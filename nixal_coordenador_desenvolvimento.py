@@ -5,20 +5,35 @@ NIXAL / NYXAL — COORDENADOR DE DESENVOLVIMENTO
 
 Responsabilidade:
     observar o estado Git da branch de desenvolvimento,
-    sincronizar somente por fast-forward e validar os arquivos
-    Python alterados no último avanço.
+    sincronizar somente por fast-forward,
+    validar os arquivos Python alterados
+    e executar os testes Python explicitamente
+    identificados pelo prefixo "teste_".
 
 Este componente NÃO:
     - escreve código automaticamente;
     - faz merge;
     - força refs;
     - altera main;
-    - executa comandos arbitrários vindos do repositório;
+    - executa comandos arbitrários;
     - publica alterações sozinho.
 
 Objetivo:
-    criar um ciclo local de desenvolvimento observável,
-    controlado e reversível.
+    criar um ciclo local de desenvolvimento
+    observável, controlado e reversível.
+
+Fluxo:
+    estado
+      ↓
+    sincronização
+      ↓
+    descoberta dos arquivos alterados
+      ↓
+    validação de sintaxe
+      ↓
+    execução dos testes
+      ↓
+    resultado verificável
 """
 
 from __future__ import annotations
@@ -37,9 +52,19 @@ class CoordenadorDesenvolvimentoNixal:
         self.repositorio = Path(
             repositorio or Path(__file__).resolve().parent
         )
+
         self.branch = branch
 
-        self.python = self.repositorio / ".venv" / "bin" / "python"
+        self.python = (
+            self.repositorio
+            / ".venv"
+            / "bin"
+            / "python"
+        )
+
+    # ==========================================================
+    # GIT
+    # ==========================================================
 
     def _git(self, *args: str) -> str:
         resultado = subprocess.run(
@@ -58,17 +83,38 @@ class CoordenadorDesenvolvimentoNixal:
 
         return resultado.stdout.strip()
 
+    # ==========================================================
+    # ESTADO
+    # ==========================================================
+
     def estado(self) -> dict:
-        status = self._git("status", "--porcelain")
-        branch_atual = self._git("branch", "--show-current")
+        status = self._git(
+            "status",
+            "--porcelain",
+        )
+
+        branch_atual = self._git(
+            "branch",
+            "--show-current",
+        )
 
         return {
-            "repositorio": str(self.repositorio),
+            "repositorio": str(
+                self.repositorio
+            ),
             "branch_atual": branch_atual,
             "branch_alvo": self.branch,
             "arvore_limpa": not bool(status),
-            "status": status.splitlines() if status else [],
+            "status": (
+                status.splitlines()
+                if status
+                else []
+            ),
         }
+
+    # ==========================================================
+    # SINCRONIZAÇÃO
+    # ==========================================================
 
     def sincronizar(self) -> dict:
         estado = self.estado()
@@ -80,14 +126,21 @@ class CoordenadorDesenvolvimentoNixal:
                 "sincronizado": False,
             }
 
-        if estado["branch_atual"] != self.branch:
+        if (
+            estado["branch_atual"]
+            != self.branch
+        ):
             return {
                 **estado,
                 "estado": "bloqueada_branch_incorreta",
                 "sincronizado": False,
             }
 
-        self._git("fetch", "origin", self.branch)
+        self._git(
+            "fetch",
+            "origin",
+            self.branch,
+        )
 
         contagem = self._git(
             "rev-list",
@@ -100,13 +153,26 @@ class CoordenadorDesenvolvimentoNixal:
 
         if len(partes) != 2:
             raise RuntimeError(
-                f"Resposta inesperada de rev-list: {contagem}"
+                "Resposta inesperada do Git "
+                f"ao comparar branches: {contagem}"
             )
 
-        commits_locais = int(partes[0])
-        commits_remotos = int(partes[1])
+        commits_locais = int(
+            partes[0]
+        )
 
-        if commits_locais > 0 and commits_remotos > 0:
+        commits_remotos = int(
+            partes[1]
+        )
+
+        # ------------------------------------------------------
+        # DIVERGÊNCIA
+        # ------------------------------------------------------
+
+        if (
+            commits_locais > 0
+            and commits_remotos > 0
+        ):
             return {
                 **estado,
                 "estado": "divergencia_detectada",
@@ -114,6 +180,10 @@ class CoordenadorDesenvolvimentoNixal:
                 "commits_locais": commits_locais,
                 "commits_remotos": commits_remotos,
             }
+
+        # ------------------------------------------------------
+        # JÁ SINCRONIZADO
+        # ------------------------------------------------------
 
         if commits_remotos == 0:
             return {
@@ -123,6 +193,10 @@ class CoordenadorDesenvolvimentoNixal:
                 "commits_locais": commits_locais,
                 "commits_remotos": 0,
             }
+
+        # ------------------------------------------------------
+        # FAST-FORWARD
+        # ------------------------------------------------------
 
         self._git(
             "pull",
@@ -139,7 +213,11 @@ class CoordenadorDesenvolvimentoNixal:
             "commits_remotos": commits_remotos,
         }
 
-    def arquivos_python_ultimo_commit(self) -> list[str]:
+    # ==========================================================
+    # ARQUIVOS ALTERADOS
+    # ==========================================================
+
+    def arquivos_ultimo_commit(self) -> list[str]:
         try:
             alterados = self._git(
                 "diff",
@@ -153,17 +231,48 @@ class CoordenadorDesenvolvimentoNixal:
         return [
             arquivo
             for arquivo in alterados.splitlines()
+            if arquivo.strip()
+        ]
+
+    def arquivos_python_ultimo_commit(
+        self,
+    ) -> list[str]:
+        return [
+            arquivo
+            for arquivo in self.arquivos_ultimo_commit()
             if arquivo.endswith(".py")
         ]
 
-    def validar_python_alterado(self) -> dict:
-        arquivos = self.arquivos_python_ultimo_commit()
+    def testes_python_ultimo_commit(
+        self,
+    ) -> list[str]:
+        return [
+            arquivo
+            for arquivo
+            in self.arquivos_python_ultimo_commit()
+            if Path(arquivo).name.startswith(
+                "teste_"
+            )
+        ]
+
+    # ==========================================================
+    # VALIDAÇÃO
+    # ==========================================================
+
+    def validar_python_alterado(
+        self,
+    ) -> dict:
+        arquivos = (
+            self.arquivos_python_ultimo_commit()
+        )
 
         resultados = []
 
         if not self.python.exists():
             return {
-                "estado": "python_virtualenv_nao_encontrado",
+                "estado": (
+                    "python_virtualenv_nao_encontrado"
+                ),
                 "arquivos_python": [],
                 "sucesso": False,
             }
@@ -185,8 +294,12 @@ class CoordenadorDesenvolvimentoNixal:
             resultados.append(
                 {
                     "arquivo": arquivo,
-                    "sucesso": resultado.returncode == 0,
-                    "erro": resultado.stderr.strip(),
+                    "sucesso": (
+                        resultado.returncode == 0
+                    ),
+                    "erro": (
+                        resultado.stderr.strip()
+                    ),
                 }
             )
 
@@ -199,30 +312,182 @@ class CoordenadorDesenvolvimentoNixal:
             ),
         }
 
-    def executar_ciclo(self) -> dict:
-        sincronizacao = self.sincronizar()
+    # ==========================================================
+    # TESTES
+    # ==========================================================
 
-        if not sincronizacao["sincronizado"]:
+    def executar_testes_alterados(
+        self,
+    ) -> dict:
+        testes = (
+            self.testes_python_ultimo_commit()
+        )
+
+        resultados = []
+
+        if not testes:
             return {
-                "sincronizacao": sincronizacao,
-                "validacao": None,
+                "estado": "nenhum_teste_alterado",
+                "testes_python": [],
+                "sucesso": True,
             }
 
-        validacao = self.validar_python_alterado()
+        if not self.python.exists():
+            return {
+                "estado": (
+                    "python_virtualenv_nao_encontrado"
+                ),
+                "testes_python": [],
+                "sucesso": False,
+            }
+
+        for teste in testes:
+            try:
+                resultado = subprocess.run(
+                    [
+                        str(self.python),
+                        teste,
+                    ],
+                    cwd=self.repositorio,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                    timeout=120,
+                )
+
+                resultados.append(
+                    {
+                        "arquivo": teste,
+                        "sucesso": (
+                            resultado.returncode == 0
+                        ),
+                        "codigo_saida": (
+                            resultado.returncode
+                        ),
+                        "saida": (
+                            resultado.stdout.strip()
+                        ),
+                        "erro": (
+                            resultado.stderr.strip()
+                        ),
+                    }
+                )
+
+            except subprocess.TimeoutExpired as erro:
+                resultados.append(
+                    {
+                        "arquivo": teste,
+                        "sucesso": False,
+                        "codigo_saida": None,
+                        "saida": (
+                            erro.stdout.strip()
+                            if isinstance(
+                                erro.stdout,
+                                str,
+                            )
+                            else ""
+                        ),
+                        "erro": (
+                            "timeout de 120 segundos"
+                        ),
+                    }
+                )
+
+        return {
+            "estado": "testes_concluidos",
+            "testes_python": resultados,
+            "sucesso": all(
+                item["sucesso"]
+                for item in resultados
+            ),
+        }
+
+    # ==========================================================
+    # CICLO COMPLETO
+    # ==========================================================
+
+    def executar_ciclo(self) -> dict:
+        sincronizacao = (
+            self.sincronizar()
+        )
+
+        if not sincronizacao[
+            "sincronizado"
+        ]:
+            return {
+                "sincronizacao": sincronizacao,
+                "arquivos": None,
+                "validacao": None,
+                "testes": None,
+                "ciclo_sucesso": False,
+            }
+
+        arquivos = (
+            self.arquivos_ultimo_commit()
+        )
+
+        validacao = (
+            self.validar_python_alterado()
+        )
+
+        if not validacao["sucesso"]:
+            return {
+                "sincronizacao": sincronizacao,
+                "arquivos": arquivos,
+                "validacao": validacao,
+                "testes": None,
+                "ciclo_sucesso": False,
+            }
+
+        testes = (
+            self.executar_testes_alterados()
+        )
 
         return {
             "sincronizacao": sincronizacao,
+            "arquivos": arquivos,
             "validacao": validacao,
+            "testes": testes,
+            "ciclo_sucesso": (
+                validacao["sucesso"]
+                and testes["sucesso"]
+            ),
         }
 
 
-if __name__ == "__main__":
-    coordenador = CoordenadorDesenvolvimentoNixal()
+# ==============================================================
+# EXECUÇÃO DIRETA
+# ==============================================================
 
-    print(
-        json.dumps(
-            coordenador.executar_ciclo(),
-            ensure_ascii=False,
-            indent=2,
-        )
+if __name__ == "__main__":
+    coordenador = (
+        CoordenadorDesenvolvimentoNixal()
     )
+
+    try:
+        resultado = (
+            coordenador.executar_ciclo()
+        )
+
+        print(
+            json.dumps(
+                resultado,
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+
+    except Exception as erro:
+        print(
+            json.dumps(
+                {
+                    "estado": (
+                        "erro_no_ciclo"
+                    ),
+                    "erro": str(erro),
+                    "ciclo_sucesso": False,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
