@@ -46,6 +46,9 @@ from pathlib import Path
 from nixal_avaliador_desenvolvimento import (
     AvaliacaoDesenvolvimentoNixal,
 )
+from nixal_candidatos_desenvolvimento import (
+    RegistroCandidatosDesenvolvimentoNixal,
+)
 from nixal_contrato_artefato import (
     ContratoArtefatoNixal,
 )
@@ -94,6 +97,12 @@ class PipelineDesenvolvimentoNixal:
             / ".venv"
             / "bin"
             / "python"
+        )
+
+        self.registro_candidatos = (
+            RegistroCandidatosDesenvolvimentoNixal(
+                repositorio=self.repositorio,
+            )
         )
 
         for diretorio in (
@@ -589,9 +598,23 @@ class PipelineDesenvolvimentoNixal:
             )
         )
 
+        candidato = (
+            self.registro_candidatos.registrar(
+                ciclo_id=ciclo_id,
+                arquivo=resultado["arquivo"],
+                manifesto=resultado["manifesto"],
+                fingerprint=fingerprint,
+                experimento_raiz=(
+                    self.experimentos / ciclo_id
+                ),
+                avaliacao=resultado["avaliacao"],
+            )
+        )
+
+        resultado["candidato"] = candidato
         resultado["decisao"] = "candidato"
         resultado["motivo"] = (
-            "contrato_analise_e_validacao_concluidas"
+            "contrato_analise_validacao_e_avaliacao_concluidas"
         )
 
         self._registrar_processado(
@@ -725,6 +748,11 @@ class PipelineDesenvolvimentoNixal:
             "arquivos_processados": resultados,
             "candidatos": candidato,
             "rejeitados": rejeitado,
+            "candidatos_registrados": [
+                item["candidato"]
+                for item in resultados
+                if item.get("candidato")
+            ],
             "integracao_stable": False,
             "codigo_executado": False,
             "estado": (
