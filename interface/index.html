@@ -126,6 +126,139 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
 @media(max-width:700px){
   .panel-left,.panel-right{display:flex}.earth-zone{height:440px;min-height:420px}.earth-wrap{width:245px;height:245px}.orbit.a{width:100%}.orbit.b{width:85%}.orbit.c{width:69%}.orbital-nav{width:620px;height:370px;transform:translate(-50%,-50%) scale(.62)}.delta-core{width:94px;height:94px}.delta-core b{font-size:43px}.chat-actions{overflow:auto}.chat-actions button{white-space:nowrap}
 }
+<style>
+/* NyxOS visual polish — presentation only */
+.topbar{
+  height:76px;
+  padding:0 24px;
+  background:
+    radial-gradient(circle at 50% -40%,rgba(121,228,255,.10),transparent 35%),
+    linear-gradient(180deg,rgba(6,18,30,.98),rgba(2,8,14,.88));
+  box-shadow:0 10px 35px rgba(0,0,0,.34),inset 0 -1px 0 rgba(121,228,255,.10);
+}
+.brand{gap:14px}
+.mark{
+  width:44px;height:44px;
+  border-radius:7px;
+  background:linear-gradient(145deg,rgba(117,205,245,.08),rgba(117,205,245,.015));
+  box-shadow:0 0 24px rgba(117,224,255,.08),inset 0 0 18px rgba(117,224,255,.04);
+}
+.brand-name{font-size:16px;letter-spacing:.31em}
+.brand-sub{font-size:6.5px}
+.nav{gap:8px}
+.nav button{
+  min-width:90px;
+  padding:10px 14px;
+  border-radius:8px;
+  transition:background .2s,border-color .2s,color .2s,box-shadow .2s,transform .2s;
+}
+.nav button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.nav button.active{
+  background:linear-gradient(180deg,rgba(117,205,245,.10),rgba(117,205,245,.035));
+  border-color:rgba(117,205,245,.30);
+  box-shadow:inset 0 0 18px rgba(117,205,245,.035),0 0 18px rgba(117,205,245,.05);
+}
+.workspace{padding:18px 18px 20px}
+.panel-left,.panel-right{top:18px;bottom:20px}
+.panel-left{left:18px;width:270px}
+.panel-right{right:18px;width:380px}
+.glass{
+  border-radius:8px;
+  border-color:rgba(117,205,245,.25);
+  background:
+    radial-gradient(circle at 15% 0%,rgba(117,205,245,.055),transparent 32%),
+    linear-gradient(145deg,rgba(8,20,33,.88),rgba(2,9,16,.82));
+  box-shadow:
+    0 16px 44px rgba(0,0,0,.38),
+    inset 0 1px 0 rgba(255,255,255,.035),
+    inset 0 0 30px rgba(117,205,245,.018);
+}
+.panel{padding:14px;position:relative;overflow:hidden}
+.panel:before{
+  content:"";
+  position:absolute;left:14px;right:14px;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(121,228,255,.30),transparent);
+  opacity:.65;
+}
+.panel-title{
+  padding-bottom:10px;
+  margin-bottom:10px;
+  font-size:7.5px;
+}
+.metric,.weather-grid div{
+  border-radius:5px;
+  background:linear-gradient(145deg,rgba(117,205,245,.035),rgba(117,205,245,.01));
+}
+.event,.project{padding-bottom:8px}
+.cover{
+  border-radius:6px;
+  box-shadow:inset 0 0 20px rgba(117,205,245,.035);
+}
+.center-tag{
+  top:0;
+  color:rgba(130,169,187,.62);
+  text-shadow:0 0 14px rgba(117,224,255,.10);
+}
+.earth-zone:after{
+  content:"";
+  position:absolute;inset:7%;pointer-events:none;
+  border:1px solid rgba(117,205,245,.035);
+  border-radius:50%;
+  box-shadow:0 0 80px rgba(45,178,230,.025);
+}
+.orbital-nav .orbit-item{
+  border-radius:7px;
+  background:linear-gradient(145deg,rgba(6,22,34,.94),rgba(2,10,17,.92));
+}
+.nyxal{
+  padding:15px;
+}
+.nyxal-name{
+  font-size:27px;
+  letter-spacing:.30em;
+  text-shadow:0 0 18px rgba(121,228,255,.13);
+}
+.nyxal-sub{font-size:6.5px}
+.presence{
+  height:560px;
+  margin-top:14px;
+  border-radius:9px;
+  border-color:rgba(117,205,245,.28);
+  background:
+    radial-gradient(circle at 50% 30%,rgba(67,192,237,.22),transparent 25%),
+    radial-gradient(circle at 50% 60%,rgba(67,192,237,.09),transparent 52%),
+    linear-gradient(180deg,rgba(3,13,21,.92),rgba(1,7,12,.90));
+  box-shadow:
+    inset 0 0 40px rgba(117,205,245,.025),
+    0 12px 36px rgba(0,0,0,.28);
+}
+.presence:before{
+  inset:9px;
+  border-radius:5px;
+}
+.face{
+  filter:
+    drop-shadow(0 0 18px rgba(117,224,255,.22))
+    drop-shadow(0 0 30px rgba(60,190,235,.08));
+}
+.state{
+  margin-top:10px;
+  padding:10px;
+  border-radius:7px;
+  background:linear-gradient(145deg,rgba(117,205,245,.035),rgba(117,205,245,.012));
+}
+.chatbar{
+  padding:9px 11px 10px;
+  background:
+    linear-gradient(145deg,rgba(7,19,30,.96),rgba(2,9,16,.94));
+  border-color:rgba(117,205,245,.34);
+  box-shadow:
+    0 20px 58px rgba(0,0,0,.50),
+    0 0 32px rgba(117,205,245,.07),
+    inset 0 1px 0 rgba(255,255,255,.035);
+}
+.chat-input{background:rgba(2,10,17,.58);box-shadow:inset 0 0 20px rgba(117,205,245,.018)}
+</style>
 </style>
 </head>
 <body>
