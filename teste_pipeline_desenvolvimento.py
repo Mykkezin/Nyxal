@@ -114,6 +114,13 @@ def executar() -> None:
         assert all(
             item["avaliacao"]["criterios"].values()
         )
+        assert item["candidato"]["estado"] == (
+            "candidato"
+        )
+        assert item["candidato"]["integracao_stable"] is False
+        assert len(
+            resultado["candidatos_registrados"]
+        ) == 1
 
         segundo = pipeline.executar_ciclo()
 
