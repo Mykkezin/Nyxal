@@ -1,0 +1,1 @@
+Teste controlado de sincronizacao remota do Observador de Desenvolvimento.
