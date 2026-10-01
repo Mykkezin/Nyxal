@@ -5,232 +5,523 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>NyxOS — Nyxal</title>
 <style>
-:root{--bg:#01050a;--panel:rgba(5,16,27,.72);--line:rgba(92,210,255,.22);--line2:rgba(92,210,255,.48);--cyan:#67defe;--text:#dbf7ff;--muted:#6c94a8;--green:#7dffcc;--gold:#ffd36b}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif}
+:root{
+  --bg:#01050a;
+  --bg2:#020b13;
+  --panel:rgba(4,14,24,.78);
+  --panel2:rgba(6,20,32,.9);
+  --line:rgba(103,222,255,.20);
+  --line2:rgba(103,222,255,.42);
+  --cyan:#67e0ff;
+  --cyan2:#2bb8ef;
+  --text:#dff8ff;
+  --muted:#6e94a7;
+  --soft:#8ab8ca;
+  --green:#7cffca;
+  --gold:#ffd46e;
+  --danger:#ff9a9a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif}
 body{overflow:hidden}
-button{font:inherit;color:inherit;border:0;cursor:pointer}
-#nyxos{height:100vh;overflow:hidden;position:relative;background:
-radial-gradient(circle at 50% 48%,rgba(21,120,166,.14),transparent 29%),
-radial-gradient(circle at 88% 18%,rgba(0,110,190,.08),transparent 26%),
-linear-gradient(180deg,#01050a,#020913 55%,#01050a)}
-#nyxos:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;background:
-radial-gradient(circle,rgba(174,235,255,.2) 0 1px,transparent 1.5px) 0 0/84px 71px,
-radial-gradient(circle,rgba(72,184,235,.13) 0 1px,transparent 1.5px) 35px 28px/118px 103px}
-#nyxos:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.13;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.03) 0 1px,transparent 2px 5px);z-index:50}
-.top{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(5,18,30,.95),rgba(3,10,17,.72));backdrop-filter:blur(16px);position:relative;z-index:10}
-.brand{display:flex;align-items:center;gap:12px}.brand-mark{width:40px;height:40px;border:1px solid var(--line2);display:grid;place-items:center;color:var(--cyan);font-size:24px}.brand-name{font-size:15px;font-weight:700;letter-spacing:.32em}.brand-sub{font-size:7px;color:var(--muted);letter-spacing:.2em;margin-top:4px}
-.top-right{display:flex;align-items:center;gap:22px}.top-item{font-size:8px;letter-spacing:.14em;color:var(--muted);display:flex;align-items:center;gap:7px}.top-item strong{color:var(--cyan);font-weight:500}.dot{width:7px;height:7px;border-radius:50%;display:inline-block}.online{background:var(--green);box-shadow:0 0 10px rgba(125,255,204,.7)}.clock{font-size:10px;letter-spacing:.13em;font-variant-numeric:tabular-nums}
-.layout{height:calc(100vh - 72px);display:grid;grid-template-columns:255px minmax(560px,1fr) 375px;gap:15px;padding:15px 16px 14px;position:relative;z-index:5}
-.column{display:flex;flex-direction:column;gap:12px;min-height:0}
-.panel{border:1px solid var(--line);background:linear-gradient(145deg,rgba(7,21,34,.78),rgba(3,10,17,.7));backdrop-filter:blur(14px);box-shadow:0 14px 42px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.02);padding:12px}
-.head{display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;margin-bottom:10px;border-bottom:1px solid rgba(92,210,255,.1)}.head span:first-child{color:var(--cyan);font-size:8px;letter-spacing:.17em;font-weight:600}.code{color:rgba(108,148,168,.55);font-size:7px}
-.metrics{display:grid;grid-template-columns:1fr 1fr;gap:7px}.metric{padding:8px;border:1px solid rgba(92,210,255,.1);background:rgba(92,210,255,.02)}.metric span{display:block;color:var(--muted);font-size:7px;letter-spacing:.12em}.metric strong{display:block;margin-top:5px;font-size:13px;font-weight:400}
-.rows{display:flex;flex-direction:column;gap:7px}.row{display:flex;justify-content:space-between;gap:8px;padding-bottom:7px;border-bottom:1px dashed rgba(92,210,255,.08);font-size:7px}.row:last-child{border-bottom:0;padding-bottom:0}.row span{color:var(--muted)}.row strong{font-weight:500;max-width:145px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}.memory{display:flex;gap:9px;align-items:center;padding:9px;border:1px solid rgba(92,210,255,.11);background:rgba(92,210,255,.025)}.memory-icon{width:32px;height:32px;border:1px solid rgba(92,210,255,.25);display:grid;place-items:center;color:var(--cyan);font-size:15px}.memory-title{font-size:8px;letter-spacing:.13em}.memory-sub{font-size:7px;color:var(--muted);margin-top:3px}.memory-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.memory-stats>div{display:flex;justify-content:space-between;padding:7px 8px;border:1px solid rgba(92,210,255,.08);font-size:7px}.memory-stats span{color:var(--muted)}
-.center{min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden}.center-label{position:absolute;top:1px;left:50%;transform:translateX(-50%);font-size:7px;letter-spacing:.31em;color:rgba(108,148,168,.55);z-index:4;white-space:nowrap}
-.stage{width:min(100%,820px);height:590px;position:relative;display:grid;place-items:center;margin-top:2px}.orbit{position:absolute;border:1px solid rgba(92,210,255,.17);border-radius:50%;left:50%;top:51%;transform:translate(-50%,-50%) rotateX(68deg)}.o1{width:92%;height:55%;animation:spin 30s linear infinite}.o2{width:76%;height:44%;border-style:dashed;animation:spinR 24s linear infinite}.o3{width:59%;height:34%;border-color:rgba(92,210,255,.3);animation:spin 17s linear infinite}
-.axis{position:absolute;left:50%;top:51%;background:rgba(92,210,255,.065)}.axis-x{width:90%;height:1px;transform:translate(-50%,-50%)}.axis-y{width:1px;height:86%;transform:translate(-50%,-50%)}
-.globe{position:absolute;width:320px;height:320px;left:50%;top:51%;transform:translate(-50%,-50%);z-index:4;border-radius:50%;filter:drop-shadow(0 0 28px rgba(72,201,255,.22));animation:globeFloat 5s ease-in-out infinite}.globe svg{width:100%;height:100%;display:block}.glow{position:absolute;inset:-18px;border-radius:50%;background:radial-gradient(circle,rgba(77,205,255,.16),transparent 65%);filter:blur(9px);z-index:-1}
-.satellite{position:absolute;width:18px;height:18px;border:1px solid rgba(92,210,255,.66);background:rgba(4,14,22,.88);box-shadow:0 0 13px rgba(92,210,255,.38);z-index:8}.sat1{left:18%;top:28%;animation:sat1 11s linear infinite}.sat2{right:16%;top:42%;animation:sat2 14s linear infinite}.satellite:before,.satellite:after{content:"";position:absolute;top:50%;width:14px;height:4px;border:1px solid rgba(92,210,255,.34);transform:translateY(-50%)}.satellite:before{right:100%}.satellite:after{left:100%}
-.moon{position:absolute;width:72px;height:72px;border-radius:50%;right:13%;top:17%;background:radial-gradient(circle at 30% 27%,#d8ebf6 0 7%,#8598aa 29%,#364653 68%,#15202a 100%);box-shadow:0 0 18px rgba(184,214,235,.16),inset -11px -8px 16px rgba(0,0,0,.46);z-index:7}
-.flight-path{position:absolute;width:72%;height:32%;left:14%;top:12%;border-top:1px dashed rgba(92,210,255,.24);border-radius:50%;transform:rotate(-10deg) scaleY(.7);z-index:5}.aircraft{position:absolute;left:8%;top:11%;z-index:9;color:#e8fbff;font-size:22px;filter:drop-shadow(0 0 7px rgba(100,224,255,.95));animation:fly 13s linear infinite}
-.delta-core{position:absolute;left:50%;top:51%;transform:translate(-50%,-50%);width:124px;height:124px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(11,72,104,.42),rgba(2,8,14,.76) 68%);border:1px solid rgba(92,210,255,.25);box-shadow:inset 0 0 25px rgba(92,210,255,.06),0 0 26px rgba(92,210,255,.09);z-index:12}.delta-core .symbol{font-size:56px;font-weight:200;color:var(--cyan);line-height:1;text-shadow:0 0 18px rgba(92,210,255,.5)}.delta-core .name{font-size:8px;letter-spacing:.29em;margin-top:3px}.delta-core .sub{font-size:6px;color:var(--muted);letter-spacing:.12em;margin-top:4px}
-.launcher{position:absolute;left:50%;bottom:9px;transform:translateX(-50%);z-index:15}.launcher-button{width:70px;height:70px;border-radius:50%;border:1px solid rgba(92,210,255,.4);background:radial-gradient(circle,rgba(12,71,101,.42),rgba(2,9,15,.94) 68%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 0 26px rgba(92,210,255,.1),inset 0 0 24px rgba(92,210,255,.07)}.launcher-button b{font-size:18px;color:var(--cyan);font-weight:300}.launcher-button span{font-size:5px;letter-spacing:.1em;color:var(--muted)}
-.quick-ring{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:650px;height:142px;pointer-events:none;z-index:14}.quick-item{position:absolute;bottom:18px;left:50%;width:72px;height:52px;transform:translateX(-50%) scale(.65);opacity:0;pointer-events:none;border:1px solid rgba(92,210,255,.34);background:rgba(4,16,27,.94);clip-path:polygon(9% 0,91% 5%,100% 88%,17% 100%,0 18%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--cyan);transition:.42s cubic-bezier(.2,.8,.2,1)}.quick-item span:first-child{font-size:14px}.quick-item span:last-child{font-size:5px;letter-spacing:.1em}.quick-ring.open .quick-item{opacity:1;pointer-events:auto}.quick-ring.open .q1{left:5%;bottom:30px;transform:translateX(-50%) rotate(-17deg)}.quick-ring.open .q2{left:20%;bottom:59px;transform:translateX(-50%) rotate(-10deg)}.quick-ring.open .q3{left:36%;bottom:78px;transform:translateX(-50%) rotate(-5deg)}.quick-ring.open .q4{left:50%;bottom:87px;transform:translateX(-50%)}.quick-ring.open .q5{left:64%;bottom:78px;transform:translateX(-50%) rotate(5deg)}.quick-ring.open .q6{left:80%;bottom:59px;transform:translateX(-50%) rotate(10deg)}.quick-ring.open .q7{left:95%;bottom:30px;transform:translateX(-50%) rotate(17deg)}
-.telemetry{width:min(100%,720px);padding:10px 13px;border:1px solid var(--line);background:rgba(2,10,17,.62)}.telemetry-head{display:flex;justify-content:space-between;color:var(--muted);font-size:7px;letter-spacing:.16em}.telemetry-head strong{color:var(--cyan);font-weight:500}.bars{height:38px;display:flex;align-items:center;justify-content:space-between;margin-top:4px}.bars i{width:3px;background:var(--cyan);opacity:.32;box-shadow:0 0 8px rgba(92,210,255,.34);animation:bar 1.7s ease-in-out infinite}
-.cycle{width:min(100%,720px);margin-top:11px;padding:10px 12px;border:1px solid rgba(92,210,255,.12);background:rgba(2,10,17,.52)}.cycle-title{text-align:center;font-size:6px;color:var(--muted);letter-spacing:.18em}.cycle-flow{display:flex;align-items:center;margin-top:9px}.node{min-width:67px;text-align:center;color:rgba(108,148,168,.48)}.node span{font-size:6px}.node strong{display:block;margin-top:3px;font-size:6px;letter-spacing:.05em}.node.active{color:var(--cyan)}.link{flex:1;height:1px;background:linear-gradient(90deg,rgba(92,210,255,.12),rgba(92,210,255,.32),rgba(92,210,255,.12))}
-.right .weather{flex:0 0 auto}.weather{padding:12px;border:1px solid var(--line);background:linear-gradient(145deg,rgba(7,21,34,.8),rgba(3,10,17,.72));backdrop-filter:blur(14px)}.weather-head{display:flex;justify-content:space-between;padding-bottom:9px;border-bottom:1px solid rgba(92,210,255,.1)}.weather-head span:first-child{display:block;font-size:6px;letter-spacing:.17em;color:var(--muted)}.weather-head strong{display:block;margin-top:4px;font-size:9px;letter-spacing:.13em}.weather-state{font-size:6px;color:var(--green);letter-spacing:.12em}.weather-main{display:grid;grid-template-columns:56px 1fr;gap:10px;align-items:center;padding:12px 0 10px}.weather-icon{width:52px;height:52px;border:1px solid rgba(92,210,255,.16);display:grid;place-items:center;color:var(--cyan);font-size:23px;background:rgba(92,210,255,.03)}.weather-temp{font-size:29px;font-weight:300}.weather-city{font-size:6px;color:var(--cyan);letter-spacing:.14em}.weather-cond{font-size:7px;color:var(--muted);margin-top:4px}.weather-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.weather-stat{padding:6px;border:1px solid rgba(92,210,255,.08);text-align:center}.weather-stat span{display:block;font-size:5px;color:var(--muted)}.weather-stat strong{display:block;margin-top:3px;font-size:7px}
-.nyxal{flex:1;min-height:0;padding:14px;border:1px solid var(--line);background:linear-gradient(145deg,rgba(7,21,34,.82),rgba(3,10,17,.72));backdrop-filter:blur(15px);box-shadow:0 15px 45px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.02)}.nyx-head{display:flex;justify-content:space-between;align-items:flex-start}.eyebrow{font-size:6px;color:var(--muted);letter-spacing:.18em}.nyx-name{font-size:25px;font-weight:300;letter-spacing:.29em;margin-top:4px}.nyx-sub{font-size:6px;color:var(--cyan);letter-spacing:.13em;margin-top:4px}.presence{position:relative;height:430px;margin-top:12px;overflow:hidden;border:1px solid rgba(92,210,255,.2);background:
-radial-gradient(circle at 50% 42%,rgba(59,178,227,.16),transparent 28%),
-radial-gradient(circle at 50% 60%,rgba(59,178,227,.07),transparent 48%),
-rgba(2,9,15,.72)}.presence:before{content:"";position:absolute;inset:13px;border:1px solid rgba(92,210,255,.07)}.corner{position:absolute;width:15px;height:15px;border-color:rgba(92,210,255,.58);border-style:solid;z-index:3}.tl{left:7px;top:7px;border-width:1px 0 0 1px}.tr{right:7px;top:7px;border-width:1px 1px 0 0}.bl{left:7px;bottom:7px;border-width:0 0 1px 1px}.br{right:7px;bottom:7px;border-width:0 1px 1px 0}.nyx-scan{position:absolute;left:4%;right:4%;height:1px;top:27%;background:linear-gradient(90deg,transparent,rgba(92,210,255,.8),transparent);box-shadow:0 0 16px rgba(92,210,255,.45);animation:scan 3.8s ease-in-out infinite;z-index:6}.face{position:absolute;width:92%;height:95%;left:4%;top:2%;z-index:4}.face-line{fill:none;stroke:rgba(106,224,255,.48);stroke-width:2}.face-soft{fill:rgba(115,225,250,.1);stroke:rgba(115,225,250,.35);stroke-width:1.5}.eye{fill:url(#eye);stroke:#c0f6ff;stroke-width:1.2}.data{position:absolute;z-index:7;font-size:5px;color:var(--muted);letter-spacing:.14em}.data strong{display:block;margin-top:3px;color:var(--cyan);font-size:6px;font-weight:500}.d1{left:14px;top:18px}.d2{right:14px;top:18px;text-align:right}.d3{left:14px;bottom:18px}.d4{right:14px;bottom:18px;text-align:right}.state{margin-top:10px;border:1px solid rgba(92,210,255,.1);padding:9px;background:rgba(92,210,255,.025)}.state-title{font-size:6px;color:var(--muted);letter-spacing:.16em}.state-main{font-size:11px;color:var(--cyan);letter-spacing:.16em;margin-top:5px}.state-desc{font-size:6px;color:var(--muted);margin-top:4px;line-height:1.45}.needs{margin-top:9px;padding-top:9px;border-top:1px solid rgba(92,210,255,.08)}.needs-title{font-size:6px;color:var(--muted);letter-spacing:.16em;margin-bottom:7px}.need{display:flex;align-items:center;gap:7px;margin-bottom:6px;font-size:6px;color:var(--muted)}.need em{font-style:normal;color:var(--cyan);margin-left:auto}.need-bar{width:52%;height:3px;border:1px solid rgba(92,210,255,.1)}.need-bar b{display:block;height:100%;background:linear-gradient(90deg,rgba(92,210,255,.18),rgba(92,210,255,.7))}
-.launcher.open{display:block}
-@keyframes spin{from{transform:translate(-50%,-50%) rotateX(68deg) rotateZ(0)}to{transform:translate(-50%,-50%) rotateX(68deg) rotateZ(360deg)}}@keyframes spinR{from{transform:translate(-50%,-50%) rotateX(68deg) rotateZ(360deg)}to{transform:translate(-50%,-50%) rotateX(68deg) rotateZ(0)}}@keyframes globeFloat{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-4px)}}@keyframes sat1{from{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes sat2{from{transform:rotate(360deg)}to{transform:rotate(0)}}@keyframes fly{0%{left:7%;top:12%;transform:rotate(8deg)}25%{left:28%;top:8%;transform:rotate(2deg)}50%{left:55%;top:14%;transform:rotate(-5deg)}75%{left:79%;top:28%;transform:rotate(-10deg)}100%{left:101%;top:43%;transform:rotate(-13deg)}}@keyframes bar{0%,100%{opacity:.18;transform:scaleY(.68)}50%{opacity:.78;transform:scaleY(1.2)}}@keyframes scan{0%{top:25%;opacity:.04}50%{opacity:.8}100%{top:76%;opacity:.04}}
-@media(max-width:1180px){.layout{grid-template-columns:225px minmax(470px,1fr)}.right{grid-column:1/-1;display:grid;grid-template-columns:330px 1fr}.stage{height:520px}.globe{width:270px;height:270px}.quick-ring{transform:translateX(-50%) scale(.86)}}@media(max-width:820px){body{overflow:auto}.layout{height:auto;min-height:calc(100vh - 72px);grid-template-columns:1fr;padding-bottom:20px}.left{display:grid;grid-template-columns:1fr 1fr}.right{grid-column:auto;display:flex}.stage{height:430px}.globe{width:230px;height:230px}.quick-ring{transform:translateX(-50%) scale(.72)}.top-right .top-item{display:none}.cycle{overflow:auto}}@media(max-width:620px){.top{height:auto;min-height:72px;flex-direction:column;align-items:flex-start;gap:10px;padding:10px 13px}.layout{padding:10px}.left{display:flex}.stage{height:390px}.globe{width:190px;height:190px}.delta-core{width:95px;height:95px}.delta-core .symbol{font-size:43px}.presence{height:370px}.quick-ring{transform:translateX(-50%) scale(.58)}}
+button{font:inherit;border:0;cursor:pointer}
+#nyxos{
+  position:relative;width:100%;height:100vh;overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 46%,rgba(27,132,177,.13),transparent 28%),
+    radial-gradient(circle at 88% 14%,rgba(0,105,183,.08),transparent 22%),
+    linear-gradient(180deg,#01040a,#020b13 48%,#01050a);
+}
+#nyxos:before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+  background:
+    radial-gradient(circle,rgba(181,240,255,.20) 0 1px,transparent 1.5px) 0 0/91px 73px,
+    radial-gradient(circle,rgba(78,190,237,.13) 0 1px,transparent 1.5px) 37px 22px/131px 109px;
+}
+#nyxos:after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:60;opacity:.12;
+  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.03) 0 1px,transparent 2px 5px);
+}
+.topbar{
+  position:relative;z-index:10;height:68px;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(5,17,29,.95),rgba(2,8,14,.72));
+  backdrop-filter:blur(18px);
+}
+.brand{display:flex;align-items:center;gap:11px}
+.brand-mark{
+  width:40px;height:40px;display:grid;place-items:center;
+  border:1px solid var(--line2);color:var(--cyan);font-size:24px;font-weight:200;
+  box-shadow:0 0 24px rgba(103,224,255,.06),inset 0 0 20px rgba(103,224,255,.05)
+}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:.31em}
+.brand-sub{margin-top:3px;color:var(--muted);font-size:6px;letter-spacing:.22em}
+.top-meta{display:flex;align-items:center;gap:18px}
+.meta{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:7px;letter-spacing:.12em}
+.meta strong{color:var(--cyan);font-weight:500}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 9px rgba(124,255,202,.65)}
+.clock{font-size:10px;letter-spacing:.12em;font-variant-numeric:tabular-nums}
+
+.layout{
+  position:relative;z-index:4;height:calc(100vh - 68px);
+  display:grid;grid-template-columns:245px minmax(540px,1fr) 360px;gap:14px;
+  padding:13px 14px 14px;
+}
+.col{display:flex;flex-direction:column;gap:10px;min-height:0}
+.card{
+  border:1px solid var(--line);
+  background:linear-gradient(145deg,rgba(7,22,34,.82),rgba(2,9,15,.74));
+  backdrop-filter:blur(16px);
+  box-shadow:0 14px 42px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.02);
+}
+.panel{padding:11px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;margin-bottom:9px;border-bottom:1px solid rgba(103,222,255,.09)}
+.panel-head span:first-child{font-size:7px;color:var(--cyan);font-weight:600;letter-spacing:.18em}
+.panel-code{font-size:6px;color:rgba(110,148,167,.55);letter-spacing:.11em}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.metric{padding:8px;border:1px solid rgba(103,222,255,.09);background:rgba(103,222,255,.02)}
+.metric span{display:block;color:var(--muted);font-size:6px;letter-spacing:.11em}
+.metric strong{display:block;margin-top:4px;color:var(--text);font-size:12px;font-weight:400}
+.rows{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:7px;padding-bottom:7px;border-bottom:1px dashed rgba(103,222,255,.08);font-size:6px}
+.row:last-child{padding-bottom:0;border-bottom:0}
+.row span{color:var(--muted)}
+.row strong{max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;text-align:right}
+.memory-box{display:flex;gap:9px;align-items:center;padding:8px;border:1px solid rgba(103,222,255,.11);background:rgba(103,222,255,.025)}
+.memory-icon{width:30px;height:30px;border:1px solid rgba(103,222,255,.24);display:grid;place-items:center;color:var(--cyan);font-size:14px}
+.memory-name{font-size:7px;letter-spacing:.12em}.memory-sub{font-size:6px;color:var(--muted);margin-top:3px}
+.memory-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.memory-grid div{display:flex;justify-content:space-between;padding:6px 7px;border:1px solid rgba(103,222,255,.07);font-size:6px}.memory-grid span{color:var(--muted)}
+.git-branch{font-size:6px!important}
+
+.center{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+.center-caption{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:8;
+  color:rgba(110,148,167,.56);font-size:6px;letter-spacing:.28em;white-space:nowrap
+}
+.stage{position:relative;width:min(100%,790px);height:610px;display:grid;place-items:center}
+.axis{position:absolute;background:rgba(103,222,255,.05);z-index:0}.axis-x{width:90%;height:1px;left:5%;top:51%}.axis-y{height:90%;width:1px;left:50%;top:6%}
+.orbit{position:absolute;left:50%;top:51%;border:1px solid rgba(103,222,255,.16);border-radius:50%;transform:translate(-50%,-50%) rotateX(69deg)}
+.o1{width:92%;height:58%;animation:orbit1 34s linear infinite}.o2{width:78%;height:47%;border-style:dashed;animation:orbit2 27s linear infinite}.o3{width:61%;height:36%;border-color:rgba(103,222,255,.30);animation:orbit1 19s linear infinite}
+.planet-halo{position:absolute;width:390px;height:390px;border-radius:50%;background:radial-gradient(circle,rgba(61,207,255,.14),rgba(61,207,255,.04) 40%,transparent 71%);filter:blur(8px);z-index:1;animation:halo 5s ease-in-out infinite}
+.earth-wrap{position:absolute;width:325px;height:325px;left:50%;top:51%;transform:translate(-50%,-50%);z-index:5}
+.earth-wrap>svg{width:100%;height:100%;display:block;overflow:visible}
+.earth-ring{position:absolute;inset:-13px;border:1px solid rgba(103,222,255,.16);border-radius:50%}.earth-ring.r2{inset:-28px;border-style:dashed;opacity:.55}
+.land-a{transform-origin:210px 210px;animation:land1 18s linear infinite}.land-b{transform-origin:210px 210px;animation:land2 18s linear infinite}
+.satellite{position:absolute;width:15px;height:15px;border:1px solid rgba(103,222,255,.64);background:rgba(4,15,23,.92);box-shadow:0 0 12px rgba(103,222,255,.42);z-index:10}
+.satellite:before,.satellite:after{content:"";position:absolute;top:50%;width:13px;height:4px;border:1px solid rgba(103,222,255,.34);transform:translateY(-50%)}.satellite:before{right:100%}.satellite:after{left:100%}
+.sat1{left:16%;top:29%;animation:satA 10s linear infinite}.sat2{right:12%;top:41%;animation:satB 13s linear infinite}
+.moon{position:absolute;width:62px;height:62px;right:13%;top:16%;border-radius:50%;z-index:8;background:radial-gradient(circle at 30% 28%,#e3f3fb 0 6%,#91a6b8 28%,#3c4c59 70%,#17232d 100%);box-shadow:0 0 17px rgba(189,218,237,.16),inset -10px -7px 15px rgba(0,0,0,.45)}
+.flight-path{position:absolute;width:74%;height:34%;left:13%;top:11%;border-top:1px dashed rgba(103,222,255,.24);border-radius:50%;transform:rotate(-9deg) scaleY(.72);z-index:7}
+.aircraft{position:absolute;left:8%;top:10%;z-index:11;color:#e7fbff;font-size:20px;filter:drop-shadow(0 0 6px rgba(103,224,255,.95));animation:flight 12s linear infinite}
+.delta-core{
+  position:absolute;left:50%;top:51%;transform:translate(-50%,-50%);z-index:20;
+  width:112px;height:112px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(circle,rgba(22,94,129,.34),rgba(2,9,15,.84) 69%);
+  border:1px solid rgba(103,222,255,.25);
+  box-shadow:0 0 34px rgba(103,222,255,.09),inset 0 0 28px rgba(103,222,255,.08)
+}
+.delta-core .d{font-size:51px;font-weight:200;line-height:1;color:var(--cyan);text-shadow:0 0 18px rgba(103,222,255,.48)}
+.delta-core .n{margin-top:3px;font-size:7px;letter-spacing:.27em}.delta-core .s{margin-top:4px;color:var(--muted);font-size:5px;letter-spacing:.10em}
+
+.quick-hub{
+  position:absolute;left:50%;bottom:4px;transform:translateX(-50%);z-index:30;
+  width:68px;height:68px;border-radius:50%;border:1px solid rgba(103,222,255,.42);
+  background:radial-gradient(circle,rgba(17,83,113,.45),rgba(2,9,15,.94) 67%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  color:var(--cyan);box-shadow:0 0 29px rgba(103,222,255,.1),inset 0 0 22px rgba(103,222,255,.08)
+}
+.quick-hub b{font-size:17px;font-weight:300}.quick-hub span{font-size:5px;letter-spacing:.09em;color:var(--muted)}
+.quick-ring{position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);width:650px;height:155px;z-index:29;pointer-events:none}
+.quick-ring:before{content:"";position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:570px;height:118px;border-top:1px solid rgba(103,222,255,.13);border-radius:50% 50% 0 0;opacity:0;transition:.3s}
+.quick-ring.open:before{opacity:1}
+.quick-item{
+  position:absolute;left:50%;bottom:25px;transform:translateX(-50%) scale(.45);
+  opacity:0;pointer-events:none;width:66px;height:50px;
+  border:1px solid rgba(103,222,255,.35);background:rgba(3,14,23,.95);
+  clip-path:polygon(10% 0,90% 4%,100% 86%,16% 100%,0 18%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--cyan);
+  transition:.42s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 17px rgba(103,222,255,.05)
+}
+.quick-item span:first-child{font-size:14px}.quick-item span:last-child{font-size:5px;letter-spacing:.10em}
+.quick-ring.open .quick-item{opacity:1;pointer-events:auto}
+.quick-ring.open .q1{left:8%;bottom:31px;transform:translateX(-50%) rotate(-18deg)}
+.quick-ring.open .q2{left:23%;bottom:60px;transform:translateX(-50%) rotate(-11deg)}
+.quick-ring.open .q3{left:39%;bottom:81px;transform:translateX(-50%) rotate(-5deg)}
+.quick-ring.open .q4{left:50%;bottom:91px;transform:translateX(-50%);border-color:rgba(103,222,255,.54)}
+.quick-ring.open .q5{left:61%;bottom:81px;transform:translateX(-50%) rotate(5deg)}
+.quick-ring.open .q6{left:77%;bottom:60px;transform:translateX(-50%) rotate(11deg)}
+.quick-ring.open .q7{left:92%;bottom:31px;transform:translateX(-50%) rotate(18deg)}
+.quick-hub{pointer-events:auto}
+
+.telemetry{width:min(100%,710px);padding:9px 12px;border:1px solid var(--line);background:rgba(2,10,17,.62);z-index:8}
+.telemetry-head{display:flex;justify-content:space-between;font-size:6px;letter-spacing:.16em;color:var(--muted)}.telemetry-head strong{color:var(--cyan);font-weight:500}
+.bars{height:31px;display:flex;align-items:center;justify-content:space-between;margin-top:3px}.bars i{display:block;width:3px;background:var(--cyan);opacity:.33;box-shadow:0 0 7px rgba(103,222,255,.32);animation:bar 1.7s ease-in-out infinite}
+.cycle{width:min(100%,710px);margin-top:9px;padding:9px 11px;border:1px solid rgba(103,222,255,.11);background:rgba(2,10,17,.54)}.cycle-title{text-align:center;font-size:6px;color:var(--muted);letter-spacing:.17em}.flow{display:flex;align-items:center;margin-top:7px}.node{min-width:62px;text-align:center;color:rgba(110,148,167,.48)}.node span{font-size:5px}.node strong{display:block;margin-top:3px;font-size:5px;letter-spacing:.06em}.node.active{color:var(--cyan)}.link{flex:1;height:1px;background:linear-gradient(90deg,rgba(103,222,255,.10),rgba(103,222,255,.30),rgba(103,222,255,.10))}
+
+.weather{padding:11px}
+.weather-head{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:1px solid rgba(103,222,255,.09)}.weather-head span{display:block;font-size:6px;color:var(--muted);letter-spacing:.17em}.weather-head strong{display:block;margin-top:4px;font-size:8px;letter-spacing:.12em}.weather-state{font-size:6px;color:var(--green);letter-spacing:.11em}
+.weather-main{display:grid;grid-template-columns:50px 1fr;gap:9px;align-items:center;padding:10px 0 8px}.weather-icon{width:48px;height:48px;border:1px solid rgba(103,222,255,.15);display:grid;place-items:center;color:var(--cyan);font-size:21px;background:rgba(103,222,255,.025)}.weather-temp{font-size:26px;font-weight:300}.weather-city{font-size:6px;color:var(--cyan);letter-spacing:.13em}.weather-cond{font-size:6px;color:var(--muted);margin-top:3px}.weather-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.weather-stat{padding:5px;border:1px solid rgba(103,222,255,.07);text-align:center}.weather-stat span{font-size:5px;color:var(--muted)}.weather-stat strong{display:block;margin-top:3px;font-size:7px}
+
+.nyxal{flex:1;min-height:0;padding:12px;display:flex;flex-direction:column}
+.nyx-head{display:flex;justify-content:space-between;align-items:flex-start}.nyx-head .eyebrow{font-size:6px;color:var(--muted);letter-spacing:.17em}.nyx-name{font-size:23px;font-weight:300;letter-spacing:.27em;margin-top:4px}.nyx-sub{font-size:6px;color:var(--cyan);letter-spacing:.12em;margin-top:4px}
+.presence{
+  position:relative;flex:1;min-height:360px;margin-top:10px;overflow:hidden;border:1px solid rgba(103,222,255,.20);
+  background:
+    radial-gradient(circle at 50% 42%,rgba(73,193,242,.17),transparent 25%),
+    radial-gradient(circle at 50% 58%,rgba(73,193,242,.05),transparent 49%),
+    rgba(2,9,15,.78)
+}
+.presence:before{content:"";position:absolute;inset:12px;border:1px solid rgba(103,222,255,.07)}
+.corner{position:absolute;width:15px;height:15px;border-color:rgba(103,222,255,.58);border-style:solid;z-index:6}.tl{left:6px;top:6px;border-width:1px 0 0 1px}.tr{right:6px;top:6px;border-width:1px 1px 0 0}.bl{left:6px;bottom:6px;border-width:0 0 1px 1px}.br{right:6px;bottom:6px;border-width:0 1px 1px 0}
+.nyx-scan{position:absolute;left:3%;right:3%;top:26%;height:1px;background:linear-gradient(90deg,transparent,rgba(103,222,255,.76),transparent);box-shadow:0 0 17px rgba(103,222,255,.42);z-index:7;animation:scan 4s ease-in-out infinite}
+.face{position:absolute;width:92%;height:96%;left:4%;top:2%;z-index:5}
+.data{position:absolute;z-index:8;color:var(--muted);font-size:5px;letter-spacing:.13em}.data strong{display:block;color:var(--cyan);font-size:6px;font-weight:500;margin-top:3px}.d1{left:13px;top:17px}.d2{right:13px;top:17px;text-align:right}.d3{left:13px;bottom:17px}.d4{right:13px;bottom:17px;text-align:right}
+.state-box{margin-top:9px;padding:8px;border:1px solid rgba(103,222,255,.1);background:rgba(103,222,255,.025)}.state-title{font-size:6px;color:var(--muted);letter-spacing:.15em}.state-main{margin-top:4px;font-size:10px;color:var(--cyan);letter-spacing:.15em}.state-desc{margin-top:3px;font-size:6px;line-height:1.4;color:var(--muted)}
+.needs{margin-top:8px;padding-top:8px;border-top:1px solid rgba(103,222,255,.08)}.needs-title{font-size:6px;color:var(--muted);letter-spacing:.15em;margin-bottom:6px}.need{display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:5px;color:var(--muted)}.need em{font-style:normal;color:var(--cyan);margin-left:auto}.needbar{width:48%;height:3px;border:1px solid rgba(103,222,255,.08)}.needbar b{display:block;height:100%;background:linear-gradient(90deg,rgba(103,222,255,.15),rgba(103,222,255,.68))}
+
+@keyframes orbit1{from{transform:translate(-50%,-50%) rotateX(69deg) rotateZ(0)}to{transform:translate(-50%,-50%) rotateX(69deg) rotateZ(360deg)}}@keyframes orbit2{from{transform:translate(-50%,-50%) rotateX(69deg) rotateZ(360deg)}to{transform:translate(-50%,-50%) rotateX(69deg) rotateZ(0)}}@keyframes halo{0%,100%{transform:scale(.97);opacity:.55}50%{transform:scale(1.03);opacity:.9}}@keyframes land1{from{transform:translateX(0)}to{transform:translateX(12px)}}@keyframes land2{from{transform:translateX(0)}to{transform:translateX(-12px)}}@keyframes satA{from{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes satB{from{transform:rotate(360deg)}to{transform:rotate(0)}}@keyframes flight{0%{left:7%;top:10%;transform:rotate(9deg)}25%{left:28%;top:5%;transform:rotate(2deg)}50%{left:56%;top:11%;transform:rotate(-5deg)}75%{left:79%;top:24%;transform:rotate(-10deg)}100%{left:102%;top:39%;transform:rotate(-14deg)}}@keyframes bar{0%,100%{opacity:.18;transform:scaleY(.65)}50%{opacity:.78;transform:scaleY(1.18)}}@keyframes scan{0%{top:25%;opacity:.03}50%{opacity:.8}100%{top:76%;opacity:.03}}
+
+@media(max-width:1200px){.layout{grid-template-columns:220px minmax(470px,1fr)}.col.right{grid-column:1/-1;display:grid;grid-template-columns:310px 1fr}.nyxal{min-height:420px}.stage{height:540px}}
+@media(max-width:900px){body{overflow:auto}.layout{height:auto;min-height:calc(100vh - 68px);grid-template-columns:1fr;padding-bottom:15px}.col.left{display:grid;grid-template-columns:1fr 1fr}.col.right{grid-column:auto;display:flex}.stage{height:480px}.quick-ring{transform:translateX(-50%) scale(.86)}}
+@media(max-width:620px){.topbar{height:auto;min-height:68px;gap:9px;flex-direction:column;align-items:flex-start;padding:9px 12px}.top-meta{gap:9px}.layout{padding:10px}.col.left{display:flex}.stage{height:410px}.earth-wrap{width:225px;height:225px}.planet-halo{width:285px;height:285px}.delta-core{width:88px;height:88px}.delta-core .d{font-size:42px}.quick-ring{transform:translateX(-50%) scale(.68)}.presence{min-height:350px;height:350px}.nyxal{min-height:0}}
 </style>
 </head>
 <body>
 <div id="nyxos">
 
-<header class="top">
-  <div class="brand"><div class="brand-mark">Δ</div><div><div class="brand-name">NYXOS</div><div class="brand-sub">NYXAL OPERATIONAL SYSTEM</div></div></div>
-  <div class="top-right">
-    <div class="top-item"><span class="dot online"></span>NYXAL ONLINE</div>
-    <div class="top-item">RUNTIME <strong id="runtimeTop">WAITING</strong></div>
-    <div class="top-item">DELTA <strong>READY</strong></div>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">Δ</div>
+    <div>
+      <div class="brand-name">NYXOS</div>
+      <div class="brand-sub">NYXAL OPERATIONAL SYSTEM</div>
+    </div>
+  </div>
+  <div class="top-meta">
+    <div class="meta"><span class="dot"></span>NYXAL ONLINE</div>
+    <div class="meta">RUNTIME <strong id="runtimeTop">WAITING</strong></div>
+    <div class="meta">DELTA <strong>READY</strong></div>
     <div class="clock" id="clock">--:--:--</div>
   </div>
 </header>
 
 <div class="layout">
 
-<aside class="column left">
+<aside class="col left">
 
-<section class="panel"><div class="head"><span>SYSTEM</span><span class="code">SYS.01</span></div><div class="metrics">
-<div class="metric"><span>CPU</span><strong>—</strong></div><div class="metric"><span>MEMORY</span><strong>—</strong></div><div class="metric"><span>DISK</span><strong>—</strong></div><div class="metric"><span>NETWORK</span><strong>—</strong></div>
-</div></section>
+<section class="card panel">
+  <div class="panel-head"><span>SYSTEM</span><span class="panel-code">SYS.01</span></div>
+  <div class="metrics">
+    <div class="metric"><span>CPU</span><strong>—</strong></div>
+    <div class="metric"><span>MEMORY</span><strong>—</strong></div>
+    <div class="metric"><span>DISK</span><strong>—</strong></div>
+    <div class="metric"><span>NETWORK</span><strong>—</strong></div>
+  </div>
+</section>
 
-<section class="panel"><div class="head"><span>RUNTIME</span><span class="code">RT.02</span></div><div class="rows">
-<div class="row"><span>Heartbeat</span><strong id="heartbeat">—</strong></div><div class="row"><span>Cycle</span><strong id="cycle">—</strong></div><div class="row"><span>Task Queue</span><strong id="queue">—</strong></div><div class="row"><span>Worker</span><strong id="worker">—</strong></div>
-</div></section>
+<section class="card panel">
+  <div class="panel-head"><span>RUNTIME</span><span class="panel-code">RT.02</span></div>
+  <div class="rows">
+    <div class="row"><span>Heartbeat</span><strong>—</strong></div>
+    <div class="row"><span>Cycle</span><strong>—</strong></div>
+    <div class="row"><span>Task Queue</span><strong>—</strong></div>
+    <div class="row"><span>Worker</span><strong>—</strong></div>
+  </div>
+</section>
 
-<section class="panel"><div class="head"><span>MEMORY</span><span class="code">MEM.03</span></div><div class="memory"><div class="memory-icon">◈</div><div><div class="memory-title">CRYSTALLIZATION</div><div class="memory-sub">Persistent knowledge</div></div></div><div class="memory-stats"><div><span>Crystals</span><strong>—</strong></div><div><span>Knowledge</span><strong>—</strong></div></div></section>
+<section class="card panel">
+  <div class="panel-head"><span>MEMORY</span><span class="panel-code">MEM.03</span></div>
+  <div class="memory-box">
+    <div class="memory-icon">◈</div>
+    <div><div class="memory-name">CRYSTALLIZATION</div><div class="memory-sub">Persistent knowledge</div></div>
+  </div>
+  <div class="memory-grid">
+    <div><span>Crystals</span><strong>—</strong></div>
+    <div><span>Knowledge</span><strong>—</strong></div>
+  </div>
+</section>
 
-<section class="panel"><div class="head"><span>DEVELOPMENT</span><span class="code">DEV.04</span></div><div class="rows">
-<div class="row"><span>Branch</span><strong>desenvolvimento/mcp-bridge</strong></div><div class="row"><span>Status</span><strong id="gitStatus">—</strong></div><div class="row"><span>Observer</span><strong id="observerStatus">—</strong></div>
-</div></section>
+<section class="card panel">
+  <div class="panel-head"><span>DEVELOPMENT</span><span class="panel-code">DEV.04</span></div>
+  <div class="rows">
+    <div class="row"><span>Branch</span><strong class="git-branch">desenvolvimento/mcp-bridge</strong></div>
+    <div class="row"><span>Status</span><strong id="gitStatus">—</strong></div>
+    <div class="row"><span>Observer</span><strong id="observerStatus">—</strong></div>
+  </div>
+</section>
 
 </aside>
 
 <main class="center">
-<div class="center-label">EARTH ORBITAL NETWORK • DELTA CORE • NYXOS</div>
+<div class="center-caption">EARTH ORBITAL NETWORK • DELTA CORE • NYXOS</div>
 
 <div class="stage">
-<div class="axis axis-x"></div><div class="axis axis-y"></div>
-<div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div>
+  <div class="axis axis-x"></div><div class="axis axis-y"></div>
+  <div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div>
+  <div class="planet-halo"></div>
 
-<div class="flight-path"></div><div class="aircraft">✈</div>
-<div class="satellite sat1"></div><div class="satellite sat2"></div><div class="moon"></div>
+  <div class="flight-path"></div>
+  <div class="aircraft" aria-hidden="true">✈</div>
+  <div class="satellite sat1"></div><div class="satellite sat2"></div>
+  <div class="moon"></div>
 
-<div class="globe">
-  <div class="glow"></div>
-  <svg viewBox="0 0 420 420">
-    <defs>
-      <radialGradient id="eg" cx="32%" cy="28%" r="72%"><stop offset="0%" stop-color="#8ae8ff" stop-opacity=".42"/><stop offset="42%" stop-color="#155273" stop-opacity=".9"/><stop offset="82%" stop-color="#06141f"/><stop offset="100%" stop-color="#01070c"/></radialGradient>
-      <radialGradient id="eye"><stop offset="0%" stop-color="#edffff"/><stop offset="50%" stop-color="#63dcff"/><stop offset="100%" stop-color="#0c4f70"/></radialGradient>
-      <clipPath id="ec"><circle cx="210" cy="210" r="154"/></clipPath>
-    </defs>
-    <circle cx="210" cy="210" r="162" fill="rgba(80,212,255,.04)" stroke="rgba(104,224,255,.48)" stroke-width="1.4"/>
-    <circle cx="210" cy="210" r="154" fill="url(#eg)"/>
-    <g clip-path="url(#ec)" opacity=".32" stroke="#83e8ff" fill="none">
-      <ellipse cx="210" cy="210" rx="125" ry="154"/><ellipse cx="210" cy="210" rx="78" ry="154"/>
-      <path d="M56 210h308"/><path d="M72 165h276"/><path d="M72 255h276"/><path d="M91 126h238"/><path d="M91 294h238"/>
-    </g>
-    <g clip-path="url(#ec)" fill="#c9efff" opacity=".72">
-      <path d="M112 132 139 111 160 121 173 145 162 164 142 158 126 175 109 158 96 148z"/>
-      <path d="M157 180 176 168 192 181 188 203 174 223 166 256 149 278 137 260 144 232 129 205 137 190z"/>
-      <path d="M194 115 213 98 233 110 238 130 222 142 203 135z"/>
-      <path d="M226 162 245 150 264 156 279 171 272 186 252 192 239 208 221 198z"/>
-      <path d="M281 122 301 135 309 154 296 165 277 157 270 138z"/>
-      <path d="M307 188 337 178 355 194 349 214 325 220 313 242 294 229 300 207z"/>
-      <path d="M264 258 283 247 302 260 294 279 275 288 255 278z"/>
-      <path d="M200 279 215 295 211 319 197 336 188 315 192 291z"/>
-    </g>
-    <g clip-path="url(#ec)" fill="#ffc65c" opacity=".85">
-      <circle cx="154" cy="180" r="2.3"/><circle cx="169" cy="195" r="2"/><circle cx="189" cy="220" r="2"/>
-      <circle cx="234" cy="176" r="2.2"/><circle cx="257" cy="184" r="1.7"/><circle cx="286" cy="207" r="1.8"/>
-      <circle cx="312" cy="195" r="1.6"/><circle cx="271" cy="268" r="1.8"/><circle cx="215" cy="292" r="1.8"/>
-    </g>
-    <path d="M77 206 Q210 98 347 210" fill="none" stroke="rgba(164,240,255,.18)" stroke-width="5"/>
-  </svg>
+  <div class="earth-wrap">
+    <div class="earth-ring"></div><div class="earth-ring r2"></div>
+    <svg viewBox="0 0 420 420" aria-label="Globo holográfico da Terra">
+      <defs>
+        <radialGradient id="eg" cx="31%" cy="27%" r="74%">
+          <stop offset="0%" stop-color="#83e9ff" stop-opacity=".46"/>
+          <stop offset="45%" stop-color="#1a607f" stop-opacity=".92"/>
+          <stop offset="84%" stop-color="#061521"/>
+          <stop offset="100%" stop-color="#01070c"/>
+        </radialGradient>
+        <clipPath id="clipEarth"><circle cx="210" cy="210" r="154"/></clipPath>
+        <filter id="blur2"><feGaussianBlur stdDeviation="2.6"/></filter>
+      </defs>
+      <circle cx="210" cy="210" r="161" fill="rgba(103,222,255,.035)" stroke="rgba(103,222,255,.46)" stroke-width="1.5"/>
+      <circle cx="210" cy="210" r="154" fill="url(#eg)"/>
+      <g clip-path="url(#clipEarth)">
+        <g opacity=".33" stroke="#84e8ff" fill="none">
+          <ellipse cx="210" cy="210" rx="123" ry="154"/>
+          <ellipse cx="210" cy="210" rx="76" ry="154"/>
+          <path d="M56 210h308"/><path d="M73 165h274"/><path d="M73 255h274"/><path d="M91 128h238"/><path d="M91 292h238"/>
+        </g>
+        <g class="land-a" fill="#c9efff" opacity=".74">
+          <path d="M103 126 132 103 160 113 174 139 163 160 141 155 124 174 105 156 93 143z"/>
+          <path d="M151 177 171 163 188 177 183 201 169 222 160 254 143 277 134 259 141 231 126 204 135 187z"/>
+          <path d="M192 114 212 95 232 107 239 129 222 143 203 136z"/>
+          <path d="M225 161 244 149 265 156 280 172 273 187 252 193 238 209 220 198z"/>
+        </g>
+        <g class="land-b" fill="#aee6fb" opacity=".55">
+          <path d="M284 119 304 132 312 153 298 165 279 157 271 139z"/>
+          <path d="M307 188 338 178 356 194 349 214 325 221 312 242 293 229 300 207z"/>
+          <path d="M264 258 283 247 303 260 295 279 274 289 254 279z"/>
+          <path d="M200 279 215 294 211 319 196 337 187 314 192 291z"/>
+        </g>
+        <g fill="#ffd36b" opacity=".86">
+          <circle cx="153" cy="179" r="2.3"/><circle cx="169" cy="195" r="2"/>
+          <circle cx="189" cy="219" r="2"/><circle cx="234" cy="176" r="2.1"/>
+          <circle cx="257" cy="184" r="1.6"/><circle cx="286" cy="207" r="1.8"/>
+          <circle cx="311" cy="195" r="1.6"/><circle cx="271" cy="269" r="1.8"/>
+          <circle cx="214" cy="293" r="1.8"/>
+        </g>
+        <ellipse cx="164" cy="142" rx="82" ry="68" fill="rgba(255,255,255,.05)" filter="url(#blur2)"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="delta-core">
+    <div class="d">Δ</div><div class="n">DELTA</div><div class="s">CHANGE ARCHITECTURE</div>
+  </div>
+
+  <div class="quick-ring" id="quickRing">
+    <button class="quick-hub" id="quickHub" aria-label="Abrir acesso rápido"><b>⌘</b><span>QUICK ACCESS</span></button>
+    <button class="quick-item q1" data-module="chat"><span>◌</span><span>CHAT</span></button>
+    <button class="quick-item q2" data-module="delta"><span>Δ</span><span>DELTA</span></button>
+    <button class="quick-item q3" data-module="memory"><span>◈</span><span>MEMÓRIA</span></button>
+    <button class="quick-item q4" data-module="projects"><span>◇</span><span>PROJETOS</span></button>
+    <button class="quick-item q5" data-module="files"><span>▱</span><span>ARQUIVOS</span></button>
+    <button class="quick-item q6" data-module="browser"><span>◎</span><span>BROWSER</span></button>
+    <button class="quick-item q7" data-module="terminal"><span>&gt;_</span><span>TERMINAL</span></button>
+  </div>
+
 </div>
 
-<div class="delta-core"><div class="symbol">Δ</div><div class="name">DELTA</div><div class="sub">CHANGE ARCHITECTURE</div></div>
-
-<div class="quick-ring" id="quickRing">
-  <button class="quick-item q1" data-module="chat"><span>◌</span><span>CHAT</span></button>
-  <button class="quick-item q2" data-module="delta"><span>Δ</span><span>DELTA</span></button>
-  <button class="quick-item q3" data-module="memory"><span>◈</span><span>MEMÓRIA</span></button>
-  <button class="quick-item q4" data-module="projects"><span>◇</span><span>PROJETOS</span></button>
-  <button class="quick-item q5" data-module="files"><span>▱</span><span>ARQUIVOS</span></button>
-  <button class="quick-item q6" data-module="browser"><span>◎</span><span>BROWSER</span></button>
-  <button class="quick-item q7" data-module="terminal"><span>&gt;_</span><span>TERMINAL</span></button>
-  <div class="launcher"><button class="launcher-button" id="launcher"><b>⌘</b><span>QUICK ACCESS</span></button></div>
+<div class="telemetry">
+  <div class="telemetry-head"><span>LIVE TELEMETRY</span><strong id="telemetryState">LOCAL UI</strong></div>
+  <div class="bars" id="bars"></div>
 </div>
 
+<div class="cycle">
+  <div class="cycle-title">NYXAL OPERATIONAL CYCLE</div>
+  <div class="flow">
+    <div class="node active"><span>01</span><strong>OBSERVE</strong></div><div class="link"></div>
+    <div class="node"><span>02</span><strong>INVESTIGATE</strong></div><div class="link"></div>
+    <div class="node"><span>03</span><strong>HYPOTHESIS</strong></div><div class="link"></div>
+    <div class="node"><span>04</span><strong>TEST</strong></div><div class="link"></div>
+    <div class="node"><span>05</span><strong>EVALUATE</strong></div><div class="link"></div>
+    <div class="node"><span>06</span><strong>CRYSTALLIZE</strong></div>
+  </div>
 </div>
 
-<div class="telemetry"><div class="telemetry-head"><span>LIVE TELEMETRY</span><strong id="telemetryState">LOCAL UI</strong></div><div class="bars" id="bars"></div></div>
-
-<div class="cycle"><div class="cycle-title">NYXAL OPERATIONAL CYCLE</div><div class="cycle-flow">
-<div class="node active"><span>01</span><strong>OBSERVE</strong></div><div class="link"></div><div class="node"><span>02</span><strong>INVESTIGATE</strong></div><div class="link"></div><div class="node"><span>03</span><strong>HYPOTHESIS</strong></div><div class="link"></div><div class="node"><span>04</span><strong>TEST</strong></div><div class="link"></div><div class="node"><span>05</span><strong>EVALUATE</strong></div><div class="link"></div><div class="node"><span>06</span><strong>CRYSTALLIZE</strong></div>
-</div></div>
 </main>
 
-<aside class="column right">
+<aside class="col right">
 
-<section class="weather">
-<div class="weather-head"><div><span>ENVIRONMENT</span><strong>CLIMA DO DIA</strong></div><div class="weather-state" id="weatherState">CARREGANDO</div></div>
-<div class="weather-main"><div class="weather-icon" id="weatherIcon">☁</div><div><div class="weather-temp"><span id="weatherTemp">—</span>°C</div><div class="weather-city">SÃO PAULO, SP</div><div class="weather-cond" id="weatherCond">Aguardando dados</div></div></div>
-<div class="weather-stats"><div class="weather-stat"><span>MIN</span><strong id="weatherMin">—</strong></div><div class="weather-stat"><span>MAX</span><strong id="weatherMax">—</strong></div><div class="weather-stat"><span>UMID.</span><strong id="weatherHumidity">—</strong></div><div class="weather-stat"><span>VENTO</span><strong id="weatherWind">—</strong></div></div>
+<section class="card weather">
+  <div class="weather-head">
+    <div><span>ENVIRONMENT</span><strong>CLIMA DO DIA</strong></div>
+    <div class="weather-state" id="weatherState">CARREGANDO</div>
+  </div>
+  <div class="weather-main">
+    <div class="weather-icon" id="weatherIcon">☁</div>
+    <div>
+      <div class="weather-temp"><span id="weatherTemp">—</span>°C</div>
+      <div class="weather-city">SÃO PAULO, SP</div>
+      <div class="weather-cond" id="weatherCond">Aguardando dados</div>
+    </div>
+  </div>
+  <div class="weather-stats">
+    <div class="weather-stat"><span>MIN</span><strong id="weatherMin">—</strong></div>
+    <div class="weather-stat"><span>MAX</span><strong id="weatherMax">—</strong></div>
+    <div class="weather-stat"><span>UMID.</span><strong id="weatherHumidity">—</strong></div>
+    <div class="weather-stat"><span>VENTO</span><strong id="weatherWind">—</strong></div>
+  </div>
 </section>
 
-<section class="nyxal">
-<div class="nyx-head"><div><span class="eyebrow">ARTIFICIAL INTELLIGENCE</span><div class="nyx-name">NYXAL</div><div class="nyx-sub">OPERATIONAL PRESENCE</div></div><span class="dot online" style="margin-top:6px"></span></div>
-<div class="presence">
-<div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
-<div class="nyx-scan"></div>
-<div class="data d1"><span>STATE</span><strong>STANDBY</strong></div><div class="data d2"><span>SYNC</span><strong>LOCAL</strong></div><div class="data d3"><span>CORE</span><strong>RUNTIME</strong></div><div class="data d4"><span>MODE</span><strong>OPERATIONAL</strong></div>
-<svg class="face" viewBox="0 0 420 520">
-<defs>
-<linearGradient id="hair" x1="0" x2="1"><stop offset="0" stop-color="#071c2d"/><stop offset=".5" stop-color="#327da3"/><stop offset="1" stop-color="#06131e"/></linearGradient>
-<linearGradient id="skin" x1="0" x2="1"><stop offset="0" stop-color="#8dd8ee" stop-opacity=".18"/><stop offset=".52" stop-color="#effcff" stop-opacity=".72"/><stop offset="1" stop-color="#79c8de" stop-opacity=".1"/></linearGradient>
-<radialGradient id="eye"><stop offset="0" stop-color="#f5ffff"/><stop offset=".5" stop-color="#6ce1ff"/><stop offset="1" stop-color="#0c5274"/></radialGradient>
-</defs>
-<ellipse cx="210" cy="468" rx="153" ry="40" fill="rgba(92,210,255,.08)"/>
-<path d="M72 488 Q104 375 148 347 Q210 314 278 347 Q321 376 349 488" class="face-line"/>
-<path d="M126 204 Q113 88 204 55 Q300 77 294 207 L284 303 Q266 354 209 365 Q153 354 133 301z" fill="rgba(3,11,17,.94)" stroke="rgba(92,210,255,.5)" stroke-width="2"/>
-<path d="M124 214 Q88 97 164 43 Q206 13 258 43 Q337 96 296 220 Q284 122 252 92 Q215 122 174 99 Q154 163 124 214z" fill="url(#hair)" stroke="rgba(92,210,255,.55)" stroke-width="2.5"/>
-<path d="M132 178 Q108 124 151 73 Q183 39 224 47" class="face-line"/>
-<path d="M272 174 Q291 111 253 74" class="face-line"/>
-<path d="M151 171 Q176 151 199 169 Q176 184 151 171z" fill="url(#eye)"/><path d="M221 169 Q246 151 270 170 Q246 184 221 169z" fill="url(#eye)"/>
-<circle cx="178" cy="170" r="3.5" fill="#edffff"/><circle cx="245" cy="170" r="3.5" fill="#edffff"/>
-<path d="M207 171 Q199 205 208 229" fill="none" stroke="url(#skin)" stroke-width="4" stroke-linecap="round"/><path d="M178 251 Q210 272 245 251" fill="none" stroke="rgba(194,240,249,.57)" stroke-width="3" stroke-linecap="round"/>
-<path d="M148 208 Q130 240 150 292" class="face-soft"/><path d="M272 208 Q292 240 270 292" class="face-soft"/>
-<path d="M148 301 Q177 336 211 341 Q250 335 275 301" class="face-line"/>
-<path d="M160 336 Q210 378 261 336" class="face-line"/>
-<g class="face-line" opacity=".65"><path d="M103 122 H72 V220 H111"/><path d="M317 122 H348 V220 H308"/><path d="M87 351 V407 H128"/><path d="M333 351 V407 H292"/></g>
-<g fill="#8beaff"><circle cx="104" cy="122" r="3"/><circle cx="316" cy="122" r="3"/><circle cx="128" cy="407" r="3"/><circle cx="292" cy="407" r="3"/></g>
-</svg>
-</div>
+<section class="card nyxal">
 
-<div class="state"><div class="state-title">CURRENT STATE</div><div class="state-main">AWAITING DATA</div><div class="state-desc">Interface visual carregada. Aguardando conexão com o Runtime Nyxal.</div></div>
+  <div class="nyx-head">
+    <div>
+      <div class="eyebrow">ARTIFICIAL INTELLIGENCE</div>
+      <div class="nyx-name">NYXAL</div>
+      <div class="nyx-sub">OPERATIONAL PRESENCE</div>
+    </div>
+    <span class="dot"></span>
+  </div>
 
-<div class="needs"><div class="needs-title">INTERNAL NEEDS</div>
-<div class="need"><span>COMPUTE</span><div class="need-bar"><b style="width:28%"></b></div><em>—</em></div>
-<div class="need"><span>MEMORY</span><div class="need-bar"><b style="width:22%"></b></div><em>—</em></div>
-<div class="need"><span>STORAGE</span><div class="need-bar"><b style="width:34%"></b></div><em>—</em></div>
-</div>
+  <div class="presence">
+    <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="nyx-scan"></div>
+
+    <div class="data d1"><span>STATE</span><strong>STANDBY</strong></div>
+    <div class="data d2"><span>SYNC</span><strong>LOCAL</strong></div>
+    <div class="data d3"><span>CORE</span><strong>RUNTIME</strong></div>
+    <div class="data d4"><span>MODE</span><strong>OPERATIONAL</strong></div>
+
+    <svg class="face" viewBox="0 0 420 520" aria-label="Presença holográfica de Nyxal">
+      <defs>
+        <linearGradient id="hair" x1="0" x2="1">
+          <stop offset="0" stop-color="#061929"/><stop offset=".5" stop-color="#397f9f"/><stop offset="1" stop-color="#05121d"/>
+        </linearGradient>
+        <linearGradient id="skin" x1="0" x2="1">
+          <stop offset="0" stop-color="#9ce2f2" stop-opacity=".18"/><stop offset=".5" stop-color="#f2fdff" stop-opacity=".72"/><stop offset="1" stop-color="#76c7df" stop-opacity=".10"/>
+        </linearGradient>
+        <radialGradient id="eye">
+          <stop offset="0" stop-color="#f5ffff"/><stop offset=".5" stop-color="#70e4ff"/><stop offset="1" stop-color="#0b5474"/>
+        </radialGradient>
+      </defs>
+
+      <ellipse cx="210" cy="470" rx="155" ry="40" fill="rgba(103,222,255,.08)"/>
+      <path d="M70 489 Q104 378 150 348 Q210 315 278 348 Q322 377 350 489" fill="none" stroke="rgba(103,222,255,.45)" stroke-width="2"/>
+      <path d="M126 205 Q112 88 204 55 Q300 76 294 208 L284 303 Q266 355 209 366 Q153 354 133 301z" fill="rgba(3,10,17,.95)" stroke="rgba(103,222,255,.49)" stroke-width="2"/>
+      <path d="M124 215 Q88 97 164 43 Q206 13 258 43 Q337 96 296 220 Q284 123 252 92 Q214 122 174 99 Q154 164 124 215z" fill="url(#hair)" stroke="rgba(103,222,255,.52)" stroke-width="2.5"/>
+      <path d="M132 178 Q107 123 151 73 Q184 38 224 47" fill="none" stroke="rgba(130,233,255,.56)" stroke-width="4"/>
+      <path d="M272 174 Q292 110 253 74" fill="none" stroke="rgba(130,233,255,.34)" stroke-width="3"/>
+      <path d="M151 171 Q176 151 199 169 Q176 184 151 171z" fill="url(#eye)" stroke="#c7f8ff" stroke-width="1.2"/>
+      <path d="M221 169 Q246 151 270 170 Q246 184 221 169z" fill="url(#eye)" stroke="#c7f8ff" stroke-width="1.2"/>
+      <circle cx="178" cy="170" r="3.4" fill="#edffff"/><circle cx="245" cy="170" r="3.4" fill="#edffff"/>
+      <path d="M207 172 Q199 205 208 229" fill="none" stroke="url(#skin)" stroke-width="4" stroke-linecap="round"/>
+      <path d="M178 251 Q210 272 245 251" fill="none" stroke="rgba(196,241,250,.57)" stroke-width="3" stroke-linecap="round"/>
+      <path d="M149 208 Q130 240 150 292" fill="none" stroke="rgba(103,222,255,.25)" stroke-width="3"/>
+      <path d="M271 208 Q292 240 270 292" fill="none" stroke="rgba(103,222,255,.25)" stroke-width="3"/>
+      <path d="M148 301 Q177 336 211 341 Q251 335 275 301" fill="none" stroke="rgba(103,222,255,.40)" stroke-width="2"/>
+      <path d="M160 336 Q210 378 261 336" fill="none" stroke="rgba(103,222,255,.25)" stroke-width="2"/>
+      <g fill="none" stroke="rgba(103,222,255,.62)" stroke-width="1.5">
+        <path d="M104 122 H72 V220 H111"/><path d="M316 122 H348 V220 H308"/><path d="M88 351 V407 H128"/><path d="M332 351 V407 H292"/>
+      </g>
+      <g fill="#8deaff"><circle cx="104" cy="122" r="3"/><circle cx="316" cy="122" r="3"/><circle cx="128" cy="407" r="3"/><circle cx="292" cy="407" r="3"/></g>
+    </svg>
+  </div>
+
+  <div class="state-box">
+    <div class="state-title">CURRENT STATE</div>
+    <div class="state-main">AWAITING DATA</div>
+    <div class="state-desc">Interface visual carregada. Aguardando conexão com o Runtime Nyxal.</div>
+  </div>
+
+  <div class="needs">
+    <div class="needs-title">INTERNAL NEEDS</div>
+    <div class="need"><span>COMPUTE</span><div class="needbar"><b style="width:28%"></b></div><em>—</em></div>
+    <div class="need"><span>MEMORY</span><div class="needbar"><b style="width:22%"></b></div><em>—</em></div>
+    <div class="need"><span>STORAGE</span><div class="needbar"><b style="width:34%"></b></div><em>—</em></div>
+  </div>
+
 </section>
-
 </aside>
+
 </div>
 
 <script>
 (() => {
-  const clock=document.getElementById("clock");
-  const quickRing=document.getElementById("quickRing");
-  const launcher=document.getElementById("launcher");
-  const runtimeTop=document.getElementById("runtimeTop");
-  function tick(){clock.textContent=new Date().toLocaleTimeString("pt-BR",{hour12:false})}
-  tick();setInterval(tick,1000);
-  launcher.addEventListener("click",()=>quickRing.classList.toggle("open"));
-  document.querySelectorAll("[data-module]").forEach(b=>b.addEventListener("click",()=>{runtimeTop.textContent=b.dataset.module.toUpperCase()}));
+  const $ = id => document.getElementById(id);
 
-  const bars=document.getElementById("bars");
-  for(let i=0;i<22;i++){const e=document.createElement("i");e.style.height=(11+(i%7)*4)+"px";e.style.animationDelay=(i*.07)+"s";bars.appendChild(e)}
-  const nodes=[...document.querySelectorAll(".node")];let idx=0;
-  setInterval(()=>{nodes.forEach((n,i)=>n.classList.toggle("active",i===idx));idx=(idx+1)%nodes.length},2200);
-
-  const codes={0:["☀","Céu limpo"],1:["🌤","Principalmente limpo"],2:["⛅","Parcialmente nublado"],3:["☁","Nublado"],45:["🌫","Névoa"],48:["🌫","Névoa"],51:["🌦","Garoa leve"],53:["🌦","Garoa"],55:["🌧","Garoa forte"],61:["🌧","Chuva leve"],63:["🌧","Chuva"],65:["🌧","Chuva forte"],71:["🌨","Neve"],73:["🌨","Neve"],75:["❄","Neve"],80:["🌦","Pancadas"],81:["🌧","Pancadas"],82:["⛈","Pancadas fortes"],95:["⛈","Trovoada"],96:["⛈","Trovoada"],99:["⛈","Trovoada"]};
-  async function weather(){
-    try{
-      const u="https://api.open-meteo.com/v1/forecast?latitude=-23.5505&longitude=-46.6333&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_min,temperature_2m_max&timezone=America%2FSao_Paulo";
-      const r=await fetch(u);if(!r.ok)throw new Error("weather");
-      const d=await r.json(),c=d.current,day=d.daily,x=codes[c.weather_code]||["☁","Condição atual"];
-      document.getElementById("weatherState").textContent="ATUALIZADO";
-      document.getElementById("weatherTemp").textContent=Math.round(c.temperature_2m);
-      document.getElementById("weatherMin").textContent=Math.round(day.temperature_2m_min[0])+"°";
-      document.getElementById("weatherMax").textContent=Math.round(day.temperature_2m_max[0])+"°";
-      document.getElementById("weatherHumidity").textContent=Math.round(c.relative_humidity_2m)+"%";
-      document.getElementById("weatherWind").textContent=Math.round(c.wind_speed_10m)+" km/h";
-      document.getElementById("weatherIcon").textContent=x[0];
-      document.getElementById("weatherCond").textContent=x[1];
-    }catch(e){document.getElementById("weatherState").textContent="OFFLINE";document.getElementById("weatherCond").textContent="Dados indisponíveis"}
+  function tick(){
+    $("clock").textContent = new Date().toLocaleTimeString("pt-BR",{hour12:false});
   }
-  weather();setInterval(weather,600000);
+  tick();
+  setInterval(tick,1000);
+
+  /* Quick Access — clique no hub para abrir/fechar o arco */
+  const ring = $("quickRing");
+  const hub = $("quickHub");
+
+  hub.addEventListener("click", () => {
+    ring.classList.toggle("open");
+    hub.querySelector("b").textContent = ring.classList.contains("open") ? "×" : "⌘";
+  });
+
+  document.querySelectorAll(".quick-item").forEach(button => {
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      const module = button.dataset.module;
+      $("runtimeTop").textContent = module.toUpperCase();
+      ring.classList.remove("open");
+      hub.querySelector("b").textContent = "⌘";
+    });
+  });
+
+  /* Telemetria visual */
+  const bars = $("bars");
+  for(let i=0;i<24;i++){
+    const bar=document.createElement("i");
+    bar.style.height=(9+(i%8)*3)+"px";
+    bar.style.animationDelay=(i*.06)+"s";
+    bars.appendChild(bar);
+  }
+
+  const nodes=[...document.querySelectorAll(".node")];
+  let idx=0;
+  setInterval(()=>{
+    nodes.forEach((n,i)=>n.classList.toggle("active",i===idx));
+    idx=(idx+1)%nodes.length;
+  },2100);
+
+  /* Clima real */
+  const codes={
+    0:["☀","Céu limpo"],1:["🌤","Principalmente limpo"],2:["⛅","Parcialmente nublado"],3:["☁","Nublado"],
+    45:["🌫","Névoa"],48:["🌫","Névoa"],51:["🌦","Garoa leve"],53:["🌦","Garoa"],55:["🌧","Garoa forte"],
+    61:["🌧","Chuva leve"],63:["🌧","Chuva"],65:["🌧","Chuva forte"],71:["🌨","Neve"],73:["🌨","Neve"],
+    75:["❄","Neve"],80:["🌦","Pancadas"],81:["🌧","Pancadas"],82:["⛈","Pancadas fortes"],
+    95:["⛈","Trovoada"],96:["⛈","Trovoada"],99:["⛈","Trovoada"]
+  };
+
+  async function loadWeather(){
+    try{
+      const url="https://api.open-meteo.com/v1/forecast?latitude=-23.5505&longitude=-46.6333&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_min,temperature_2m_max&timezone=America%2FSao_Paulo";
+      const r=await fetch(url);
+      if(!r.ok) throw new Error("weather");
+      const d=await r.json(), c=d.current, day=d.daily, item=codes[c.weather_code]||["☁","Condição atual"];
+      $("weatherState").textContent="ATUALIZADO";
+      $("weatherTemp").textContent=Math.round(c.temperature_2m);
+      $("weatherMin").textContent=Math.round(day.temperature_2m_min[0])+"°";
+      $("weatherMax").textContent=Math.round(day.temperature_2m_max[0])+"°";
+      $("weatherHumidity").textContent=Math.round(c.relative_humidity_2m)+"%";
+      $("weatherWind").textContent=Math.round(c.wind_speed_10m)+" km/h";
+      $("weatherIcon").textContent=item[0];
+      $("weatherCond").textContent=item[1];
+    }catch{
+      $("weatherState").textContent="OFFLINE";
+      $("weatherCond").textContent="Dados indisponíveis";
+    }
+  }
+
+  loadWeather();
+  setInterval(loadWeather,600000);
 })();
 </script>
+
 </div>
 </body>
 </html>
