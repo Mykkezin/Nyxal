@@ -344,6 +344,25 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
       <stop offset=".44" stop-color="#7bdffb" stop-opacity=".18"/>
       <stop offset="1" stop-color="#2aa9df" stop-opacity="0"/>
     </radialGradient>
+    <radialGradient id="nyxVolume" cx="43%" cy="40%" r="70%">
+      <stop offset="0" stop-color="#f4ffff" stop-opacity=".34"/>
+      <stop offset=".28" stop-color="#b8f4ff" stop-opacity=".20"/>
+      <stop offset=".58" stop-color="#3aaed7" stop-opacity=".09"/>
+      <stop offset=".82" stop-color="#071923" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#01070d" stop-opacity=".52"/>
+    </radialGradient>
+    <linearGradient id="nyxPlane" x1="0" x2="1">
+      <stop offset="0" stop-color="#06131b" stop-opacity=".50"/>
+      <stop offset=".28" stop-color="#9ceeff" stop-opacity=".08"/>
+      <stop offset=".50" stop-color="#f4ffff" stop-opacity=".18"/>
+      <stop offset=".72" stop-color="#9ceeff" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#06131b" stop-opacity=".50"/>
+    </linearGradient>
+    <radialGradient id="nyxSpecular" cx="36%" cy="32%" r="65%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".36"/>
+      <stop offset=".22" stop-color="#bdf7ff" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#bdf7ff" stop-opacity="0"/>
+    </radialGradient>
     <linearGradient id="nyxSkin" x1="0" x2="1">
       <stop offset="0" stop-color="#72d8f5" stop-opacity=".10"/>
       <stop offset=".5" stop-color="#efffff" stop-opacity=".28"/>
@@ -423,7 +442,33 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
     C251 299 264 268 266 229
     L269 163
     C269 119 249 93 210 93Z"
-    fill="url(#nyxSkin)" stroke="#c9f9ff" stroke-opacity=".40" stroke-width="1.8"/>
+    fill="url(#nyxSkin)" stroke="#c9f9ff" stroke-opacity=".40" stroke-width="1.8"/>\n\n    <!-- volume 3D: luz, planos e profundidade facial -->
+  <path d="M210 93
+    C171 93 151 119 151 163
+    L154 229
+    C156 268 169 299 190 317
+    Q210 333 230 317
+    C251 299 264 268 266 229
+    L269 163
+    C269 119 249 93 210 93Z"
+    fill="url(#nyxVolume)" opacity=".78"/>
+
+  <path d="M154 164 Q177 145 198 151 L190 206 Q173 225 155 218Z"
+    fill="#081b25" fill-opacity=".15"/>
+  <path d="M222 151 Q243 145 266 164 L265 218 Q247 225 230 206Z"
+    fill="#071923" fill-opacity=".22"/>
+
+  <path d="M158 229 Q177 215 193 220 L190 298 Q171 287 160 258Z"
+    fill="#06151e" fill-opacity=".13"/>
+  <path d="M227 220 Q243 215 262 229 L260 258 Q249 287 230 298Z"
+    fill="#06151e" fill-opacity=".18"/>
+
+  <ellipse cx="185" cy="147" rx="43" ry="72" fill="url(#nyxSpecular)" opacity=".52"/>
+
+  <path d="M210 96 Q196 152 201 205 Q204 238 210 260 Q216 238 219 205 Q224 152 210 96Z"
+    fill="url(#nyxPlane)" opacity=".38"/>
+
+
 
   <g clip-path="url(#nyxFaceClip)">
     <rect x="146" y="86" width="128" height="255" fill="url(#nyxDots)" opacity=".90"/>
