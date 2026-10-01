@@ -922,9 +922,41 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
 }
 </style>
 
+
+<style>
+/* Remove legacy visual-reference layers; the Home is now composed from live elements */
+#nyxos .reference-home,
+#nyxos .live-home,
+#nyxos .live-weather,
+#nyxos .live-system{
+  display:none !important;
+}
+#nyxos .topbar{
+  display:none !important;
+}
+#nyxos .workspace{
+  position:absolute;
+  inset:0;
+  height:100%;
+  padding:0;
+}
+#nyxos .panel-left,
+#nyxos .panel-right{
+  display:none !important;
+}
+#nyxos .center{
+  position:absolute;
+  inset:0;
+  left:0;
+  right:0;
+  top:0;
+  bottom:0;
+}
+</style>
+
 </head>
 <body>
-<div id="nyxos" class="visual-reference">
+<div id="nyxos">
 
 
 
