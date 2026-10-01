@@ -3,28 +3,27 @@
 """
 NIXAL / NYXAL — OBSERVADOR DE DESENVOLVIMENTO
 
-Responsabilidade:
-    observar continuamente a branch de desenvolvimento e acionar
-    o CoordenadorDesenvolvimentoNixal quando houver trabalho remoto.
+Observa continuamente a branch de desenvolvimento e coordena:
+    1. sincronização Git controlada;
+    2. validação dos arquivos alterados;
+    3. testes alterados;
+    4. pipeline de entrada de artefatos externos.
 
-Este componente NÃO:
-    - escreve código;
-    - faz merge;
-    - altera main;
-    - força refs;
-    - executa comandos arbitrários;
-    - publica alterações.
+Limites:
+    - não faz merge;
+    - não altera main;
+    - não força refs;
+    - não publica;
+    - não executa código recebido pelo pipeline de entrada.
 
 Fluxo:
     observação
         ↓
-    coordenador
+    coordenador Git
         ↓
-    fetch/pull fast-forward
+    validação/testes
         ↓
-    validação
-        ↓
-    testes
+    pipeline incoming
         ↓
     resultado
 """
@@ -37,6 +36,9 @@ from pathlib import Path
 
 from nixal_coordenador_desenvolvimento import (
     CoordenadorDesenvolvimentoNixal,
+)
+from nixal_pipeline_desenvolvimento import (
+    PipelineDesenvolvimentoNixal,
 )
 
 
@@ -61,6 +63,12 @@ class ObservadorDesenvolvimentoNixal:
             )
         )
 
+        self.pipeline = (
+            PipelineDesenvolvimentoNixal(
+                repositorio=self.repositorio,
+            )
+        )
+
         self.ativo = True
         self.ultimo_estado: dict | None = None
 
@@ -69,10 +77,27 @@ class ObservadorDesenvolvimentoNixal:
         self.ativo = False
 
     def ciclo(self) -> dict:
-        """Executa uma única verificação."""
-        resultado = (
+        """Executa uma única verificação Git + pipeline."""
+        desenvolvimento = (
             self.coordenador.executar_ciclo()
         )
+
+        pipeline = (
+            self.pipeline.executar_ciclo()
+        )
+
+        resultado = {
+            "desenvolvimento": desenvolvimento,
+            "pipeline": pipeline,
+            "ciclo_sucesso": (
+                desenvolvimento["ciclo_sucesso"]
+                and pipeline["estado"]
+                in {
+                    "nenhum_artefato",
+                    "processamento_concluido",
+                }
+            ),
+        }
 
         self.ultimo_estado = resultado
 
@@ -159,9 +184,7 @@ if __name__ == "__main__":
         print(
             json.dumps(
                 {
-                    "estado": (
-                        "observador_encerrado"
-                    ),
+                    "estado": "observador_encerrado"
                 },
                 ensure_ascii=False,
                 indent=2,
