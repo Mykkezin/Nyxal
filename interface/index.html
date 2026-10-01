@@ -340,145 +340,145 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
         <svg class="face" viewBox="0 0 420 520" aria-label="Presença holográfica de Nyxal">
   <defs>
     <radialGradient id="nyxHalo" cx="50%" cy="38%" r="64%">
-      <stop offset="0" stop-color="#e9ffff" stop-opacity=".42"/>
-      <stop offset=".42" stop-color="#7bdffb" stop-opacity=".20"/>
+      <stop offset="0" stop-color="#e9ffff" stop-opacity=".40"/>
+      <stop offset=".44" stop-color="#7bdffb" stop-opacity=".18"/>
       <stop offset="1" stop-color="#2aa9df" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="nyxSkin" x1="0" x2="1">
-      <stop offset="0" stop-color="#72d8f5" stop-opacity=".12"/>
-      <stop offset=".5" stop-color="#efffff" stop-opacity=".30"/>
-      <stop offset="1" stop-color="#58c9eb" stop-opacity=".10"/>
+      <stop offset="0" stop-color="#72d8f5" stop-opacity=".10"/>
+      <stop offset=".5" stop-color="#efffff" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#58c9eb" stop-opacity=".08"/>
     </linearGradient>
     <linearGradient id="nyxHair" x1="0" x2="1">
       <stop offset="0" stop-color="#020910" stop-opacity=".94"/>
-      <stop offset=".45" stop-color="#163344" stop-opacity=".66"/>
-      <stop offset=".55" stop-color="#071720" stop-opacity=".82"/>
+      <stop offset=".45" stop-color="#163344" stop-opacity=".64"/>
+      <stop offset=".55" stop-color="#071720" stop-opacity=".78"/>
       <stop offset="1" stop-color="#01070d" stop-opacity=".94"/>
     </linearGradient>
     <linearGradient id="nyxHairEdge" x1="0" x2="1">
-      <stop offset="0" stop-color="#8ceaff" stop-opacity=".12"/>
-      <stop offset=".45" stop-color="#d9fbff" stop-opacity=".48"/>
-      <stop offset="1" stop-color="#65d8f7" stop-opacity=".12"/>
+      <stop offset="0" stop-color="#8ceaff" stop-opacity=".10"/>
+      <stop offset=".48" stop-color="#d9fbff" stop-opacity=".44"/>
+      <stop offset="1" stop-color="#65d8f7" stop-opacity=".10"/>
     </linearGradient>
     <radialGradient id="nyxEye">
       <stop offset="0" stop-color="#ffffff"/>
-      <stop offset=".34" stop-color="#b8f6ff"/>
-      <stop offset=".78" stop-color="#55dafa"/>
+      <stop offset=".36" stop-color="#b8f6ff"/>
+      <stop offset=".80" stop-color="#55dafa"/>
       <stop offset="1" stop-color="#0a6b8d"/>
     </radialGradient>
-    <pattern id="nyxSkinDots" width="13" height="13" patternUnits="userSpaceOnUse">
-      <circle cx="6.5" cy="6.5" r="1.45" fill="#e8fcff" fill-opacity=".22"/>
-      <circle cx="6.5" cy="6.5" r=".45" fill="#ffffff" fill-opacity=".62"/>
+    <pattern id="nyxDots" width="11" height="11" patternUnits="userSpaceOnUse">
+      <circle cx="5.5" cy="5.5" r="1.35" fill="#e8fcff" fill-opacity=".25"/>
+      <circle cx="5.5" cy="5.5" r=".42" fill="#ffffff" fill-opacity=".66"/>
     </pattern>
     <clipPath id="nyxFaceClip">
-      <path d="M210 82
-        C168 82 144 112 145 163
-        L151 252
-        C154 299 177 330 210 345
-        C243 330 266 299 269 252
-        L275 163
-        C276 112 252 82 210 82Z"/>
+      <path d="M210 93
+        C171 93 151 119 151 163
+        L154 229
+        C156 268 169 299 190 317
+        Q210 333 230 317
+        C251 299 264 268 266 229
+        L269 163
+        C269 119 249 93 210 93Z"/>
     </clipPath>
-    <filter id="nyxSoft"><feGaussianBlur stdDeviation="12"/></filter>
+    <filter id="nyxSoft"><feGaussianBlur stdDeviation="11"/></filter>
   </defs>
 
-  <ellipse cx="210" cy="246" rx="172" ry="220" fill="url(#nyxHalo)" filter="url(#nyxSoft)"/>
+  <ellipse cx="210" cy="238" rx="170" ry="205" fill="url(#nyxHalo)" filter="url(#nyxSoft)"/>
 
-  <!-- presença corporal -->
-  <path d="M54 507 Q70 417 126 371 Q164 341 210 339 Q256 341 294 371 Q350 417 366 507"
-    fill="#07151e" fill-opacity=".52" stroke="#72defa" stroke-opacity=".30" stroke-width="2"/>
-  <path d="M128 371 Q149 418 166 505" fill="none" stroke="#c9f9ff" stroke-opacity=".15" stroke-width="2"/>
-  <path d="M292 371 Q271 418 254 505" fill="none" stroke="#c9f9ff" stroke-opacity=".15" stroke-width="2"/>
-
-  <!-- cabelo longo: moldura da cabeça e queda lateral -->
-  <path d="M121 225
-    Q93 157 112 91
-    Q130 29 192 31
-    Q210 18 228 31
-    Q290 29 308 91
-    Q327 157 299 225
-    L291 383
-    Q284 420 264 451
-    L246 414
-    Q252 348 260 291
-    Q272 236 270 175
-    Q265 103 210 70
-    Q155 103 150 175
-    Q148 236 160 291
-    Q168 348 174 414
-    L156 451
-    Q136 420 129 383Z"
+  <!-- cabelo longo: moldura, não alongamento do rosto -->
+  <path d="M125 232
+    Q99 161 116 93
+    Q131 39 184 31
+    Q210 18 236 31
+    Q289 39 304 93
+    Q321 161 295 232
+    L290 392
+    Q282 438 257 474
+    L241 431
+    Q249 361 258 293
+    Q270 226 265 163
+    Q261 112 210 72
+    Q159 112 155 163
+    Q150 226 162 293
+    Q171 361 179 431
+    L163 474
+    Q138 438 130 392Z"
     fill="url(#nyxHair)" stroke="url(#nyxHairEdge)" stroke-width="2"/>
 
-  <!-- fios holográficos -->
-  <path d="M137 371 Q119 225 151 103 Q170 57 210 48"
-    fill="none" stroke="#dffcff" stroke-opacity=".26" stroke-width="3"/>
-  <path d="M283 371 Q301 225 269 103 Q250 57 210 48"
-    fill="none" stroke="#8de9ff" stroke-opacity=".20" stroke-width="3"/>
-  <path d="M119 324 Q103 203 129 117 Q141 73 176 48"
-    fill="none" stroke="#5ed3f3" stroke-opacity=".16" stroke-width="2"/>
-  <path d="M301 324 Q317 203 291 117 Q279 73 244 48"
-    fill="none" stroke="#5ed3f3" stroke-opacity=".12" stroke-width="2"/>
+  <path d="M139 391 Q119 224 150 105 Q169 60 210 48"
+    fill="none" stroke="#dffcff" stroke-opacity=".24" stroke-width="3"/>
+  <path d="M281 391 Q301 224 270 105 Q251 60 210 48"
+    fill="none" stroke="#8de9ff" stroke-opacity=".18" stroke-width="3"/>
+  <path d="M122 337 Q106 207 132 116 Q145 70 177 49"
+    fill="none" stroke="#5ed3f3" stroke-opacity=".14" stroke-width="2"/>
+  <path d="M298 337 Q314 207 288 116 Q275 70 243 49"
+    fill="none" stroke="#5ed3f3" stroke-opacity=".10" stroke-width="2"/>
 
-  <!-- rosto -->
-  <path d="M210 82
-    C168 82 144 112 145 163
-    L151 252
-    C154 299 177 330 210 345
-    C243 330 266 299 269 252
-    L275 163
-    C276 112 252 82 210 82Z"
-    fill="url(#nyxSkin)" stroke="#c9f9ff" stroke-opacity=".42" stroke-width="1.8"/>
+  <!-- rosto: proporção mais uniforme e humanoide -->
+  <path d="M210 93
+    C171 93 151 119 151 163
+    L154 229
+    C156 268 169 299 190 317
+    Q210 333 230 317
+    C251 299 264 268 266 229
+    L269 163
+    C269 119 249 93 210 93Z"
+    fill="url(#nyxSkin)" stroke="#c9f9ff" stroke-opacity=".40" stroke-width="1.8"/>
 
   <g clip-path="url(#nyxFaceClip)">
-    <rect x="140" y="75" width="140" height="285" fill="url(#nyxSkinDots)" opacity=".88"/>
+    <rect x="146" y="86" width="128" height="255" fill="url(#nyxDots)" opacity=".90"/>
 
-    <!-- topologia facial -->
-    <path d="M143 132 Q176 109 210 116 Q244 109 277 132" fill="none" stroke="#bff7ff" stroke-opacity=".14"/>
-    <path d="M143 160 Q177 143 210 148 Q243 143 277 160" fill="none" stroke="#9ceeff" stroke-opacity=".11"/>
-    <path d="M145 190 Q177 178 210 182 Q243 178 275 190" fill="none" stroke="#9ceeff" stroke-opacity=".09"/>
-    <path d="M147 220 Q178 212 210 216 Q242 212 273 220" fill="none" stroke="#9ceeff" stroke-opacity=".09"/>
-    <path d="M149 250 Q180 246 210 249 Q240 246 271 250" fill="none" stroke="#9ceeff" stroke-opacity=".08"/>
-    <path d="M153 280 Q182 278 210 281 Q238 278 267 280" fill="none" stroke="#9ceeff" stroke-opacity=".08"/>
+    <!-- malha uniforme seguindo o volume -->
+    <path d="M151 133 Q180 113 210 119 Q240 113 269 133" fill="none" stroke="#bff7ff" stroke-opacity=".15"/>
+    <path d="M150 157 Q180 142 210 147 Q240 142 270 157" fill="none" stroke="#9ceeff" stroke-opacity=".12"/>
+    <path d="M151 181 Q181 171 210 175 Q239 171 269 181" fill="none" stroke="#9ceeff" stroke-opacity=".10"/>
+    <path d="M152 206 Q181 199 210 202 Q239 199 268 206" fill="none" stroke="#9ceeff" stroke-opacity=".09"/>
+    <path d="M153 231 Q182 227 210 230 Q238 227 267 231" fill="none" stroke="#9ceeff" stroke-opacity=".08"/>
+    <path d="M155 255 Q183 253 210 256 Q237 253 265 255" fill="none" stroke="#9ceeff" stroke-opacity=".08"/>
+    <path d="M159 279 Q185 280 210 282 Q235 280 261 279" fill="none" stroke="#9ceeff" stroke-opacity=".07"/>
 
-    <!-- olhos inspirados em uma presença serena -->
-    <path d="M157 172 Q177 157 198 170 Q179 179 157 172Z"
-      fill="url(#nyxEye)" stroke="#ecffff" stroke-opacity=".58" stroke-width="1.1"/>
-    <path d="M222 170 Q243 157 263 172 Q241 179 222 170Z"
-      fill="url(#nyxEye)" stroke="#ecffff" stroke-opacity=".58" stroke-width="1.1"/>
-    <path d="M156 167 Q177 153 199 164" fill="none" stroke="#dfffff" stroke-opacity=".30" stroke-width="2"/>
-    <path d="M221 164 Q243 153 264 167" fill="none" stroke="#dfffff" stroke-opacity=".30" stroke-width="2"/>
-    <circle cx="179" cy="170" r="3" fill="#ffffff"/>
-    <circle cx="241" cy="170" r="3" fill="#ffffff"/>
+    <!-- sobrancelhas e olhos -->
+    <path d="M159 159 Q178 148 198 158" fill="none" stroke="#e8fdff" stroke-opacity=".34" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M222 158 Q242 148 261 159" fill="none" stroke="#e8fdff" stroke-opacity=".34" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M159 169 Q178 158 198 169 Q179 178 159 169Z"
+      fill="url(#nyxEye)" stroke="#ecffff" stroke-opacity=".54" stroke-width="1.1"/>
+    <path d="M222 169 Q242 158 261 169 Q241 178 222 169Z"
+      fill="url(#nyxEye)" stroke="#ecffff" stroke-opacity=".54" stroke-width="1.1"/>
+    <circle cx="179" cy="169" r="2.7" fill="#ffffff"/>
+    <circle cx="241" cy="169" r="2.7" fill="#ffffff"/>
 
-    <!-- nariz delicado -->
-    <path d="M210 166 C206 193 205 215 210 231 Q214 239 207 244"
-      fill="none" stroke="#e8fdff" stroke-opacity=".38" stroke-width="2.2" stroke-linecap="round"/>
-    <path d="M201 246 Q210 250 219 246" fill="none" stroke="#bdf7ff" stroke-opacity=".20" stroke-width="1.2"/>
+    <!-- nariz -->
+    <path d="M210 166 C206 191 205 211 210 226 Q213 233 208 238"
+      fill="none" stroke="#e8fdff" stroke-opacity=".34" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M202 240 Q210 244 218 240" fill="none" stroke="#bdf7ff" stroke-opacity=".18" stroke-width="1.1"/>
 
-    <!-- boca -->
-    <path d="M184 274 Q210 286 236 274"
-      fill="none" stroke="#efffff" stroke-opacity=".42" stroke-width="2.2" stroke-linecap="round"/>
-    <path d="M191 278 Q210 282 229 278"
-      fill="none" stroke="#6fdcf8" stroke-opacity=".18" stroke-width="1"/>
+    <!-- boca curta e proporcional -->
+    <path d="M188 263 Q210 273 232 263"
+      fill="none" stroke="#efffff" stroke-opacity=".38" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M195 267 Q210 270 225 267"
+      fill="none" stroke="#6fdcf8" stroke-opacity=".16" stroke-width="1"/>
 
-    <!-- linhas verticais de leitura -->
-    <path d="M166 96 Q181 176 170 332" fill="none" stroke="#c8f9ff" stroke-opacity=".055"/>
-    <path d="M188 82 Q196 174 190 345" fill="none" stroke="#c8f9ff" stroke-opacity=".055"/>
-    <path d="M232 82 Q224 174 230 345" fill="none" stroke="#c8f9ff" stroke-opacity=".055"/>
-    <path d="M254 96 Q239 176 250 332" fill="none" stroke="#c8f9ff" stroke-opacity=".055"/>
+    <!-- leitura vertical discreta -->
+    <path d="M173 101 Q185 174 178 315" fill="none" stroke="#c8f9ff" stroke-opacity=".05"/>
+    <path d="M192 91 Q198 174 193 327" fill="none" stroke="#c8f9ff" stroke-opacity=".05"/>
+    <path d="M228 91 Q222 174 227 327" fill="none" stroke="#c8f9ff" stroke-opacity=".05"/>
+    <path d="M247 101 Q235 174 242 315" fill="none" stroke="#c8f9ff" stroke-opacity=".05"/>
   </g>
 
-  <!-- pescoço -->
-  <path d="M176 325 L176 386 Q210 405 244 386 L244 325"
-    fill="#07151e" fill-opacity=".34" stroke="#78e1fb" stroke-opacity=".26" stroke-width="1.5"/>
+  <!-- pescoço e ombros: proporcionais ao novo rosto -->
+  <path d="M181 303 L181 370 Q210 389 239 370 L239 303"
+    fill="#07151e" fill-opacity=".32" stroke="#78e1fb" stroke-opacity=".24" stroke-width="1.5"/>
+  <path d="M61 507 Q78 419 128 374 Q166 344 210 343 Q254 344 292 374 Q342 419 359 507"
+    fill="#07151e" fill-opacity=".44" stroke="#72defa" stroke-opacity=".28" stroke-width="2"/>
+  <path d="M132 374 Q154 421 170 507" fill="none" stroke="#c9f9ff" stroke-opacity=".13" stroke-width="2"/>
+  <path d="M288 374 Q266 421 250 507" fill="none" stroke="#c9f9ff" stroke-opacity=".13" stroke-width="2"/>
 
-  <!-- marca central discreta da Nyxal -->
-  <path d="M210 354 L202 369 L210 383 L218 369Z"
-    fill="#bdf8ff" fill-opacity=".16" stroke="#75e1ff" stroke-opacity=".30"/>
+  <!-- marca discreta da Nyxal -->
+  <path d="M210 344 L203 358 L210 371 L217 358Z"
+    fill="#bdf8ff" fill-opacity=".14" stroke="#75e1ff" stroke-opacity=".26"/>
 
   <!-- moldura HUD -->
-  <g fill="none" stroke="#75e1ff" stroke-opacity=".38" stroke-width="1.3">
+  <g fill="none" stroke="#75e1ff" stroke-opacity=".36" stroke-width="1.3">
     <path d="M94 125 H65 V226 H106"/>
     <path d="M326 125 H355 V226 H314"/>
     <path d="M105 350 H77 V416 H137"/>
@@ -491,9 +491,9 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
     <circle cx="283" cy="416" r="2.2"/>
   </g>
 
-  <g opacity=".27">
-    <circle cx="210" cy="232" r="179" fill="none" stroke="#70ddfa" stroke-opacity=".20"/>
-    <circle cx="210" cy="232" r="191" fill="none" stroke="#70ddfa" stroke-opacity=".09" stroke-dasharray="3 9"/>
+  <g opacity=".25">
+    <circle cx="210" cy="232" r="179" fill="none" stroke="#70ddfa" stroke-opacity=".18"/>
+    <circle cx="210" cy="232" r="191" fill="none" stroke="#70ddfa" stroke-opacity=".08" stroke-dasharray="3 9"/>
   </g>
 </svg>
       </div>
