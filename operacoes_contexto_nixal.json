@@ -1,0 +1,29 @@
+[
+  {
+    "nome": "selecionar",
+    "descricao": "Seleciona uma informação específica que já esteja presente no contexto atual.",
+    "objetivo": "Obter uma informação existente no contexto sem executar uma nova capacidade.",
+    "tipo_entrada": "contexto",
+    "tipo_saida": "informacao_selecionada",
+    "argumentos": {
+      "consulta": {
+        "tipo": "string",
+        "obrigatorio": true,
+        "descricao": "Descrição da informação que deve ser localizada dentro do contexto."
+      }
+    },
+    "regras": [
+      "A informação selecionada deve existir no contexto.",
+      "A operação não pode inventar informações ausentes.",
+      "Quando existir mais de uma correspondência possível sem critério suficiente, a operação deve recusar por ambiguidade.",
+      "Quando uma informação explicitamente solicitada não existir no contexto, a operação deve recusar por ausência.",
+      "A operação não executa capacidades.",
+      "A operação não altera o contexto original."
+    ],
+    "exemplos": [
+      "Selecionar o arquivo capacidades_nixal.json da lista.",
+      "Selecionar o resultado da primeira etapa.",
+      "Obter do contexto o arquivo estado_corpo_nixal.json."
+    ]
+  }
+]

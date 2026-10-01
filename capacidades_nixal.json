@@ -1,0 +1,128 @@
+[
+  {
+    "nome": "obter_hora",
+    "descricao": "Obtém o horário atual da máquina.",
+    "objetivo": "Descobrir o horário atual do sistema.",
+    "exemplos": [
+      "Que horas são?",
+      "Preciso saber a hora.",
+      "Qual é o horário agora?",
+      "Me diga o horário atual."
+    ],
+    "argumentos": {},
+    "dominios": [
+      "sistema_computacional"
+    ],
+    "evidencias_dominio": [
+      "hora",
+      "horario",
+      "sistema",
+      "maquina"
+    ]
+  },
+  {
+    "nome": "listar_arquivos",
+    "descricao": "Lista os arquivos do diretório do projeto Nixal.",
+    "objetivo": "Descobrir quais arquivos existem no projeto Nixal.",
+    "exemplos": [
+      "Quais arquivos existem?",
+      "Quero conhecer os arquivos do projeto.",
+      "Liste os arquivos da Nixal.",
+      "Quais arquivos estão disponíveis?"
+    ],
+    "argumentos": {},
+    "dominios": [
+      "projeto_arquivo"
+    ],
+    "evidencias_dominio": [
+      "arquivo",
+      "arquivos",
+      "projeto",
+      "diretorio",
+      "pasta"
+    ]
+  },
+  {
+    "nome": "ler_estado_corpo",
+    "descricao": "Lê o estado atual do corpo da Nixal.",
+    "objetivo": "Consultar o estado atual do corpo computacional da Nixal, incluindo CPU, memória, GPU, temperaturas, armazenamento e processos.",
+    "exemplos": [
+      "Como está meu corpo?",
+      "Como está minha CPU?",
+      "Qual é o uso da minha GPU?",
+      "Como está minha memória?",
+      "Quais são minhas temperaturas?",
+      "Qual é o estado atual do meu computador?"
+    ],
+    "argumentos": {},
+    "dominios": [
+      "corpo_computacional"
+    ],
+    "evidencias_dominio": [
+      "corpo",
+      "corporal",
+      "cpu",
+      "gpu",
+      "memoria",
+      "armazenamento",
+      "processos",
+      "computador",
+      "computacional"
+    ]
+  },
+  {
+    "nome": "ler_memoria_corporal",
+    "descricao": "Lê os eventos registrados na memória corporal.",
+    "objetivo": "Consultar eventos e acontecimentos registrados anteriormente pelo corpo da Nixal.",
+    "exemplos": [
+      "Quais eventos meu corpo registrou?",
+      "O que meu corpo registrou?",
+      "Quais eventos corporais aconteceram?",
+      "Mostre meu histórico corporal.",
+      "O que aconteceu com meu corpo?",
+      "Quais eventos estão na minha memória corporal?"
+    ],
+    "argumentos": {},
+    "dominios": [
+      "corpo_computacional"
+    ],
+    "evidencias_dominio": [
+      "corpo",
+      "corporal",
+      "evento",
+      "eventos",
+      "historico",
+      "acontecimentos"
+    ]
+  },
+  {
+    "nome": "ler_arquivo",
+    "descricao": "Lê um arquivo de texto dentro do projeto Nixal.",
+    "objetivo": "Ler o conteúdo textual de um arquivo específico cujo nome ou caminho relativo foi fornecido.",
+    "exemplos": [
+      "Leia o arquivo estado_corpo_nixal.json.",
+      "Mostre o conteúdo de capacidades_nixal.json.",
+      "Abra o arquivo teste.py.",
+      "Leia o conteúdo de um arquivo específico."
+    ],
+    "argumentos": {
+      "arquivo": {
+        "tipo": "string",
+        "obrigatorio": true,
+        "descricao": "Nome ou caminho relativo do arquivo dentro do projeto Nixal."
+      }
+    },
+    "dominios": [
+      "projeto_arquivo"
+    ],
+    "evidencias_dominio": [
+      "arquivo",
+      "arquivos",
+      "projeto",
+      "texto",
+      "conteudo",
+      "caminho",
+      "diretorio"
+    ]
+  }
+]

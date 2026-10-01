@@ -1,0 +1,4348 @@
+[
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790828187672567968",
+    "iniciado_em": "2026-10-01T01:16:27.672572-03:00",
+    "concluido_em": "2026-10-01T01:16:27.676015-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790828187672567968"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": null,
+                "estado": "indisponivel",
+                "calibrada": false
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 10.53,
+                "usado_gb": 4.98,
+                "uso_percentual": 32.08,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 4,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 29.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 36.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 27.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.3,
+                "livre_gb": 39.1,
+                "uso_percentual": 59.0,
+                "estado": "normal"
+              },
+              "processos": 394,
+              "uptime_segundos": 26359.77
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:16:27.675473-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790828692748852515",
+    "iniciado_em": "2026-10-01T01:24:52.748856-03:00",
+    "concluido_em": "2026-10-01T01:24:52.752068-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790828692748852515"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": null,
+                "estado": "indisponivel",
+                "calibrada": false
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 10.64,
+                "usado_gb": 4.86,
+                "uso_percentual": 31.37,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 2,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 30.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.31,
+                "livre_gb": 39.1,
+                "uso_percentual": 59.01,
+                "estado": "normal"
+              },
+              "processos": 380,
+              "uptime_segundos": 26864.85
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:24:52.751525-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790828693754082471",
+    "iniciado_em": "2026-10-01T01:24:53.754088-03:00",
+    "concluido_em": "2026-10-01T01:24:53.757136-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790828693754082471"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": 0.75,
+                "estado": "baixa_carga",
+                "calibrada": true
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 10.64,
+                "usado_gb": 4.86,
+                "uso_percentual": 31.37,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 0,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 30.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.31,
+                "livre_gb": 39.1,
+                "uso_percentual": 59.01,
+                "estado": "normal"
+              },
+              "processos": 380,
+              "uptime_segundos": 26865.85
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:24:53.756545-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790828694759510311",
+    "iniciado_em": "2026-10-01T01:24:54.759516-03:00",
+    "concluido_em": "2026-10-01T01:24:54.762606-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790828694759510311"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": 0.94,
+                "estado": "baixa_carga",
+                "calibrada": true
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 10.65,
+                "usado_gb": 4.86,
+                "uso_percentual": 31.33,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 0,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 30.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.31,
+                "livre_gb": 39.1,
+                "uso_percentual": 59.01,
+                "estado": "normal"
+              },
+              "processos": 380,
+              "uptime_segundos": 26866.86
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:24:54.762041-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790828980400502455",
+    "iniciado_em": "2026-10-01T01:29:40.400506-03:00",
+    "concluido_em": "2026-10-01T01:29:40.403783-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790828980400502455"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": null,
+                "estado": "indisponivel",
+                "calibrada": false
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 10.01,
+                "usado_gb": 5.49,
+                "uso_percentual": 35.42,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 2,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 30.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.32,
+                "livre_gb": 39.08,
+                "uso_percentual": 59.02,
+                "estado": "normal"
+              },
+              "processos": 388,
+              "uptime_segundos": 27152.5
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:29:40.403247-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790828982406768479",
+    "iniciado_em": "2026-10-01T01:29:42.406775-03:00",
+    "concluido_em": "2026-10-01T01:29:42.410072-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790828982406768479"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": 0.88,
+                "estado": "baixa_carga",
+                "calibrada": true
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 10.02,
+                "usado_gb": 5.49,
+                "uso_percentual": 35.38,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 0,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 30.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.32,
+                "livre_gb": 39.08,
+                "uso_percentual": 59.02,
+                "estado": "normal"
+              },
+              "processos": 387,
+              "uptime_segundos": 27154.51
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:29:42.409455-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790828984413852154",
+    "iniciado_em": "2026-10-01T01:29:44.413859-03:00",
+    "concluido_em": "2026-10-01T01:29:44.416936-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790828984413852154"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": 1.19,
+                "estado": "baixa_carga",
+                "calibrada": true
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 10.02,
+                "usado_gb": 5.49,
+                "uso_percentual": 35.38,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 1,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.32,
+                "livre_gb": 39.08,
+                "uso_percentual": 59.02,
+                "estado": "normal"
+              },
+              "processos": 387,
+              "uptime_segundos": 27156.51
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:29:44.416341-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790828986420833159",
+    "iniciado_em": "2026-10-01T01:29:46.420841-03:00",
+    "concluido_em": "2026-10-01T01:29:46.424117-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790828986420833159"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": 1.09,
+                "estado": "baixa_carga",
+                "calibrada": true
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 10.04,
+                "usado_gb": 5.47,
+                "uso_percentual": 35.28,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 1,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 30.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.32,
+                "livre_gb": 39.08,
+                "uso_percentual": 59.02,
+                "estado": "normal"
+              },
+              "processos": 387,
+              "uptime_segundos": 27158.52
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:29:46.423522-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790830089242119543",
+    "iniciado_em": "2026-10-01T01:48:09.242120-03:00",
+    "concluido_em": "2026-10-01T01:48:09.245287-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790830089242119543"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": null,
+                "estado": "indisponivel",
+                "calibrada": false
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 9.17,
+                "usado_gb": 6.34,
+                "uso_percentual": 40.87,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 2,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 30.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.41,
+                "livre_gb": 38.99,
+                "uso_percentual": 59.1,
+                "estado": "normal"
+              },
+              "processos": 395,
+              "uptime_segundos": 28261.34
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:48:09.244760-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        },
+        {
+          "etapa": "avaliacao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_avaliado",
+            "avaliacao": "sucesso",
+            "criterio": "acao_e_resultado_sucesso",
+            "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "avaliado",
+          "dados": {
+            "avaliacao": "sucesso",
+            "estado": "resultado_avaliado"
+          }
+        },
+        {
+          "etapa": "experiencia",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "experiencia_registrada",
+            "tipo": "ciclo_runtime",
+            "acao": "registrar_estado_corpo",
+            "resultado": "resultado_observado",
+            "avaliacao": "sucesso",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "experiencia_registrada",
+          "dados": {
+            "tipo": "ciclo_runtime",
+            "avaliacao": "sucesso"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "avaliacao": {
+        "sucesso": true,
+        "estado": "resultado_avaliado",
+        "avaliacao": "sucesso",
+        "criterio": "acao_e_resultado_sucesso",
+        "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+      },
+      "experiencia": {
+        "sucesso": true,
+        "estado": "experiencia_registrada",
+        "tipo": "ciclo_runtime",
+        "acao": "registrar_estado_corpo",
+        "resultado": "resultado_observado",
+        "avaliacao": "sucesso",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790830204026158649",
+    "iniciado_em": "2026-10-01T01:50:04.026163-03:00",
+    "concluido_em": "2026-10-01T01:50:04.029164-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790830204026158649"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": null,
+                "estado": "indisponivel",
+                "calibrada": false
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 9.1,
+                "usado_gb": 6.41,
+                "uso_percentual": 41.32,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 2,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 29.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.42,
+                "livre_gb": 38.98,
+                "uso_percentual": 59.11,
+                "estado": "normal"
+              },
+              "processos": 393,
+              "uptime_segundos": 28376.13
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:50:04.028631-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        },
+        {
+          "etapa": "avaliacao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_avaliado",
+            "avaliacao": "sucesso",
+            "criterio": "acao_e_resultado_sucesso",
+            "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "avaliado",
+          "dados": {
+            "avaliacao": "sucesso",
+            "estado": "resultado_avaliado"
+          }
+        },
+        {
+          "etapa": "experiencia",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "experiencia_registrada",
+            "tipo": "ciclo_runtime",
+            "acao": "registrar_estado_corpo",
+            "resultado": "resultado_observado",
+            "avaliacao": "sucesso",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "experiencia_registrada",
+          "dados": {
+            "tipo": "ciclo_runtime",
+            "avaliacao": "sucesso"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "avaliacao": {
+        "sucesso": true,
+        "estado": "resultado_avaliado",
+        "avaliacao": "sucesso",
+        "criterio": "acao_e_resultado_sucesso",
+        "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+      },
+      "experiencia": {
+        "sucesso": true,
+        "estado": "experiencia_registrada",
+        "tipo": "ciclo_runtime",
+        "acao": "registrar_estado_corpo",
+        "resultado": "resultado_observado",
+        "avaliacao": "sucesso",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790830206033643884",
+    "iniciado_em": "2026-10-01T01:50:06.033650-03:00",
+    "concluido_em": "2026-10-01T01:50:06.036784-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790830206033643884"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": 1.16,
+                "estado": "baixa_carga",
+                "calibrada": true
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 9.1,
+                "usado_gb": 6.41,
+                "uso_percentual": 41.32,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 0,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 28.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.42,
+                "livre_gb": 38.98,
+                "uso_percentual": 59.11,
+                "estado": "normal"
+              },
+              "processos": 393,
+              "uptime_segundos": 28378.13
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:50:06.036211-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        },
+        {
+          "etapa": "avaliacao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_avaliado",
+            "avaliacao": "sucesso",
+            "criterio": "acao_e_resultado_sucesso",
+            "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "avaliado",
+          "dados": {
+            "avaliacao": "sucesso",
+            "estado": "resultado_avaliado"
+          }
+        },
+        {
+          "etapa": "experiencia",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "experiencia_registrada",
+            "tipo": "ciclo_runtime",
+            "acao": "registrar_estado_corpo",
+            "resultado": "resultado_observado",
+            "avaliacao": "sucesso",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "experiencia_registrada",
+          "dados": {
+            "tipo": "ciclo_runtime",
+            "avaliacao": "sucesso"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "avaliacao": {
+        "sucesso": true,
+        "estado": "resultado_avaliado",
+        "avaliacao": "sucesso",
+        "criterio": "acao_e_resultado_sucesso",
+        "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+      },
+      "experiencia": {
+        "sucesso": true,
+        "estado": "experiencia_registrada",
+        "tipo": "ciclo_runtime",
+        "acao": "registrar_estado_corpo",
+        "resultado": "resultado_observado",
+        "avaliacao": "sucesso",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790830208041780257",
+    "iniciado_em": "2026-10-01T01:50:08.041786-03:00",
+    "concluido_em": "2026-10-01T01:50:08.045241-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790830208041780257"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": 2.2,
+                "estado": "baixa_carga",
+                "calibrada": true
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 9.07,
+                "usado_gb": 6.44,
+                "uso_percentual": 41.52,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 0,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 29.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.42,
+                "livre_gb": 38.98,
+                "uso_percentual": 59.11,
+                "estado": "normal"
+              },
+              "processos": 394,
+              "uptime_segundos": 28380.14
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:50:08.044525-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        },
+        {
+          "etapa": "avaliacao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_avaliado",
+            "avaliacao": "sucesso",
+            "criterio": "acao_e_resultado_sucesso",
+            "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "avaliado",
+          "dados": {
+            "avaliacao": "sucesso",
+            "estado": "resultado_avaliado"
+          }
+        },
+        {
+          "etapa": "experiencia",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "experiencia_registrada",
+            "tipo": "ciclo_runtime",
+            "acao": "registrar_estado_corpo",
+            "resultado": "resultado_observado",
+            "avaliacao": "sucesso",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "experiencia_registrada",
+          "dados": {
+            "tipo": "ciclo_runtime",
+            "avaliacao": "sucesso"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "avaliacao": {
+        "sucesso": true,
+        "estado": "resultado_avaliado",
+        "avaliacao": "sucesso",
+        "criterio": "acao_e_resultado_sucesso",
+        "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+      },
+      "experiencia": {
+        "sucesso": true,
+        "estado": "experiencia_registrada",
+        "tipo": "ciclo_runtime",
+        "acao": "registrar_estado_corpo",
+        "resultado": "resultado_observado",
+        "avaliacao": "sucesso",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  },
+  {
+    "sucesso": true,
+    "estado": "ciclo_concluido",
+    "origem": "nyxal_runtime",
+    "versao_runtime": "fase_01",
+    "ciclo_id": "fase_01_1790830210050547805",
+    "iniciado_em": "2026-10-01T01:50:10.050555-03:00",
+    "concluido_em": "2026-10-01T01:50:10.053692-03:00",
+    "valor": {
+      "etapas": [
+        {
+          "etapa": "transicao",
+          "estado": "iniciado",
+          "dados": {
+            "ciclo_id": "fase_01_1790830210050547805"
+          }
+        },
+        {
+          "etapa": "percepcao",
+          "sucesso": true,
+          "estado": {
+            "identidade": {
+              "nome": "Nixal"
+            },
+            "corpo": {
+              "cpu": {
+                "uso_percentual": 0.81,
+                "estado": "baixa_carga",
+                "calibrada": true
+              },
+              "memoria": {
+                "total_gb": 15.51,
+                "disponivel_gb": 9.07,
+                "usado_gb": 6.44,
+                "uso_percentual": 41.51,
+                "estado": "normal"
+              },
+              "temperaturas_gerais": [],
+              "gpu": [
+                {
+                  "dispositivo": "card1",
+                  "identidade": {
+                    "vendor": "0x1002",
+                    "driver": "amdgpu",
+                    "pci_id": "1002:7480",
+                    "pci_subsys_id": "1849:5313",
+                    "pci_slot": "0000:12:00.0"
+                  },
+                  "uso_percentual": 0,
+                  "estado_uso": "baixa_carga",
+                  "temperaturas": [
+                    {
+                      "sensor": "temp1_input",
+                      "rotulo": "edge",
+                      "chip": "amdgpu",
+                      "temperatura_c": 31.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp2_input",
+                      "rotulo": "junction",
+                      "chip": "amdgpu",
+                      "temperatura_c": 32.0,
+                      "estado": "fria"
+                    },
+                    {
+                      "sensor": "temp3_input",
+                      "rotulo": "mem",
+                      "chip": "amdgpu",
+                      "temperatura_c": 28.0,
+                      "estado": "fria"
+                    }
+                  ]
+                }
+              ],
+              "armazenamento": {
+                "ponto": "/",
+                "total_gb": 108.98,
+                "usado_gb": 64.42,
+                "livre_gb": 38.98,
+                "uso_percentual": 59.11,
+                "estado": "normal"
+              },
+              "processos": 394,
+              "uptime_segundos": 28382.15
+            },
+            "percepcao": {
+              "timestamp": "2026-10-01T01:50:10.053115-03:00"
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "percebido",
+          "dados": {
+            "fonte": "corpo_nixal"
+          }
+        },
+        {
+          "etapa": "estado_interno",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "conhecido",
+            "origem": "estado_composto_autorreprentacao",
+            "valor": {
+              "nome": "Nixal",
+              "versao_arquitetura": "56.4.2",
+              "fundacao": "em_construcao",
+              "autorrepresentacao": "em_construcao",
+              "evolucao_autonoma": "ainda_nao_iniciada"
+            }
+          }
+        },
+        {
+          "etapa": "diagnostico",
+          "sucesso": true,
+          "estado": {
+            "sucesso": true,
+            "estado": "incompleto",
+            "origem": "diagnostico_autorreprentacao",
+            "valor": {
+              "inconsistencias": [],
+              "lacunas": [
+                "dependencias_arquiteturais_nao_declaradas"
+              ],
+              "achados": [
+                {
+                  "tipo": "lacuna",
+                  "item": "dependencias_arquiteturais",
+                  "estado": "incompleto",
+                  "motivo": "A planta atual não declara relações de dependência arquitetural."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "diagnosticado",
+          "dados": {
+            "estado_diagnostico": "incompleto"
+          }
+        },
+        {
+          "etapa": "necessidades",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "necessidades_detectadas",
+            "origem": "necessidades_internas_nixal",
+            "valor": {
+              "diagnostico_estado": "incompleto",
+              "necessidades": [
+                {
+                  "origem": "diagnostico_autorreprentacao",
+                  "problema": "dependencias_arquiteturais_nao_declaradas",
+                  "tipo_problema": "lacuna",
+                  "tipo": "conhecimento_arquitetural",
+                  "necessidade": "conhecer_dependencias_arquiteturais",
+                  "prioridade": "baixa",
+                  "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+                }
+              ]
+            }
+          },
+          "prioridade": {
+            "sucesso": true,
+            "quantidade": 1,
+            "selecionada": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "necessidade_detectada",
+          "dados": {
+            "quantidade": 1
+          }
+        },
+        {
+          "etapa": "decisao",
+          "sucesso": true,
+          "decisao": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "decidido",
+          "dados": {
+            "sucesso": true,
+            "tipo": "acao_controlada",
+            "acao": "registrar_estado_corpo",
+            "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+            "necessidade_prioritaria": {
+              "origem": "diagnostico_autorreprentacao",
+              "problema": "dependencias_arquiteturais_nao_declaradas",
+              "tipo_problema": "lacuna",
+              "tipo": "conhecimento_arquitetural",
+              "necessidade": "conhecer_dependencias_arquiteturais",
+              "prioridade": "baixa",
+              "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+            }
+          }
+        },
+        {
+          "etapa": "acao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "estado_corpo_persistido",
+            "acao": "registrar_estado_corpo",
+            "arquivo": "estado_corpo_nixal.json",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "acao_executada",
+          "dados": {
+            "acao": "registrar_estado_corpo"
+          }
+        },
+        {
+          "etapa": "resultado",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_observado",
+            "arquivo_persistido": "estado_corpo_nixal.json",
+            "corpo_observado": true,
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "resultado_observado",
+          "dados": {
+            "estado": "resultado_observado"
+          }
+        },
+        {
+          "etapa": "avaliacao",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "resultado_avaliado",
+            "avaliacao": "sucesso",
+            "criterio": "acao_e_resultado_sucesso",
+            "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "avaliado",
+          "dados": {
+            "avaliacao": "sucesso",
+            "estado": "resultado_avaliado"
+          }
+        },
+        {
+          "etapa": "experiencia",
+          "sucesso": true,
+          "resultado": {
+            "sucesso": true,
+            "estado": "experiencia_registrada",
+            "tipo": "ciclo_runtime",
+            "acao": "registrar_estado_corpo",
+            "resultado": "resultado_observado",
+            "avaliacao": "sucesso",
+            "conhecimento_permanente": false,
+            "arquitetura_modificada": false
+          }
+        },
+        {
+          "etapa": "transicao",
+          "estado": "experiencia_registrada",
+          "dados": {
+            "tipo": "ciclo_runtime",
+            "avaliacao": "sucesso"
+          }
+        }
+      ],
+      "necessidade_prioritaria": {
+        "sucesso": true,
+        "quantidade": 1,
+        "selecionada": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "decisao": {
+        "sucesso": true,
+        "tipo": "acao_controlada",
+        "acao": "registrar_estado_corpo",
+        "motivo": "Na Fase 01, a ação segura mínima é persistir o estado corporal observado para garantir continuidade e rastreabilidade.",
+        "necessidade_prioritaria": {
+          "origem": "diagnostico_autorreprentacao",
+          "problema": "dependencias_arquiteturais_nao_declaradas",
+          "tipo_problema": "lacuna",
+          "tipo": "conhecimento_arquitetural",
+          "necessidade": "conhecer_dependencias_arquiteturais",
+          "prioridade": "baixa",
+          "motivo": "As relações de dependência entre componentes ainda não estão declaradas na autorrepresentação."
+        }
+      },
+      "acao": {
+        "sucesso": true,
+        "estado": "estado_corpo_persistido",
+        "acao": "registrar_estado_corpo",
+        "arquivo": "estado_corpo_nixal.json",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "resultado": {
+        "sucesso": true,
+        "estado": "resultado_observado",
+        "arquivo_persistido": "estado_corpo_nixal.json",
+        "corpo_observado": true,
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "avaliacao": {
+        "sucesso": true,
+        "estado": "resultado_avaliado",
+        "avaliacao": "sucesso",
+        "criterio": "acao_e_resultado_sucesso",
+        "motivo": "A ação autorizada foi executada com sucesso e o resultado foi observado corretamente."
+      },
+      "experiencia": {
+        "sucesso": true,
+        "estado": "experiencia_registrada",
+        "tipo": "ciclo_runtime",
+        "acao": "registrar_estado_corpo",
+        "resultado": "resultado_observado",
+        "avaliacao": "sucesso",
+        "conhecimento_permanente": false,
+        "arquitetura_modificada": false
+      },
+      "conhecimento_permanente": false,
+      "arquitetura_modificada": false
+    }
+  }
+]

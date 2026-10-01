@@ -1,0 +1,29 @@
+{
+  "identidade": {
+    "nome": "Nixal"
+  },
+  "sessao": {
+    "iniciada_em": "2026-09-26T19:11:53.209475-03:00",
+    "ciclos": 31,
+    "eventos": [
+      {
+        "timestamp": "2026-09-26T19:12:11.240974-03:00",
+        "tipo": "mudanca_corporal",
+        "caminho": "cpu.uso_percentual",
+        "anterior": 1.13,
+        "atual": 45.15,
+        "delta": 44.02,
+        "motivo": "mudança significativa de CPU (aumento)"
+      },
+      {
+        "timestamp": "2026-09-26T19:12:31.291795-03:00",
+        "tipo": "mudanca_corporal",
+        "caminho": "cpu.uso_percentual",
+        "anterior": 50.53,
+        "atual": 5.39,
+        "delta": -45.14,
+        "motivo": "mudança significativa de CPU (redução)"
+      }
+    ]
+  }
+}

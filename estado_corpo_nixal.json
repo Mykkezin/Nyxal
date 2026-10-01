@@ -1,0 +1,25 @@
+{
+  "identidade": {
+    "nome": "Nixal"
+  },
+  "corpo": {
+    "cpu": {
+      "uso_percentual": 12.0,
+      "estado": "baixa_carga",
+      "calibrada": true
+    },
+    "memoria": {
+      "uso_percentual": 20.0
+    },
+    "temperaturas_gerais": [],
+    "gpu": [],
+    "armazenamento": {
+      "uso_percentual": 50.0
+    },
+    "processos": 1,
+    "uptime_segundos": 10.0
+  },
+  "percepcao": {
+    "timestamp": "2026-10-01T00:00:00-03:00"
+  }
+}

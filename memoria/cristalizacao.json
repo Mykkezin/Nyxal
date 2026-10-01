@@ -1,0 +1,21 @@
+{
+  "conceitos": {
+    "hipotese": {
+      "relacoes": [
+        "provisória",
+        "testável",
+        "investigação"
+      ]
+    },
+    "Hipótese": {
+      "conceito": "Hipótese",
+      "essencia": "Ideia provisória que pode ser testada",
+      "relacoes": [
+        "Observação",
+        "Experimento",
+        "Evidências"
+      ],
+      "incerteza": "A certeza se está correta ou errada"
+    }
+  }
+}

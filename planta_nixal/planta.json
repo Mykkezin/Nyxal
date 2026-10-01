@@ -1,0 +1,103 @@
+{
+  "identidade": {
+    "nome": "Nixal",
+    "versao_arquitetura": "56.4.2",
+    "estado": "experimental",
+    "proposito": "Construir uma arquitetura local experimental capaz de perceber, representar, organizar e futuramente evoluir seu próprio sistema sob restrições de recursos."
+  },
+  "estado_atual": {
+    "fundacao": "em_construcao",
+    "camada_conversacional": "ainda_nao_iniciada",
+    "autorrepresentacao": "em_construcao",
+    "evolucao_autonoma": "ainda_nao_iniciada"
+  },
+  "componentes": [
+    {
+      "id": "corpo_computacional",
+      "arquivo_principal": "corpo_nixal.py",
+      "funcao": "Perceber e registrar o estado computacional da Nixal.",
+      "estado": "ativo"
+    },
+    {
+      "id": "memoria_corporal",
+      "arquivo_principal": "memoria_corporal_nixal.json",
+      "funcao": "Registrar eventos e mudanças relevantes observados pelo corpo.",
+      "estado": "ativo"
+    },
+    {
+      "id": "cristalizacao",
+      "arquivo_principal": "cristalizacao.py",
+      "funcao": "Representar conhecimento de forma compacta e reconstruível.",
+      "estado": "experimental"
+    },
+    {
+      "id": "gerenciador_cristal",
+      "arquivo_principal": "gerenciador_cristal.py",
+      "funcao": "Registrar e gerenciar experiências em representação cristalizada.",
+      "estado": "experimental"
+    },
+    {
+      "id": "interpretacao_qwen",
+      "arquivo_principal": "experiencia_qwen.py",
+      "funcao": "Interpretar linguagem natural com modelo local e produzir estruturas candidatas.",
+      "estado": "experimental"
+    },
+    {
+      "id": "agente_qwen",
+      "arquivo_principal": "nixal_agente_qwen.py",
+      "funcao": "Resolver necessidades por meio das capacidades registradas.",
+      "estado": "ativo"
+    },
+    {
+      "id": "capacidades",
+      "arquivo_principal": "nixal_capacidades.py",
+      "funcao": "Registrar contratos e metadados das capacidades disponíveis.",
+      "estado": "ativo"
+    },
+    {
+      "id": "operacoes_contexto",
+      "arquivo_principal": "nixal_operacoes_contexto.py",
+      "funcao": "Registrar operações que transformam ou selecionam informação já presente no contexto.",
+      "estado": "ativo"
+    },
+    {
+      "id": "executor_contexto",
+      "arquivo_principal": "executor_contexto_nixal.py",
+      "funcao": "Executar operações sobre contexto sem executar capacidades.",
+      "estado": "ativo"
+    },
+    {
+      "id": "composicao",
+      "arquivo_principal": "nixal_composicao.py",
+      "funcao": "Planejar e encadear ações e operações de contexto.",
+      "estado": "ativo"
+    },
+    {
+      "id": "dependencias",
+      "arquivo_principal": "nixal_dependencias_56_3_12.py",
+      "funcao": "Representar e validar dependências de dados e dependências temporais entre etapas.",
+      "estado": "ativo"
+    }
+  ],
+  "capacidades_conhecidas": [
+    "obter_hora",
+    "listar_arquivos",
+    "ler_estado_corpo",
+    "ler_memoria_corporal",
+    "ler_arquivo"
+  ],
+  "limites_conhecidos": [
+    "Não declarar como existente uma capacidade ausente da planta.",
+    "Não declarar como conhecido um componente ausente da planta.",
+    "Não inventar sensores físicos não declarados.",
+    "Internet não é requisito para a existência local do sistema.",
+    "A arquitetura ainda está em construção.",
+    "A camada conversacional ainda não foi iniciada."
+  ],
+  "regras_modificacao": {
+    "planta": "somente_leitura",
+    "arquitetura": "somente_leitura",
+    "codigo_fundacional": "protegido",
+    "evolucoes_experimentais": "controlado"
+  }
+}

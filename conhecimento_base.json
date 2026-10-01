@@ -1,0 +1,70 @@
+{
+  "A01": {
+    "texto": "Uma hipótese é uma ideia provisória.",
+    "tipo": "definicao"
+  },
+  "A02": {
+    "texto": "Uma hipótese pode ser usada para explicar um fenômeno.",
+    "tipo": "funcao"
+  },
+  "A03": {
+    "texto": "Uma hipótese pode orientar uma investigação.",
+    "tipo": "funcao"
+  },
+  "A04": {
+    "texto": "Uma hipótese não precisa estar correta.",
+    "tipo": "incerteza"
+  },
+  "A05": {
+    "texto": "Uma hipótese pode surgir de uma observação.",
+    "tipo": "origem"
+  },
+  "A06": {
+    "texto": "Uma hipótese pode surgir de padrões encontrados em dados.",
+    "tipo": "origem"
+  },
+  "A07": {
+    "texto": "Uma hipótese pode surgir de uma experiência anterior.",
+    "tipo": "origem"
+  },
+  "A08": {
+    "texto": "Uma hipótese pode surgir de uma possibilidade ainda não investigada.",
+    "tipo": "origem"
+  },
+  "A09": {
+    "texto": "Uma hipótese pode ser submetida a experimentos.",
+    "tipo": "teste"
+  },
+  "A10": {
+    "texto": "Uma hipótese pode ser submetida a novas observações.",
+    "tipo": "teste"
+  },
+  "A11": {
+    "texto": "Resultados compatíveis podem dar suporte à hipótese.",
+    "tipo": "resultado"
+  },
+  "A12": {
+    "texto": "Suporte não transforma necessariamente a hipótese em verdade absoluta.",
+    "tipo": "limite"
+  },
+  "A13": {
+    "texto": "Novas evidências podem modificar a interpretação anterior.",
+    "tipo": "evolucao"
+  },
+  "A14": {
+    "texto": "Novas evidências podem contradizer a interpretação anterior.",
+    "tipo": "evolucao"
+  },
+  "A15": {
+    "texto": "Uma representação pode preservar relações.",
+    "tipo": "estrutura"
+  },
+  "A16": {
+    "texto": "Uma representação pode preservar limitações.",
+    "tipo": "estrutura"
+  },
+  "A17": {
+    "texto": "Uma representação pode preservar o grau de incerteza.",
+    "tipo": "estrutura"
+  }
+}
