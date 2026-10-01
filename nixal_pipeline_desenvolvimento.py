@@ -4,7 +4,7 @@
 NYXAL — PIPELINE CONTROLADO DE DESENVOLVIMENTO
 
 Recebe artefatos externos fora da árvore Git e os conduz por uma
-primeira etapa segura do pipeline:
+primeira etapa segura:
 
     incoming
       ↓
@@ -20,7 +20,7 @@ primeira etapa segura do pipeline:
       ↓
     relatório
 
-Limites desta primeira versão:
+Limites desta versão:
 - não executa código recebido;
 - não instala dependências;
 - não altera a branch atual;
@@ -30,6 +30,12 @@ Limites desta primeira versão:
 - não executa testes arbitrários recebidos.
 
 A validação Python usa apenas py_compile.
+
+Deduplicação:
+- cada artefato é identificado pelo SHA-256;
+- artefatos já processados ficam registrados em um estado externo;
+- o mesmo conteúdo não é reprocessado enquanto permanecer no incoming;
+- conteúdo novo do mesmo arquivo pode voltar ao pipeline.
 """
 
 from __future__ import annotations
@@ -43,6 +49,8 @@ from pathlib import Path
 
 
 class PipelineDesenvolvimentoNixal:
+    VERSAO_ESTADO = 1
+
     def __init__(
         self,
         repositorio: str | Path | None = None,
@@ -50,6 +58,7 @@ class PipelineDesenvolvimentoNixal:
         workspace: str | Path | None = None,
         experimentos: str | Path | None = None,
         relatorios: str | Path | None = None,
+        estado: str | Path | None = None,
     ) -> None:
         self.repositorio = Path(
             repositorio or Path(__file__).resolve().parent
@@ -71,6 +80,10 @@ class PipelineDesenvolvimentoNixal:
 
         self.relatorios = Path(
             relatorios or base_externa / "Nyxal-reports"
+        )
+
+        self.estado_path = Path(
+            estado or self.relatorios / "estado_pipeline.json"
         )
 
         self.python = (
@@ -108,6 +121,89 @@ class PipelineDesenvolvimentoNixal:
             timezone.utc
         ).isoformat()
 
+    def _carregar_estado(self) -> dict:
+        if not self.estado_path.exists():
+            return {
+                "versao": self.VERSAO_ESTADO,
+                "processados": {},
+            }
+
+        try:
+            estado = json.loads(
+                self.estado_path.read_text(
+                    encoding="utf-8"
+                )
+            )
+        except (OSError, json.JSONDecodeError):
+            return {
+                "versao": self.VERSAO_ESTADO,
+                "processados": {},
+            }
+
+        processados = estado.get(
+            "processados",
+            {},
+        )
+
+        if not isinstance(processados, dict):
+            processados = {}
+
+        return {
+            "versao": self.VERSAO_ESTADO,
+            "processados": processados,
+        }
+
+    def _salvar_estado(self, estado: dict) -> None:
+        self.estado_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        temporario = self.estado_path.with_suffix(
+            ".tmp"
+        )
+
+        temporario.write_text(
+            json.dumps(
+                estado,
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        temporario.replace(
+            self.estado_path
+        )
+
+    def _eh_processado(
+        self,
+        sha256: str,
+        estado: dict,
+    ) -> bool:
+        return sha256 in estado["processados"]
+
+    def _registrar_processado(
+        self,
+        analise: dict,
+        ciclo_id: str,
+        decisao: str,
+    ) -> None:
+        estado = self._carregar_estado()
+
+        estado["processados"][
+            analise["sha256"]
+        ] = {
+            "arquivo": analise["arquivo"],
+            "processado_em": self._timestamp(),
+            "ciclo_id": ciclo_id,
+            "decisao": decisao,
+        }
+
+        self._salvar_estado(
+            estado
+        )
+
     def listar_entrada(self) -> list[Path]:
         return sorted(
             (
@@ -115,7 +211,11 @@ class PipelineDesenvolvimentoNixal:
                 for caminho in self.entrada.rglob("*")
                 if caminho.is_file()
             ),
-            key=lambda item: str(item.relative_to(self.entrada)),
+            key=lambda item: str(
+                item.relative_to(
+                    self.entrada
+                )
+            ),
         )
 
     def _copiar_workspace(
@@ -123,8 +223,14 @@ class PipelineDesenvolvimentoNixal:
         origem: Path,
         destino_raiz: Path,
     ) -> Path:
-        relativo = origem.relative_to(self.entrada)
-        destino = destino_raiz / relativo
+        relativo = origem.relative_to(
+            self.entrada
+        )
+
+        destino = (
+            destino_raiz
+            / relativo
+        )
 
         destino.parent.mkdir(
             parents=True,
@@ -154,7 +260,9 @@ class PipelineDesenvolvimentoNixal:
                 else "arquivo_texto"
             ),
             "tamanho_bytes": arquivo.stat().st_size,
-            "sha256": self._hash_arquivo(arquivo),
+            "sha256": self._hash_arquivo(
+                arquivo
+            ),
         }
 
         try:
@@ -233,11 +341,19 @@ class PipelineDesenvolvimentoNixal:
         )
 
         if analise["estado"] == "rejeitado":
-            return {
+            resultado = {
                 **analise,
                 "decisao": "rejeitado",
                 "motivo": "arquivo_nao_utf8",
             }
+
+            self._registrar_processado(
+                analise,
+                ciclo_id,
+                "rejeitado",
+            )
+
+            return resultado
 
         workspace_arquivo = (
             self._copiar_workspace(
@@ -272,6 +388,12 @@ class PipelineDesenvolvimentoNixal:
                     or "falha_na_sintaxe_python"
                 )
 
+                self._registrar_processado(
+                    analise,
+                    ciclo_id,
+                    "rejeitado",
+                )
+
                 return resultado
 
         experimento_arquivo = (
@@ -292,6 +414,12 @@ class PipelineDesenvolvimentoNixal:
             "analise_e_validacao_concluidas"
         )
 
+        self._registrar_processado(
+            analise,
+            ciclo_id,
+            "candidato",
+        )
+
         return resultado
 
     def executar_ciclo(self) -> dict:
@@ -300,15 +428,44 @@ class PipelineDesenvolvimentoNixal:
             .strftime("%Y%m%dT%H%M%S%fZ")
         )
 
+        estado = self._carregar_estado()
         arquivos = self.listar_entrada()
 
-        resultados = [
-            self.processar_arquivo(
+        resultados = []
+        ignorados = []
+
+        for arquivo in arquivos:
+            sha256 = self._hash_arquivo(
+                arquivo
+            )
+
+            if self._eh_processado(
+                sha256,
+                estado,
+            ):
+                ignorados.append(
+                    {
+                        "arquivo": str(
+                            arquivo.relative_to(
+                                self.entrada
+                            )
+                        ),
+                        "sha256": sha256,
+                        "motivo": "artefato_ja_processado",
+                    }
+                )
+                continue
+
+            resultado = self.processar_arquivo(
                 arquivo,
                 ciclo_id,
             )
-            for arquivo in arquivos
-        ]
+
+            resultados.append(
+                resultado
+            )
+
+            estado = self._carregar_estado()
 
         candidato = sum(
             item["decisao"] == "candidato"
@@ -321,9 +478,12 @@ class PipelineDesenvolvimentoNixal:
         )
 
         relatorio = {
+            "versao_pipeline": 1,
             "ciclo_id": ciclo_id,
             "iniciado_em": self._timestamp(),
             "arquivos_detectados": len(arquivos),
+            "arquivos_novos": len(resultados),
+            "arquivos_ignorados": ignorados,
             "arquivos_processados": resultados,
             "candidatos": candidato,
             "rejeitados": rejeitado,
@@ -332,7 +492,11 @@ class PipelineDesenvolvimentoNixal:
             "estado": (
                 "nenhum_artefato"
                 if not arquivos
-                else "processamento_concluido"
+                else (
+                    "nenhum_artefato_novo"
+                    if not resultados
+                    else "processamento_concluido"
+                )
             ),
         }
 
