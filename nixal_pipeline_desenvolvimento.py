@@ -14,7 +14,7 @@ Fluxo:
       ↓
     validação estrutural/sintaxe
       ↓
-    experiments
+    avaliação
       ↓
     candidato ou rejeitado
       ↓
@@ -27,7 +27,8 @@ Limites:
 - não faz merge;
 - não publica;
 - não promove para stable;
-- não executa testes arbitrários recebidos.
+- não executa testes arbitrários recebidos;
+- candidato somente após avaliação explícita.
 
 O contrato do artefato é um arquivo *.nyxal.json declarativo.
 Artefatos sem contrato são ignorados e registrados.
@@ -42,6 +43,9 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+from nixal_avaliador_desenvolvimento import (
+    AvaliacaoDesenvolvimentoNixal,
+)
 from nixal_contrato_artefato import (
     ContratoArtefatoNixal,
 )
@@ -513,6 +517,42 @@ class PipelineDesenvolvimentoNixal:
         if "analise" not in contrato.operacoes_permitidas:
             resultado["motivo"] = (
                 "analise_nao_autorizada_pelo_contrato"
+            )
+
+            self._registrar_processado(
+                fingerprint,
+                resultado["arquivo"],
+                resultado["manifesto"],
+                sha_artefato,
+                sha_manifesto,
+                ciclo_id,
+                "rejeitado",
+            )
+
+            return resultado
+
+        avaliacao = (
+            AvaliacaoDesenvolvimentoNixal.avaliar(
+                contrato={
+                    "executar": contrato.executar,
+                    "operacoes_permitidas": list(
+                        contrato.operacoes_permitidas
+                    ),
+                    "tipo": contrato.tipo,
+                },
+                validacao_python=resultado[
+                    "validacao_python"
+                ],
+            )
+        )
+
+        resultado["avaliacao"] = (
+            avaliacao.como_dict()
+        )
+
+        if not avaliacao.aprovado:
+            resultado["motivo"] = (
+                "avaliacao_reprovada"
             )
 
             self._registrar_processado(
