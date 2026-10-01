@@ -27,7 +27,9 @@ def git(raiz: Path, *args: str) -> str:
 
 def executar() -> None:
     with TemporaryDirectory() as temporario:
-        raiz = Path(temporario)
+        base_temporaria = Path(temporario)
+        raiz = base_temporaria / "repositorio"
+        raiz.mkdir()
 
         git(raiz, "init", "-b", "main")
         git(raiz, "config", "user.name", "Nyxal Test")
@@ -38,7 +40,7 @@ def executar() -> None:
         git(raiz, "add", "base.txt")
         git(raiz, "commit", "-m", "base")
 
-        candidato = raiz / "candidate"
+        candidato = base_temporaria / "candidate"
         candidato.mkdir()
         (candidato / "candidato.json").write_text(
             json.dumps(
@@ -57,7 +59,7 @@ def executar() -> None:
             encoding="utf-8",
         )
 
-        proposta = raiz / "proposta.json"
+        proposta = base_temporaria / "proposta.json"
         proposta.write_text(
             json.dumps(
                 {
