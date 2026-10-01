@@ -320,6 +320,74 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
 }
 </style>
 
+
+<style>
+/* Live weather — functional data layer over the reference layout */
+.live-weather{
+  position:absolute;
+  left:1.55%;
+  top:29.0%;
+  width:16.7%;
+  height:19.4%;
+  min-width:240px;
+  pointer-events:none;
+  color:#ecfaff;
+  text-shadow:0 0 14px rgba(0,0,0,.75),0 0 12px rgba(121,228,255,.12);
+}
+.live-weather .status{
+  position:absolute;
+  top:6.5%;
+  right:7%;
+  color:rgba(121,228,255,.78);
+  font-size:clamp(6px,.45vw,9px);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.live-weather .main{
+  position:absolute;
+  left:9%;
+  bottom:11%;
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+}
+.live-weather .temp{
+  font-size:clamp(22px,2.15vw,40px);
+  font-weight:300;
+  line-height:1;
+  letter-spacing:.01em;
+}
+.live-weather .condition{
+  color:rgba(236,250,255,.72);
+  font-size:clamp(6px,.50vw,10px);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.live-weather .meta{
+  position:absolute;
+  right:8%;
+  bottom:10%;
+  display:flex;
+  gap:10px;
+  color:rgba(190,224,239,.68);
+  font-size:clamp(5px,.40vw,8px);
+  letter-spacing:.08em;
+  text-align:right;
+  text-transform:uppercase;
+}
+.live-weather .meta b{
+  color:rgba(121,228,255,.90);
+  font-weight:500;
+}
+@media(max-width:1050px){
+  .live-weather{left:1.8%;min-width:200px;width:25%}
+}
+@media(max-width:700px){
+  .live-weather{left:4%;top:28%;width:36%;min-width:0}
+  .live-weather .meta{gap:6px}
+}
+</style>
+
 </head>
 <body>
 <div id="nyxos" class="visual-reference">
@@ -330,6 +398,20 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
 
 
 <div class="live-home" aria-label="Informações em tempo real">
+
+<div class="live-weather" aria-label="Clima em tempo real">
+  <div class="status" id="weatherLiveState">CARREGANDO</div>
+  <div class="main">
+    <div class="temp" id="weatherLiveTemp">--°</div>
+    <div class="condition" id="weatherLiveCond">—</div>
+  </div>
+  <div class="meta">
+    <span>MÍN <b id="weatherLiveMin">--°</b></span>
+    <span>MÁX <b id="weatherLiveMax">--°</b></span>
+    <span>UMID <b id="weatherLiveHum">--%</b></span>
+    <span>VENTO <b id="weatherLiveWind">--</b></span>
+  </div>
+</div>
   <div class="live-clock">
     <div class="date" id="liveDate">—</div>
     <div class="time" id="liveTime">--:--:--</div>
@@ -690,6 +772,43 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
 
   updateLiveClock();
   setInterval(updateLiveClock, 1000);
+
+
+  async function updateLiveWeather(){
+    const stateEl=document.getElementById("weatherLiveState");
+    const tempEl=document.getElementById("weatherLiveTemp");
+    const condEl=document.getElementById("weatherLiveCond");
+    const minEl=document.getElementById("weatherLiveMin");
+    const maxEl=document.getElementById("weatherLiveMax");
+    const humEl=document.getElementById("weatherLiveHum");
+    const windEl=document.getElementById("weatherLiveWind");
+    try{
+      const url="https://api.open-meteo.com/v1/forecast?latitude=-23.5505&longitude=-46.6333&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_min,temperature_2m_max&timezone=America%2FSao_Paulo";
+      const response=await fetch(url,{cache:"no-store"});
+      if(!response.ok) throw new Error("weather_http_"+response.status);
+      const data=await response.json();
+      const weatherCode=Number(data?.current?.weather_code);
+      const labels={
+        0:"CÉU LIMPO",1:"PRINC. LIMPO",2:"PARC. NUBLADO",3:"NUBLADO",
+        45:"NEBLINA",48:"NEBLINA",51:"GAROA LEVE",53:"GAROA",55:"GAROA FORTE",
+        61:"CHUVA LEVE",63:"CHUVA",65:"CHUVA FORTE",71:"NEVE LEVE",73:"NEVE",75:"NEVE FORTE",
+        80:"AGUACEIROS",81:"AGUACEIROS",82:"AGUACEIROS FORTES",95:"TROVOADA",96:"TROVOADA",99:"TROVOADA"
+      };
+      if(tempEl) tempEl.textContent=Math.round(Number(data.current.temperature_2m))+"°";
+      if(condEl) condEl.textContent=labels[weatherCode] || "DADOS ATUAIS";
+      if(minEl) minEl.textContent=Math.round(Number(data.daily.temperature_2m_min?.[0]))+"°";
+      if(maxEl) maxEl.textContent=Math.round(Number(data.daily.temperature_2m_max?.[0]))+"°";
+      if(humEl) humEl.textContent=Math.round(Number(data.current.relative_humidity_2m))+"%";
+      if(windEl) windEl.textContent=Math.round(Number(data.current.wind_speed_10m))+" KM/H";
+      if(stateEl) stateEl.textContent="AO VIVO";
+    }catch(error){
+      if(stateEl) stateEl.textContent="SEM CONEXÃO";
+    }
+  }
+
+  updateLiveWeather();
+  setInterval(updateLiveWeather, 10*60*1000);
+
 })();
 </script>
 
