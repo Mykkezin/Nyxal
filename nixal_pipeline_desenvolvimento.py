@@ -3,10 +3,10 @@
 """
 NYXAL — PIPELINE CONTROLADO DE DESENVOLVIMENTO
 
-Recebe artefatos externos fora da árvore Git e os conduz por uma
-primeira etapa segura:
-
+Fluxo:
     incoming
+      ↓
+    contrato
       ↓
     análise
       ↓
@@ -20,7 +20,7 @@ primeira etapa segura:
       ↓
     relatório
 
-Limites desta versão:
+Limites:
 - não executa código recebido;
 - não instala dependências;
 - não altera a branch atual;
@@ -29,13 +29,8 @@ Limites desta versão:
 - não promove para stable;
 - não executa testes arbitrários recebidos.
 
-A validação Python usa apenas py_compile.
-
-Deduplicação:
-- cada artefato é identificado pelo SHA-256;
-- artefatos já processados ficam registrados em um estado externo;
-- o mesmo conteúdo não é reprocessado enquanto permanecer no incoming;
-- conteúdo novo do mesmo arquivo pode voltar ao pipeline.
+O contrato do artefato é um arquivo *.nyxal.json declarativo.
+Artefatos sem contrato são ignorados e registrados.
 """
 
 from __future__ import annotations
@@ -47,9 +42,13 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+from nixal_contrato_artefato import (
+    ContratoArtefatoNixal,
+)
+
 
 class PipelineDesenvolvimentoNixal:
-    VERSAO_ESTADO = 1
+    VERSAO_ESTADO = 2
 
     def __init__(
         self,
@@ -116,6 +115,26 @@ class PipelineDesenvolvimentoNixal:
 
         return digest.hexdigest()
 
+    def _fingerprint(
+        self,
+        artefato: Path,
+        manifesto: Path,
+    ) -> str:
+        digest = hashlib.sha256()
+
+        for caminho in (
+            artefato,
+            manifesto,
+        ):
+            with caminho.open("rb") as arquivo:
+                for bloco in iter(
+                    lambda: arquivo.read(1024 * 1024),
+                    b"",
+                ):
+                    digest.update(bloco)
+
+        return digest.hexdigest()
+
     def _timestamp(self) -> str:
         return datetime.now(
             timezone.utc
@@ -134,7 +153,10 @@ class PipelineDesenvolvimentoNixal:
                     encoding="utf-8"
                 )
             )
-        except (OSError, json.JSONDecodeError):
+        except (
+            OSError,
+            json.JSONDecodeError,
+        ):
             return {
                 "versao": self.VERSAO_ESTADO,
                 "processados": {},
@@ -145,7 +167,10 @@ class PipelineDesenvolvimentoNixal:
             {},
         )
 
-        if not isinstance(processados, dict):
+        if not isinstance(
+            processados,
+            dict,
+        ):
             processados = {}
 
         return {
@@ -153,14 +178,17 @@ class PipelineDesenvolvimentoNixal:
             "processados": processados,
         }
 
-    def _salvar_estado(self, estado: dict) -> None:
+    def _salvar_estado(
+        self,
+        estado: dict,
+    ) -> None:
         self.estado_path.parent.mkdir(
             parents=True,
             exist_ok=True,
         )
 
-        temporario = self.estado_path.with_suffix(
-            ".tmp"
+        temporario = (
+            self.estado_path.with_suffix(".tmp")
         )
 
         temporario.write_text(
@@ -178,23 +206,32 @@ class PipelineDesenvolvimentoNixal:
 
     def _eh_processado(
         self,
-        sha256: str,
+        fingerprint: str,
         estado: dict,
     ) -> bool:
-        return sha256 in estado["processados"]
+        return fingerprint in estado[
+            "processados"
+        ]
 
     def _registrar_processado(
         self,
-        analise: dict,
+        fingerprint: str,
+        artefato: str,
+        manifesto: str,
+        sha256_artefato: str,
+        sha256_manifesto: str,
         ciclo_id: str,
         decisao: str,
     ) -> None:
         estado = self._carregar_estado()
 
         estado["processados"][
-            analise["sha256"]
+            fingerprint
         ] = {
-            "arquivo": analise["arquivo"],
+            "artefato": artefato,
+            "manifesto": manifesto,
+            "sha256_artefato": sha256_artefato,
+            "sha256_manifesto": sha256_manifesto,
             "processado_em": self._timestamp(),
             "ciclo_id": ciclo_id,
             "decisao": decisao,
@@ -210,6 +247,9 @@ class PipelineDesenvolvimentoNixal:
                 caminho
                 for caminho in self.entrada.rglob("*")
                 if caminho.is_file()
+                and not caminho.name.endswith(
+                    ".nyxal.json"
+                )
             ),
             key=lambda item: str(
                 item.relative_to(
@@ -218,7 +258,20 @@ class PipelineDesenvolvimentoNixal:
             ),
         )
 
-    def _copiar_workspace(
+    def _manifesto_do_arquivo(
+        self,
+        arquivo: Path,
+    ) -> Path:
+        relativo = arquivo.relative_to(
+            self.entrada
+        )
+
+        return (
+            arquivo.parent
+            / f"{relativo.name}.nyxal.json"
+        )
+
+    def _copiar(
         self,
         origem: Path,
         destino_raiz: Path,
@@ -244,43 +297,58 @@ class PipelineDesenvolvimentoNixal:
 
         return destino
 
-    def analisar_arquivo(
+    def _validar_contrato(
         self,
         arquivo: Path,
-    ) -> dict:
-        relativo = arquivo.relative_to(
-            self.entrada
-        )
-
-        resultado = {
-            "arquivo": str(relativo),
-            "tipo": (
-                "python"
-                if arquivo.suffix == ".py"
-                else "arquivo_texto"
-            ),
-            "tamanho_bytes": arquivo.stat().st_size,
-            "sha256": self._hash_arquivo(
-                arquivo
-            ),
-        }
-
+        manifesto: Path,
+    ) -> tuple[
+        ContratoArtefatoNixal | None,
+        str | None,
+    ]:
         try:
-            arquivo.read_text(
-                encoding="utf-8"
+            contrato = (
+                ContratoArtefatoNixal.carregar(
+                    manifesto
+                )
+            )
+        except ValueError as erro:
+            return (
+                None,
+                str(erro),
             )
 
-            resultado["utf8_valido"] = True
+        arquivo_relativo = str(
+            arquivo.relative_to(
+                self.entrada
+            )
+        )
 
-        except UnicodeDecodeError:
-            resultado["utf8_valido"] = False
-            resultado["estado"] = "rejeitado"
+        if contrato.arquivo != arquivo_relativo:
+            return (
+                None,
+                "arquivo_do_contrato_nao_corresponde",
+            )
 
-            return resultado
+        extensao_esperada = (
+            ".py"
+            if contrato.tipo == "python"
+            else None
+        )
 
-        resultado["estado"] = "analisado"
+        if (
+            extensao_esperada
+            and arquivo.suffix
+            != extensao_esperada
+        ):
+            return (
+                None,
+                "tipo_do_contrato_nao_corresponde",
+            )
 
-        return resultado
+        return (
+            contrato,
+            None,
+        )
 
     def validar_python(
         self,
@@ -334,38 +402,60 @@ class PipelineDesenvolvimentoNixal:
     def processar_arquivo(
         self,
         arquivo: Path,
+        manifesto: Path,
+        contrato: ContratoArtefatoNixal,
+        fingerprint: str,
         ciclo_id: str,
     ) -> dict:
-        analise = self.analisar_arquivo(
+        sha_artefato = self._hash_arquivo(
             arquivo
         )
 
-        if analise["estado"] == "rejeitado":
-            resultado = {
-                **analise,
-                "decisao": "rejeitado",
-                "motivo": "arquivo_nao_utf8",
-            }
+        sha_manifesto = self._hash_arquivo(
+            manifesto
+        )
 
-            self._registrar_processado(
-                analise,
-                ciclo_id,
-                "rejeitado",
-            )
+        workspace_arquivo = self._copiar(
+            arquivo,
+            self.workspace / ciclo_id,
+        )
 
-            return resultado
-
-        workspace_arquivo = (
-            self._copiar_workspace(
-                arquivo,
-                self.workspace / ciclo_id,
-            )
+        workspace_manifesto = self._copiar(
+            manifesto,
+            self.workspace / ciclo_id,
         )
 
         resultado = {
-            **analise,
+            "arquivo": str(
+                arquivo.relative_to(
+                    self.entrada
+                )
+            ),
+            "manifesto": str(
+                manifesto.relative_to(
+                    self.entrada
+                )
+            ),
+            "sha256": sha_artefato,
+            "sha256_manifesto": sha_manifesto,
+            "fingerprint": fingerprint,
+            "contrato": {
+                "versao_contrato": contrato.versao_contrato,
+                "nome": contrato.nome,
+                "objetivo": contrato.objetivo,
+                "tipo": contrato.tipo,
+                "operacoes_permitidas": list(
+                    contrato.operacoes_permitidas
+                ),
+                "executar": contrato.executar,
+            },
             "workspace": str(
                 workspace_arquivo.relative_to(
+                    self.workspace
+                )
+            ),
+            "workspace_manifesto": str(
+                workspace_manifesto.relative_to(
                     self.workspace
                 )
             ),
@@ -373,14 +463,34 @@ class PipelineDesenvolvimentoNixal:
             "decisao": "rejeitado",
         }
 
-        if arquivo.suffix == ".py":
+        if contrato.tipo == "python":
+            if (
+                "py_compile"
+                not in contrato.operacoes_permitidas
+            ):
+                resultado["motivo"] = (
+                    "py_compile_nao_autorizado_pelo_contrato"
+                )
+
+                self._registrar_processado(
+                    fingerprint,
+                    resultado["arquivo"],
+                    resultado["manifesto"],
+                    sha_artefato,
+                    sha_manifesto,
+                    ciclo_id,
+                    "rejeitado",
+                )
+
+                return resultado
+
             validacao = self.validar_python(
                 workspace_arquivo
             )
 
-            resultado["validacao_python"] = (
-                validacao
-            )
+            resultado[
+                "validacao_python"
+            ] = validacao
 
             if not validacao["sucesso"]:
                 resultado["motivo"] = (
@@ -389,18 +499,42 @@ class PipelineDesenvolvimentoNixal:
                 )
 
                 self._registrar_processado(
-                    analise,
+                    fingerprint,
+                    resultado["arquivo"],
+                    resultado["manifesto"],
+                    sha_artefato,
+                    sha_manifesto,
                     ciclo_id,
                     "rejeitado",
                 )
 
                 return resultado
 
-        experimento_arquivo = (
-            self._copiar_workspace(
-                arquivo,
-                self.experimentos / ciclo_id,
+        if "analise" not in contrato.operacoes_permitidas:
+            resultado["motivo"] = (
+                "analise_nao_autorizada_pelo_contrato"
             )
+
+            self._registrar_processado(
+                fingerprint,
+                resultado["arquivo"],
+                resultado["manifesto"],
+                sha_artefato,
+                sha_manifesto,
+                ciclo_id,
+                "rejeitado",
+            )
+
+            return resultado
+
+        experimento_arquivo = self._copiar(
+            arquivo,
+            self.experimentos / ciclo_id,
+        )
+
+        experimento_manifesto = self._copiar(
+            manifesto,
+            self.experimentos / ciclo_id,
         )
 
         resultado["experimento"] = str(
@@ -409,13 +543,23 @@ class PipelineDesenvolvimentoNixal:
             )
         )
 
+        resultado["experimento_manifesto"] = str(
+            experimento_manifesto.relative_to(
+                self.experimentos
+            )
+        )
+
         resultado["decisao"] = "candidato"
         resultado["motivo"] = (
-            "analise_e_validacao_concluidas"
+            "contrato_analise_e_validacao_concluidas"
         )
 
         self._registrar_processado(
-            analise,
+            fingerprint,
+            resultado["arquivo"],
+            resultado["manifesto"],
+            sha_artefato,
+            sha_manifesto,
             ciclo_id,
             "candidato",
         )
@@ -435,12 +579,58 @@ class PipelineDesenvolvimentoNixal:
         ignorados = []
 
         for arquivo in arquivos:
-            sha256 = self._hash_arquivo(
-                arquivo
+            manifesto = (
+                self._manifesto_do_arquivo(
+                    arquivo
+                )
+            )
+
+            if not manifesto.exists():
+                ignorados.append(
+                    {
+                        "arquivo": str(
+                            arquivo.relative_to(
+                                self.entrada
+                            )
+                        ),
+                        "motivo": "contrato_ausente",
+                    }
+                )
+                continue
+
+            contrato, erro_contrato = (
+                self._validar_contrato(
+                    arquivo,
+                    manifesto,
+                )
+            )
+
+            if erro_contrato:
+                ignorados.append(
+                    {
+                        "arquivo": str(
+                            arquivo.relative_to(
+                                self.entrada
+                            )
+                        ),
+                        "manifesto": str(
+                            manifesto.relative_to(
+                                self.entrada
+                            )
+                        ),
+                        "motivo": "contrato_invalido",
+                        "erro": erro_contrato,
+                    }
+                )
+                continue
+
+            fingerprint = self._fingerprint(
+                arquivo,
+                manifesto,
             )
 
             if self._eh_processado(
-                sha256,
+                fingerprint,
                 estado,
             ):
                 ignorados.append(
@@ -450,7 +640,12 @@ class PipelineDesenvolvimentoNixal:
                                 self.entrada
                             )
                         ),
-                        "sha256": sha256,
+                        "manifesto": str(
+                            manifesto.relative_to(
+                                self.entrada
+                            )
+                        ),
+                        "fingerprint": fingerprint,
                         "motivo": "artefato_ja_processado",
                     }
                 )
@@ -458,6 +653,9 @@ class PipelineDesenvolvimentoNixal:
 
             resultado = self.processar_arquivo(
                 arquivo,
+                manifesto,
+                contrato,
+                fingerprint,
                 ciclo_id,
             )
 
@@ -478,7 +676,7 @@ class PipelineDesenvolvimentoNixal:
         )
 
         relatorio = {
-            "versao_pipeline": 1,
+            "versao_pipeline": 2,
             "ciclo_id": ciclo_id,
             "iniciado_em": self._timestamp(),
             "arquivos_detectados": len(arquivos),
