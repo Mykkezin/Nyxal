@@ -339,118 +339,125 @@ rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border
 
         <svg class="face" viewBox="0 0 420 520" aria-label="Presença holográfica de Nyxal">
   <defs>
-    <radialGradient id="nyxFaceGlow" cx="50%" cy="42%" r="62%">
-      <stop offset="0" stop-color="#dffaff" stop-opacity=".78"/>
-      <stop offset=".34" stop-color="#8deaff" stop-opacity=".42"/>
-      <stop offset=".72" stop-color="#35b8ee" stop-opacity=".12"/>
+    <radialGradient id="nyxFaceGlow" cx="50%" cy="40%" r="62%">
+      <stop offset="0" stop-color="#eaffff" stop-opacity=".58"/>
+      <stop offset=".38" stop-color="#8deaff" stop-opacity=".30"/>
+      <stop offset=".78" stop-color="#35b8ee" stop-opacity=".08"/>
       <stop offset="1" stop-color="#35b8ee" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="nyxFaceGlass" x1="0" x2="1">
-      <stop offset="0" stop-color="#73d9f4" stop-opacity=".10"/>
-      <stop offset=".48" stop-color="#efffff" stop-opacity=".48"/>
-      <stop offset="1" stop-color="#55c9ed" stop-opacity=".08"/>
+      <stop offset="0" stop-color="#73d9f4" stop-opacity=".05"/>
+      <stop offset=".5" stop-color="#efffff" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#55c9ed" stop-opacity=".04"/>
     </linearGradient>
-    <linearGradient id="nyxFaceEdge" x1="0" x2="0" y1="0" y2="1">
-      <stop offset="0" stop-color="#dfffff" stop-opacity=".72"/>
-      <stop offset=".48" stop-color="#78e5ff" stop-opacity=".34"/>
-      <stop offset="1" stop-color="#36b7e9" stop-opacity=".08"/>
+    <linearGradient id="nyxEdge" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#dfffff" stop-opacity=".66"/>
+      <stop offset=".5" stop-color="#78e5ff" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#36b7e9" stop-opacity=".10"/>
     </linearGradient>
     <radialGradient id="nyxEye">
       <stop offset="0" stop-color="#ffffff"/>
-      <stop offset=".34" stop-color="#a8f3ff"/>
-      <stop offset=".72" stop-color="#51d7fa"/>
+      <stop offset=".35" stop-color="#b7f5ff"/>
+      <stop offset=".75" stop-color="#51d7fa"/>
       <stop offset="1" stop-color="#0c6d91"/>
     </radialGradient>
-    <pattern id="nyxDots" width="16" height="16" patternUnits="userSpaceOnUse">
-      <circle cx="8" cy="8" r="2.15" fill="#dffbff" fill-opacity=".32"/>
-      <circle cx="8" cy="8" r=".8" fill="#ffffff" fill-opacity=".72"/>
+    <pattern id="nyxDots" width="14" height="14" patternUnits="userSpaceOnUse">
+      <circle cx="7" cy="7" r="1.7" fill="#dffbff" fill-opacity=".28"/>
+      <circle cx="7" cy="7" r=".65" fill="#ffffff" fill-opacity=".72"/>
     </pattern>
-    <pattern id="nyxMesh" width="28" height="28" patternUnits="userSpaceOnUse">
-      <path d="M0 14H28M14 0V28" stroke="#9ceeff" stroke-opacity=".10" stroke-width=".7"/>
-      <path d="M0 0L28 28M28 0L0 28" stroke="#9ceeff" stroke-opacity=".045" stroke-width=".7"/>
+    <pattern id="nyxMesh" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M0 15H30M15 0V30" stroke="#9ceeff" stroke-opacity=".08" stroke-width=".7"/>
+      <path d="M0 0L30 30M30 0L0 30" stroke="#9ceeff" stroke-opacity=".035" stroke-width=".7"/>
     </pattern>
     <clipPath id="nyxHeadClip">
-      <path d="M210 55
-        C151 55 113 105 119 180
-        L128 294
-        C135 349 169 381 210 388
-        C251 381 285 349 292 294
-        L301 180
-        C307 105 269 55 210 55Z"/>
+      <path d="M210 63
+        C156 63 126 105 126 166
+        L131 271
+        C134 325 165 363 210 373
+        C255 363 286 325 289 271
+        L294 166
+        C294 105 264 63 210 63Z"/>
     </clipPath>
-    <filter id="nyxBlur">
-      <feGaussianBlur stdDeviation="10"/>
-    </filter>
+    <filter id="nyxBlur"><feGaussianBlur stdDeviation="11"/></filter>
   </defs>
 
-  <ellipse cx="210" cy="250" rx="170" ry="205" fill="url(#nyxFaceGlow)" opacity=".62" filter="url(#nyxBlur)"/>
-  <ellipse cx="210" cy="470" rx="155" ry="38" fill="#69dcfa" fill-opacity=".08"/>
+  <ellipse cx="210" cy="238" rx="158" ry="190" fill="url(#nyxFaceGlow)" opacity=".65" filter="url(#nyxBlur)"/>
 
-  <g opacity=".92">
-    <path d="M210 55
-      C151 55 113 105 119 180
-      L128 294
-      C135 349 169 381 210 388
-      C251 381 285 349 292 294
-      L301 180
-      C307 105 269 55 210 55Z"
-      fill="url(#nyxFaceGlass)"
-      stroke="url(#nyxFaceEdge)"
-      stroke-width="2"/>
+  <!-- Ombros e presença corporal mínima -->
+  <path d="M82 493 Q101 397 153 363 Q181 347 210 347 Q239 347 267 363 Q319 397 338 493"
+    fill="#68dcfa" fill-opacity=".035" stroke="#79e4ff" stroke-opacity=".30" stroke-width="2"/>
+  <path d="M139 365 Q210 414 281 365" fill="none" stroke="#bdf7ff" stroke-opacity=".18" stroke-width="2"/>
 
-    <g clip-path="url(#nyxHeadClip)">
-      <rect x="105" y="40" width="210" height="360" fill="url(#nyxDots)" opacity=".78"/>
-      <rect x="105" y="40" width="210" height="360" fill="url(#nyxMesh)" opacity=".62"/>
+  <!-- Silhueta humana -->
+  <path d="M210 63
+    C156 63 126 105 126 166
+    L131 271
+    C134 325 165 363 210 373
+    C255 363 286 325 289 271
+    L294 166
+    C294 105 264 63 210 63Z"
+    fill="url(#nyxFaceGlass)" stroke="url(#nyxEdge)" stroke-width="2"/>
 
-      <ellipse cx="210" cy="170" rx="94" ry="122" fill="#eaffff" fill-opacity=".045"/>
-      <path d="M116 135 Q160 92 210 100 Q260 92 304 135" fill="none" stroke="#b8f5ff" stroke-opacity=".24" stroke-width="2"/>
-      <path d="M112 168 Q160 128 210 136 Q260 128 308 168" fill="none" stroke="#9ceeff" stroke-opacity=".16" stroke-width="1.5"/>
-      <path d="M113 203 Q162 171 210 178 Q258 171 307 203" fill="none" stroke="#9ceeff" stroke-opacity=".12" stroke-width="1.5"/>
-      <path d="M116 239 Q160 216 210 222 Q260 216 304 239" fill="none" stroke="#9ceeff" stroke-opacity=".12" stroke-width="1.5"/>
-      <path d="M122 275 Q164 258 210 264 Q256 258 298 275" fill="none" stroke="#9ceeff" stroke-opacity=".11" stroke-width="1.5"/>
-      <path d="M129 311 Q168 299 210 304 Q252 299 291 311" fill="none" stroke="#9ceeff" stroke-opacity=".10" stroke-width="1.5"/>
+  <g clip-path="url(#nyxHeadClip)">
+    <rect x="118" y="50" width="184" height="335" fill="url(#nyxDots)" opacity=".82"/>
+    <rect x="118" y="50" width="184" height="335" fill="url(#nyxMesh)" opacity=".54"/>
 
-      <path d="M210 92 C201 135 199 176 208 216 C214 241 214 255 207 278"
-        fill="none" stroke="#e9ffff" stroke-opacity=".48" stroke-width="3.2" stroke-linecap="round"/>
-      <path d="M205 278 Q210 286 217 278" fill="none" stroke="#dfffff" stroke-opacity=".38" stroke-width="2"/>
+    <!-- linhas de topologia -->
+    <path d="M128 133 Q169 104 210 111 Q251 104 292 133" fill="none" stroke="#b8f5ff" stroke-opacity=".18" stroke-width="1.5"/>
+    <path d="M126 164 Q168 138 210 145 Q252 138 294 164" fill="none" stroke="#9ceeff" stroke-opacity=".13" stroke-width="1.3"/>
+    <path d="M127 198 Q170 177 210 182 Q250 177 293 198" fill="none" stroke="#9ceeff" stroke-opacity=".10" stroke-width="1.3"/>
+    <path d="M129 232 Q170 215 210 220 Q250 215 291 232" fill="none" stroke="#9ceeff" stroke-opacity=".10" stroke-width="1.3"/>
+    <path d="M132 266 Q171 253 210 258 Q249 253 288 266" fill="none" stroke="#9ceeff" stroke-opacity=".09" stroke-width="1.3"/>
+    <path d="M137 300 Q174 291 210 296 Q246 291 283 300" fill="none" stroke="#9ceeff" stroke-opacity=".08" stroke-width="1.3"/>
 
-      <path d="M143 171 Q171 148 199 169 Q173 191 143 171Z"
-        fill="url(#nyxEye)" stroke="#e9ffff" stroke-opacity=".70" stroke-width="1.4"/>
-      <path d="M221 169 Q249 148 277 171 Q247 191 221 169Z"
-        fill="url(#nyxEye)" stroke="#e9ffff" stroke-opacity=".70" stroke-width="1.4"/>
-      <circle cx="176" cy="170" r="4.1" fill="#f5ffff"/>
-      <circle cx="244" cy="170" r="4.1" fill="#f5ffff"/>
-      <circle cx="176" cy="170" r="9" fill="none" stroke="#71e5ff" stroke-opacity=".28"/>
-      <circle cx="244" cy="170" r="9" fill="none" stroke="#71e5ff" stroke-opacity=".28"/>
+    <!-- olhos mais orgânicos -->
+    <path d="M146 171 Q171 151 199 168 Q175 184 146 171Z"
+      fill="url(#nyxEye)" stroke="#e9ffff" stroke-opacity=".62" stroke-width="1.2"/>
+    <path d="M221 168 Q249 151 274 171 Q245 184 221 168Z"
+      fill="url(#nyxEye)" stroke="#e9ffff" stroke-opacity=".62" stroke-width="1.2"/>
+    <circle cx="177" cy="169" r="3.2" fill="#f7ffff"/>
+    <circle cx="243" cy="169" r="3.2" fill="#f7ffff"/>
+    <circle cx="177" cy="169" r="8" fill="none" stroke="#71e5ff" stroke-opacity=".20"/>
+    <circle cx="243" cy="169" r="8" fill="none" stroke="#71e5ff" stroke-opacity=".20"/>
 
-      <path d="M145 250 Q177 270 205 251" fill="none" stroke="#d9fbff" stroke-opacity=".43" stroke-width="2.6" stroke-linecap="round"/>
-      <path d="M215 251 Q243 270 275 250" fill="none" stroke="#d9fbff" stroke-opacity=".43" stroke-width="2.6" stroke-linecap="round"/>
-      <path d="M173 294 Q210 315 247 294" fill="none" stroke="#e9ffff" stroke-opacity=".34" stroke-width="2.6" stroke-linecap="round"/>
-      <path d="M158 322 Q210 350 262 322" fill="none" stroke="#7de3fb" stroke-opacity=".23" stroke-width="2"/>
-    </g>
+    <!-- nariz / boca -->
+    <path d="M210 167 C204 197 202 220 210 238 C214 246 212 252 207 256"
+      fill="none" stroke="#e9ffff" stroke-opacity=".34" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M178 277 Q210 292 242 277" fill="none" stroke="#e9ffff" stroke-opacity=".36" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M184 281 Q210 287 236 281" fill="none" stroke="#7de3fb" stroke-opacity=".16" stroke-width="1"/>
 
-    <path d="M126 175 Q105 102 157 52 Q209 6 263 51 Q316 102 294 178"
-      fill="none" stroke="#86e8ff" stroke-opacity=".34" stroke-width="4"/>
-    <path d="M145 118 Q169 72 207 64 Q251 70 278 119"
-      fill="none" stroke="#d8fbff" stroke-opacity=".18" stroke-width="2"/>
-    <path d="M128 205 Q105 244 129 303" fill="none" stroke="#6dd9f7" stroke-opacity=".26" stroke-width="3"/>
-    <path d="M292 205 Q315 244 291 303" fill="none" stroke="#6dd9f7" stroke-opacity=".26" stroke-width="3"/>
-
-    <path d="M92 119 H65 V225 H105" fill="none" stroke="#75e1ff" stroke-opacity=".48" stroke-width="1.5"/>
-    <path d="M328 119 H355 V225 H315" fill="none" stroke="#75e1ff" stroke-opacity=".48" stroke-width="1.5"/>
-    <path d="M105 347 H76 V410 H137" fill="none" stroke="#75e1ff" stroke-opacity=".32" stroke-width="1.5"/>
-    <path d="M315 347 H344 V410 H283" fill="none" stroke="#75e1ff" stroke-opacity=".32" stroke-width="1.5"/>
-    <g fill="#baf6ff">
-      <circle cx="105" cy="119" r="3"/>
-      <circle cx="315" cy="119" r="3"/>
-      <circle cx="137" cy="410" r="2.5"/>
-      <circle cx="283" cy="410" r="2.5"/>
-    </g>
+    <!-- malha vertical de leitura -->
+    <path d="M157 104 Q175 173 157 337" fill="none" stroke="#b9f6ff" stroke-opacity=".07"/>
+    <path d="M182 82 Q193 172 182 356" fill="none" stroke="#b9f6ff" stroke-opacity=".07"/>
+    <path d="M238 82 Q227 172 238 356" fill="none" stroke="#b9f6ff" stroke-opacity=".07"/>
+    <path d="M263 104 Q245 173 263 337" fill="none" stroke="#b9f6ff" stroke-opacity=".07"/>
   </g>
 
-  <g opacity=".36">
-    <circle cx="210" cy="225" r="178" fill="none" stroke="#70ddfa" stroke-opacity=".25"/>
-    <circle cx="210" cy="225" r="190" fill="none" stroke="#70ddfa" stroke-opacity=".11" stroke-dasharray="3 9"/>
+  <!-- cabelo / contorno holográfico -->
+  <path d="M128 178 Q103 108 151 57 Q181 25 211 34 Q257 24 291 65 Q320 105 293 179"
+    fill="none" stroke="#8ae9ff" stroke-opacity=".38" stroke-width="4"/>
+  <path d="M139 126 Q158 71 207 47 Q254 65 279 126"
+    fill="none" stroke="#d8fbff" stroke-opacity=".18" stroke-width="2"/>
+  <path d="M132 105 Q105 153 126 220" fill="none" stroke="#72ddfa" stroke-opacity=".22" stroke-width="2.5"/>
+  <path d="M288 105 Q315 153 294 220" fill="none" stroke="#72ddfa" stroke-opacity=".22" stroke-width="2.5"/>
+
+  <!-- conectores da presença -->
+  <g fill="none" stroke="#75e1ff" stroke-opacity=".40" stroke-width="1.3">
+    <path d="M92 119 H66 V225 H104"/>
+    <path d="M328 119 H354 V225 H316"/>
+    <path d="M105 352 H78 V414 H137"/>
+    <path d="M315 352 H342 V414 H283"/>
+  </g>
+  <g fill="#baf6ff">
+    <circle cx="104" cy="119" r="2.6"/>
+    <circle cx="316" cy="119" r="2.6"/>
+    <circle cx="137" cy="414" r="2.2"/>
+    <circle cx="283" cy="414" r="2.2"/>
+  </g>
+
+  <g opacity=".30">
+    <circle cx="210" cy="225" r="178" fill="none" stroke="#70ddfa" stroke-opacity=".22"/>
+    <circle cx="210" cy="225" r="190" fill="none" stroke="#70ddfa" stroke-opacity=".10" stroke-dasharray="3 9"/>
   </g>
 </svg>
       </div>
