@@ -25,60 +25,69 @@ def git(raiz: Path, *args: str) -> str:
     return resultado.stdout.strip()
 
 
+def preparar_fixture(base_temporaria: Path) -> tuple[Path, Path]:
+    candidato = base_temporaria / "candidate"
+    candidato.mkdir()
+    (candidato / "candidato.json").write_text(
+        json.dumps(
+            {
+                "candidato_id": "candidato-001",
+                "estado": "candidato",
+                "arquivo": "codigo.py",
+                "avaliacao": {"aprovado": True},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (candidato / "codigo.py").write_text(
+        "def saudacao():\n    return 'NYXAL'\n",
+        encoding="utf-8",
+    )
+
+    proposta = base_temporaria / "proposta.json"
+    proposta.write_text(
+        json.dumps(
+            {
+                "proposta_id": "integracao-candidato-001",
+                "estado": "aguardando_autorizacao",
+                "candidato_dir": str(candidato),
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    return candidato, proposta
+
+
+def preparar_repositorio(base_temporaria: Path) -> Path:
+    raiz = base_temporaria / "repositorio"
+    raiz.mkdir()
+
+    git(raiz, "init", "-b", "main")
+    git(raiz, "config", "user.name", "Nyxal Test")
+    git(raiz, "config", "user.email", "nyxal-test@example.invalid")
+
+    base = raiz / "base.txt"
+    base.write_text("base\n", encoding="utf-8")
+    git(raiz, "add", "base.txt")
+    git(raiz, "commit", "-m", "base")
+
+    return raiz
+
+
 def executar() -> None:
     with TemporaryDirectory() as temporario:
         base_temporaria = Path(temporario)
-        raiz = base_temporaria / "repositorio"
-        raiz.mkdir()
+        raiz = preparar_repositorio(base_temporaria)
+        _, proposta = preparar_fixture(base_temporaria)
 
-        git(raiz, "init", "-b", "main")
-        git(raiz, "config", "user.name", "Nyxal Test")
-        git(raiz, "config", "user.email", "nyxal-test@example.invalid")
-
-        base = raiz / "base.txt"
-        base.write_text("base\n", encoding="utf-8")
-        git(raiz, "add", "base.txt")
-        git(raiz, "commit", "-m", "base")
-
-        candidato = base_temporaria / "candidate"
-        candidato.mkdir()
-        (candidato / "candidato.json").write_text(
-            json.dumps(
-                {
-                    "candidato_id": "candidato-001",
-                    "estado": "candidato",
-                    "arquivo": "codigo.py",
-                    "avaliacao": {"aprovado": True},
-                },
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
-        )
-        (candidato / "codigo.py").write_text(
-            "def saudacao():\n    return 'NYXAL'\n",
-            encoding="utf-8",
-        )
-
-        proposta = base_temporaria / "proposta.json"
-        proposta.write_text(
-            json.dumps(
-                {
-                    "proposta_id": "integracao-candidato-001",
-                    "estado": "aguardando_autorizacao",
-                    "candidato_dir": str(candidato),
-                    "autorizacao_explicita": False,
-                    "integracao_executada": False,
-                    "stable_modificada": False,
-                },
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
-        )
-
-        integrador = (
-            IntegracaoControladaDesenvolvimentoNixal(
-                repositorio=raiz
-            )
+        integrador = IntegracaoControladaDesenvolvimentoNixal(
+            repositorio=raiz
         )
 
         try:
@@ -140,6 +149,114 @@ def executar() -> None:
             "status",
             "--porcelain",
         ) == ""
+
+    with TemporaryDirectory() as temporario:
+        base_temporaria = Path(temporario)
+        raiz = preparar_repositorio(base_temporaria)
+        _, proposta = preparar_fixture(base_temporaria)
+        (raiz / "alteracao.txt").write_text(
+            "nao autorizada\n",
+            encoding="utf-8",
+        )
+
+        integrador = IntegracaoControladaDesenvolvimentoNixal(
+            repositorio=raiz
+        )
+
+        try:
+            integrador.preparar(
+                proposta_path=proposta,
+                autorizacao_explicita=True,
+            )
+        except RuntimeError as erro:
+            assert str(erro) == "arvore_git_suja"
+        else:
+            raise AssertionError(
+                "integracao em arvore suja foi permitida"
+            )
+
+    with TemporaryDirectory() as temporario:
+        base_temporaria = Path(temporario)
+        raiz = preparar_repositorio(base_temporaria)
+        _, proposta = preparar_fixture(base_temporaria)
+        git(raiz, "switch", "-c", "desenvolvimento")
+
+        integrador = IntegracaoControladaDesenvolvimentoNixal(
+            repositorio=raiz
+        )
+
+        try:
+            integrador.preparar(
+                proposta_path=proposta,
+                autorizacao_explicita=True,
+            )
+        except RuntimeError as erro:
+            assert str(erro) == "branch_atual_nao_e_stable"
+        else:
+            raise AssertionError(
+                "integracao fora de stable foi permitida"
+            )
+
+    with TemporaryDirectory() as temporario:
+        base_temporaria = Path(temporario)
+        raiz = preparar_repositorio(base_temporaria)
+        _, proposta = preparar_fixture(base_temporaria)
+
+        git(
+            raiz,
+            "branch",
+            "integracao/integracao-candidato-001",
+        )
+
+        integrador = IntegracaoControladaDesenvolvimentoNixal(
+            repositorio=raiz
+        )
+
+        try:
+            integrador.preparar(
+                proposta_path=proposta,
+                autorizacao_explicita=True,
+            )
+        except FileExistsError as erro:
+            assert str(erro) == (
+                "branch_de_integracao_ja_existente"
+            )
+        else:
+            raise AssertionError(
+                "branch de integracao existente foi reutilizada"
+            )
+
+    with TemporaryDirectory() as temporario:
+        base_temporaria = Path(temporario)
+        raiz = preparar_repositorio(base_temporaria)
+        _, proposta = preparar_fixture(base_temporaria)
+
+        dados = json.loads(
+            proposta.read_text(encoding="utf-8")
+        )
+        dados["estado"] = "integracao_preparada"
+        proposta.write_text(
+            json.dumps(dados, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        integrador = IntegracaoControladaDesenvolvimentoNixal(
+            repositorio=raiz
+        )
+
+        try:
+            integrador.preparar(
+                proposta_path=proposta,
+                autorizacao_explicita=True,
+            )
+        except ValueError as erro:
+            assert str(erro) == (
+                "estado_da_proposta_invalido"
+            )
+        else:
+            raise AssertionError(
+                "proposta ja processada foi reutilizada"
+            )
 
     print(
         "TESTE_INTEGRACAO_CONTROLADA_OK"
