@@ -108,6 +108,12 @@ def executar() -> None:
         assert item[
             "validacao_python"
         ]["sucesso"] is True
+        assert item[
+            "avaliacao"
+        ]["aprovado"] is True
+        assert all(
+            item["avaliacao"]["criterios"].values()
+        )
 
         segundo = pipeline.executar_ciclo()
 
