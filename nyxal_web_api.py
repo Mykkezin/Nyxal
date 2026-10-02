@@ -9,6 +9,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from secrets import compare_digest
 
+import numpy as np
+import soundfile as sf
+from kokoro import KPipeline
+
 from nixal_executor_ordens import ExecutorOrdensNixal
 
 
@@ -19,6 +23,10 @@ API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
 CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
 EXECUTOR = ExecutorOrdensNixal()
 PIPER_BIN = Path(sys.executable).parent / "piper"
+KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
+KOKORO_PIPELINE = KPipeline(
+    lang_code="p",
+)
 TTS_MODEL = Path(
     os.environ.get(
         "NYXAL_TTS_MODEL",
@@ -33,6 +41,33 @@ def json_bytes(payload: dict) -> bytes:
         ensure_ascii=False,
         indent=2,
     ).encode("utf-8")
+
+
+def generate_kokoro_audio(texto: str) -> bytes:
+    chunks = []
+
+    for _, _, audio in KOKORO_PIPELINE(
+        texto.strip(),
+        voice=KOKORO_VOICE,
+    ):
+        chunks.append(np.asarray(audio))
+
+    if not chunks:
+        raise RuntimeError("O Kokoro não gerou nenhum segmento de áudio.")
+
+    audio = np.concatenate(chunks)
+
+    with tempfile.NamedTemporaryFile(
+        suffix=".wav",
+        dir="/tmp",
+    ) as arquivo_audio:
+        sf.write(
+            arquivo_audio.name,
+            audio,
+            24000,
+        )
+        arquivo_audio.seek(0)
+        return arquivo_audio.read()
 
 
 def format_chat_response(resultado: dict) -> str:
@@ -313,73 +348,87 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 )
                 return
 
-            if not PIPER_BIN.exists() or not TTS_MODEL.exists():
-                self._send_json(
-                    503,
-                    {
-                        "estado": "tts_nao_configurado",
-                        "motivo": "Piper ou o modelo de voz da Nyxal não foi encontrado.",
-                    },
-                )
-                return
-
             try:
-                with tempfile.NamedTemporaryFile(
-                    suffix=".wav",
-                    dir="/tmp",
-                ) as arquivo_audio:
-                    processo = subprocess.run(
-                        [
-                            str(PIPER_BIN),
-                            "--model",
-                            str(TTS_MODEL),
-                            "--output_file",
-                            arquivo_audio.name,
-                        ],
-                        input=texto.strip() + "\n",
-                        text=True,
-                        capture_output=True,
-                        timeout=30,
-                        check=False,
-                    )
-
-                    if processo.returncode != 0:
-                        self._send_json(
-                            500,
-                            {
-                                "estado": "erro_ao_gerar_audio",
-                                "motivo": (
-                                    processo.stderr.strip()
-                                    or "O Piper não conseguiu gerar o áudio."
-                                ),
-                            },
-                        )
-                        return
-
-                    arquivo_audio.seek(0)
-                    audio = arquivo_audio.read()
+                audio = generate_kokoro_audio(texto)
 
                 self._send_bytes(
                     200,
                     audio,
                     "audio/wav",
                 )
-            except subprocess.TimeoutExpired:
-                self._send_json(
-                    504,
-                    {
-                        "estado": "tts_timeout",
-                        "motivo": "A geração do áudio excedeu 30 segundos.",
-                    },
+            except Exception as kokoro_erro:
+                print(
+                    "[Nyxal-API] Kokoro falhou; usando Piper:",
+                    kokoro_erro,
                 )
-            except OSError as erro:
-                self._send_json(
-                    500,
-                    {
-                        "estado": "erro_ao_gerar_audio",
-                        "motivo": str(erro),
-                    },
-                )
+
+                if not PIPER_BIN.exists() or not TTS_MODEL.exists():
+                    self._send_json(
+                        503,
+                        {
+                            "estado": "tts_nao_configurado",
+                            "motivo": "Kokoro e Piper não estão disponíveis.",
+                        },
+                    )
+                    return
+
+                try:
+                    with tempfile.NamedTemporaryFile(
+                        suffix=".wav",
+                        dir="/tmp",
+                    ) as arquivo_audio:
+                        processo = subprocess.run(
+                            [
+                                str(PIPER_BIN),
+                                "--model",
+                                str(TTS_MODEL),
+                                "--output_file",
+                                arquivo_audio.name,
+                            ],
+                            input=texto.strip() + "\n",
+                            text=True,
+                            capture_output=True,
+                            timeout=30,
+                            check=False,
+                        )
+
+                        if processo.returncode != 0:
+                            self._send_json(
+                                500,
+                                {
+                                    "estado": "erro_ao_gerar_audio",
+                                    "motivo": (
+                                        processo.stderr.strip()
+                                        or "O Piper não conseguiu gerar o áudio."
+                                    ),
+                                },
+                            )
+                            return
+
+                        arquivo_audio.seek(0)
+                        audio = arquivo_audio.read()
+
+                    self._send_bytes(
+                        200,
+                        audio,
+                        "audio/wav",
+                    )
+                except subprocess.TimeoutExpired:
+                    self._send_json(
+                        504,
+                        {
+                            "estado": "tts_timeout",
+                            "motivo": "A geração do áudio excedeu 30 segundos.",
+                        },
+                    )
+                except OSError as erro:
+                    self._send_json(
+                        500,
+                        {
+                            "estado": "erro_ao_gerar_audio",
+                            "motivo": str(erro),
+                        },
+                    )
             return
 
         if self.path != "/api/chat":
@@ -615,6 +664,10 @@ def main() -> None:
     print(
         "[Nyxal-API] endpoint de voz: "
         "POST /api/tts"
+    )
+    print(
+        "[Nyxal-API] TTS principal: "
+        f"Kokoro {KOKORO_VOICE}"
     )
 
     try:
