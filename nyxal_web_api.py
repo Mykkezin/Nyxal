@@ -514,9 +514,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     else "da noite"
                 )
                 resposta["fala"] = (
-                    f"Uma e {minuto_fala} {periodo_fala}, senhor Myke."
+                    f"Uma e {minuto_fala} {periodo_fala}, senhor Mayque."
                     if hora_fala == 1
-                    else f"{hora_fala} e {minuto_fala} {periodo_fala}, senhor Myke."
+                    else f"{hora_fala} e {minuto_fala} {periodo_fala}, senhor Mayque."
                 )
 
         self._send_json(
