@@ -1138,32 +1138,153 @@
       textEl.innerText = `"${text}"`;
     }
 
-    function toggleVoiceInput() {
+    let voiceRecorder = null;
+    let voiceChunks = [];
+
+    async function toggleVoiceInput() {
       playHudSound('click');
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert('Reconhecimento de voz não suportado neste navegador.');
+
+      if (voiceRecorder && voiceRecorder.state === 'recording') {
+        voiceRecorder.stop();
         return;
       }
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'pt-BR';
 
-      setAiStatusText('OUVINDO...', 'text-emerald-400');
-      document.getElementById('micBtn').classList.add('text-hud-cyan', 'animate-pulse');
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        alert('Este navegador não disponibiliza gravação de áudio para a Nyxal.');
+        return;
+      }
 
-      recognition.onresult = (e) => {
-        const transcript = e.results[0][0].transcript;
-        document.getElementById('chatInput').value = transcript;
-        document.getElementById('chatForm').dispatchEvent(new Event('submit'));
-        document.getElementById('micBtn').classList.remove('text-hud-cyan', 'animate-pulse');
-      };
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true
+        });
 
-      recognition.onerror = () => {
-        setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
-        document.getElementById('micBtn').classList.remove('text-hud-cyan', 'animate-pulse');
-      };
+        const preferredTypes = [
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/ogg;codecs=opus'
+        ];
 
-      recognition.start();
+        const mimeType = preferredTypes.find(type =>
+          MediaRecorder.isTypeSupported(type)
+        ) || '';
+
+        voiceChunks = [];
+        voiceRecorder = mimeType
+          ? new MediaRecorder(stream, { mimeType })
+          : new MediaRecorder(stream);
+
+        voiceRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            voiceChunks.push(event.data);
+          }
+        };
+
+        voiceRecorder.onstop = async () => {
+          stream.getTracks().forEach(track => track.stop());
+
+          const actualType =
+            voiceRecorder?.mimeType ||
+            mimeType ||
+            'audio/webm';
+
+          const blob = new Blob(
+            voiceChunks,
+            { type: actualType }
+          );
+
+          voiceChunks = [];
+          document.getElementById('micBtn').classList.remove(
+            'text-hud-cyan',
+            'animate-pulse'
+          );
+
+          if (!blob.size) {
+            setAiStatusText(
+              isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+              'text-hud-cyan'
+            );
+            return;
+          }
+
+          setAiStatusText('TRANSCRIÇÃO...', 'text-emerald-400');
+          setHologramProcessing(true);
+          showSubtitles('Transcrevendo comando de voz...');
+
+          try {
+            const response = await fetch(
+              `${window.NYXAL_API_BASE}/api/stt`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': actualType.split(';')[0]
+                },
+                body: blob
+              }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.sucesso) {
+              throw new Error(
+                data.motivo || 'Falha na transcrição.'
+              );
+            }
+
+            const transcript = (data.texto || '').trim();
+
+            if (!transcript) {
+              setHologramProcessing(false);
+              setAiStatusText(
+                isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+                'text-hud-cyan'
+              );
+              showSubtitles('Não identifiquei uma fala no áudio.');
+              return;
+            }
+
+            document.getElementById('chatInput').value = transcript;
+            document.getElementById('chatForm').requestSubmit();
+          } catch (err) {
+            setHologramProcessing(false);
+            console.warn('STT API error:', err);
+            setAiStatusText(
+              isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+              'text-hud-cyan'
+            );
+            alert(`Não foi possível transcrever o áudio: ${err.message}`);
+          }
+        };
+
+        voiceRecorder.onerror = (event) => {
+          stream.getTracks().forEach(track => track.stop());
+          document.getElementById('micBtn').classList.remove(
+            'text-hud-cyan',
+            'animate-pulse'
+          );
+          setAiStatusText(
+            isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+            'text-hud-cyan'
+          );
+          console.warn('Microfone:', event.error || event);
+        };
+
+        voiceRecorder.start();
+
+        setAiStatusText('OUVINDO...', 'text-emerald-400');
+        document.getElementById('micBtn').classList.add(
+          'text-hud-cyan',
+          'animate-pulse'
+        );
+        showSubtitles('Estou ouvindo...');
+      } catch (err) {
+        console.warn('Permissão/áudio do microfone:', err);
+        setAiStatusText(
+          isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+          'text-hud-cyan'
+        );
+        alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.');
+      }
     }
 
     // ================= HOLOGRAM SOURCE CONTROL =================
