@@ -11,6 +11,7 @@ from secrets import compare_digest
 
 import numpy as np
 import soundfile as sf
+from faster_whisper import WhisperModel
 from kokoro import KPipeline
 
 from nixal_executor_ordens import ExecutorOrdensNixal
@@ -27,6 +28,11 @@ KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 KOKORO_PIPELINE = KPipeline(
     lang_code="p",
 )
+WHISPER_MODEL_NAME = os.environ.get(
+    "NYXAL_WHISPER_MODEL",
+    "tiny",
+)
+WHISPER_MODEL = None
 TTS_MODEL = Path(
     os.environ.get(
         "NYXAL_TTS_MODEL",
@@ -41,6 +47,35 @@ def json_bytes(payload: dict) -> bytes:
         ensure_ascii=False,
         indent=2,
     ).encode("utf-8")
+
+
+def get_whisper_model() -> WhisperModel:
+    global WHISPER_MODEL
+
+    if WHISPER_MODEL is None:
+        WHISPER_MODEL = WhisperModel(
+            WHISPER_MODEL_NAME,
+            device="cpu",
+            compute_type="int8",
+        )
+
+    return WHISPER_MODEL
+
+
+def transcribe_audio(audio_path: str) -> str:
+    model = get_whisper_model()
+
+    segments, _ = model.transcribe(
+        audio_path,
+        language="pt",
+        vad_filter=True,
+    )
+
+    return " ".join(
+        segmento.text.strip()
+        for segmento in segments
+        if segmento.text.strip()
+    ).strip()
 
 
 def generate_kokoro_audio(texto: str) -> bytes:
@@ -282,6 +317,98 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
+        if self.path == "/api/stt":
+            try:
+                content_length = int(
+                    self.headers.get("Content-Length", "0")
+                )
+            except ValueError:
+                self._send_json(
+                    400,
+                    {
+                        "estado": "entrada_invalida",
+                        "motivo": "Content-Length inválido.",
+                    },
+                )
+                return
+
+            if content_length <= 0:
+                self._send_json(
+                    400,
+                    {
+                        "estado": "entrada_invalida",
+                        "motivo": "O áudio é obrigatório.",
+                    },
+                )
+                return
+
+            if content_length > 15 * 1024 * 1024:
+                self._send_json(
+                    413,
+                    {
+                        "estado": "audio_muito_grande",
+                        "motivo": "O áudio excede 15 MiB.",
+                    },
+                )
+                return
+
+            audio_data = self.rfile.read(content_length)
+            content_type = (
+                self.headers.get(
+                    "Content-Type",
+                    "application/octet-stream",
+                )
+                .split(";")[0]
+                .strip()
+                .lower()
+            )
+
+            extensoes = {
+                "audio/webm": ".webm",
+                "audio/ogg": ".ogg",
+                "audio/wav": ".wav",
+                "audio/x-wav": ".wav",
+                "audio/mpeg": ".mp3",
+                "audio/mp4": ".mp4",
+                "audio/aac": ".aac",
+            }
+            suffix = extensoes.get(content_type, ".audio")
+
+            try:
+                with tempfile.NamedTemporaryFile(
+                    suffix=suffix,
+                    dir="/tmp",
+                ) as arquivo_audio:
+                    arquivo_audio.write(audio_data)
+                    arquivo_audio.flush()
+
+                    texto = transcribe_audio(
+                        arquivo_audio.name
+                    )
+
+                self._send_json(
+                    200,
+                    {
+                        "sucesso": True,
+                        "estado": (
+                            "transcricao_concluida"
+                            if texto
+                            else "audio_sem_fala"
+                        ),
+                        "texto": texto,
+                        "modelo": WHISPER_MODEL_NAME,
+                    },
+                )
+            except Exception as erro:
+                self._send_json(
+                    500,
+                    {
+                        "estado": "erro_ao_transcrever",
+                        "motivo": str(erro),
+                    },
+                )
+            return
+
         if self.path == "/api/tts":
             try:
                 content_length = int(
@@ -668,6 +795,10 @@ def main() -> None:
     print(
         "[Nyxal-API] TTS principal: "
         f"Kokoro {KOKORO_VOICE}"
+    )
+    print(
+        "[Nyxal-API] endpoint de voz: "
+        "POST /api/stt"
     )
 
     try:
