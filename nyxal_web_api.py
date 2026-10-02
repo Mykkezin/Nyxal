@@ -364,7 +364,6 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if self.path != "/api/chat":
-        if self.path != "/api/chat":
             self._send_json(
                 404,
                 {
