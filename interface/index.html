@@ -945,10 +945,12 @@
       window.speechSynthesis.speak(utterance);
     }
 
-    async function speakGoddessNyxVoice(text) {
+    async function speakGoddessNyxVoice(text, updateSubtitle = true) {
       if (!text) return;
 
-      showSubtitles(text);
+      if (updateSubtitle) {
+        showSubtitles(text);
+      }
       setAiStatusText('FALANDO...', 'text-hud-cyan');
 
       if (currentNyxalAudio) {
@@ -1104,7 +1106,7 @@
           const reply = data.resposta || "Ordem processada pelo ExecutorOrdensNixal.";
           const speechText = data.fala || reply;
           showSubtitles(reply);
-          speakGoddessNyxVoice(speechText);
+          speakGoddessNyxVoice(speechText, false);
         } else {
           // If endpoint /api/chat is not created in backend yet, inform gracefully
           speakGoddessNyxVoice(`Ordem recebida. A rota POST /api/chat será conectada ao ExecutorOrdensNixal no backend.`);
