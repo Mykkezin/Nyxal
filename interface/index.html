@@ -16,6 +16,55 @@
   <!-- Three.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
+  <style>
+    #globeContainer {
+      transition: transform .35s ease, filter .35s ease;
+      will-change: transform, filter;
+    }
+
+    #globeVoiceButton {
+      border-radius: 9999px;
+      touch-action: manipulation;
+    }
+
+    #globeVoiceButton:hover {
+      background: radial-gradient(circle at center, rgba(0,242,254,.035), transparent 52%);
+    }
+
+    #globeContainer.globe-voice-listening {
+      transform: scale(1.035);
+      filter: drop-shadow(0 0 34px rgba(0,242,254,.42));
+      animation: globeVoicePulse 1.15s ease-in-out infinite;
+    }
+
+    #globeContainer.globe-voice-processing {
+      transform: scale(1.02);
+      filter: drop-shadow(0 0 30px rgba(180,120,255,.38));
+      animation: globeVoiceProcess 1.4s ease-in-out infinite;
+    }
+
+    #globeContainer.globe-voice-speaking {
+      transform: scale(1.025);
+      filter: drop-shadow(0 0 34px rgba(120,255,210,.40));
+      animation: globeVoiceSpeak 1.05s ease-in-out infinite;
+    }
+
+    @keyframes globeVoicePulse {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.045); }
+    }
+
+    @keyframes globeVoiceProcess {
+      0%,100% { transform: scale(1.015) rotate(0deg); }
+      50% { transform: scale(1.03) rotate(1deg); }
+    }
+
+    @keyframes globeVoiceSpeak {
+      0%,100% { transform: scale(1.015); }
+      50% { transform: scale(1.035); }
+    }
+  </style>
+
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -423,7 +472,22 @@
       <div class="relative flex-1 w-full flex items-center justify-center min-h-[380px]">
         
         <!-- Three.js 3D Holographic Core Canvas Container -->
-        <div id="globeContainer" class="relative w-full h-[380px] sm:h-[450px] lg:h-[500px] flex items-center justify-center cursor-grab active:cursor-grabbing">
+        <div class="relative w-full h-[380px] sm:h-[450px] lg:h-[500px] flex items-center justify-center">
+          <div id="globeContainer" class="relative w-full h-full flex items-center justify-center"></div>
+
+          <button
+            id="globeVoiceButton"
+            type="button"
+            aria-label="Falar com Nyxal"
+            title="Clique para falar com Nyxal"
+            class="absolute inset-0 z-10 appearance-none border-0 bg-transparent cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-hud-cyan/40"
+          ></button>
+
+          <div id="globeVoiceState" class="absolute left-1/2 bottom-2 sm:bottom-4 -translate-x-1/2 z-20 pointer-events-none hidden">
+            <div class="px-3 py-1.5 rounded-full border border-hud-cyan/30 bg-slate-950/75 backdrop-blur-md text-[10px] font-mono text-hud-cyan tracking-[0.18em] shadow-lg shadow-hud-cyan/10">
+              <span id="globeVoiceStateText">OUVINDO...</span>
+            </div>
+          </div>
         </div>
 
         <!-- RADIAL ORBITAL HUD NODES -->
@@ -495,9 +559,6 @@
           />
 
           <div class="absolute right-2 flex items-center gap-1.5">
-            <button type="button" onclick="toggleVoiceInput()" id="micBtn" title="Comando de Voz para Nyxal" class="w-8 h-8 rounded-lg bg-slate-900 text-slate-400 hover:text-hud-cyan hover:bg-slate-800 flex items-center justify-center transition-all">
-              <i class="fa-solid fa-microphone text-xs"></i>
-            </button>
             <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs flex items-center gap-1 transition-all shadow-md shadow-hud-cyan/20">
               <i class="fa-solid fa-paper-plane"></i>
             </button>
@@ -937,6 +998,7 @@
       utterance.volume = 1.0;
 
       utterance.onend = () => {
+        setGlobeVoiceState('idle');
         setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
         setTimeout(() => {
           document.getElementById('aiSubtitlesBox').classList.add('hidden');
@@ -952,6 +1014,7 @@
       if (updateSubtitle) {
         showSubtitles(text);
       }
+      setGlobeVoiceState('speaking');
       setAiStatusText('FALANDO...', 'text-hud-cyan');
 
       if (currentNyxalAudio) {
@@ -977,6 +1040,7 @@
         audio.onended = () => {
           URL.revokeObjectURL(url);
           currentNyxalAudio = null;
+          setGlobeVoiceState('idle');
           setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
           setTimeout(() => {
             document.getElementById('aiSubtitlesBox').classList.add('hidden');
@@ -1149,6 +1213,36 @@
       textEl.innerText = `"${text}"`;
     }
 
+    function setGlobeVoiceState(state) {
+      const globe = document.getElementById('globeContainer');
+      const hud = document.getElementById('globeVoiceState');
+      const label = document.getElementById('globeVoiceStateText');
+
+      if (!globe || !hud || !label) return;
+
+      globe.classList.remove(
+        'globe-voice-listening',
+        'globe-voice-processing',
+        'globe-voice-speaking'
+      );
+
+      if (state === 'listening') {
+        globe.classList.add('globe-voice-listening');
+        hud.classList.remove('hidden');
+        label.innerText = 'OUVINDO...';
+      } else if (state === 'processing') {
+        globe.classList.add('globe-voice-processing');
+        hud.classList.remove('hidden');
+        label.innerText = 'PROCESSANDO...';
+      } else if (state === 'speaking') {
+        globe.classList.add('globe-voice-speaking');
+        hud.classList.remove('hidden');
+        label.innerText = 'NYXAL FALANDO...';
+      } else {
+        hud.classList.add('hidden');
+      }
+    }
+
     let voiceRecorder = null;
     let voiceChunks = [];
     let voiceStopTimer = null;
@@ -1220,21 +1314,17 @@
 
           voiceChunks = [];
 
-          document.getElementById('micBtn').classList.remove(
-            'text-hud-cyan',
-            'animate-pulse'
-          );
-
           if (!blob.size) {
+            setGlobeVoiceState('idle');
             setHologramProcessing(false);
             setAiStatusText(
               isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
               'text-hud-cyan'
             );
-            showSubtitles('Não foi capturado nenhum áudio.');
             return;
           }
 
+          setGlobeVoiceState('processing');
           setAiStatusText('TRANSCRIÇÃO...', 'text-emerald-400');
           setHologramProcessing(true);
           showSubtitles('Transcrevendo comando de voz...');
@@ -1262,6 +1352,7 @@
             const transcript = (data.texto || '').trim();
 
             if (!transcript) {
+              setGlobeVoiceState('idle');
               setHologramProcessing(false);
               setAiStatusText(
                 isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
@@ -1275,6 +1366,7 @@
             document.getElementById('chatInput').value = transcript;
             document.getElementById('chatForm').requestSubmit();
           } catch (err) {
+            setGlobeVoiceState('idle');
             setHologramProcessing(false);
             console.warn('STT API error:', err);
             setAiStatusText(
@@ -1295,27 +1387,24 @@
           }
 
           stream.getTracks().forEach(track => track.stop());
-          document.getElementById('micBtn').classList.remove(
-            'text-hud-cyan',
-            'animate-pulse'
-          );
+          voiceChunks = [];
+          voiceRecorder = null;
+
+          setGlobeVoiceState('idle');
+          setHologramProcessing(false);
           setAiStatusText(
             isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
             'text-hud-cyan'
           );
-          setHologramProcessing(false);
           console.warn('Microfone:', event.error || event);
           alert('Ocorreu um erro durante a gravação do microfone.');
-          voiceRecorder = null;
         };
 
         currentRecorder.start(250);
 
+        setGlobeVoiceState('listening');
         setAiStatusText('OUVINDO...', 'text-emerald-400');
-        document.getElementById('micBtn').classList.add(
-          'text-hud-cyan',
-          'animate-pulse'
-        );
+        setHologramProcessing(false);
         showSubtitles('Estou ouvindo... fale agora.');
 
         voiceStopTimer = setTimeout(() => {
@@ -1325,6 +1414,7 @@
         }, VOICE_RECORDING_MS);
       } catch (err) {
         console.warn('Permissão/áudio do microfone:', err);
+        setGlobeVoiceState('idle');
         setAiStatusText(
           isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
           'text-hud-cyan'
@@ -1332,6 +1422,21 @@
         showSubtitles('Permissão do microfone necessária.');
         alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.');
       }
+    }
+
+    function initGlobeVoiceControl() {
+      const globeButton = document.getElementById('globeVoiceButton');
+      if (!globeButton) return;
+
+      globeButton.addEventListener('click', toggleVoiceInput);
+      globeButton.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggleVoiceInput();
+        }
+      });
+
+      setGlobeVoiceState('idle');
     }
 
     // ================= HOLOGRAM SOURCE CONTROL =================
@@ -1607,6 +1712,7 @@
     window.onload = function() {
       initSpaceBgCanvas();
       init3DGlobe();
+      initGlobeVoiceControl();
       initSysGraph();
 
       setInterval(updateLiveClock, 1000);
