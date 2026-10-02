@@ -915,27 +915,25 @@
     }
 
     // ================= GODDESS NYX SYNTHESIZED VOICE ENGINE =================
-    function speakGoddessNyxVoice(text) {
+    let currentNyxalAudio = null;
+
+    async function speakBrowserFallback(text) {
       if (!('speechSynthesis' in window)) return;
 
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      
+
       const voices = window.speechSynthesis.getVoices();
-      const goddessVoice = voices.find(v => 
-        (v.lang.includes('pt') || v.lang.includes('PT')) && 
+      const goddessVoice = voices.find(v =>
+        (v.lang.includes('pt') || v.lang.includes('PT')) &&
         (v.name.includes('Francisca') || v.name.includes('Luciana') || v.name.includes('Helena') || v.name.includes('Maria') || v.name.includes('Google') || v.name.includes('Female'))
       ) || voices.find(v => v.lang.includes('pt'));
 
       if (goddessVoice) utterance.voice = goddessVoice;
 
-      // Goddess Nyx Voice Parameters: Deep, calm, natural pitch and speed
       utterance.pitch = 0.92;
       utterance.rate = 0.95;
       utterance.volume = 1.0;
-
-      showSubtitles(text);
-      setAiStatusText('FALANDO...', 'text-hud-cyan');
 
       utterance.onend = () => {
         setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
@@ -945,6 +943,48 @@
       };
 
       window.speechSynthesis.speak(utterance);
+    }
+
+    async function speakGoddessNyxVoice(text) {
+      if (!text) return;
+
+      showSubtitles(text);
+      setAiStatusText('FALANDO...', 'text-hud-cyan');
+
+      if (currentNyxalAudio) {
+        currentNyxalAudio.pause();
+        currentNyxalAudio = null;
+      }
+
+      try {
+        const response = await fetch(`${window.NYXAL_API_BASE}/api/tts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto: text })
+        });
+
+        if (!response.ok) {
+          throw new Error(`TTS HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        currentNyxalAudio = audio;
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          currentNyxalAudio = null;
+          setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
+          setTimeout(() => {
+            document.getElementById('aiSubtitlesBox').classList.add('hidden');
+          }, 4000);
+        };
+
+        await audio.play();
+      } catch (err) {
+        console.warn('TTS local indisponível; usando voz do navegador:', err);
+        await speakBrowserFallback(text);
+      }
     }
 
     // ================= HOLOGRAM RECEDED & VISUAL STATE CONTROL =================
