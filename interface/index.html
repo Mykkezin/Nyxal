@@ -1109,8 +1109,19 @@
           showSubtitles(reply);
           speakGoddessNyxVoice(speechText, false);
         } else {
-          // If endpoint /api/chat is not created in backend yet, inform gracefully
-          speakGoddessNyxVoice(`Ordem recebida. A rota POST /api/chat será conectada ao ExecutorOrdensNixal no backend.`);
+          let errorMessage = `A Nyxal não conseguiu concluir a ordem (HTTP ${res.status}).`;
+
+          try {
+            const errorData = await res.json();
+            if (errorData.motivo) {
+              errorMessage = errorData.motivo;
+            }
+          } catch (_) {
+            // Mantém a mensagem HTTP caso a API não retorne JSON.
+          }
+
+          showSubtitles(errorMessage);
+          speakGoddessNyxVoice(errorMessage);
         }
       } catch (err) {
         setHologramProcessing(false);
@@ -1140,6 +1151,8 @@
 
     let voiceRecorder = null;
     let voiceChunks = [];
+    let voiceStopTimer = null;
+    const VOICE_RECORDING_MS = 7000;
 
     async function toggleVoiceInput() {
       playHudSound('click');
@@ -1156,13 +1169,18 @@
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
         });
 
         const preferredTypes = [
+          'audio/ogg;codecs=opus',
           'audio/webm;codecs=opus',
-          'audio/webm',
-          'audio/ogg;codecs=opus'
+          'audio/webm'
         ];
 
         const mimeType = preferredTypes.find(type =>
@@ -1174,17 +1192,24 @@
           ? new MediaRecorder(stream, { mimeType })
           : new MediaRecorder(stream);
 
-        voiceRecorder.ondataavailable = (event) => {
+        const currentRecorder = voiceRecorder;
+
+        currentRecorder.ondataavailable = (event) => {
           if (event.data && event.data.size > 0) {
             voiceChunks.push(event.data);
           }
         };
 
-        voiceRecorder.onstop = async () => {
+        currentRecorder.onstop = async () => {
+          if (voiceStopTimer) {
+            clearTimeout(voiceStopTimer);
+            voiceStopTimer = null;
+          }
+
           stream.getTracks().forEach(track => track.stop());
 
           const actualType =
-            voiceRecorder?.mimeType ||
+            currentRecorder.mimeType ||
             mimeType ||
             'audio/webm';
 
@@ -1194,16 +1219,19 @@
           );
 
           voiceChunks = [];
+
           document.getElementById('micBtn').classList.remove(
             'text-hud-cyan',
             'animate-pulse'
           );
 
           if (!blob.size) {
+            setHologramProcessing(false);
             setAiStatusText(
               isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
               'text-hud-cyan'
             );
+            showSubtitles('Não foi capturado nenhum áudio.');
             return;
           }
 
@@ -1227,7 +1255,7 @@
 
             if (!response.ok || !data.sucesso) {
               throw new Error(
-                data.motivo || 'Falha na transcrição.'
+                data.motivo || `Falha na transcrição (HTTP ${response.status}).`
               );
             }
 
@@ -1243,6 +1271,7 @@
               return;
             }
 
+            showSubtitles(`Você disse: "${transcript}"`);
             document.getElementById('chatInput').value = transcript;
             document.getElementById('chatForm').requestSubmit();
           } catch (err) {
@@ -1252,11 +1281,19 @@
               isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
               'text-hud-cyan'
             );
+            showSubtitles(`Erro de reconhecimento: ${err.message}`);
             alert(`Não foi possível transcrever o áudio: ${err.message}`);
+          } finally {
+            voiceRecorder = null;
           }
         };
 
-        voiceRecorder.onerror = (event) => {
+        currentRecorder.onerror = (event) => {
+          if (voiceStopTimer) {
+            clearTimeout(voiceStopTimer);
+            voiceStopTimer = null;
+          }
+
           stream.getTracks().forEach(track => track.stop());
           document.getElementById('micBtn').classList.remove(
             'text-hud-cyan',
@@ -1266,23 +1303,33 @@
             isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
             'text-hud-cyan'
           );
+          setHologramProcessing(false);
           console.warn('Microfone:', event.error || event);
+          alert('Ocorreu um erro durante a gravação do microfone.');
+          voiceRecorder = null;
         };
 
-        voiceRecorder.start();
+        currentRecorder.start(250);
 
         setAiStatusText('OUVINDO...', 'text-emerald-400');
         document.getElementById('micBtn').classList.add(
           'text-hud-cyan',
           'animate-pulse'
         );
-        showSubtitles('Estou ouvindo...');
+        showSubtitles('Estou ouvindo... fale agora.');
+
+        voiceStopTimer = setTimeout(() => {
+          if (currentRecorder.state === 'recording') {
+            currentRecorder.stop();
+          }
+        }, VOICE_RECORDING_MS);
       } catch (err) {
         console.warn('Permissão/áudio do microfone:', err);
         setAiStatusText(
           isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
           'text-hud-cyan'
         );
+        showSubtitles('Permissão do microfone necessária.');
         alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.');
       }
     }
