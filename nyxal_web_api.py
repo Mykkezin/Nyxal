@@ -6,12 +6,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from secrets import compare_digest
 
+from nixal_executor_ordens import ExecutorOrdensNixal
+
 
 BASE_DIR = Path(__file__).resolve().parent
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
 CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
+EXECUTOR = ExecutorOrdensNixal()
 
 
 def json_bytes(payload: dict) -> bytes:
@@ -85,7 +88,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         )
         self.send_header(
             "Access-Control-Allow-Methods",
-            "GET, OPTIONS",
+            "GET, POST, OPTIONS",
         )
         self.end_headers()
 
@@ -141,9 +144,109 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         )
         self.send_header(
             "Access-Control-Allow-Methods",
-            "GET, OPTIONS",
+            "GET, POST, OPTIONS",
         )
         self.end_headers()
+
+    def do_POST(self) -> None:
+        if self.path != "/api/chat":
+            self._send_json(
+                404,
+                {
+                    "estado": "rota_nao_encontrada",
+                },
+            )
+            return
+
+        try:
+            content_length = int(
+                self.headers.get("Content-Length", "0")
+            )
+        except ValueError:
+            self._send_json(
+                400,
+                {
+                    "estado": "entrada_invalida",
+                    "motivo": "Content-Length inválido.",
+                },
+            )
+            return
+
+        if content_length <= 0:
+            self._send_json(
+                400,
+                {
+                    "estado": "entrada_invalida",
+                    "motivo": "O corpo da requisição é obrigatório.",
+                },
+            )
+            return
+
+        if content_length > 64 * 1024:
+            self._send_json(
+                413,
+                {
+                    "estado": "entrada_muito_grande",
+                    "motivo": "O corpo da requisição excede 64 KiB.",
+                },
+            )
+            return
+
+        try:
+            payload = json.loads(
+                self.rfile.read(content_length).decode("utf-8")
+            )
+        except (
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ):
+            self._send_json(
+                400,
+                {
+                    "estado": "entrada_invalida",
+                    "motivo": "O corpo precisa ser um JSON UTF-8 válido.",
+                },
+            )
+            return
+
+        if not isinstance(payload, dict):
+            self._send_json(
+                400,
+                {
+                    "estado": "entrada_invalida",
+                    "motivo": "O corpo precisa ser um objeto JSON.",
+                },
+            )
+            return
+
+        mensagem = payload.get("mensagem")
+
+        if not isinstance(mensagem, str) or not mensagem.strip():
+            self._send_json(
+                400,
+                {
+                    "estado": "entrada_invalida",
+                    "motivo": "O campo 'mensagem' precisa ser um texto não vazio.",
+                },
+            )
+            return
+
+        try:
+            resultado = EXECUTOR.atender(mensagem)
+        except Exception as erro:
+            self._send_json(
+                500,
+                {
+                    "estado": "erro_ao_atender_ordem",
+                    "motivo": str(erro),
+                },
+            )
+            return
+
+        self._send_json(
+            200 if resultado.get("sucesso") else 422,
+            resultado,
+        )
 
     def do_GET(self) -> None:
         if self.path == "/health":
@@ -228,6 +331,10 @@ def main() -> None:
     print(
         "[Nyxal-API] endpoint publico: "
         "GET /api/public/status"
+    )
+    print(
+        "[Nyxal-API] endpoint de chat: "
+        "POST /api/chat"
     )
 
     try:
