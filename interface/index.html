@@ -10,7 +10,17 @@
 .app{position:relative;width:100vw;height:100vh;overflow:hidden;background:radial-gradient(circle at 52% 58%,rgba(47,171,223,.10),transparent 27%),radial-gradient(circle at 88% 34%,rgba(49,126,168,.13),transparent 29%),linear-gradient(180deg,#030710,#050b14 55%,#02060b)}
 .app:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.46;background:linear-gradient(rgba(112,200,241,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(112,200,241,.045) 1px,transparent 1px);background-size:64px 64px}
 .app:after{content:"";position:absolute;inset:0;pointer-events:none;z-index:40;opacity:.08;background:repeating-linear-gradient(180deg,rgba(255,255,255,.04) 0 1px,transparent 2px 5px)}
-.backdrop-face{position:absolute;right:-7vw;top:8vh;width:44vw;height:85vh;object-fit:cover;object-position:52% 42%;opacity:.11;filter:saturate(.7);mix-blend-mode:screen;pointer-events:none}
+.backdrop-face{display:none}
+.nyxal-hologram{position:absolute;z-index:2;right:3vw;top:6vh;width:min(45vw,760px);height:88vh;min-height:620px;pointer-events:none;opacity:.74;transition:opacity .35s ease,transform .35s ease,filter .35s ease;filter:drop-shadow(0 0 18px rgba(86,211,255,.13))}
+.nyxal-hologram.background-mode{opacity:.13;transform:scale(.97);filter:blur(.4px) drop-shadow(0 0 12px rgba(86,211,255,.06))}
+.nyxal-aura{position:absolute;inset:5% 5%;background:radial-gradient(ellipse at 50% 42%,rgba(73,210,255,.14),transparent 55%),radial-gradient(ellipse at 52% 72%,rgba(48,141,181,.08),transparent 62%);filter:blur(28px);animation:holoAura 5.5s ease-in-out infinite}
+.nyxal-figure{position:absolute;inset:4% 10%;width:80%;height:92%;overflow:visible;filter:drop-shadow(0 0 14px rgba(121,225,255,.25));animation:holoBreath 5.3s ease-in-out infinite}
+.nyxal-orbit{position:absolute;left:50%;top:49%;border:1px solid rgba(126,227,255,.19);border-radius:50%;transform:translate(-50%,-50%) rotateX(67deg)}
+.orbit-x{width:94%;height:38%;animation:holoOrbit 34s linear infinite}.orbit-y{width:73%;height:31%;border-style:dashed;animation:holoOrbitReverse 25s linear infinite}
+.nyxal-hud{position:absolute;z-index:3;color:var(--muted);font-size:6px;letter-spacing:.14em}.nyxal-hud b{display:block;margin-top:4px;color:var(--cyan);font-size:8px;font-weight:500}.hud-left{left:8%;top:10%}.hud-right{right:8%;top:10%;text-align:right}.hud-bottom{left:50%;bottom:5%;transform:translateX(-50%);text-align:center}
+.holo-toggle{position:absolute;right:6%;bottom:8%;z-index:5;pointer-events:auto;width:28px;height:28px;border-radius:50%;border:1px solid rgba(126,227,255,.32);background:rgba(3,13,21,.55);color:var(--cyan);font-size:10px;box-shadow:0 0 15px rgba(126,227,255,.10);opacity:.66}
+.holo-toggle:hover{opacity:1;border-color:rgba(126,227,255,.62)}
+@keyframes holoAura{0%,100%{opacity:.48;transform:scale(.97)}50%{opacity:.95;transform:scale(1.03)}}@keyframes holoBreath{0%,100%{transform:scale(1);opacity:.56}50%{transform:scale(1.014);opacity:.84}}@keyframes holoOrbit{from{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(0)}to{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(360deg)}}@keyframes holoOrbitReverse{from{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(360deg)}to{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(0)}}
 header{position:relative;z-index:10;height:76px;display:grid;grid-template-columns:245px 1fr 310px;align-items:center;padding:0 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(5,14,24,.96),rgba(3,8,14,.82))}
 .brand{display:flex;align-items:center;gap:11px}.brand-mark{font-size:23px;color:var(--cyan);text-shadow:0 0 16px rgba(128,221,255,.32)}.brand-name{font-size:15px;letter-spacing:.28em}.brand-sub{margin-top:2px;font-size:6px;color:var(--muted);letter-spacing:.18em}
 nav{display:flex;justify-content:center;gap:5px}nav button{padding:9px 13px;border:1px solid transparent;background:transparent;color:#78909d;font-size:7px;letter-spacing:.13em;border-radius:17px}nav button.active{color:var(--text);border-color:rgba(118,211,247,.22);background:rgba(118,211,247,.05);box-shadow:0 0 18px rgba(118,211,247,.05)}
@@ -21,25 +31,7 @@ main{position:relative;height:calc(100vh - 76px);padding:14px 18px 16px}.left,.r
 .events{flex:1;min-height:0}.event-list{display:flex;flex-direction:column;gap:10px}.event{display:grid;grid-template-columns:28px 1fr 7px;gap:8px;align-items:center;padding-bottom:8px;border-bottom:1px dashed rgba(118,211,247,.07)}.event:last-child{border-bottom:0}.event-icon{width:28px;height:28px;border:1px solid rgba(118,211,247,.11);border-radius:7px;display:grid;place-items:center;color:var(--cyan);font-size:10px}.event-name{font-size:7px}.event-time{font-size:5px;color:var(--muted);margin-top:2px}.event-dot{width:6px;height:6px;border-radius:50%;background:#58bef0;box-shadow:0 0 8px rgba(88,190,240,.72)}
 .music{min-height:146px}.music-row{display:grid;grid-template-columns:53px 1fr;gap:9px;align-items:center}.cover{width:53px;height:53px;border-radius:6px;border:1px solid rgba(118,211,247,.10);background:linear-gradient(145deg,#1c3d50,#08111a 55%,#23475b);position:relative;overflow:hidden}.cover:before{content:"";position:absolute;inset:-25%;background:repeating-linear-gradient(135deg,transparent 0 8px,rgba(154,224,247,.18) 9px 11px);transform:rotate(12deg)}.song{font-size:8px}.artist{font-size:6px;color:var(--muted);margin-top:3px}.timeline{height:2px;margin-top:9px;background:rgba(118,211,247,.10)}.timeline i{display:block;width:31%;height:100%;background:var(--cyan)}.controls{text-align:center;margin-top:8px;color:var(--cyan);font-size:11px;letter-spacing:.8em}
 .right .quote{padding:12px 13px;font:italic 15px Georgia,serif;color:#c2d4dc}.right .quote small{display:block;margin-top:6px;font:normal 6px Inter,"Segoe UI",sans-serif;color:var(--cyan);letter-spacing:.08em}.goals{flex:1;min-height:0;padding:12px 12px 10px}.goal-list{display:flex;flex-direction:column;gap:14px}.goal{display:grid;grid-template-columns:16px 1fr 34px;gap:7px;align-items:start}.check{width:14px;height:14px;border:1px solid rgba(118,211,247,.32);border-radius:4px}.goal-name{font-size:7px}.goal-state{font-size:5px;color:var(--muted);margin-top:3px}.pct{text-align:right;color:var(--cyan);font-size:6px}.bar{grid-column:2/4;height:3px;border:1px solid rgba(118,211,247,.07);margin-top:5px}.bar i{display:block;height:100%;background:linear-gradient(90deg,rgba(118,211,247,.15),rgba(118,211,247,.72))}
-.bottom-quote{display:flex;align-items:center;gap:10px}.quote-icon{width:42px;height:42px;border-radius:8px;border:1px solid rgba(118,211,247,.12);background:radial-gradient(circle at 35% 30%,rgba(150,228,250,.45),rgba(31,74,96,.4) 35%,rgba(4,15,25,.8) 72%);flex:none}.bottom-quote .text{font:italic 12px Georgia,serif;color:#bfd0d8;line-height:1.25}.bottom-quote small{display:block;margin-top:4px;font:normal 6px Inter,"Segoe UI",sans-serif;color:var(--muted)}.holo-card{min-height:238px;position:relative;padding:10px;overflow:hidden}
-.holo-head{display:flex;align-items:center;justify-content:space-between;color:var(--cyan);font-size:7px;letter-spacing:.17em;margin-bottom:7px}
-.holo-head small{color:var(--muted);font-size:5px;letter-spacing:.08em}
-.holo-stage{position:relative;height:196px;border:1px solid rgba(118,211,247,.20);overflow:hidden;background:
-radial-gradient(circle at 50% 43%,rgba(92,210,255,.18),transparent 33%),
-radial-gradient(circle at 50% 70%,rgba(54,150,198,.08),transparent 55%),
-rgba(1,8,14,.80)}
-.holo-stage:before{content:"";position:absolute;inset:6px;border:1px solid rgba(118,211,247,.07);pointer-events:none}
-.holo-stage:after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(160,237,255,.08) 0 1px,transparent 2px 5px);opacity:.38}
-.holo-face{position:absolute;left:50%;top:52%;width:190px;height:220px;object-fit:cover;object-position:50% 40%;transform:translate(-50%,-50%);filter:grayscale(1) contrast(1.18) brightness(1.35) sepia(.42) hue-rotate(145deg) saturate(2.2) drop-shadow(0 0 18px rgba(117,224,255,.55));opacity:.84;mix-blend-mode:screen;mask-image:linear-gradient(180deg,transparent 0%,#000 11%,#000 88%,transparent 100%);animation:holo-breathe 5.4s ease-in-out infinite}
-.holo-silhouette{position:absolute;left:50%;bottom:-31px;width:210px;height:135px;transform:translateX(-50%);border-radius:50% 50% 0 0;background:radial-gradient(ellipse at 50% 5%,rgba(110,222,255,.14),rgba(53,146,193,.06) 44%,transparent 72%);filter:blur(5px);animation:holo-pulse 2.3s ease-in-out infinite}
-.holo-scan{position:absolute;left:5%;right:5%;height:2px;top:26%;background:linear-gradient(90deg,transparent,rgba(137,232,255,.80),transparent);box-shadow:0 0 13px rgba(118,221,255,.56);animation:holo-scan 4.2s ease-in-out infinite;z-index:4}
-.holo-grid{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,transparent 0 42%,rgba(118,221,255,.09) 43%,transparent 44%),linear-gradient(90deg,transparent 49.7%,rgba(118,221,255,.10) 50%,transparent 50.3%);opacity:.4;pointer-events:none}
-.holo-data{position:absolute;z-index:7;color:var(--muted);font-size:5px;letter-spacing:.11em;line-height:1.5}
-.holo-data b{display:block;color:var(--cyan);font-size:6px;font-weight:500}
-.holo-d1{left:9px;top:9px}.holo-d2{right:9px;top:9px;text-align:right}.holo-d3{left:9px;bottom:9px}.holo-d4{right:9px;bottom:9px;text-align:right}
-.holo-core{position:absolute;left:50%;bottom:11px;transform:translateX(-50%);z-index:8;width:20px;height:20px;border:1px solid rgba(126,226,255,.48);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-size:8px;background:rgba(2,12,19,.62);box-shadow:0 0 13px rgba(118,221,255,.22);animation:holo-heart 1.9s ease-in-out infinite}
-.holo-corner{position:absolute;width:12px;height:12px;border-color:rgba(118,221,255,.55);border-style:solid;z-index:9}.holo-corner.tl{left:4px;top:4px;border-width:1px 0 0 1px}.holo-corner.tr{right:4px;top:4px;border-width:1px 1px 0 0}.holo-corner.bl{left:4px;bottom:4px;border-width:0 0 1px 1px}.holo-corner.br{right:4px;bottom:4px;border-width:0 1px 1px 0}
-@keyframes holo-breathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.70}50%{transform:translate(-50%,-50%) scale(1.018);opacity:.92}}
+.bottom-quote{display:flex;align-items:center;gap:10px}.quote-icon{width:42px;height:42px;border-radius:8px;border:1px solid rgba(118,211,247,.12);background:radial-gradient(circle at 35% 30%,rgba(150,228,250,.45),rgba(31,74,96,.4) 35%,rgba(4,15,25,.8) 72%);flex:none}.bottom-quote .text{font:italic 12px Georgia,serif;color:#bfd0d8;line-height:1.25}.bottom-quote small{display:block;margin-top:4px;font:normal 6px Inter,"Segoe UI",sans-serif;color:var(--muted)}@keyframes holo-breathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.70}50%{transform:translate(-50%,-50%) scale(1.018);opacity:.92}}
 @keyframes holo-pulse{0%,100%{opacity:.24;transform:translateX(-50%) scale(.94)}50%{opacity:.52;transform:translateX(-50%) scale(1.04)}}
 @keyframes holo-scan{0%,100%{top:23%;opacity:.04}50%{top:73%;opacity:.86}}
 @keyframes holo-heart{0%,100%{transform:translateX(-50%) scale(.92);box-shadow:0 0 10px rgba(118,221,255,.18)}25%{transform:translateX(-50%) scale(1.14);box-shadow:0 0 18px rgba(118,221,255,.42)}40%{transform:translateX(-50%) scale(.98)}55%{transform:translateX(-50%) scale(1.08);box-shadow:0 0 15px rgba(118,221,255,.32)}70%{transform:translateX(-50%) scale(.94)}}
@@ -56,7 +48,39 @@ rgba(1,8,14,.80)}
 </head>
 <body>
 <div class="app">
-<img class="backdrop-face" src="./nyxal-presenca.jpg" alt="">
+<div class="nyxal-hologram" id="nyxal-hologram" aria-label="Presença holográfica da Nyxal">
+<div class="nyxal-aura"></div><div class="nyxal-orbit orbit-x"></div><div class="nyxal-orbit orbit-y"></div>
+<svg class="nyxal-figure" viewBox="0 0 700 900" aria-hidden="true">
+<defs>
+<radialGradient id="hf" cx="50%" cy="38%" r="65%"><stop offset="0%" stop-color="#d7f9ff" stop-opacity=".58"/><stop offset="48%" stop-color="#64d8ff" stop-opacity=".25"/><stop offset="100%" stop-color="#0b4057" stop-opacity="0"/></radialGradient>
+<linearGradient id="hl" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#b5f5ff" stop-opacity=".86"/><stop offset="52%" stop-color="#55d0ff" stop-opacity=".40"/><stop offset="100%" stop-color="#1d617d" stop-opacity=".06"/></linearGradient>
+<filter id="hg"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<ellipse cx="350" cy="540" rx="280" ry="330" fill="url(#hf)" opacity=".22"/>
+<path d="M196 385 C150 298 186 163 350 114 C514 163 550 298 504 385 C488 242 443 170 350 170 C257 170 212 242 196 385Z" fill="#081923" fill-opacity=".56" stroke="url(#hl)" stroke-width="4"/>
+<path d="M215 360 C215 238 270 158 350 158 C430 158 485 238 485 360 C485 461 432 545 350 563 C268 545 215 461 215 360Z" fill="#0b2d3b" fill-opacity=".24" stroke="url(#hl)" stroke-width="3"/>
+<path d="M242 302 C270 252 316 231 350 231 C384 231 430 252 458 302" fill="none" stroke="#80e4ff" stroke-opacity=".32" stroke-width="3"/>
+<path d="M262 332 C288 316 315 316 337 329 M363 329 C385 316 412 316 438 332" fill="none" stroke="#a8f3ff" stroke-width="5" stroke-linecap="round"/>
+<ellipse cx="306" cy="343" rx="18" ry="7" fill="#9beaff" opacity=".82" filter="url(#hg)"/><ellipse cx="394" cy="343" rx="18" ry="7" fill="#9beaff" opacity=".82" filter="url(#hg)"/>
+<path d="M350 345 C343 377 338 397 350 410 C362 397 357 377 350 345Z" fill="#60d5ff" fill-opacity=".15" stroke="#82e6ff" stroke-opacity=".42" stroke-width="2"/>
+<path d="M311 443 C337 459 363 459 389 443" fill="none" stroke="#a9efff" stroke-opacity=".70" stroke-width="3" stroke-linecap="round"/>
+<path d="M350 175 V255" stroke="#9beaff" stroke-opacity=".34" stroke-width="2"/><circle cx="350" cy="196" r="8" fill="#9beaff" opacity=".62" filter="url(#hg)"/>
+<path d="M247 300 L220 335 L250 350 M453 300 L480 335 L450 350 M234 374 L211 396 L236 414 M466 374 L489 396 L464 414" fill="none" stroke="#66dcff" stroke-opacity=".30" stroke-width="3"/>
+<path d="M291 558 L280 637 L228 728 L203 868 M409 558 L420 637 L472 728 L497 868" fill="none" stroke="url(#hl)" stroke-width="5"/>
+<path d="M278 616 C232 627 190 657 168 702 C151 738 148 793 140 868 M422 616 C468 627 510 657 532 702 C549 738 552 793 560 868" fill="none" stroke="url(#hl)" stroke-width="4"/>
+<path d="M282 619 C307 651 324 671 350 686 C376 671 393 651 418 619" fill="none" stroke="#76ddff" stroke-opacity=".40" stroke-width="3"/>
+<path d="M285 650 C306 684 321 718 350 736 C379 718 394 684 415 650" fill="#0c2430" fill-opacity=".62" stroke="#80e4ff" stroke-opacity=".26" stroke-width="3"/>
+<circle cx="350" cy="711" r="47" fill="#0b2a39" fill-opacity=".64" stroke="#92ecff" stroke-opacity=".46" stroke-width="3" filter="url(#hg)"/><circle cx="350" cy="711" r="17" fill="#b9f5ff" fill-opacity=".68" filter="url(#hg)"/>
+<path d="M350 694 V728 M333 711 H367" stroke="#d7fbff" stroke-opacity=".70" stroke-width="3"/>
+<g stroke="#92ecff" stroke-opacity=".22" stroke-width="1"><line x1="168" y1="205" x2="532" y2="205"/><line x1="168" y1="235" x2="532" y2="235"/><line x1="168" y1="265" x2="532" y2="265"/><line x1="168" y1="295" x2="532" y2="295"/><line x1="168" y1="325" x2="532" y2="325"/><line x1="168" y1="355" x2="532" y2="355"/><line x1="168" y1="385" x2="532" y2="385"/><line x1="168" y1="415" x2="532" y2="415"/><line x1="168" y1="445" x2="532" y2="445"/><line x1="168" y1="475" x2="532" y2="475"/><line x1="168" y1="505" x2="532" y2="505"/><line x1="168" y1="535" x2="532" y2="535"/><line x1="168" y1="565" x2="532" y2="565"/><line x1="168" y1="595" x2="532" y2="595"/><line x1="168" y1="625" x2="532" y2="625"/><line x1="168" y1="655" x2="532" y2="655"/><line x1="168" y1="685" x2="532" y2="685"/><line x1="168" y1="715" x2="532" y2="715"/><line x1="168" y1="745" x2="532" y2="745"/><line x1="168" y1="775" x2="532" y2="775"/><line x1="168" y1="805" x2="532" y2="805"/><line x1="168" y1="835" x2="532" y2="835"/></g>
+<g fill="#9eeeff" opacity=".64"><circle cx="278" cy="505" r="5"/><circle cx="422" cy="505" r="5"/><circle cx="231" cy="603" r="4"/><circle cx="469" cy="603" r="4"/><circle cx="204" cy="760" r="4"/><circle cx="496" cy="760" r="4"/></g>
+<g stroke="#85e8ff" stroke-opacity=".28" stroke-width="2"><path d="M278 505 H225 V540 H195"/><path d="M422 505 H475 V540 H505"/><path d="M231 603 H184 V640 H157"/><path d="M469 603 H516 V640 H543"/><path d="M204 760 H155 V808 H127"/><path d="M496 760 H545 V808 H573"/></g>
+</svg>
+<div class="nyxal-hud hud-left">NYXAL PRESENCE<b id="holo-status">OFFLINE</b></div>
+<div class="nyxal-hud hud-right">CYCLES<b id="holo-cycles">—</b></div>
+<div class="nyxal-hud hud-bottom">CORE · <b style="display:inline">DELTA</b></div>
+<button class="holo-toggle" id="holo-toggle" title="Trazer Nyxal para frente">◉</button>
+</div>
 <header>
 <div class="brand"><div class="brand-mark">△</div><div><div class="brand-name">NyxOS</div><div class="brand-sub">v2.0 · DELTA</div></div></div>
 <nav><button class="active">INÍCIO</button><button>INTELIGÊNCIA</button><button>PROJETOS</button><button>ESTUDOS</button><button>AVIAÇÃO</button><button>SISTEMA</button></nav>
@@ -85,21 +109,6 @@ rgba(1,8,14,.80)}
 <div class="goal"><div class="check"></div><div><div class="goal-name">NyxOS / Delta</div><div class="goal-state">Em andamento</div></div><div class="pct">—</div><div class="bar"><i style="width:0%"></i></div></div>
 <div class="goal"><div class="check"></div><div><div class="goal-name">Projeto Manhwa</div><div class="goal-state">Em andamento</div></div><div class="pct">—</div><div class="bar"><i style="width:0%"></i></div></div>
 </div></section>
-<section class="card holo-card">
-  <div class="holo-head">NYXAL · PRESENÇA <small>HOLOGRAPHIC CORE</small></div>
-  <div class="holo-stage">
-    <div class="holo-grid"></div>
-    <div class="holo-scan"></div>
-    <div class="holo-silhouette"></div>
-    <img class="holo-face" src="./nyxal-presenca.jpg" alt="Presença visual holográfica da Nyxal">
-    <div class="holo-data holo-d1">STATUS<b id="holo-status">OFFLINE</b></div>
-    <div class="holo-data holo-d2">CYCLES<b id="holo-cycles">—</b></div>
-    <div class="holo-data holo-d3">LAST CYCLE<b id="holo-last">—</b></div>
-    <div class="holo-data holo-d4">CORE<b>DELTA</b></div>
-    <div class="holo-core">⌁</div>
-    <span class="holo-corner tl"></span><span class="holo-corner tr"></span><span class="holo-corner bl"></span><span class="holo-corner br"></span>
-  </div>
-</section>
 <section class="card pad bottom-quote"><div class="quote-icon"></div><div class="text">“Um dia isso será a base de algo grande.”<small>— Nyxal</small></div></section>
 </aside>
 
@@ -111,11 +120,15 @@ rgba(1,8,14,.80)}
 const API_BASE=window.NYXAL_API_BASE||localStorage.getItem('nyxal_api_base')||'';
 const $=id=>document.getElementById(id);
 function clock(){const n=new Date();$('date').textContent=new Intl.DateTimeFormat('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}).format(n).toUpperCase();$('time').textContent=new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(n)}
-function applyState(data){const online=Boolean(data?.presenca?.ativa);const cycles=data?.presenca?.ciclos??'—';$('status-dot').classList.toggle('offline',!online);$('status-text').textContent=online?'Online':'Offline';$('cycle').textContent='CYCLES '+cycles;$('holo-status').textContent=online?'ONLINE':'OFFLINE';$('holo-cycles').textContent=cycles;$('holo-last').textContent=data?.presenca?.ultimo_ciclo?new Date(data.presenca.ultimo_ciclo).toLocaleTimeString('pt-BR',{hour12:false}):'—'}
+function applyState(data){const online=Boolean(data?.presenca?.ativa);const cycles=data?.presenca?.ciclos??'—';$('status-dot').classList.toggle('offline',!online);$('status-text').textContent=online?'Online':'Offline';$('cycle').textContent='CYCLES '+cycles;$('holo-status').textContent=online?'ONLINE':'OFFLINE';$('holo-cycles').textContent=cycles;$('presence-status')?.textContent=online?'ATIVA':'OFFLINE';$('nyxal-mode')?.textContent=online?String(data?.estado?.modo||'PRESENÇA').toUpperCase():'PRESENÇA · OFFLINE'}
 async function refresh(){if(!API_BASE){$('api-state').textContent='configure window.NYXAL_API_BASE';applyState({});return}try{const r=await fetch(API_BASE.replace(/\/$/,'')+'/api/public/status',{headers:{Accept:'application/json'},cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);applyState(await r.json());$('api-state').textContent='conectada'}catch(e){applyState({});$('api-state').textContent='erro de conexão'}}
 for(let i=0;i<42;i++){const b=document.createElement('i');b.style.height=(5+Math.round(Math.random()*16))+'px';b.style.animationDelay=(Math.random()*1.5).toFixed(2)+'s';$('bars').appendChild(b)}
 $('send').addEventListener('click',()=>{const v=$('chat').value.trim();if(!v)return;$('chat').value='';$('chat').placeholder='Comando recebido · integração de chat em próxima etapa'});
 $('chat').addEventListener('keydown',e=>{if(e.key==='Enter')$('send').click()});
+function nyxalBackground(active){$('nyxal-hologram').classList.toggle('background-mode',Boolean(active))}
+document.querySelectorAll('.orb,.actions button,.nav button').forEach(el=>el.addEventListener('click',()=>nyxalBackground(true)));
+$('holo-toggle').addEventListener('click',()=>nyxalBackground(false));
+$('nyxal-hologram').addEventListener('dblclick',()=>nyxalBackground(false));
 clock();setInterval(clock,1000);refresh();setInterval(refresh,5000);
 </script>
 </body>
