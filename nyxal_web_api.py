@@ -25,6 +25,45 @@ def json_bytes(payload: dict) -> bytes:
     ).encode("utf-8")
 
 
+def format_chat_response(resultado: dict) -> str:
+    if not resultado.get("sucesso"):
+        return str(
+            resultado.get(
+                "motivo",
+                "Não foi possível concluir a ordem.",
+            )
+        )
+
+    execucao = (
+        resultado.get("valor", {})
+        .get("execucao", {})
+    )
+    pacote = execucao.get("valor", {})
+    capacidade = pacote.get("capacidade")
+    valor = pacote.get("resultado")
+
+    if capacidade == "obter_hora" and isinstance(valor, dict):
+        hora = valor.get("hora")
+        minuto = valor.get("minuto")
+        segundo = valor.get("segundo")
+
+        if all(isinstance(item, int) for item in (hora, minuto, segundo)):
+            return (
+                f"Agora são {hora:02d}:{minuto:02d}:{segundo:02d}."
+            )
+
+    if capacidade == "listar_arquivos" and isinstance(valor, list):
+        quantidade = len(valor)
+        if quantidade == 0:
+            return "A pasta atual não contém arquivos listados."
+        return f"Encontrei {quantidade} arquivos na pasta atual."
+
+    if isinstance(valor, str):
+        return valor
+
+    return "Ordem executada com sucesso pela Nyxal."
+
+
 def read_status() -> dict:
     estado_path = BASE_DIR / "estado_nixal.json"
 
@@ -243,9 +282,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             )
             return
 
+        resposta = dict(resultado)
+        resposta["resposta"] = format_chat_response(resultado)
+
         self._send_json(
             200 if resultado.get("sucesso") else 422,
-            resultado,
+            resposta,
         )
 
     def do_GET(self) -> None:
