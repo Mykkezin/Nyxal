@@ -52,6 +52,15 @@ def format_chat_response(resultado: dict) -> str:
     capacidade = pacote.get("capacidade")
     valor = pacote.get("resultado")
 
+    # A execução da capacidade pode encapsular o valor em outro
+    # objeto de resultado. Desembrulhamos somente esse nível.
+    if (
+        isinstance(valor, dict)
+        and "resultado" in valor
+        and valor.get("capacidade") == capacidade
+    ):
+        valor = valor.get("resultado")
+
     if capacidade == "obter_hora" and isinstance(valor, dict):
         hora = valor.get("hora")
         minuto = valor.get("minuto")
