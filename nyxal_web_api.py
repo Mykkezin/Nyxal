@@ -105,36 +105,44 @@ def normalizar_texto_stt(texto: str) -> str:
     Converte aproximações fonéticas do reconhecimento de voz
     para a grafia oficial usada pela Nyxal.
     """
-    variantes_myke = (
-        "myque",
-        "myk",
-        "mike",
-        "mayque",
-        "maique",
-        "maike",
-    )
-    variantes_nyxal = (
-        "nyxal",
-        "nixal",
-        "aniksao",
-        "anixao",
-        "niquischau",
-        "niquichau",
-        "niquis hau",
-        "niquischáu",
-    )
+    import re
 
     resultado = texto
 
-    for variante in variantes_myke:
-        resultado = resultado.replace(variante, "Myke")
-        resultado = resultado.replace(variante.capitalize(), "Myke")
-        resultado = resultado.replace(variante.upper(), "Myke")
+    substituicoes = (
+        (
+            r"\bsenhora\s+myke\b",
+            "senhor Myke",
+        ),
+        (
+            r"\bsenhora\s+(?:myque|mike|mayque|maique|maike|myk)\b",
+            "senhor Myke",
+        ),
+        (
+            r"\b(?:myque|myke|mike|mayque|maique|maike|myk)\b",
+            "Myke",
+        ),
+        (
+            r"\b(?:nixal|aniksao|anixao|niquischau|niquichau|niquis hau|niquischáu)\b",
+            "Nyxal",
+        ),
+        (
+            r"\beu\s+sou\s+(?:a\s+)?nyxal\b",
+            "eu sou a Nyxal",
+        ),
+        (
+            r"\be\s+eu\s+sou\s+(?:a\s+)?nyxal\b",
+            "e eu sou a Nyxal",
+        ),
+    )
 
-    for variante in variantes_nyxal:
-        resultado = resultado.replace(variante, "Nyxal")
-        resultado = resultado.replace(variante.capitalize(), "Nyxal")
-        resultado = resultado.replace(variante.upper(), "Nyxal")
+    for padrao, substituto in substituicoes:
+        resultado = re.sub(
+            padrao,
+            substituto,
+            resultado,
+            flags=re.IGNORECASE,
+        )
 
     return resultado
 
