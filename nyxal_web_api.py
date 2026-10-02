@@ -18,7 +18,7 @@ PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
 CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
 EXECUTOR = ExecutorOrdensNixal()
-PIPER_BIN = Path(sys.executable).resolve().parent / "piper"
+PIPER_BIN = Path(sys.executable).parent / "piper"
 TTS_MODEL = Path(
     os.environ.get(
         "NYXAL_TTS_MODEL",
