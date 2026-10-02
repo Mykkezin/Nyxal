@@ -156,6 +156,33 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             )
             return
 
+        if self.path == "/api/public/status":
+            estado = read_status()
+
+            identidade = estado.get("identidade", {})
+            presenca = estado.get("presenca", {})
+            estado_operacional = estado.get("estado", {})
+
+            self._send_json(
+                200,
+                {
+                    "identidade": {
+                        "nome": identidade.get("nome"),
+                        "versao": identidade.get("versao"),
+                    },
+                    "presenca": {
+                        "ativa": presenca.get("ativa"),
+                        "ultimo_ciclo": presenca.get("ultimo_ciclo"),
+                        "ciclos": presenca.get("ciclos"),
+                    },
+                    "estado": {
+                        "modo": estado_operacional.get("modo"),
+                        "status": estado_operacional.get("status"),
+                    },
+                },
+            )
+            return
+
         if self.path == "/api/status":
             if not self._authorized():
                 return
@@ -197,6 +224,10 @@ def main() -> None:
     print(
         "[Nyxal-API] endpoint protegido: "
         "GET /api/status"
+    )
+    print(
+        "[Nyxal-API] endpoint publico: "
+        "GET /api/public/status"
     )
 
     try:
