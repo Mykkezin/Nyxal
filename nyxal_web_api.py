@@ -2,6 +2,9 @@
 
 import json
 import os
+import subprocess
+import sys
+import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from secrets import compare_digest
@@ -15,6 +18,13 @@ PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
 CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
 EXECUTOR = ExecutorOrdensNixal()
+PIPER_BIN = Path(sys.executable).resolve().parent / "piper"
+TTS_MODEL = Path(
+    os.environ.get(
+        "NYXAL_TTS_MODEL",
+        str(BASE_DIR / "voices/dii_pt-BR/dii_pt-BR.onnx"),
+    )
+)
 
 
 def json_bytes(payload: dict) -> bytes:
@@ -133,6 +143,36 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         self.wfile.write(body)
 
+    def _send_bytes(
+        self,
+        status_code: int,
+        body: bytes,
+        content_type: str,
+    ) -> None:
+        self.send_response(status_code)
+        self.send_header(
+            "Content-Type",
+            content_type,
+        )
+        self.send_header(
+            "Content-Length",
+            str(len(body)),
+        )
+        self.send_header(
+            "Access-Control-Allow-Origin",
+            CORS_ORIGIN,
+        )
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "Authorization, Content-Type",
+        )
+        self.send_header(
+            "Access-Control-Allow-Methods",
+            "GET, POST, OPTIONS",
+        )
+        self.end_headers()
+        self.wfile.write(body)
+
     def _authorized(self) -> bool:
         if not API_TOKEN:
             self._send_json(
@@ -188,6 +228,142 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
+        if self.path == "/api/tts":
+            try:
+                content_length = int(
+                    self.headers.get("Content-Length", "0")
+                )
+            except ValueError:
+                self._send_json(
+                    400,
+                    {
+                        "estado": "entrada_invalida",
+                        "motivo": "Content-Length inválido.",
+                    },
+                )
+                return
+
+            if content_length <= 0 or content_length > 16 * 1024:
+                self._send_json(
+                    400 if content_length <= 0 else 413,
+                    {
+                        "estado": (
+                            "entrada_invalida"
+                            if content_length <= 0
+                            else "entrada_muito_grande"
+                        ),
+                        "motivo": (
+                            "O corpo da requisição é obrigatório."
+                            if content_length <= 0
+                            else "O corpo da requisição excede 16 KiB."
+                        ),
+                    },
+                )
+                return
+
+            try:
+                payload = json.loads(
+                    self.rfile.read(content_length).decode("utf-8")
+                )
+            except (
+                UnicodeDecodeError,
+                json.JSONDecodeError,
+            ):
+                self._send_json(
+                    400,
+                    {
+                        "estado": "entrada_invalida",
+                        "motivo": "O corpo precisa ser um JSON UTF-8 válido.",
+                    },
+                )
+                return
+
+            texto = (
+                payload.get("texto")
+                if isinstance(payload, dict)
+                else None
+            )
+
+            if not isinstance(texto, str) or not texto.strip():
+                self._send_json(
+                    400,
+                    {
+                        "estado": "entrada_invalida",
+                        "motivo": "O campo 'texto' precisa ser um texto não vazio.",
+                    },
+                )
+                return
+
+            if not PIPER_BIN.exists() or not TTS_MODEL.exists():
+                self._send_json(
+                    503,
+                    {
+                        "estado": "tts_nao_configurado",
+                        "motivo": "Piper ou o modelo de voz da Nyxal não foi encontrado.",
+                    },
+                )
+                return
+
+            try:
+                with tempfile.NamedTemporaryFile(
+                    suffix=".wav",
+                    dir="/tmp",
+                ) as arquivo_audio:
+                    processo = subprocess.run(
+                        [
+                            str(PIPER_BIN),
+                            "--model",
+                            str(TTS_MODEL),
+                            "--output_file",
+                            arquivo_audio.name,
+                        ],
+                        input=texto.strip() + "\n",
+                        text=True,
+                        capture_output=True,
+                        timeout=30,
+                        check=False,
+                    )
+
+                    if processo.returncode != 0:
+                        self._send_json(
+                            500,
+                            {
+                                "estado": "erro_ao_gerar_audio",
+                                "motivo": (
+                                    processo.stderr.strip()
+                                    or "O Piper não conseguiu gerar o áudio."
+                                ),
+                            },
+                        )
+                        return
+
+                    arquivo_audio.seek(0)
+                    audio = arquivo_audio.read()
+
+                self._send_bytes(
+                    200,
+                    audio,
+                    "audio/wav",
+                )
+            except subprocess.TimeoutExpired:
+                self._send_json(
+                    504,
+                    {
+                        "estado": "tts_timeout",
+                        "motivo": "A geração do áudio excedeu 30 segundos.",
+                    },
+                )
+            except OSError as erro:
+                self._send_json(
+                    500,
+                    {
+                        "estado": "erro_ao_gerar_audio",
+                        "motivo": str(erro),
+                    },
+                )
+            return
+
+        if self.path != "/api/chat":
         if self.path != "/api/chat":
             self._send_json(
                 404,
@@ -377,6 +553,10 @@ def main() -> None:
     print(
         "[Nyxal-API] endpoint de chat: "
         "POST /api/chat"
+    )
+    print(
+        "[Nyxal-API] endpoint de voz: "
+        "POST /api/tts"
     )
 
     try:
