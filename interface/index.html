@@ -771,6 +771,103 @@
     window.NYXAL_API_BASE = localStorage.getItem('NYXAL_API_BASE') || 'http://127.0.0.1:8010';
     let isNyxalOnline = false;
 
+    // ================= NYXAL HOLOGRAM PERSISTENCE =================
+    const NYXAL_AVATAR_DB = 'nyxal-interface-storage';
+    const NYXAL_AVATAR_STORE = 'settings';
+    const NYXAL_AVATAR_KEY = 'hologram';
+
+    function openAvatarDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(NYXAL_AVATAR_DB, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(NYXAL_AVATAR_STORE)) {
+            db.createObjectStore(NYXAL_AVATAR_STORE);
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function saveHologramBlob(file) {
+      const db = await openAvatarDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(NYXAL_AVATAR_STORE, 'readwrite');
+        tx.objectStore(NYXAL_AVATAR_STORE).put({
+          kind: file.type,
+          blob: file,
+          name: file.name,
+          updatedAt: Date.now()
+        }, NYXAL_AVATAR_KEY);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    }
+
+    async function loadHologramBlob() {
+      const db = await openAvatarDB();
+      const value = await new Promise((resolve, reject) => {
+        const tx = db.transaction(NYXAL_AVATAR_STORE, 'readonly');
+        const request = tx.objectStore(NYXAL_AVATAR_STORE).get(NYXAL_AVATAR_KEY);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      return value;
+    }
+
+    function clearStoredHologram() {
+      return openAvatarDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(NYXAL_AVATAR_STORE, 'readwrite');
+        tx.objectStore(NYXAL_AVATAR_STORE).delete(NYXAL_AVATAR_KEY);
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      }));
+    }
+
+    function setHologramMedia(url, kind) {
+      const video = document.getElementById('hologramVideo');
+      const img = document.getElementById('hologramImageFallback');
+      if (!video || !img) return;
+
+      if (kind.startsWith('video/')) {
+        img.classList.add('hidden');
+        video.classList.remove('hidden');
+        video.src = url;
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        video.classList.add('hidden');
+        img.classList.remove('hidden');
+        img.src = url;
+      }
+    }
+
+    async function restoreStoredHologram() {
+      try {
+        const stored = await loadHologramBlob();
+        if (stored?.blob instanceof Blob) {
+          setHologramMedia(URL.createObjectURL(stored.blob), stored.kind || stored.blob.type || 'image/*');
+          return;
+        }
+
+        const savedUrl = localStorage.getItem('NYXAL_AVATAR_VIDEO_URL');
+        if (savedUrl) {
+          const video = document.getElementById('hologramVideo');
+          if (video) {
+            video.src = savedUrl;
+            video.play().catch(() => handleVideoLoadError());
+          }
+        }
+      } catch (err) {
+        console.warn('Não foi possível restaurar a presença holográfica:', err);
+      }
+    }
+
     // WEB AUDIO SYNTHESIZER FOR HUD SFX & VOICE REVERB
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
@@ -897,6 +994,8 @@
       speakGoddessNyxVoice("Configuração de rede atualizada. Conectando à ponte Nyxal.");
     }
 
+    restoreStoredHologram();
+
     // ================= BACKEND STATUS POLLING =================
     async function fetchNyxalStatus() {
       try {
@@ -963,6 +1062,7 @@
         if (res.ok) {
           const data = await res.json();
           const reply = data.resposta || "Ordem processada pelo ExecutorOrdensNixal.";
+          showSubtitles(reply);
           speakGoddessNyxVoice(reply);
         } else {
           // If endpoint /api/chat is not created in backend yet, inform gracefully
@@ -1029,41 +1129,41 @@
       setHologramReceded(true);
     }
 
-    function applyAvatarVideoUrl() {
+    async function applyAvatarVideoUrl() {
       playHudSound('click');
-      const url = document.getElementById('avatarVideoUrlInput').value;
-      const video = document.getElementById('hologramVideo');
-      const img = document.getElementById('hologramImageFallback');
+      const url = document.getElementById('avatarVideoUrlInput').value.trim();
+      if (!url) return;
 
-      img.classList.add('hidden');
-      video.classList.remove('hidden');
-      video.src = url;
-      video.play().catch(e => handleVideoLoadError());
+      localStorage.setItem('NYXAL_AVATAR_VIDEO_URL', url);
+      await clearStoredHologram().catch(() => {});
+
+      const video = document.getElementById('hologramVideo');
+      if (video) {
+        video.src = url;
+        video.classList.remove('hidden');
+        document.getElementById('hologramImageFallback')?.classList.add('hidden');
+        video.play().catch(() => handleVideoLoadError());
+      }
 
       closeModal('avatarModal');
-      speakGoddessNyxVoice("Projeção holográfica calibrada.");
+      speakGoddessNyxVoice("Projeção holográfica calibrada e salva.");
     }
 
-    function handleLocalAvatarFile(e) {
+    async function handleLocalAvatarFile(e) {
       const file = e.target.files[0];
-      if (file) {
-        const url = URL.createObjectURL(file);
-        const video = document.getElementById('hologramVideo');
-        const img = document.getElementById('hologramImageFallback');
+      if (!file) return;
 
-        if (file.type.startsWith('video/')) {
-          img.classList.add('hidden');
-          video.classList.remove('hidden');
-          video.src = url;
-          video.play();
-        } else {
-          video.classList.add('hidden');
-          img.classList.remove('hidden');
-          img.src = url;
-        }
+      try {
+        await saveHologramBlob(file);
+        localStorage.removeItem('NYXAL_AVATAR_VIDEO_URL');
+        const url = URL.createObjectURL(file);
+        setHologramMedia(url, file.type || 'image/*');
 
         closeModal('avatarModal');
-        speakGoddessNyxVoice("Arquivo de presença visual atualizado.");
+        speakGoddessNyxVoice("Arquivo de presença visual atualizado e salvo.");
+      } catch (err) {
+        console.error('Falha ao salvar o arquivo holográfico:', err);
+        alert('Não foi possível salvar esse arquivo no armazenamento local do navegador.');
       }
     }
 
