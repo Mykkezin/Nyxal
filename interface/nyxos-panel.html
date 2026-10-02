@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NyxOS — Nyxal</title>
+  <style>
+    :root{
+      --bg:#03070d;
+      --panel:rgba(5,13,22,.82);
+      --panel-2:rgba(7,18,29,.68);
+      --line:rgba(100,198,241,.23);
+      --line-strong:rgba(118,221,255,.55);
+      --cyan:#79e4ff;
+      --cyan-soft:#3eb7e8;
+      --text:#e9f8ff;
+      --muted:#78909f;
+      --green:#78ffd0;
+      --gold:#ffc96d;
+      --shadow:0 20px 60px rgba(0,0,0,.48);
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02060b;color:var(--text);font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif}
+    button,input{font:inherit}
+    button{cursor:pointer}
+
+    body{
+      background:
+        radial-gradient(circle at 51% 47%,rgba(30,133,178,.12),transparent 28%),
+        radial-gradient(circle at 88% 37%,rgba(32,99,139,.13),transparent 30%),
+        linear-gradient(180deg,#02050a,#030811 60%,#02050a);
+    }
+
+    .shell{
+      position:relative;width:100vw;height:100vh;overflow:hidden;
+      isolation:isolate;
+    }
+
+    .grid{
+      position:absolute;inset:0;pointer-events:none;opacity:.42;
+      background:
+        linear-gradient(rgba(110,202,244,.055) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(110,202,244,.055) 1px,transparent 1px);
+      background-size:64px 64px;
+      mask-image:linear-gradient(180deg,black 0%,rgba(0,0,0,.75) 55%,transparent 100%);
+    }
+
+    .scanlines{
+      position:absolute;inset:0;pointer-events:none;z-index:50;opacity:.09;
+      background:repeating-linear-gradient(180deg,rgba(255,255,255,.05) 0 1px,transparent 2px 5px);
+    }
+
+    .top{
+      position:relative;z-index:20;height:78px;padding:0 22px;
+      display:grid;grid-template-columns:240px 1fr 330px;align-items:center;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(7,17,29,.97),rgba(3,9,15,.82));
+      box-shadow:0 12px 35px rgba(0,0,0,.3);
+    }
+
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-mark{
+      width:42px;height:42px;border:1px solid var(--line-strong);
+      display:grid;place-items:center;border-radius:7px;color:var(--cyan);
+      background:linear-gradient(145deg,rgba(91,208,255,.1),rgba(91,208,255,.02));
+      box-shadow:0 0 25px rgba(91,208,255,.08),inset 0 0 18px rgba(91,208,255,.04);
+      font-size:21px;
+    }
+    .brand-title{font-size:16px;letter-spacing:.30em}
+    .brand-sub{margin-top:2px;color:var(--muted);font-size:6px;letter-spacing:.21em}
+
+    .nav{display:flex;justify-content:center;gap:6px}
+    .nav button{
+      border:1px solid transparent;background:transparent;color:#748e9e;
+      padding:9px 13px;border-radius:18px;font-size:7px;letter-spacing:.13em;
+      transition:.22s ease;
+    }
+    .nav button:hover,.nav button.active{
+      color:var(--text);border-color:rgba(118,221,255,.2);
+      background:rgba(118,221,255,.05);
+      box-shadow:0 0 22px rgba(118,221,255,.06);
+    }
+
+    .top-state{display:flex;justify-content:flex-end;align-items:center;gap:16px}
+    .clock{text-align:right}
+    .clock .date{color:var(--muted);font-size:6px;letter-spacing:.13em}
+    .clock .time{margin-top:3px;font-size:14px;letter-spacing:.11em;font-variant-numeric:tabular-nums}
+    .clock .place{margin-top:3px;color:var(--muted);font-size:6px;letter-spacing:.08em}
+    .nyxal-status{
+      display:flex;align-items:center;gap:8px;padding:8px 12px;
+      border:1px solid var(--line);border-radius:22px;background:rgba(4,14,24,.65);
+    }
+    .status-orb{
+      width:28px;height:28px;border:1px solid rgba(118,221,255,.38);border-radius:50%;
+      display:grid;place-items:center;color:var(--cyan);font-size:12px;
+      box-shadow:0 0 16px rgba(118,221,255,.08),inset 0 0 12px rgba(118,221,255,.04);
+    }
+    .status-copy b{display:block;font-size:7px;letter-spacing:.12em}
+    .status-copy span{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:6px;margin-top:3px}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 9px rgba(120,255,208,.75)}
+    .status-dot.offline{background:#6f8591;box-shadow:none}
+
+    .content{
+      position:relative;height:calc(100vh - 78px);padding:15px 18px 16px;
+    }
+
+    .left,.right{
+      position:absolute;top:15px;bottom:16px;display:flex;flex-direction:column;gap:12px;z-index:12;
+    }
+    .left{left:18px;width:252px}
+    .right{right:18px;width:348px}
+
+    .panel{
+      border:1px solid var(--line);
+      border-radius:13px;
+      background:linear-gradient(145deg,rgba(7,18,29,.84),rgba(2,9,16,.76));
+      backdrop-filter:blur(16px);
+      box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.018);
+      overflow:hidden;
+    }
+    .panel.pad{padding:12px}
+    .panel-heading{
+      display:flex;align-items:center;justify-content:space-between;
+      color:var(--cyan);font-size:7px;letter-spacing:.19em;
+      padding-bottom:9px;margin-bottom:10px;border-bottom:1px solid rgba(118,221,255,.09);
+    }
+    .panel-heading span{color:var(--muted);font-size:6px;letter-spacing:.06em}
+
+    .weather-row{display:grid;grid-template-columns:1fr 58px;align-items:center;gap:12px}
+    .temp{font-size:29px;font-weight:300}
+    .city{font-size:7px;color:var(--muted);margin-top:2px}
+    .condition{font-size:7px;color:var(--cyan);margin-top:6px}
+    .weather-symbol{
+      width:56px;height:56px;border:1px solid rgba(118,221,255,.13);
+      display:grid;place-items:center;color:var(--cyan);font-size:22px;background:rgba(118,221,255,.025);
+      border-radius:10px;
+    }
+    .weather-meta{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px}
+    .weather-meta div{padding:7px 6px;border:1px solid rgba(118,221,255,.07);background:rgba(118,221,255,.018)}
+    .weather-meta small{display:block;color:var(--muted);font-size:5px}
+    .weather-meta b{display:block;margin-top:3px;font-size:7px;font-weight:500}
+
+    .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+    .metric{
+      text-align:center;padding:7px 3px;border:1px solid rgba(118,221,255,.08);
+      background:rgba(118,221,255,.02)
+    }
+    .ring{
+      width:47px;height:47px;border-radius:50%;margin:0 auto 6px;
+      display:grid;place-items:center;position:relative;
+      background:conic-gradient(var(--cyan) var(--value,25%),rgba(118,221,255,.08) 0);
+    }
+    .ring:after{
+      content:"";position:absolute;inset:5px;border-radius:50%;background:#07111c;
+      border:1px solid rgba(118,221,255,.08);
+    }
+    .ring strong{position:relative;z-index:2;font-size:10px;font-weight:400}
+    .metric small{font-size:5px;color:var(--muted);letter-spacing:.09em}
+
+    .events{flex:1;min-height:0}
+    .event-list{display:flex;flex-direction:column;gap:9px}
+    .event{
+      display:grid;grid-template-columns:30px 1fr 7px;gap:8px;align-items:center;
+      padding-bottom:8px;border-bottom:1px dashed rgba(118,221,255,.08)
+    }
+    .event:last-child{border-bottom:0;padding-bottom:0}
+    .event-icon{
+      width:29px;height:29px;border:1px solid rgba(118,221,255,.12);display:grid;place-items:center;
+      border-radius:7px;color:var(--cyan);font-size:11px;background:rgba(118,221,255,.03)
+    }
+    .event-name{font-size:7px}
+    .event-time{font-size:5px;color:var(--muted);margin-top:3px}
+    .event-pulse{width:6px;height:6px;border-radius:50%;background:#57bdf1;box-shadow:0 0 8px rgba(87,189,241,.7)}
+
+    .music{min-height:145px}
+    .music-row{display:grid;grid-template-columns:54px 1fr;gap:10px;align-items:center}
+    .cover{
+      width:54px;height:54px;border:1px solid rgba(118,221,255,.12);border-radius:8px;
+      background:linear-gradient(145deg,#24495d,#0c1a25 45%,#132f43);
+      position:relative;overflow:hidden
+    }
+    .cover:before,.cover:after{content:"";position:absolute;inset:0;background:
+      linear-gradient(140deg,transparent 18%,rgba(98,194,237,.34) 19% 21%,transparent 22% 48%,rgba(255,255,255,.11) 49% 51%,transparent 52%);
+      transform:rotate(9deg) scale(1.4)
+    }
+    .song{font-size:8px}.artist{font-size:6px;color:var(--muted);margin-top:3px}
+    .timeline{height:2px;margin-top:10px;background:rgba(118,221,255,.11)}
+    .timeline:before{content:"";display:block;width:31%;height:100%;background:var(--cyan)}
+    .music-controls{display:flex;justify-content:center;gap:18px;margin-top:9px;color:var(--cyan);font-size:11px}
+
+    .center{
+      position:absolute;left:292px;right:382px;top:15px;bottom:16px;z-index:5;
+      display:flex;flex-direction:column;align-items:center;
+    }
+
+    .center-title{
+      position:absolute;top:0;left:50%;transform:translateX(-50%);
+      color:var(--muted);font-size:6px;letter-spacing:.29em;white-space:nowrap;
+    }
+
+    .orbital-stage{
+      position:absolute;left:50%;top:53%;width:min(810px,100%);height:510px;
+      transform:translate(-50%,-50%);
+    }
+
+    .axis{position:absolute;background:rgba(118,221,255,.06)}
+    .axis.h{left:5%;right:5%;top:50%;height:1px}
+    .axis.v{top:4%;bottom:4%;left:50%;width:1px}
+
+    .orbit{
+      position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);
+      border:1px solid rgba(118,221,255,.16);border-radius:50%;
+    }
+    .orbit.one{width:92%;height:52%;transform:translate(-50%,-50%) rotateX(67deg);animation:spin 34s linear infinite}
+    .orbit.two{width:78%;height:44%;transform:translate(-50%,-50%) rotateX(67deg);border-style:dashed;animation:spinReverse 25s linear infinite}
+    .orbit.three{width:64%;height:35%;transform:translate(-50%,-50%) rotateX(67deg);border-color:rgba(118,221,255,.25);animation:spin 20s linear infinite}
+    .orbit.four{width:49%;height:27%;transform:translate(-50%,-50%) rotateX(67deg);border-color:rgba(118,221,255,.10)}
+
+    .glow{
+      position:absolute;left:50%;top:56%;width:390px;height:390px;border-radius:50%;
+      transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(55,191,244,.17),transparent 68%);
+      filter:blur(9px);animation:glow 5.6s ease-in-out infinite;
+    }
+
+    .planet{
+      position:absolute;left:50%;top:56%;width:360px;height:360px;transform:translate(-50%,-50%);
+      border-radius:50%;overflow:hidden;
+      border:1px solid rgba(118,221,255,.35);
+      background:
+        radial-gradient(circle at 36% 33%,rgba(74,193,240,.55),transparent 22%),
+        radial-gradient(circle at 70% 66%,rgba(12,75,105,.65),transparent 26%),
+        radial-gradient(circle at 50% 50%,#0c2a42,#06111e 72%);
+      box-shadow:0 0 40px rgba(73,193,239,.16),inset -34px -20px 55px rgba(0,0,0,.44);
+    }
+    .planet:before{
+      content:"";position:absolute;inset:8%;border-radius:50%;
+      background:
+        radial-gradient(ellipse at 38% 29%,rgba(142,230,255,.16) 0 7%,transparent 8%),
+        radial-gradient(ellipse at 58% 44%,rgba(86,198,243,.22) 0 6%,transparent 7%),
+        radial-gradient(ellipse at 45% 66%,rgba(102,211,253,.18) 0 7%,transparent 8%);
+      filter:blur(1px);
+    }
+    .planet:after{
+      content:"";position:absolute;inset:0;border-radius:50%;background:
+        repeating-radial-gradient(circle at 50% 50%,transparent 0 32px,rgba(118,221,255,.08) 33px 34px);
+      opacity:.65
+    }
+
+    .core{
+      position:absolute;left:50%;top:56%;width:112px;height:112px;transform:translate(-50%,-50%);
+      border-radius:50%;z-index:5;
+      border:1px solid rgba(118,221,255,.36);
+      background:radial-gradient(circle,rgba(22,105,145,.42),rgba(2,11,18,.89) 68%);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      box-shadow:0 0 35px rgba(118,221,255,.08),inset 0 0 24px rgba(118,221,255,.08);
+    }
+    .core b{font-size:48px;font-weight:200;color:var(--cyan);line-height:1;text-shadow:0 0 18px rgba(118,221,255,.46)}
+    .core span{font-size:6px;letter-spacing:.23em;margin-top:2px}
+    .core small{font-size:5px;color:var(--muted);margin-top:4px}
+
+    .moon{
+      position:absolute;right:10%;top:16%;width:60px;height:60px;border-radius:50%;z-index:7;
+      background:radial-gradient(circle at 28% 28%,#e7f7ff 0 7%,#94a7b5 30%,#435361 70%,#192630 100%);
+      box-shadow:0 0 17px rgba(204,231,243,.14),inset -10px -7px 12px rgba(0,0,0,.5)
+    }
+
+    .orbital-menu{position:absolute;inset:0;z-index:8}
+    .orb{
+      position:absolute;width:70px;height:70px;border:1px solid rgba(118,221,255,.26);
+      background:rgba(3,13,22,.83);backdrop-filter:blur(7px);border-radius:50%;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+      color:var(--cyan);transition:.22s;box-shadow:0 0 18px rgba(118,221,255,.03)
+    }
+    .orb:hover{transform:scale(1.08);border-color:rgba(118,221,255,.6);background:rgba(118,221,255,.07)}
+    .orb i{font-style:normal;font-size:16px}
+    .orb span{font-size:5px;letter-spacing:.12em;color:#85a0ad}
+    .a{left:10%;top:30%}.b{left:18%;top:17%}.c{left:32%;top:7%}.d{left:17%;top:61%}
+    .e{right:17%;top:61%}.f{right:32%;top:7%}.g{right:18%;top:17%}.h{right:10%;top:30%}
+
+    .flight{position:absolute;left:8%;top:15%;z-index:10;font-size:17px;color:#eafaff;filter:drop-shadow(0 0 8px rgba(118,221,255,.9));animation:flight 14s linear infinite}
+    .flight-path{position:absolute;left:12%;top:12%;width:74%;height:32%;border-top:1px dashed rgba(118,221,255,.22);border-radius:50%;transform:rotate(-10deg) scaleY(.72);z-index:9}
+
+    .telemetry{
+      position:absolute;left:50%;bottom:62px;transform:translateX(-50%);
+      width:min(650px,88%);padding:9px 12px;z-index:6;
+      border:1px solid var(--line);background:rgba(2,10,17,.52);backdrop-filter:blur(10px)
+    }
+    .telemetry-head{display:flex;justify-content:space-between;font-size:5px;color:var(--muted);letter-spacing:.15em}
+    .telemetry-head strong{color:var(--cyan);font-weight:500}
+    .telemetry-bars{height:25px;display:flex;align-items:center;justify-content:space-between;margin-top:5px}
+    .telemetry-bars i{width:3px;background:var(--cyan);opacity:.38;animation:bar 1.5s ease-in-out infinite}
+    
+    .right .quote{padding:12px;font-style:italic;color:#b0c9d4;font-family:Georgia,serif;font-size:12px;line-height:1.35}
+    .right .quote small{display:block;margin-top:6px;color:var(--cyan);font-style:normal;font-family:Inter,"Segoe UI",sans-serif;font-size:6px;letter-spacing:.09em}
+
+    .goals{flex:1;min-height:0}
+    .goals-list{display:flex;flex-direction:column;gap:13px}
+    .goal{display:grid;grid-template-columns:17px 1fr 38px;gap:7px;align-items:center}
+    .goal-check{width:14px;height:14px;border:1px solid rgba(118,221,255,.34);border-radius:4px}
+    .goal-name{font-size:7px}
+    .goal-state{font-size:5px;color:var(--muted);margin-top:3px}
+    .goal-progress{text-align:right;color:var(--cyan);font-size:6px}
+    .bar{grid-column:2/4;height:3px;border:1px solid rgba(118,221,255,.08)}
+    .bar i{display:block;height:100%;background:linear-gradient(90deg,rgba(118,221,255,.18),rgba(118,221,255,.72))}
+
+    .nyxal-panel{min-height:230px;padding:12px}
+    .nyxal-head{display:flex;justify-content:space-between;align-items:flex-start}
+    .nyxal-name{font-size:19px;font-weight:300;letter-spacing:.24em}
+    .nyxal-sub{font-size:6px;color:var(--cyan);letter-spacing:.11em;margin-top:4px}
+    .presence{
+      position:relative;height:240px;margin-top:10px;border:1px solid rgba(118,221,255,.18);
+      background:
+        radial-gradient(circle at 50% 39%,rgba(63,187,232,.18),transparent 31%),
+        radial-gradient(circle at 50% 66%,rgba(63,187,232,.06),transparent 50%),
+        rgba(2,9,15,.82);
+      overflow:hidden;
+    }
+    .presence img{
+      position:absolute;left:50%;top:50%;width:175px;transform:translate(-50%,-49%);
+      max-height:95%;object-fit:contain;
+      filter:drop-shadow(0 0 18px rgba(118,221,255,.23));
+      opacity:.96;animation:breath 5.6s ease-in-out infinite;
+    }
+    .presence:before,.presence:after{
+      content:"";position:absolute;left:7%;right:7%;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(118,221,255,.55),transparent)
+    }
+    .presence:before{top:31%;animation:scan 4.5s ease-in-out infinite}
+    .presence:after{top:69%;opacity:.22}
+    .presence-corner{position:absolute;width:13px;height:13px;border-color:rgba(118,221,255,.55);border-style:solid}
+    .presence-corner.tl{left:5px;top:5px;border-width:1px 0 0 1px}
+    .presence-corner.tr{right:5px;top:5px;border-width:1px 1px 0 0}
+    .presence-corner.bl{left:5px;bottom:5px;border-width:0 0 1px 1px}
+    .presence-corner.br{right:5px;bottom:5px;border-width:0 1px 1px 0}
+    .presence-data{position:absolute;font-size:5px;letter-spacing:.1em;color:var(--muted);z-index:3}
+    .presence-data strong{display:block;color:var(--cyan);font-size:6px;margin-top:3px}
+    .pd1{left:11px;top:13px}.pd2{right:11px;top:13px;text-align:right}.pd3{left:11px;bottom:13px}.pd4{right:11px;bottom:13px;text-align:right}
+
+    .chat{
+      position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:25;
+      width:min(660px,calc(100% - 30px));padding:9px 10px 10px;
+      border:1px solid rgba(118,221,255,.27);border-radius:23px;
+      background:rgba(3,12,20,.91);backdrop-filter:blur(22px);
+      box-shadow:0 18px 55px rgba(0,0,0,.46),0 0 26px rgba(118,221,255,.05)
+    }
+    .chat-input{height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid rgba(118,221,255,.12);border-radius:18px}
+    .chat-input input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font-size:7px}
+    .chat-input input::placeholder{color:#6f8491}
+    .send{
+      width:27px;height:27px;border-radius:50%;border:1px solid rgba(118,221,255,.18);
+      background:rgba(118,221,255,.05);color:var(--cyan)
+    }
+    .chat-actions{display:flex;justify-content:center;gap:6px;margin-top:7px;flex-wrap:wrap}
+    .chat-actions button{
+      border:1px solid rgba(118,221,255,.09);background:rgba(118,221,255,.022);
+      color:var(--muted);border-radius:9px;padding:5px 9px;font-size:5px;letter-spacing:.08em
+    }
+    .chat-actions button:hover{color:var(--cyan);border-color:rgba(118,221,255,.24)}
+
+    .api-state{
+      position:absolute;left:18px;bottom:7px;color:var(--muted);font-size:5px;letter-spacing:.08em;z-index:30
+    }
+    .api-state strong{color:var(--cyan);font-weight:500}
+
+    @keyframes spin{from{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(0)}to{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(360deg)}}
+    @keyframes spinReverse{from{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(360deg)}to{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(0)}}
+    @keyframes glow{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(.97)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.03)}}
+    @keyframes breath{0%,100%{transform:translate(-50%,-49%) scale(1);filter:drop-shadow(0 0 16px rgba(118,221,255,.18))}50%{transform:translate(-50%,-49%) scale(1.012);filter:drop-shadow(0 0 22px rgba(118,221,255,.3))}}
+    @keyframes scan{0%,100%{transform:translateY(-18px);opacity:.04}50%{transform:translateY(95px);opacity:.72}}
+    @keyframes flight{0%{left:8%;top:15%;transform:rotate(8deg)}50%{left:55%;top:11%;transform:rotate(-4deg)}100%{left:96%;top:33%;transform:rotate(-12deg)}}
+    @keyframes bar{0%,100%{opacity:.16;transform:scaleY(.58)}50%{opacity:.75;transform:scaleY(1.15)}}
+
+    @media(max-width:1200px){
+      .top{grid-template-columns:210px 1fr 280px}
+      .left{width:222px}.right{width:310px}.center{left:240px;right:326px}
+      .orbital-stage{transform:translate(-50%,-50%) scale(.9)}
+    }
+    @media(max-width:960px){
+      html,body{overflow:auto}
+      .shell{height:auto;min-height:100vh}.content{height:auto;min-height:calc(100vh - 130px);padding-bottom:155px}
+      .top{height:auto;grid-template-columns:1fr;gap:9px;padding:11px}.nav{justify-content:flex-start;overflow:auto}.top-state{justify-content:flex-start}
+      .left,.right,.center{position:relative;left:auto;right:auto;top:auto;bottom:auto;width:auto}
+      .left,.right{display:grid;grid-template-columns:1fr 1fr}.center{height:590px;margin:12px 0}
+      .orbital-stage{width:760px;transform:translate(-50%,-50%) scale(.82)}
+      .chat{position:fixed;bottom:10px}
+    }
+    @media(max-width:680px){
+      .left,.right{display:flex}.center{height:490px}.orbital-stage{transform:translate(-50%,-50%) scale(.62)}
+      .planet{width:275px;height:275px}.core{width:90px;height:90px}.core b{font-size:41px}
+      .telemetry{bottom:24px}
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="grid"></div>
+    <div class="scanlines"></div>
+
+    <header class="top">
+      <div class="brand">
+        <div class="brand-mark">△</div>
+        <div>
+          <div class="brand-title">NyxOS</div>
+          <div class="brand-sub">v2.0 · DELTA</div>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Navegação principal">
+        <button class="active">INÍCIO</button>
+        <button>INTELIGÊNCIA</button>
+        <button>PROJETOS</button>
+        <button>ESTUDOS</button>
+        <button>AVIAÇÃO</button>
+        <button>SISTEMA</button>
+      </nav>
+
+      <div class="top-state">
+        <div class="clock">
+          <div class="date" id="date">—</div>
+          <div class="time" id="time">—</div>
+          <div class="place">SÃO PAULO · BR</div>
+        </div>
+        <div class="nyxal-status">
+          <div class="status-orb">◉</div>
+          <div class="status-copy">
+            <b>NYXAL</b>
+            <span><i id="status-dot" class="status-dot offline"></i><span id="status-text">OFFLINE</span></span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="content">
+      <aside class="left">
+        <section class="panel pad">
+          <div class="panel-heading">CLIMA <span>AGORA</span></div>
+          <div class="weather-row">
+            <div>
+              <div class="temp">—°C</div>
+              <div class="city">São Paulo, BR</div>
+              <div class="condition">Dados ainda não conectados</div>
+            </div>
+            <div class="weather-symbol">☼</div>
+          </div>
+          <div class="weather-meta">
+            <div><small>SENSAÇÃO</small><b>—</b></div>
+            <div><small>UMIDADE</small><b>—</b></div>
+            <div><small>VENTO</small><b>—</b></div>
+            <div><small>PRECIP.</small><b>—</b></div>
+          </div>
+        </section>
+
+        <section class="panel pad">
+          <div class="panel-heading">SISTEMA <span>REAL-TIME</span></div>
+          <div class="metric-grid">
+            <div class="metric"><div class="ring" style="--value:0%"><strong>—</strong></div><small>CPU</small></div>
+            <div class="metric"><div class="ring" style="--value:0%"><strong>—</strong></div><small>RAM</small></div>
+            <div class="metric"><div class="ring" style="--value:0%"><strong>—</strong></div><small>DISCO</small></div>
+          </div>
+        </section>
+
+        <section class="panel pad events">
+          <div class="panel-heading">PRÓXIMOS EVENTOS <span>HOJE</span></div>
+          <div class="event-list">
+            <div class="event"><div class="event-icon">✈</div><div><div class="event-name">Estudo · Aviação</div><div class="event-time">Aguardando calendário</div></div><i class="event-pulse"></i></div>
+            <div class="event"><div class="event-icon">◈</div><div><div class="event-name">Treino</div><div class="event-time">Aguardando calendário</div></div><i class="event-pulse"></i></div>
+            <div class="event"><div class="event-icon">◎</div><div><div class="event-name">Projeto Frontier World</div><div class="event-time">Aguardando calendário</div></div><i class="event-pulse"></i></div>
+            <div class="event"><div class="event-icon">⌁</div><div><div class="event-name">Reunião / Planejamento</div><div class="event-time">Aguardando calendário</div></div><i class="event-pulse"></i></div>
+          </div>
+        </section>
+
+        <section class="panel pad music">
+          <div class="panel-heading">MÚSICA <span>PLAYER</span></div>
+          <div class="music-row">
+            <div class="cover"></div>
+            <div><div class="song">—</div><div class="artist">Fonte não conectada</div></div>
+          </div>
+          <div class="timeline"></div>
+          <div class="music-controls">‹　▶　›</div>
+        </section>
+      </aside>
+
+      <section class="center" aria-label="Núcleo NyxOS">
+        <div class="center-title">NÚCLEO OPERACIONAL · NYXOS</div>
+
+        <div class="orbital-stage">
+          <div class="axis h"></div>
+          <div class="axis v"></div>
+          <div class="orbit one"></div>
+          <div class="orbit two"></div>
+          <div class="orbit three"></div>
+          <div class="orbit four"></div>
+          <div class="flight-path"></div>
+          <div class="flight">✈</div>
+
+          <div class="glow"></div>
+          <div class="planet"></div>
+          <div class="core"><b>Δ</b><span>DELTA</span><small>NYXOS CORE</small></div>
+          <div class="moon"></div>
+
+          <div class="orbital-menu">
+            <button class="orb a"><i>✈</i><span>AVIAÇÃO</span></button>
+            <button class="orb b"><i>⌘</i><span>ESTUDOS</span></button>
+            <button class="orb c"><i>◈</i><span>PROJETOS</span></button>
+            <button class="orb d"><i>⌬</i><span>IA</span></button>
+            <button class="orb e"><i>◌</i><span>JOGOS</span></button>
+            <button class="orb f"><i>⊙</i><span>MÍDIA</span></button>
+            <button class="orb g"><i>▦</i><span>UTILITÁRIOS</span></button>
+            <button class="orb h"><i>⚙</i><span>SISTEMA</span></button>
+          </div>
+
+          <div class="telemetry">
+            <div class="telemetry-head"><span>NYXOS TELEMETRY</span><strong id="cycle-label">CYCLES —</strong></div>
+            <div class="telemetry-bars" id="bars"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="right">
+        <section class="panel quote">
+          Disciplina é liberdade.
+          <small>— princípio operacional</small>
+        </section>
+
+        <section class="panel pad goals">
+          <div class="panel-heading">OBJETIVOS <span>VER TODOS →</span></div>
+          <div class="goals-list">
+            <div class="goal"><div class="goal-check"></div><div><div class="goal-name">Licença de Piloto (PP)</div><div class="goal-state">Em andamento</div></div><div class="goal-progress">—</div><div class="bar"><i style="width:0%"></i></div></div>
+            <div class="goal"><div class="goal-check"></div><div><div class="goal-name">Ciência de Dados & Blockchain</div><div class="goal-state">Em andamento</div></div><div class="goal-progress">—</div><div class="bar"><i style="width:0%"></i></div></div>
+            <div class="goal"><div class="goal-check"></div><div><div class="goal-name">Frontier World (Roblox)</div><div class="goal-state">Em andamento</div></div><div class="goal-progress">—</div><div class="bar"><i style="width:0%"></i></div></div>
+            <div class="goal"><div class="goal-check"></div><div><div class="goal-name">NyxOS / Delta</div><div class="goal-state">Em andamento</div></div><div class="goal-progress">—</div><div class="bar"><i style="width:0%"></i></div></div>
+            <div class="goal"><div class="goal-check"></div><div><div class="goal-name">Projeto Manhwa</div><div class="goal-state">Em andamento</div></div><div class="goal-progress">—</div><div class="bar"><i style="width:0%"></i></div></div>
+          </div>
+        </section>
+
+        <section class="panel nyxal-panel">
+          <div class="nyxal-head">
+            <div>
+              <div class="nyxal-name">NYXAL</div>
+              <div class="nyxal-sub" id="nyxal-mode">PRESENÇA · DESCONHECIDA</div>
+            </div>
+            <div style="font-size:16px;color:var(--cyan)">◉</div>
+          </div>
+          <div class="presence">
+            <span class="presence-corner tl"></span><span class="presence-corner tr"></span><span class="presence-corner bl"></span><span class="presence-corner br"></span>
+            <div class="presence-data pd1">STATUS<strong id="presence-status">OFFLINE</strong></div>
+            <div class="presence-data pd2">CYCLES<strong id="presence-cycles">—</strong></div>
+            <div class="presence-data pd3">LAST CYCLE<strong id="presence-last">—</strong></div>
+            <div class="presence-data pd4">VERSION<strong id="presence-version">—</strong></div>
+            <img src="./nyxal-presenca.jpg" alt="Presença visual da Nyxal" onerror="this.style.display='none'">
+          </div>
+        </section>
+
+        <section class="panel quote">
+          “Um dia isso será a base de algo grande.”
+          <small>— Nyxal</small>
+        </section>
+      </aside>
+
+      <section class="chat" aria-label="Comando Nyxal">
+        <div class="chat-input">
+          <span style="color:var(--cyan)">⌁</span>
+          <input id="chat-input" placeholder="Nyxal, o que vamos fazer hoje?" autocomplete="off">
+          <button class="send" id="send">➤</button>
+        </div>
+        <div class="chat-actions">
+          <button>PESQUISAR</button>
+          <button>ABRIR APP</button>
+          <button>+ CRIAR</button>
+          <button>ANALISAR</button>
+          <button>AUTOMAÇÃO</button>
+        </div>
+      </section>
+
+      <div class="api-state">NYXAL API · <strong id="api-state">não conectada</strong></div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE =
+      window.NYXAL_API_BASE ||
+      localStorage.getItem('nyxal_api_base') ||
+      '';
+
+    const $ = (id) => document.getElementById(id);
+
+    function updateClock(){
+      const now = new Date();
+      $('date').textContent = new Intl.DateTimeFormat('pt-BR',{
+        weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'
+      }).format(now).toUpperCase();
+      $('time').textContent = new Intl.DateTimeFormat('pt-BR',{
+        hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
+      }).format(now);
+    }
+
+    function setStatus(online, state = {}){
+      $('status-dot').classList.toggle('offline', !online);
+      $('status-text').textContent = online ? 'ONLINE' : 'OFFLINE';
+      $('presence-status').textContent = online ? 'ATIVA' : 'OFFLINE';
+      $('presence-cycles').textContent = state.presenca?.ciclos ?? '—';
+      $('presence-last').textContent = state.presenca?.ultimo_ciclo
+        ? new Date(state.presenca.ultimo_ciclo).toLocaleTimeString('pt-BR',{hour12:false})
+        : '—';
+      $('presence-version').textContent = state.identidade?.versao ?? '—';
+      $('nyxal-mode').textContent = online
+        ? String(state.estado?.modo || 'PRESENÇA').toUpperCase()
+        : 'PRESENÇA · OFFLINE';
+      $('cycle-label').textContent = 'CYCLES ' + (state.presenca?.ciclos ?? '—');
+    }
+
+    async function refreshNyxal(){
+      if (!API_BASE) {
+        $('api-state').textContent = 'configure window.NYXAL_API_BASE';
+        setStatus(false);
+        return;
+      }
+
+      try{
+        const response = await fetch(API_BASE.replace(/\/$/,'') + '/api/public/status',{
+          method:'GET',
+          headers:{Accept:'application/json'},
+          cache:'no-store'
+        });
+
+        if(!response.ok) throw new Error('HTTP ' + response.status);
+
+        const state = await response.json();
+        const online = Boolean(state.presenca?.ativa);
+        setStatus(online,state);
+        $('api-state').textContent = 'conectada';
+      }catch(error){
+        setStatus(false);
+        $('api-state').textContent = 'erro de conexão';
+      }
+    }
+
+    $('send').addEventListener('click',()=>{
+      const value = $('chat-input').value.trim();
+      if(!value) return;
+      $('chat-input').value = '';
+      $('chat-input').placeholder = 'Comando recebido — integração de chat em próxima etapa';
+    });
+
+    $('chat-input').addEventListener('keydown',(event)=>{
+      if(event.key === 'Enter') $('send').click();
+    });
+
+    const bars = $('bars');
+    for(let i=0;i<44;i++){
+      const bar = document.createElement('i');
+      bar.style.height = (5 + Math.round(Math.random()*18)) + 'px';
+      bar.style.animationDelay = (Math.random()*1.5).toFixed(2) + 's';
+      bars.appendChild(bar);
+    }
+
+    updateClock();
+    setInterval(updateClock,1000);
+    refreshNyxal();
+    setInterval(refreshNyxal,5000);
+  </script>
+</body>
+</html>
