@@ -1,135 +1,1314 @@
-<!doctype html>
-<html lang="pt-BR">
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NyxOS · Home</title>
-<style>
-:root{--bg:#030811;--panel:rgba(6,14,24,.84);--line:rgba(118,211,247,.20);--cyan:#80ddff;--text:#eef9ff;--muted:#718996;--green:#78ffd1}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif}button,input{font:inherit}button{cursor:pointer}
-.app{position:relative;width:100vw;height:100vh;overflow:hidden;background:radial-gradient(circle at 52% 58%,rgba(47,171,223,.10),transparent 27%),radial-gradient(circle at 88% 34%,rgba(49,126,168,.13),transparent 29%),linear-gradient(180deg,#030710,#050b14 55%,#02060b)}
-.app:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.46;background:linear-gradient(rgba(112,200,241,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(112,200,241,.045) 1px,transparent 1px);background-size:64px 64px}
-.app:after{content:"";position:absolute;inset:0;pointer-events:none;z-index:40;opacity:.08;background:repeating-linear-gradient(180deg,rgba(255,255,255,.04) 0 1px,transparent 2px 5px)}
-.backdrop-face{display:none}
-.nyxal-hologram{position:absolute;z-index:2;right:3vw;top:6vh;width:min(45vw,760px);height:88vh;min-height:620px;pointer-events:none;opacity:.74;transition:opacity .35s ease,transform .35s ease,filter .35s ease;filter:drop-shadow(0 0 18px rgba(86,211,255,.13))}
-.nyxal-hologram.background-mode{opacity:.13;transform:scale(.97);filter:blur(.4px) drop-shadow(0 0 12px rgba(86,211,255,.06))}
-.nyxal-aura{position:absolute;inset:5% 5%;background:radial-gradient(ellipse at 50% 42%,rgba(73,210,255,.14),transparent 55%),radial-gradient(ellipse at 52% 72%,rgba(48,141,181,.08),transparent 62%);filter:blur(28px);animation:holoAura 5.5s ease-in-out infinite}
-.nyxal-figure{position:absolute;inset:4% 10%;width:80%;height:92%;overflow:visible;filter:drop-shadow(0 0 14px rgba(121,225,255,.25));animation:holoBreath 5.3s ease-in-out infinite}
-.nyxal-orbit{position:absolute;left:50%;top:49%;border:1px solid rgba(126,227,255,.19);border-radius:50%;transform:translate(-50%,-50%) rotateX(67deg)}
-.orbit-x{width:94%;height:38%;animation:holoOrbit 34s linear infinite}.orbit-y{width:73%;height:31%;border-style:dashed;animation:holoOrbitReverse 25s linear infinite}
-.nyxal-hud{position:absolute;z-index:3;color:var(--muted);font-size:6px;letter-spacing:.14em}.nyxal-hud b{display:block;margin-top:4px;color:var(--cyan);font-size:8px;font-weight:500}.hud-left{left:8%;top:10%}.hud-right{right:8%;top:10%;text-align:right}.hud-bottom{left:50%;bottom:5%;transform:translateX(-50%);text-align:center}
-.holo-toggle{position:absolute;right:6%;bottom:8%;z-index:5;pointer-events:auto;width:28px;height:28px;border-radius:50%;border:1px solid rgba(126,227,255,.32);background:rgba(3,13,21,.55);color:var(--cyan);font-size:10px;box-shadow:0 0 15px rgba(126,227,255,.10);opacity:.66}
-.holo-toggle:hover{opacity:1;border-color:rgba(126,227,255,.62)}
-@keyframes holoAura{0%,100%{opacity:.48;transform:scale(.97)}50%{opacity:.95;transform:scale(1.03)}}@keyframes holoBreath{0%,100%{transform:scale(1);opacity:.56}50%{transform:scale(1.014);opacity:.84}}@keyframes holoOrbit{from{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(0)}to{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(360deg)}}@keyframes holoOrbitReverse{from{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(360deg)}to{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(0)}}
-header{position:relative;z-index:10;height:76px;display:grid;grid-template-columns:245px 1fr 310px;align-items:center;padding:0 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(5,14,24,.96),rgba(3,8,14,.82))}
-.brand{display:flex;align-items:center;gap:11px}.brand-mark{font-size:23px;color:var(--cyan);text-shadow:0 0 16px rgba(128,221,255,.32)}.brand-name{font-size:15px;letter-spacing:.28em}.brand-sub{margin-top:2px;font-size:6px;color:var(--muted);letter-spacing:.18em}
-nav{display:flex;justify-content:center;gap:5px}nav button{padding:9px 13px;border:1px solid transparent;background:transparent;color:#78909d;font-size:7px;letter-spacing:.13em;border-radius:17px}nav button.active{color:var(--text);border-color:rgba(118,211,247,.22);background:rgba(118,211,247,.05);box-shadow:0 0 18px rgba(118,211,247,.05)}
-.top-right{display:flex;justify-content:flex-end;align-items:center;gap:13px}.clock{text-align:right}.date{font-size:6px;color:var(--muted);letter-spacing:.11em}.time{margin-top:2px;font-size:15px;letter-spacing:.11em;font-variant-numeric:tabular-nums}.place{margin-top:2px;font-size:6px;color:var(--muted);letter-spacing:.08em}.status{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--line);border-radius:20px;background:rgba(5,15,24,.58)}.status-avatar{width:28px;height:28px;border-radius:50%;border:1px solid rgba(118,211,247,.28);overflow:hidden;background:rgba(118,211,247,.06)}.status-avatar img{width:100%;height:100%;object-fit:cover;opacity:.8}.status-name{font-size:7px;letter-spacing:.10em}.status-line{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:6px;color:var(--muted)}.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 9px rgba(120,255,209,.7)}.dot.offline{background:#718996;box-shadow:none}
-main{position:relative;height:calc(100vh - 76px);padding:14px 18px 16px}.left,.right{position:absolute;top:14px;bottom:16px;display:flex;flex-direction:column;gap:12px;z-index:12}.left{left:18px;width:250px}.right{right:18px;width:268px}.card{border:1px solid var(--line);border-radius:13px;background:linear-gradient(145deg,rgba(7,17,28,.86),rgba(2,9,16,.74));backdrop-filter:blur(14px);box-shadow:0 18px 50px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.02);overflow:hidden}.pad{padding:11px}.heading{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;margin-bottom:9px;border-bottom:1px solid rgba(118,211,247,.08);color:var(--cyan);font-size:7px;letter-spacing:.17em}.heading span{font-size:6px;color:var(--muted);letter-spacing:.05em}
-.weather-row{display:grid;grid-template-columns:1fr 52px;gap:8px;align-items:center}.temp{font-size:29px;font-weight:300}.city{font-size:7px;color:var(--muted);margin-top:1px}.condition{font-size:6px;color:var(--cyan);margin-top:5px}.weather-icon{width:52px;height:52px;border:1px solid rgba(118,211,247,.12);border-radius:9px;display:grid;place-items:center;color:var(--cyan);font-size:22px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}.meta div{padding:6px 5px;border:1px solid rgba(118,211,247,.06)}.meta small{display:block;color:var(--muted);font-size:5px}.meta b{display:block;margin-top:3px;font-size:7px;font-weight:500}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.metric{text-align:center;position:relative}.ring{position:relative;width:49px;height:49px;border-radius:50%;margin:auto;display:grid;place-items:center;background:conic-gradient(var(--cyan) var(--v,0%),rgba(118,211,247,.08) 0)}.ring:after{content:"";position:absolute;width:39px;height:39px;border-radius:50%;background:#06101a}.ring span{position:relative;z-index:2;font-size:9px}.metric small{display:block;margin-top:5px;color:var(--muted);font-size:5px;letter-spacing:.08em}
-.events{flex:1;min-height:0}.event-list{display:flex;flex-direction:column;gap:10px}.event{display:grid;grid-template-columns:28px 1fr 7px;gap:8px;align-items:center;padding-bottom:8px;border-bottom:1px dashed rgba(118,211,247,.07)}.event:last-child{border-bottom:0}.event-icon{width:28px;height:28px;border:1px solid rgba(118,211,247,.11);border-radius:7px;display:grid;place-items:center;color:var(--cyan);font-size:10px}.event-name{font-size:7px}.event-time{font-size:5px;color:var(--muted);margin-top:2px}.event-dot{width:6px;height:6px;border-radius:50%;background:#58bef0;box-shadow:0 0 8px rgba(88,190,240,.72)}
-.music{min-height:146px}.music-row{display:grid;grid-template-columns:53px 1fr;gap:9px;align-items:center}.cover{width:53px;height:53px;border-radius:6px;border:1px solid rgba(118,211,247,.10);background:linear-gradient(145deg,#1c3d50,#08111a 55%,#23475b);position:relative;overflow:hidden}.cover:before{content:"";position:absolute;inset:-25%;background:repeating-linear-gradient(135deg,transparent 0 8px,rgba(154,224,247,.18) 9px 11px);transform:rotate(12deg)}.song{font-size:8px}.artist{font-size:6px;color:var(--muted);margin-top:3px}.timeline{height:2px;margin-top:9px;background:rgba(118,211,247,.10)}.timeline i{display:block;width:31%;height:100%;background:var(--cyan)}.controls{text-align:center;margin-top:8px;color:var(--cyan);font-size:11px;letter-spacing:.8em}
-.right .quote{padding:12px 13px;font:italic 15px Georgia,serif;color:#c2d4dc}.right .quote small{display:block;margin-top:6px;font:normal 6px Inter,"Segoe UI",sans-serif;color:var(--cyan);letter-spacing:.08em}.goals{flex:1;min-height:0;padding:12px 12px 10px}.goal-list{display:flex;flex-direction:column;gap:14px}.goal{display:grid;grid-template-columns:16px 1fr 34px;gap:7px;align-items:start}.check{width:14px;height:14px;border:1px solid rgba(118,211,247,.32);border-radius:4px}.goal-name{font-size:7px}.goal-state{font-size:5px;color:var(--muted);margin-top:3px}.pct{text-align:right;color:var(--cyan);font-size:6px}.bar{grid-column:2/4;height:3px;border:1px solid rgba(118,211,247,.07);margin-top:5px}.bar i{display:block;height:100%;background:linear-gradient(90deg,rgba(118,211,247,.15),rgba(118,211,247,.72))}
-.bottom-quote{display:flex;align-items:center;gap:10px}.quote-icon{width:42px;height:42px;border-radius:8px;border:1px solid rgba(118,211,247,.12);background:radial-gradient(circle at 35% 30%,rgba(150,228,250,.45),rgba(31,74,96,.4) 35%,rgba(4,15,25,.8) 72%);flex:none}.bottom-quote .text{font:italic 12px Georgia,serif;color:#bfd0d8;line-height:1.25}.bottom-quote small{display:block;margin-top:4px;font:normal 6px Inter,"Segoe UI",sans-serif;color:var(--muted)}@keyframes holo-breathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.70}50%{transform:translate(-50%,-50%) scale(1.018);opacity:.92}}
-@keyframes holo-pulse{0%,100%{opacity:.24;transform:translateX(-50%) scale(.94)}50%{opacity:.52;transform:translateX(-50%) scale(1.04)}}
-@keyframes holo-scan{0%,100%{top:23%;opacity:.04}50%{top:73%;opacity:.86}}
-@keyframes holo-heart{0%,100%{transform:translateX(-50%) scale(.92);box-shadow:0 0 10px rgba(118,221,255,.18)}25%{transform:translateX(-50%) scale(1.14);box-shadow:0 0 18px rgba(118,221,255,.42)}40%{transform:translateX(-50%) scale(.98)}55%{transform:translateX(-50%) scale(1.08);box-shadow:0 0 15px rgba(118,221,255,.32)}70%{transform:translateX(-50%) scale(.94)}}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NyxOS v2.0 DELTA | Nyxal Holographic Interface</title>
 
-.center{position:absolute;left:292px;right:304px;top:14px;bottom:16px;z-index:6}.center-title{position:absolute;top:-1px;left:50%;transform:translateX(-50%);font-size:6px;letter-spacing:.28em;color:rgba(113,137,150,.55);white-space:nowrap}.stage{position:absolute;left:50%;top:52%;width:min(770px,100%);height:545px;transform:translate(-50%,-50%)}.orbit{position:absolute;left:50%;top:52%;border:1px solid rgba(118,211,247,.15);border-radius:50%;transform:translate(-50%,-50%) rotateX(67deg)}.o1{width:92%;height:53%;animation:spin 34s linear infinite}.o2{width:78%;height:44%;border-style:dashed;animation:spin2 26s linear infinite}.o3{width:62%;height:35%;border-color:rgba(118,211,247,.25)}.o4{width:48%;height:28%;border-color:rgba(118,211,247,.08)}
-.moon{position:absolute;right:24%;top:15%;width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 30% 28%,#eef9ff 0 7%,#a2b1bc 30%,#54636e 69%,#1b2730 100%);box-shadow:0 0 19px rgba(183,215,231,.17)}.planet-glow{position:absolute;left:50%;top:63%;width:355px;height:355px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(45,186,239,.17),transparent 68%);filter:blur(8px);animation:pulse 5s ease-in-out infinite}.planet{position:absolute;left:50%;top:63%;width:330px;height:330px;transform:translate(-50%,-50%);border-radius:50%;border:1px solid rgba(118,211,247,.34);background:radial-gradient(circle at 37% 33%,rgba(65,184,238,.43),transparent 22%),radial-gradient(circle at 65% 64%,rgba(10,76,106,.55),transparent 26%),radial-gradient(circle,#0e3150,#07131f 70%);box-shadow:0 0 35px rgba(65,195,239,.13),inset -28px -18px 48px rgba(0,0,0,.48);overflow:hidden}.planet:before{content:"";position:absolute;inset:13%;border-radius:50%;background:radial-gradient(ellipse at 45% 29%,rgba(163,231,255,.12) 0 8%,transparent 9%),radial-gradient(ellipse at 58% 48%,rgba(91,201,242,.15) 0 9%,transparent 10%),radial-gradient(ellipse at 39% 66%,rgba(114,220,255,.13) 0 8%,transparent 9%)}.planet:after{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-radial-gradient(circle,transparent 0 31px,rgba(118,211,247,.055) 32px 33px);opacity:.7}
-.center-orbs{position:absolute;inset:0}.orb{position:absolute;width:48px;height:48px;border-radius:50%;border:1px solid rgba(118,211,247,.28);background:rgba(3,13,21,.70);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--cyan);box-shadow:0 0 14px rgba(118,211,247,.03)}.orb i{font-style:normal;font-size:14px}.orb span{margin-top:3px;font-size:5px;letter-spacing:.09em;color:#87a0aa}.p1{left:18%;top:27%}.p2{left:29%;top:47%}.p3{left:34%;top:7%}.p4{left:11%;top:61%}.p5{right:11%;top:61%}.p6{right:34%;top:7%}.p7{right:29%;top:47%}.p8{right:18%;top:27%}.flight{position:absolute;left:14%;top:20%;font-size:18px;color:#eafdff;filter:drop-shadow(0 0 8px rgba(118,211,247,.95));animation:flight 13s linear infinite}.telemetry{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);width:min(590px,85%);padding:8px 11px;border:1px solid rgba(118,211,247,.16);background:rgba(2,10,17,.48);backdrop-filter:blur(8px)}.telemetry-top{display:flex;justify-content:space-between;font-size:5px;color:var(--muted);letter-spacing:.13em}.telemetry-top strong{color:var(--cyan);font-weight:500}.bars{height:22px;display:flex;align-items:center;justify-content:space-between;margin-top:4px}.bars i{display:block;width:3px;background:var(--cyan);opacity:.36;animation:bars 1.7s ease-in-out infinite}
-.chat{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:min(610px,78%);z-index:25;padding:8px 10px 9px;border:1px solid rgba(118,211,247,.25);border-radius:22px;background:rgba(4,13,21,.92);backdrop-filter:blur(20px);box-shadow:0 18px 48px rgba(0,0,0,.42)}.chat-row{display:flex;align-items:center;gap:8px;height:34px;border:1px solid rgba(118,211,247,.12);border-radius:18px;padding:0 9px}.chat-row input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--text);font-size:7px}.chat-row input::placeholder{color:#6d8490}.send{width:27px;height:27px;border-radius:50%;border:1px solid rgba(118,211,247,.2);background:rgba(118,211,247,.04);color:var(--cyan)}.actions{display:flex;justify-content:center;gap:5px;flex-wrap:wrap;margin-top:6px}.actions button{padding:5px 9px;border:1px solid rgba(118,211,247,.09);border-radius:9px;background:rgba(118,211,247,.02);color:var(--muted);font-size:5px;letter-spacing:.07em}.api{position:absolute;left:18px;bottom:7px;z-index:25;font-size:5px;color:var(--muted);letter-spacing:.08em}.api strong{color:var(--cyan);font-weight:500}
-@keyframes spin{from{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(0)}to{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(360deg)}}@keyframes spin2{from{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(360deg)}to{transform:translate(-50%,-50%) rotateX(67deg) rotateZ(0)}}@keyframes pulse{0%,100%{opacity:.55;transform:translate(-50%,-50%) scale(.97)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.03)}}@keyframes flight{0%{left:14%;top:20%}50%{left:58%;top:12%}100%{left:91%;top:31%}}@keyframes bars{0%,100%{opacity:.14;transform:scaleY(.55)}50%{opacity:.72;transform:scaleY(1.1)}}
-@media(max-width:1100px){header{grid-template-columns:205px 1fr 250px}.left{width:220px}.right{width:245px}.center{left:240px;right:275px}.stage{transform:translate(-50%,-50%) scale(.88)}.backdrop-face{width:48vw;opacity:.08}}
-@media(max-width:860px){html,body{overflow:auto}.app{height:auto;min-height:100vh}.backdrop-face{display:none}header{height:auto;grid-template-columns:1fr;gap:8px;padding:11px}.top-right{justify-content:flex-start}.nav{justify-content:flex-start;overflow:auto}.nav button{white-space:nowrap}.app main{height:auto;min-height:calc(100vh - 140px);padding-bottom:150px}.left,.right,.center{position:relative;left:auto;right:auto;top:auto;bottom:auto;width:auto}.left,.right{display:grid;grid-template-columns:1fr 1fr}.center{height:520px;margin:12px 0}.stage{transform:translate(-50%,-50%) scale(.72)}.chat{position:fixed;bottom:9px;width:min(640px,calc(100% - 24px))}}
-@media(max-width:620px){.left,.right{display:flex}.center{height:470px}.stage{transform:translate(-50%,-50%) scale(.58)}.chat{width:calc(100% - 16px)}}
-</style>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Orbitron, Rajdhani, Inter, Cinzel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            hud: {
+              bg: '#02050e',
+              card: 'rgba(6, 14, 28, 0.78)',
+              border: 'rgba(0, 242, 254, 0.22)',
+              cyan: '#00f2fe',
+              blue: '#4facfe',
+              purple: '#8a2be2',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              muted: '#64748b'
+            }
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            rajdhani: ['Rajdhani', 'sans-serif'],
+            cinzel: ['Cinzel', 'serif'],
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Global Sci-Fi Theme */
+    body {
+      background-color: #02050e;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    /* Cyber Glassmorphism Card */
+    .hud-card {
+      background: rgba(6, 14, 28, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 242, 254, 0.18);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(0, 242, 254, 0.05);
+      border-radius: 12px;
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .hud-card:hover {
+      border-color: rgba(0, 242, 254, 0.45);
+      box-shadow: 0 8px 32px 0 rgba(0, 242, 254, 0.18), inset 0 0 20px rgba(0, 242, 254, 0.1);
+    }
+
+    /* Sci-Fi Corner Brackets */
+    .cyber-brackets::before, .cyber-brackets::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-color: #00f2fe;
+      pointer-events: none;
+    }
+    .cyber-brackets::before {
+      top: -1px; left: -1px;
+      border-top: 2px solid #00f2fe;
+      border-left: 2px solid #00f2fe;
+      border-top-left-radius: 4px;
+    }
+    .cyber-brackets::after {
+      bottom: -1px; right: -1px;
+      border-bottom: 2px solid #00f2fe;
+      border-right: 2px solid #00f2fe;
+      border-bottom-right-radius: 4px;
+    }
+
+    /* HOLOGRAPHIC PRESENCE CONTAINER & ANIMATIONS */
+    .holo-container {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Floating & Breathing Animation for Nyxal Hologram */
+    @keyframes holoFloat {
+      0% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 15px rgba(0,242,254,0.3)); }
+      50% { transform: translateY(-7px) scale(1.012); filter: drop-shadow(0 0 25px rgba(0,242,254,0.5)); }
+      100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 15px rgba(0,242,254,0.3)); }
+    }
+
+    .animate-holo-float {
+      animation: holoFloat 5.5s ease-in-out infinite;
+    }
+
+    /* Receded state when modals/drawers are open */
+    .nyxal-receded {
+      opacity: 0.2 !important;
+      filter: blur(8px) grayscale(50%) !important;
+      transform: scale(0.92) translateY(12px) !important;
+      pointer-events: none;
+    }
+
+    /* Processing visual state */
+    .nyxal-processing {
+      animation: holoPulseProcessing 1.2s infinite ease-in-out !important;
+    }
+
+    @keyframes holoPulseProcessing {
+      0% { filter: drop-shadow(0 0 10px #f59e0b) brightness(1); }
+      50% { filter: drop-shadow(0 0 30px #00f2fe) brightness(1.3); }
+      100% { filter: drop-shadow(0 0 10px #f59e0b) brightness(1); }
+    }
+
+    /* Holographic Scanlines */
+    .holo-scanline {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 242, 254, 0.08) 50%,
+        rgba(0, 242, 254, 0.08)
+      );
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    .holo-beam {
+      position: absolute;
+      top: -100%; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(0deg, rgba(0, 242, 254, 0.35) 0%, rgba(0, 242, 254, 0) 100%);
+      animation: holoBeam 3.8s infinite linear;
+      pointer-events: none;
+      z-index: 16;
+    }
+
+    @keyframes holoBeam {
+      0% { top: -100%; }
+      100% { top: 100%; }
+    }
+
+    /* Goddess Nyx Voice Aura Pulse */
+    @keyframes goddessPulse {
+      0% { transform: scale(0.9); opacity: 0.4; filter: blur(20px); }
+      50% { transform: scale(1.2); opacity: 0.9; filter: blur(30px); }
+      100% { transform: scale(0.9); opacity: 0.4; filter: blur(20px); }
+    }
+
+    .voice-aura-nyx {
+      animation: goddessPulse 3.2s infinite ease-in-out;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: rgba(2, 5, 14, 0.8); }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 242, 254, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 242, 254, 0.7); }
+
+    /* Orbital Nodes */
+    .orbital-node {
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .orbital-node:hover {
+      transform: scale(1.18);
+      box-shadow: 0 0 25px #00f2fe, inset 0 0 10px #00f2fe;
+    }
+
+    .glow-text-cyan {
+      text-shadow: 0 0 10px rgba(0, 242, 254, 0.7), 0 0 20px rgba(0, 242, 254, 0.4);
+    }
+  </style>
 </head>
-<body>
-<div class="app">
-<div class="nyxal-hologram" id="nyxal-hologram" aria-label="Presença holográfica da Nyxal">
-<div class="nyxal-aura"></div><div class="nyxal-orbit orbit-x"></div><div class="nyxal-orbit orbit-y"></div>
-<svg class="nyxal-figure" viewBox="0 0 700 900" aria-hidden="true">
-<defs>
-<radialGradient id="hf" cx="50%" cy="38%" r="65%"><stop offset="0%" stop-color="#d7f9ff" stop-opacity=".58"/><stop offset="48%" stop-color="#64d8ff" stop-opacity=".25"/><stop offset="100%" stop-color="#0b4057" stop-opacity="0"/></radialGradient>
-<linearGradient id="hl" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#b5f5ff" stop-opacity=".86"/><stop offset="52%" stop-color="#55d0ff" stop-opacity=".40"/><stop offset="100%" stop-color="#1d617d" stop-opacity=".06"/></linearGradient>
-<filter id="hg"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-</defs>
-<ellipse cx="350" cy="540" rx="280" ry="330" fill="url(#hf)" opacity=".22"/>
-<path d="M196 385 C150 298 186 163 350 114 C514 163 550 298 504 385 C488 242 443 170 350 170 C257 170 212 242 196 385Z" fill="#081923" fill-opacity=".56" stroke="url(#hl)" stroke-width="4"/>
-<path d="M215 360 C215 238 270 158 350 158 C430 158 485 238 485 360 C485 461 432 545 350 563 C268 545 215 461 215 360Z" fill="#0b2d3b" fill-opacity=".24" stroke="url(#hl)" stroke-width="3"/>
-<path d="M242 302 C270 252 316 231 350 231 C384 231 430 252 458 302" fill="none" stroke="#80e4ff" stroke-opacity=".32" stroke-width="3"/>
-<path d="M262 332 C288 316 315 316 337 329 M363 329 C385 316 412 316 438 332" fill="none" stroke="#a8f3ff" stroke-width="5" stroke-linecap="round"/>
-<ellipse cx="306" cy="343" rx="18" ry="7" fill="#9beaff" opacity=".82" filter="url(#hg)"/><ellipse cx="394" cy="343" rx="18" ry="7" fill="#9beaff" opacity=".82" filter="url(#hg)"/>
-<path d="M350 345 C343 377 338 397 350 410 C362 397 357 377 350 345Z" fill="#60d5ff" fill-opacity=".15" stroke="#82e6ff" stroke-opacity=".42" stroke-width="2"/>
-<path d="M311 443 C337 459 363 459 389 443" fill="none" stroke="#a9efff" stroke-opacity=".70" stroke-width="3" stroke-linecap="round"/>
-<path d="M350 175 V255" stroke="#9beaff" stroke-opacity=".34" stroke-width="2"/><circle cx="350" cy="196" r="8" fill="#9beaff" opacity=".62" filter="url(#hg)"/>
-<path d="M247 300 L220 335 L250 350 M453 300 L480 335 L450 350 M234 374 L211 396 L236 414 M466 374 L489 396 L464 414" fill="none" stroke="#66dcff" stroke-opacity=".30" stroke-width="3"/>
-<path d="M291 558 L280 637 L228 728 L203 868 M409 558 L420 637 L472 728 L497 868" fill="none" stroke="url(#hl)" stroke-width="5"/>
-<path d="M278 616 C232 627 190 657 168 702 C151 738 148 793 140 868 M422 616 C468 627 510 657 532 702 C549 738 552 793 560 868" fill="none" stroke="url(#hl)" stroke-width="4"/>
-<path d="M282 619 C307 651 324 671 350 686 C376 671 393 651 418 619" fill="none" stroke="#76ddff" stroke-opacity=".40" stroke-width="3"/>
-<path d="M285 650 C306 684 321 718 350 736 C379 718 394 684 415 650" fill="#0c2430" fill-opacity=".62" stroke="#80e4ff" stroke-opacity=".26" stroke-width="3"/>
-<circle cx="350" cy="711" r="47" fill="#0b2a39" fill-opacity=".64" stroke="#92ecff" stroke-opacity=".46" stroke-width="3" filter="url(#hg)"/><circle cx="350" cy="711" r="17" fill="#b9f5ff" fill-opacity=".68" filter="url(#hg)"/>
-<path d="M350 694 V728 M333 711 H367" stroke="#d7fbff" stroke-opacity=".70" stroke-width="3"/>
-<g stroke="#92ecff" stroke-opacity=".22" stroke-width="1"><line x1="168" y1="205" x2="532" y2="205"/><line x1="168" y1="235" x2="532" y2="235"/><line x1="168" y1="265" x2="532" y2="265"/><line x1="168" y1="295" x2="532" y2="295"/><line x1="168" y1="325" x2="532" y2="325"/><line x1="168" y1="355" x2="532" y2="355"/><line x1="168" y1="385" x2="532" y2="385"/><line x1="168" y1="415" x2="532" y2="415"/><line x1="168" y1="445" x2="532" y2="445"/><line x1="168" y1="475" x2="532" y2="475"/><line x1="168" y1="505" x2="532" y2="505"/><line x1="168" y1="535" x2="532" y2="535"/><line x1="168" y1="565" x2="532" y2="565"/><line x1="168" y1="595" x2="532" y2="595"/><line x1="168" y1="625" x2="532" y2="625"/><line x1="168" y1="655" x2="532" y2="655"/><line x1="168" y1="685" x2="532" y2="685"/><line x1="168" y1="715" x2="532" y2="715"/><line x1="168" y1="745" x2="532" y2="745"/><line x1="168" y1="775" x2="532" y2="775"/><line x1="168" y1="805" x2="532" y2="805"/><line x1="168" y1="835" x2="532" y2="835"/></g>
-<g fill="#9eeeff" opacity=".64"><circle cx="278" cy="505" r="5"/><circle cx="422" cy="505" r="5"/><circle cx="231" cy="603" r="4"/><circle cx="469" cy="603" r="4"/><circle cx="204" cy="760" r="4"/><circle cx="496" cy="760" r="4"/></g>
-<g stroke="#85e8ff" stroke-opacity=".28" stroke-width="2"><path d="M278 505 H225 V540 H195"/><path d="M422 505 H475 V540 H505"/><path d="M231 603 H184 V640 H157"/><path d="M469 603 H516 V640 H543"/><path d="M204 760 H155 V808 H127"/><path d="M496 760 H545 V808 H573"/></g>
-</svg>
-<div class="nyxal-hud hud-left">NYXAL PRESENCE<b id="holo-status">OFFLINE</b></div>
-<div class="nyxal-hud hud-right">CYCLES<b id="holo-cycles">—</b></div>
-<div class="nyxal-hud hud-bottom">CORE · <b style="display:inline">DELTA</b></div>
-<button class="holo-toggle" id="holo-toggle" title="Trazer Nyxal para frente">◉</button>
-</div>
-<header>
-<div class="brand"><div class="brand-mark">△</div><div><div class="brand-name">NyxOS</div><div class="brand-sub">v2.0 · DELTA</div></div></div>
-<nav><button class="active">INÍCIO</button><button>INTELIGÊNCIA</button><button>PROJETOS</button><button>ESTUDOS</button><button>AVIAÇÃO</button><button>SISTEMA</button></nav>
-<div class="top-right"><div class="clock"><div class="date" id="date">—</div><div class="time" id="time">—</div><div class="place">SÃO PAULO · BR</div></div><div class="status"><div class="status-avatar"><img src="./nyxal-presenca.jpg" alt=""></div><div><div class="status-name">NYXAL</div><div class="status-line"><i id="status-dot" class="dot offline"></i><span id="status-text">OFFLINE</span></div></div></div></div>
-</header>
-<main>
-<aside class="left">
-<section class="card pad"><div class="heading">CLIMA <span>AGORA</span></div><div class="weather-row"><div><div class="temp">—°C</div><div class="city">São Paulo, BR</div><div class="condition">Garoa · dados não conectados</div></div><div class="weather-icon">☼</div></div><div class="meta"><div><small>SENSAÇÃO</small><b>—</b></div><div><small>UMIDADE</small><b>—</b></div><div><small>VENTO</small><b>—</b></div><div><small>PRECIP.</small><b>—</b></div></div></section>
-<section class="card pad"><div class="heading">SISTEMA <span>REAL-TIME</span></div><div class="metrics"><div class="metric"><div class="ring" style="--v:0%"><span>—</span></div><small>CPU</small></div><div class="metric"><div class="ring" style="--v:0%"><span>—</span></div><small>RAM</small></div><div class="metric"><div class="ring" style="--v:0%"><span>—</span></div><small>DISCO</small></div></div></section>
-<section class="card pad events"><div class="heading">PRÓXIMOS EVENTOS <span>HOJE</span></div><div class="event-list"><div class="event"><div class="event-icon">✈</div><div><div class="event-name">Estudo · Aviação</div><div class="event-time">Calendário não conectado</div></div><i class="event-dot"></i></div><div class="event"><div class="event-icon">◈</div><div><div class="event-name">Treino</div><div class="event-time">Calendário não conectado</div></div><i class="event-dot"></i></div><div class="event"><div class="event-icon">◎</div><div><div class="event-name">Projeto Frontier World</div><div class="event-time">Calendário não conectado</div></div><i class="event-dot"></i></div><div class="event"><div class="event-icon">⌁</div><div><div class="event-name">Reunião / Planejamento</div><div class="event-time">Calendário não conectado</div></div><i class="event-dot"></i></div></div></section>
-<section class="card pad music"><div class="heading">MÚSICA <span>PLAYER</span></div><div class="music-row"><div class="cover"></div><div><div class="song">—</div><div class="artist">Fonte não conectada</div></div></div><div class="timeline"><i></i></div><div class="controls">‹　▶　›</div></section>
-</aside>
 
-<section class="center"><div class="center-title">NÚCLEO OPERACIONAL · NYXOS</div><div class="stage">
-<div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div><div class="orbit o4"></div><div class="moon"></div><div class="flight">✈</div><div class="planet-glow"></div><div class="planet"></div>
-<div class="center-orbs"><button class="orb p1"><i>✈</i><span>AVIAÇÃO</span></button><button class="orb p2"><i>⌘</i><span>ESTUDOS</span></button><button class="orb p3"><i>◈</i><span>PROJETOS</span></button><button class="orb p4"><i>⌬</i><span>IA</span></button><button class="orb p5"><i>◌</i><span>JOGOS</span></button><button class="orb p6"><i>⊙</i><span>MÍDIA</span></button><button class="orb p7"><i>▦</i><span>UTILITÁRIOS</span></button><button class="orb p8"><i>⚙</i><span>SISTEMA</span></button></div>
-<div class="telemetry"><div class="telemetry-top"><span>NYXOS TELEMETRY</span><strong id="cycle">CYCLES —</strong></div><div class="bars" id="bars"></div></div>
-</div></section>
+<body class="min-h-screen bg-[#02050e] text-slate-100 flex flex-col justify-between relative selection:bg-hud-cyan selection:text-black">
 
-<aside class="right">
-<section class="card quote">Disciplina é liberdade.<small>— princípio</small></section>
-<section class="card goals"><div class="heading">OBJETIVOS <span>VER TODOS →</span></div><div class="goal-list">
-<div class="goal"><div class="check"></div><div><div class="goal-name">Licença de Piloto (PP)</div><div class="goal-state">Em andamento</div></div><div class="pct">—</div><div class="bar"><i style="width:0%"></i></div></div>
-<div class="goal"><div class="check"></div><div><div class="goal-name">Ciência de Dados & Blockchain</div><div class="goal-state">Em andamento</div></div><div class="pct">—</div><div class="bar"><i style="width:0%"></i></div></div>
-<div class="goal"><div class="check"></div><div><div class="goal-name">Frontier World (Roblox)</div><div class="goal-state">Em andamento</div></div><div class="pct">—</div><div class="bar"><i style="width:0%"></i></div></div>
-<div class="goal"><div class="check"></div><div><div class="goal-name">NyxOS / Delta</div><div class="goal-state">Em andamento</div></div><div class="pct">—</div><div class="bar"><i style="width:0%"></i></div></div>
-<div class="goal"><div class="check"></div><div><div class="goal-name">Projeto Manhwa</div><div class="goal-state">Em andamento</div></div><div class="pct">—</div><div class="bar"><i style="width:0%"></i></div></div>
-</div></section>
-<section class="card pad bottom-quote"><div class="quote-icon"></div><div class="text">“Um dia isso será a base de algo grande.”<small>— Nyxal</small></div></section>
-</aside>
+  <!-- Background Space Canvas -->
+  <canvas id="spaceBgCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
 
-<section class="chat"><div class="chat-row"><span style="color:var(--cyan)">⌁</span><input id="chat" placeholder="Nyxal, o que vamos fazer hoje?" autocomplete="off"><button class="send" id="send">➤</button></div><div class="actions"><button>PESQUISAR</button><button>ABRIR APP</button><button>+ CRIAR</button><button>ANALISAR</button><button>AUTOMAÇÃO</button></div></section>
-<div class="api">NYXAL API · <strong id="api-state">não conectada</strong></div>
-</main>
-</div>
-<script>
-const API_BASE=window.NYXAL_API_BASE||localStorage.getItem('nyxal_api_base')||'';
-const $=id=>document.getElementById(id);
-function clock(){const n=new Date();$('date').textContent=new Intl.DateTimeFormat('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}).format(n).toUpperCase();$('time').textContent=new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(n)}
-function applyState(data){const online=Boolean(data?.presenca?.ativa);const cycles=data?.presenca?.ciclos??'—';$('status-dot').classList.toggle('offline',!online);$('status-text').textContent=online?'Online':'Offline';$('cycle').textContent='CYCLES '+cycles;$('holo-status').textContent=online?'ONLINE':'OFFLINE';$('holo-cycles').textContent=cycles}
-async function refresh(){if(!API_BASE){$('api-state').textContent='configure window.NYXAL_API_BASE';applyState({});return}try{const r=await fetch(API_BASE.replace(/\/$/,'')+'/api/public/status',{headers:{Accept:'application/json'},cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);applyState(await r.json());$('api-state').textContent='conectada'}catch(e){applyState({});$('api-state').textContent='erro de conexão'}}
-for(let i=0;i<42;i++){const b=document.createElement('i');b.style.height=(5+Math.round(Math.random()*16))+'px';b.style.animationDelay=(Math.random()*1.5).toFixed(2)+'s';$('bars').appendChild(b)}
-$('send').addEventListener('click',()=>{const v=$('chat').value.trim();if(!v)return;$('chat').value='';$('chat').placeholder='Comando recebido · integração de chat em próxima etapa'});
-$('chat').addEventListener('keydown',e=>{if(e.key==='Enter')$('send').click()});
-function nyxalBackground(active){$('nyxal-hologram').classList.toggle('background-mode',Boolean(active))}
-document.querySelectorAll('.orb,.actions button,.nav button').forEach(el=>el.addEventListener('click',()=>nyxalBackground(true)));
-$('holo-toggle').addEventListener('click',()=>nyxalBackground(false));
-$('nyxal-hologram').addEventListener('dblclick',()=>nyxalBackground(false));
-clock();setInterval(clock,1000);refresh();setInterval(refresh,5000);
-</script>
+  <!-- ================= HEADER NAVBAR ================= -->
+  <header class="relative z-20 w-full px-4 lg:px-8 py-3 bg-[#030816]/85 backdrop-blur-md border-b border-hud-border/40 flex flex-wrap items-center justify-between gap-4">
+    
+    <!-- Logo & System Info -->
+    <div class="flex items-center gap-3 cursor-pointer" onclick="playHudSound('click');">
+      <div class="relative w-10 h-10 rounded-lg bg-gradient-to-br from-hud-cyan/25 to-hud-purple/20 border border-hud-cyan/50 flex items-center justify-center shadow-lg shadow-hud-cyan/10">
+        <i class="fa-solid fa-moon text-hud-cyan text-lg"></i>
+        <span class="absolute -top-1 -right-1 flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-hud-cyan opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-hud-cyan"></span>
+        </span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-orbitron font-bold text-lg md:text-xl tracking-wider text-white">
+            Nyx<span class="text-hud-cyan glow-text-cyan">OS</span>
+          </h1>
+          <span class="text-[10px] font-orbitron px-1.5 py-0.5 rounded bg-hud-cyan/10 border border-hud-cyan/30 text-hud-cyan">DELTA</span>
+        </div>
+        <p class="text-[10px] font-rajdhani text-slate-400 tracking-widest uppercase">NÚCLEO OPERACIONAL • NYXAL INTEGRATED</p>
+      </div>
+    </div>
+
+    <!-- Center Nav Tabs -->
+    <nav class="hidden md:flex items-center gap-1 lg:gap-2 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
+      <button onclick="switchTab('inicio')" id="tab-inicio" class="nav-btn active px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-hud-cyan bg-hud-cyan/15 border border-hud-cyan/40 transition-all flex items-center gap-2">
+        <i class="fa-solid fa-house text-xs"></i> INÍCIO
+      </button>
+      <button onclick="switchTab('inteligencia')" id="tab-inteligencia" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-brain text-xs"></i> INTELIGÊNCIA
+      </button>
+      <button onclick="switchTab('projetos')" id="tab-projetos" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-cube text-xs"></i> PROJETOS
+      </button>
+      <button onclick="switchTab('estudos')" id="tab-estudos" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-book text-xs"></i> ESTUDOS
+      </button>
+      <button onclick="switchTab('aviacao')" id="tab-aviacao" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-plane text-xs"></i> AVIAÇÃO
+      </button>
+      <button onclick="switchTab('sistema')" id="tab-sistema" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-gear text-xs"></i> SISTEMA
+      </button>
+    </nav>
+
+    <!-- Right Controls & Status -->
+    <div class="flex items-center gap-4">
+      <!-- API Connection Setup Button -->
+      <button onclick="openConfigModal();" title="Configurar Conexão API Nyxal" class="w-9 h-9 rounded-lg bg-slate-900 border border-hud-border/50 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan flex items-center justify-center transition-all">
+        <i class="fa-solid fa-network-wired text-sm"></i>
+      </button>
+
+      <!-- Date & Time -->
+      <div class="text-right hidden sm:block">
+        <div id="liveClock" class="font-orbitron font-bold text-sm tracking-widest text-white glow-text-cyan">
+          00:00:00
+        </div>
+        <div id="liveDate" class="text-[11px] font-rajdhani text-slate-400 uppercase tracking-wider">
+          SÃO PAULO - BR
+        </div>
+      </div>
+
+      <!-- User Badge -->
+      <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-hud-cyan/30">
+        <div class="relative w-8 h-8 rounded-full overflow-hidden border border-hud-cyan">
+          <img src="https://placehold.co/100x100/030712/00f2fe?text=NYX" alt="Nyxal Avatar" class="w-full h-full object-cover">
+        </div>
+        <div class="hidden xl:block text-left">
+          <div class="text-xs font-bold font-orbitron text-white">NYXAL</div>
+          <div id="headerNyxalStatus" class="flex items-center gap-1.5 text-[10px] text-emerald-400 font-rajdhani">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> CONECTADA
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN DASHBOARD CONTENT ================= -->
+  <main class="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 lg:p-6 max-w-[1920px] mx-auto w-full">
+
+    <!-- ================= LEFT SIDEBAR (WIDGETS) ================= -->
+    <section class="lg:col-span-3 flex flex-col gap-4">
+      
+      <!-- WEATHER WIDGET (CLIMA) -->
+      <div class="hud-card cyber-brackets p-4">
+        <div class="flex items-center justify-between pb-2 mb-3 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-cloud-sun-rain text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">CLIMA</h2>
+          </div>
+          <span class="text-[11px] font-rajdhani text-slate-400"><i class="fa-solid fa-location-dot text-hud-cyan"></i> São Paulo, BR</span>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="text-3xl text-hud-cyan animate-pulse">
+              <i class="fa-solid fa-cloud-showers-heavy"></i>
+            </div>
+            <div>
+              <div id="weatherTemp" class="text-3xl font-orbitron font-bold text-white tracking-tighter">--°C</div>
+              <div id="weatherCond" class="text-xs text-slate-300 font-rajdhani font-medium">Aguardando dados...</div>
+            </div>
+          </div>
+          <div class="text-right text-[11px] font-rajdhani text-slate-400 space-y-0.5">
+            <div>Sensação: <span id="weatherFeels" class="text-slate-200 font-bold">--°C</span></div>
+            <div>Umidade: <span id="weatherHumidity" class="text-hud-cyan font-bold">--%</span></div>
+            <div>Vento: <span id="weatherWind" class="text-slate-200 font-bold">-- km/h</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SYSTEM METRICS (SISTEMA) -->
+      <div class="hud-card cyber-brackets p-4 flex-1 flex flex-col justify-between">
+        <div class="flex items-center justify-between pb-2 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-microchip text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">SISTEMA</h2>
+          </div>
+          <span class="text-[10px] font-rajdhani text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded bg-emerald-950/30">DELTA ACTIVE</span>
+        </div>
+
+        <!-- 3 Gauges -->
+        <div class="grid grid-cols-3 gap-2 my-3 text-center">
+          <div class="flex flex-col items-center">
+            <div class="relative w-16 h-16 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90">
+                <circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,0.08)" stroke-width="4" fill="transparent"/>
+                <circle id="cpuCircle" cx="32" cy="32" r="26" stroke="#00f2fe" stroke-width="4" stroke-dasharray="163" stroke-dashoffset="163" stroke-linecap="round" fill="transparent" class="transition-all duration-700"/>
+              </svg>
+              <span id="cpuText" class="absolute text-xs font-orbitron font-bold text-white">--%</span>
+            </div>
+            <span class="text-[11px] font-rajdhani text-slate-400 font-semibold uppercase mt-1">CPU</span>
+          </div>
+
+          <div class="flex flex-col items-center">
+            <div class="relative w-16 h-16 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90">
+                <circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,0.08)" stroke-width="4" fill="transparent"/>
+                <circle id="ramCircle" cx="32" cy="32" r="26" stroke="#4facfe" stroke-width="4" stroke-dasharray="163" stroke-dashoffset="163" stroke-linecap="round" fill="transparent" class="transition-all duration-700"/>
+              </svg>
+              <span id="ramText" class="absolute text-xs font-orbitron font-bold text-white">--%</span>
+            </div>
+            <span class="text-[11px] font-rajdhani text-slate-400 font-semibold uppercase mt-1">RAM</span>
+          </div>
+
+          <div class="flex flex-col items-center">
+            <div class="relative w-16 h-16 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90">
+                <circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,0.08)" stroke-width="4" fill="transparent"/>
+                <circle id="diskCircle" cx="32" cy="32" r="26" stroke="#38ef7d" stroke-width="4" stroke-dasharray="163" stroke-dashoffset="163" stroke-linecap="round" fill="transparent" class="transition-all duration-700"/>
+              </svg>
+              <span id="diskText" class="absolute text-xs font-orbitron font-bold text-white">--%</span>
+            </div>
+            <span class="text-[11px] font-rajdhani text-slate-400 font-semibold uppercase mt-1">DISCO</span>
+          </div>
+        </div>
+
+        <!-- System Stream Graph -->
+        <div class="w-full bg-slate-950/80 rounded-lg p-2 border border-slate-800">
+          <div class="flex justify-between items-center text-[10px] font-rajdhani text-slate-400 mb-1">
+            <span>FLUXO DE PROCESSAMENTO DELTA</span>
+            <span class="text-hud-cyan font-mono">60.0 FPS</span>
+          </div>
+          <canvas id="sysGraphCanvas" class="w-full h-12 block"></canvas>
+        </div>
+      </div>
+
+      <!-- UPCOMING EVENTS (EVENTOS) -->
+      <div class="hud-card cyber-brackets p-4">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-calendar-check text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">PRÓXIMOS EVENTOS</h2>
+          </div>
+          <button onclick="addNewEventPrompt()" class="w-5 h-5 rounded bg-hud-cyan/20 border border-hud-cyan/50 hover:bg-hud-cyan hover:text-black text-hud-cyan flex items-center justify-center transition-all text-xs">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+
+        <div id="eventsList" class="space-y-2 text-xs font-rajdhani">
+          <!-- Dinamicamente alimentado pelo Backend/Script -->
+          <div class="p-2 rounded bg-slate-900/80 border border-slate-800 flex justify-between items-center text-slate-500 italic">
+            <span>Nenhum evento agendado</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MUSIC PLAYER (MÚSICA) -->
+      <div class="hud-card cyber-brackets p-4">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-music text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">MÚSICA</h2>
+          </div>
+          <span class="text-[10px] font-rajdhani text-hud-cyan">STANDBY</span>
+        </div>
+
+        <div class="flex items-center gap-3 mb-2">
+          <div class="relative w-12 h-12 rounded-lg bg-slate-800 border border-hud-cyan/40 overflow-hidden flex-shrink-0 flex items-center justify-center">
+            <i class="fa-solid fa-compact-disc text-slate-600 text-xl"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 id="musicTrackTitle" class="text-xs font-orbitron font-bold text-slate-400 truncate">Sem Reprodução</h3>
+            <p id="musicArtist" class="text-[11px] font-rajdhani text-slate-500 truncate">--</p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-center gap-4 pt-1">
+          <button onclick="playHudSound('click')" class="text-slate-500 hover:text-white transition-colors"><i class="fa-solid fa-backward-step text-xs"></i></button>
+          <button id="playPauseBtn" onclick="togglePlayMusic()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center hover:text-hud-cyan hover:border hover:border-hud-cyan transition-all">
+            <i class="fa-solid fa-play text-xs"></i>
+          </button>
+          <button onclick="playHudSound('click')" class="text-slate-500 hover:text-white transition-colors"><i class="fa-solid fa-forward-step text-xs"></i></button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= CENTER HUB (3D HOLOGRAPHIC COMPUTATIONAL CORE & ORBITAL NODES) ================= -->
+    <section class="lg:col-span-6 flex flex-col justify-between relative min-h-[550px] lg:min-h-full">
+      
+      <!-- Central Holographic Canvas Container -->
+      <div class="relative flex-1 w-full flex items-center justify-center min-h-[380px]">
+        
+        <!-- Three.js 3D Holographic Core Canvas Container -->
+        <div id="globeContainer" class="relative w-full h-[380px] sm:h-[450px] lg:h-[500px] flex items-center justify-center cursor-grab active:cursor-grabbing">
+        </div>
+
+        <!-- RADIAL ORBITAL HUD NODES -->
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div class="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] rounded-full border border-hud-cyan/20 animate-[spin_60s_linear_infinite]"></div>
+          <div class="absolute w-[260px] h-[260px] sm:w-[350px] sm:h-[350px] rounded-full border border-dashed border-hud-blue/30 animate-[spin_40s_linear_infinite_reverse]"></div>
+
+          <!-- Nodes positioned radially around core -->
+          <button onclick="triggerOrbitalNode('IA')" class="orbital-node pointer-events-auto absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-hud-cyan text-hud-cyan hover:bg-hud-cyan hover:text-black px-3 py-1.5 rounded-full text-xs font-orbitron font-bold flex items-center gap-1.5 shadow-lg shadow-hud-cyan/20">
+            <i class="fa-solid fa-brain"></i> IA
+          </button>
+
+          <button onclick="triggerOrbitalNode('PROJETOS')" class="orbital-node pointer-events-auto absolute top-12 left-2 sm:top-16 sm:left-6 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-cube text-hud-cyan"></i> PROJETOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('ESTUDOS')" class="orbital-node pointer-events-auto absolute bottom-24 left-0 sm:bottom-28 sm:left-4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-book text-hud-cyan"></i> ESTUDOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('AVIAÇÃO')" class="orbital-node pointer-events-auto absolute bottom-4 left-1/4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-plane text-hud-cyan"></i> AVIAÇÃO
+          </button>
+
+          <button onclick="triggerOrbitalNode('JOGOS')" class="orbital-node pointer-events-auto absolute top-12 right-2 sm:top-16 sm:right-6 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-gamepad text-hud-cyan"></i> JOGOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('MÍDIA')" class="orbital-node pointer-events-auto absolute top-1/2 -right-4 sm:-right-6 -translate-y-1/2 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-play text-hud-cyan"></i> MÍDIA
+          </button>
+
+          <button onclick="triggerOrbitalNode('UTILITÁRIOS')" class="orbital-node pointer-events-auto absolute bottom-24 right-0 sm:bottom-28 sm:right-4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-border-all text-hud-cyan"></i> UTILITÁRIOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('SISTEMA')" class="orbital-node pointer-events-auto absolute bottom-4 right-1/4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-gear text-hud-cyan"></i> SISTEMA
+          </button>
+        </div>
+      </div>
+
+      <!-- BOTTOM INTERACTION / CHAT COMMAND BAR -->
+      <div class="hud-card cyber-brackets p-3 sm:p-4 mt-4">
+        <!-- Quick Action Shortcuts -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 mb-2 no-scrollbar text-[11px] font-rajdhani">
+          <button onclick="sendQuickAction('Status operacional da Nyxal')" class="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan transition-all flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid fa-magnifying-glass text-hud-cyan"></i> Status Nyxal
+          </button>
+          <button onclick="sendQuickAction('Abrir módulo de Aviação')" class="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan transition-all flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid fa-plane text-hud-cyan"></i> Módulo Aviação
+          </button>
+          <button onclick="sendQuickAction('Listar tarefas pendentes')" class="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan transition-all flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid fa-list-check text-hud-cyan"></i> Tarefas Pendentes
+          </button>
+          <button onclick="sendQuickAction('Executar ciclo de desenvolvimento')" class="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan transition-all flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid fa-code text-hud-cyan"></i> Ciclo Delta
+          </button>
+        </div>
+
+        <!-- Interactive Chat Form -->
+        <form id="chatForm" onsubmit="handleUserChat(event)" class="relative flex items-center">
+          <input 
+            type="text" 
+            id="chatInput" 
+            placeholder="Enviar ordem para Nyxal (ExecutorOrdensNixal)..."
+            class="w-full bg-slate-950/90 border border-hud-border/60 focus:border-hud-cyan text-slate-100 placeholder-slate-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-hud-cyan transition-all font-sans pr-24"
+            autocomplete="off"
+          />
+
+          <div class="absolute right-2 flex items-center gap-1.5">
+            <button type="button" onclick="toggleVoiceInput()" id="micBtn" title="Comando de Voz para Nyxal" class="w-8 h-8 rounded-lg bg-slate-900 text-slate-400 hover:text-hud-cyan hover:bg-slate-800 flex items-center justify-center transition-all">
+              <i class="fa-solid fa-microphone text-xs"></i>
+            </button>
+            <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs flex items-center gap-1 transition-all shadow-md shadow-hud-cyan/20">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+        </form>
+
+        <div class="flex justify-between items-center text-[10px] font-mono text-slate-500 mt-2 px-1">
+          <span id="apiStatusBadge"><i class="fa-solid fa-circle text-[8px] text-emerald-400"></i> ENDPOINT: <span id="currentEndpointLabel">http://127.0.0.1:8010</span></span>
+          <span class="hover:text-hud-cyan cursor-pointer" onclick="openConfigModal()">[ CONEXÃO NYXAL ]</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= RIGHT SIDEBAR (HOLOGRAPHIC NYXAL PRESENCE & GOALS) ================= -->
+    <section class="lg:col-span-3 flex flex-col gap-4">
+
+      <!-- TOP INSPIRATIONAL QUOTE HEADER -->
+      <div class="hud-card p-3 text-center border border-hud-cyan/30">
+        <p class="font-cinzel italic text-slate-200 text-sm tracking-wide">"Disciplina é liberdade."</p>
+      </div>
+
+      <!-- HOLOGRAPHIC NYXAL PRESENCE CARD -->
+      <div id="nyxalHoloContainer" class="hud-card cyber-brackets p-4 flex flex-col items-center holo-container relative overflow-hidden animate-holo-float">
+        
+        <!-- Hologram Effects Layers -->
+        <div class="holo-scanline"></div>
+        <div class="holo-beam"></div>
+
+        <!-- Presence Header / Live Telemetry -->
+        <div class="w-full flex items-center justify-between pb-2 mb-2 border-b border-hud-border/30 z-20">
+          <div class="flex items-center gap-2">
+            <span id="aiPulseIndicator" class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-hud-cyan opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-hud-cyan"></span>
+            </span>
+            <span id="aiStatusText" class="font-orbitron text-xs font-bold text-hud-cyan tracking-wider">NYXAL • PRESENÇA ATIVA</span>
+          </div>
+          <button onclick="toggleAvatarSourceModal()" class="text-[10px] font-mono text-slate-400 hover:text-hud-cyan transition-colors" title="Ajustar Vídeo/Imagem Holográfica">
+            <i class="fa-solid fa-sliders text-xs"></i> VIDEO
+          </button>
+        </div>
+
+        <!-- Video Hologram Container -->
+        <div class="relative w-full h-72 rounded-xl bg-slate-950/90 border border-hud-cyan/40 overflow-hidden flex items-center justify-center my-1 group">
+          
+          <!-- Goddess Nyx Voice Aura Glow -->
+          <div id="avatarVoiceAura" class="absolute w-52 h-52 rounded-full bg-gradient-to-r from-hud-cyan/20 via-hud-purple/20 to-hud-blue/20 blur-xl voice-aura-nyx pointer-events-none z-0"></div>
+
+          <!-- Futuristic Target Overlay -->
+          <div class="absolute inset-0 pointer-events-none z-20 border border-hud-cyan/20 p-2 flex flex-col justify-between text-[8px] font-mono text-hud-cyan/70">
+            <div class="flex justify-between">
+              <span>TRK: #NYXAL-DELTA</span>
+              <span id="nyxalModeBadge">MODO: PRESENÇA</span>
+            </div>
+            <div class="flex justify-between">
+              <span id="nyxalCycleBadge">CICLOS: ---</span>
+              <span id="nyxalLatencyBadge">SYNC: 100%</span>
+            </div>
+          </div>
+
+          <!-- Video Element (Loading user's generated holographic video) -->
+          <video 
+            id="hologramVideo" 
+            autoplay 
+            loop 
+            muted 
+            playsinline 
+            class="w-full h-full object-cover object-center relative z-10 filter brightness-110 contrast-125 saturate-125 transition-all duration-500"
+            onerror="handleVideoLoadError()"
+          >
+            <!-- Generated Video Source -->
+            <source id="videoSource" src="http://googleusercontent.com/generated_video_content/8567766849646079774" type="video/mp4">
+          </video>
+
+          <!-- Fallback Image Element if Video unavailable -->
+          <img 
+            id="hologramImageFallback" 
+            src="nyxal-presenca.jpg" 
+            alt="Nyxal Hologram Fallback" 
+            class="w-full h-full object-cover object-center relative z-10 hidden filter brightness-110 contrast-125"
+            onerror="this.src='https://placehold.co/400x600/030712/00f2fe?text=NYXAL+HOLOGRAPHIC+CORE'"
+          />
+
+          <!-- Subtitle / Voice Output Overlay -->
+          <div id="aiSubtitlesBox" class="absolute bottom-2 left-2 right-2 z-30 bg-slate-950/95 border border-hud-cyan/60 p-2.5 rounded-lg text-center shadow-lg backdrop-blur-md hidden">
+            <p id="aiSubtitlesText" class="text-xs font-rajdhani text-hud-cyan font-semibold leading-tight">"Sistemas operacionais iniciados, Nyxal ao seu dispor."</p>
+          </div>
+        </div>
+
+        <!-- Telemetry Details Footer -->
+        <div class="w-full space-y-1.5 pt-2 border-t border-slate-800 text-[11px] font-rajdhani">
+          <div class="flex justify-between text-slate-300">
+            <span>Último Ciclo Operacional:</span>
+            <span id="lastCycleText" class="font-mono text-hud-cyan text-[10px]">---</span>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>Arquitetura Interna:</span>
+            <span class="text-slate-200 font-bold">Delta / MCP Bridge</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOALS TRACKER (OBJETIVOS) -->
+      <div class="hud-card cyber-brackets p-4">
+        <div class="flex items-center justify-between pb-2 mb-3 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-bullseye text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">OBJETIVOS</h2>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400 hover:text-hud-cyan cursor-pointer" onclick="triggerOrbitalNode('PROJETOS')">Ver todos <i class="fa-solid fa-arrow-right text-[8px]"></i></span>
+        </div>
+
+        <div id="goalsList" class="space-y-3 text-xs font-rajdhani">
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-200 font-medium">Licença de Piloto (PP)</span>
+              <span id="goal1Perc" class="text-hud-cyan font-mono text-[11px] font-bold">--%</span>
+            </div>
+            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div id="goal1Bar" class="bg-gradient-to-r from-hud-cyan to-blue-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-200 font-medium">Ciência de Dados & Blockchain</span>
+              <span id="goal2Perc" class="text-hud-cyan font-mono text-[11px] font-bold">--%</span>
+            </div>
+            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div id="goal2Bar" class="bg-gradient-to-r from-hud-cyan to-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-200 font-medium">Frontier World (Roblox)</span>
+              <span id="goal3Perc" class="text-hud-cyan font-mono text-[11px] font-bold">--%</span>
+            </div>
+            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div id="goal3Bar" class="bg-gradient-to-r from-hud-cyan to-emerald-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-200 font-medium">NyxOS / Delta Interface</span>
+              <span id="goal4Perc" class="text-hud-cyan font-mono text-[11px] font-bold">--%</span>
+            </div>
+            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div id="goal4Bar" class="bg-gradient-to-r from-hud-cyan to-purple-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM QUOTE CARD -->
+      <div class="hud-card p-4 text-center border-t-2 border-t-hud-cyan flex-1 flex flex-col justify-center">
+        <p class="text-xs font-serif italic text-slate-300 mb-1">"Um dia isso tudo será a base de algo grande."</p>
+        <span class="text-[10px] font-orbitron font-bold text-hud-cyan uppercase tracking-wider">— Nyxal</span>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= FOOTER STATUS BAR ================= -->
+  <footer class="relative z-20 w-full px-6 py-2 bg-[#020612]/90 border-t border-hud-border/30 flex justify-between items-center text-[11px] font-mono text-slate-500">
+    <div>NYXOS • NYXAL • DELTA ARCHITECTURE</div>
+    <div class="flex gap-4">
+      <span id="footerConnectionStatus" class="text-emerald-400"><i class="fa-solid fa-wifi text-[10px]"></i> REDE: ONLINE</span>
+      <span>BRANCH: desenvolvimento/mcp-bridge</span>
+      <span>GPU: ENABLED</span>
+    </div>
+  </footer>
+
+  <!-- ================= MODALS & DRAWERS ================= -->
+  
+  <!-- 1. API CONFIG MODAL -->
+  <div id="configModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="hud-card cyber-brackets w-full max-w-lg p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-hud-border/40 pb-3">
+        <h3 class="font-orbitron font-bold text-hud-cyan text-base flex items-center gap-2">
+          <i class="fa-solid fa-network-wired"></i> CONEXÃO API NYXAL
+        </h3>
+        <button onclick="closeModal('configModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4 text-xs font-rajdhani">
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">URL BASE DA API (window.NYXAL_API_BASE)</label>
+          <input 
+            type="text" 
+            id="apiBaseInput" 
+            class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg p-2.5 font-mono text-xs focus:border-hud-cyan outline-none" 
+            placeholder="http://127.0.0.1:8010" 
+          />
+          <p class="text-[10px] text-slate-400 mt-1">Exemplo Local: <code class="text-hud-cyan">http://127.0.0.1:8010</code> | Cloudflare Quick Tunnel: <code class="text-hud-cyan">https://antarctica-tremendous-writings-kirk.trycloudflare.com</code></p>
+        </div>
+        <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px] text-slate-300 space-y-1">
+          <div class="font-bold text-hud-cyan">ENDPOINTS CONECTADOS:</div>
+          <div>• Operational Status: <code class="text-emerald-400">GET /api/public/status</code></div>
+          <div>• Chat / Executor: <code class="text-emerald-400">POST /api/chat</code> (Aguardando criação da rota na nyxal_web_api.py)</div>
+        </div>
+
+        <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800">
+          <span class="text-slate-200 font-medium">Sintetizador Sonoro HUD</span>
+          <input type="checkbox" id="soundToggle" checked class="w-4 h-4 accent-hud-cyan cursor-pointer" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeModal('configModal')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-orbitron">Cancelar</button>
+        <button onclick="saveApiConfig()" class="px-4 py-2 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs">Salvar Configuração</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. AVATAR / HOLOGRAM SOURCE MODAL -->
+  <div id="avatarModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="hud-card cyber-brackets w-full max-w-md p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-hud-border/40 pb-3">
+        <h3 class="font-orbitron font-bold text-hud-cyan text-base flex items-center gap-2">
+          <i class="fa-solid fa-video"></i> CARREGAR HOLOGRAMA DA NYXAL
+        </h3>
+        <button onclick="closeModal('avatarModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs font-rajdhani">
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">URL DO VÍDEO (.MP4)</label>
+          <input type="text" id="avatarVideoUrlInput" value="http://googleusercontent.com/generated_video_content/8567766849646079774" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg p-2.5 font-mono text-xs focus:border-hud-cyan outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">ARQUIVO LOCAL DE VÍDEO / IMAGEM</label>
+          <input type="file" id="avatarFileInput" accept="video/*,image/*" onchange="handleLocalAvatarFile(event)" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-orbitron file:bg-hud-cyan file:text-black hover:file:bg-cyan-300 cursor-pointer" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeModal('avatarModal')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-orbitron">Fechar</button>
+        <button onclick="applyAvatarVideoUrl()" class="px-4 py-2 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs">Aplicar Holograma</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ORBITAL NODE DETAIL MODAL -->
+  <div id="nodeDetailModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="hud-card cyber-brackets w-full max-w-lg p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-hud-border/40 pb-3">
+        <h3 id="nodeTitle" class="font-orbitron font-bold text-hud-cyan text-base flex items-center gap-2">
+          <i class="fa-solid fa-atom"></i> MÓDULO DETALHADO
+        </h3>
+        <button onclick="closeModal('nodeDetailModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div id="nodeContent" class="space-y-3 text-xs font-rajdhani text-slate-300 min-h-[120px]">
+        <!-- Dynamic Content -->
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-800">
+        <button onclick="closeModal('nodeDetailModal')" class="px-4 py-2 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // ================= CONFIGURATION & GLOBAL STATE =================
+    window.NYXAL_API_BASE = localStorage.getItem('NYXAL_API_BASE') || 'http://127.0.0.1:8010';
+    let isNyxalOnline = false;
+
+    // WEB AUDIO SYNTHESIZER FOR HUD SFX & VOICE REVERB
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playHudSound(type) {
+      const soundEnabled = document.getElementById('soundToggle')?.checked ?? true;
+      if (!soundEnabled || !audioCtx) return;
+
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'open') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === 'send') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(500, now);
+          osc.frequency.exponentialRampToValueAtTime(1400, now + 0.15);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        }
+      } catch (e) {
+        console.warn('Audio play error:', e);
+      }
+    }
+
+    // ================= GODDESS NYX SYNTHESIZED VOICE ENGINE =================
+    function speakGoddessNyxVoice(text) {
+      if (!('speechSynthesis' in window)) return;
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      const voices = window.speechSynthesis.getVoices();
+      const goddessVoice = voices.find(v => 
+        (v.lang.includes('pt') || v.lang.includes('PT')) && 
+        (v.name.includes('Francisca') || v.name.includes('Luciana') || v.name.includes('Helena') || v.name.includes('Maria') || v.name.includes('Google') || v.name.includes('Female'))
+      ) || voices.find(v => v.lang.includes('pt'));
+
+      if (goddessVoice) utterance.voice = goddessVoice;
+
+      // Goddess Nyx Voice Parameters: Deep, calm, natural pitch and speed
+      utterance.pitch = 0.92;
+      utterance.rate = 0.95;
+      utterance.volume = 1.0;
+
+      showSubtitles(text);
+      setAiStatusText('FALANDO...', 'text-hud-cyan');
+
+      utterance.onend = () => {
+        setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
+        setTimeout(() => {
+          document.getElementById('aiSubtitlesBox').classList.add('hidden');
+        }, 4000);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // ================= HOLOGRAM RECEDED & VISUAL STATE CONTROL =================
+    function setHologramReceded(receded) {
+      const container = document.getElementById('nyxalHoloContainer');
+      if (!container) return;
+      if (receded) {
+        container.classList.add('nyxal-receded');
+      } else {
+        container.classList.remove('nyxal-receded');
+      }
+    }
+
+    function setHologramProcessing(processing) {
+      const container = document.getElementById('nyxalHoloContainer');
+      if (!container) return;
+      if (processing) {
+        container.classList.add('nyxal-processing');
+      } else {
+        container.classList.remove('nyxal-processing');
+      }
+    }
+
+    function openConfigModal() {
+      playHudSound('open');
+      document.getElementById('apiBaseInput').value = window.NYXAL_API_BASE;
+      document.getElementById('configModal').classList.remove('hidden');
+      setHologramReceded(true);
+    }
+
+    function closeModal(id) {
+      playHudSound('click');
+      document.getElementById(id).classList.add('hidden');
+      setHologramReceded(false);
+    }
+
+    function saveApiConfig() {
+      playHudSound('open');
+      const val = document.getElementById('apiBaseInput').value.trim();
+      if (val) {
+        window.NYXAL_API_BASE = val.replace(/\/$/, '');
+        localStorage.setItem('NYXAL_API_BASE', window.NYXAL_API_BASE);
+        document.getElementById('currentEndpointLabel').innerText = window.NYXAL_API_BASE;
+        fetchNyxalStatus();
+      }
+      closeModal('configModal');
+      speakGoddessNyxVoice("Configuração de rede atualizada. Conectando à ponte Nyxal.");
+    }
+
+    // ================= BACKEND STATUS POLLING =================
+    async function fetchNyxalStatus() {
+      try {
+        const response = await fetch(`${window.NYXAL_API_BASE}/api/public/status`, { method: 'GET' });
+        
+        if (response.ok) {
+          const data = await response.json();
+          isNyxalOnline = true;
+
+          // Update UI elements with real status data
+          document.getElementById('headerNyxalStatus').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> ONLINE`;
+          document.getElementById('headerNyxalStatus').className = "flex items-center gap-1.5 text-[10px] text-emerald-400 font-rajdhani";
+          document.getElementById('footerConnectionStatus').innerHTML = `<i class="fa-solid fa-wifi text-[10px]"></i> REDE: ESTÁVEL (${data.identidade?.nome || 'Nyxal'})`;
+
+          document.getElementById('nyxalModeBadge').innerText = `MODO: ${(data.estado?.modo || 'PRESENÇA').toUpperCase()}`;
+          document.getElementById('nyxalCycleBadge').innerText = `CICLOS: ${data.presenca?.ciclos || 0}`;
+
+          if (data.presenca?.ultimo_ciclo) {
+            const date = new Date(data.presenca.ultimo_ciclo);
+            document.getElementById('lastCycleText').innerText = date.toLocaleTimeString('pt-BR');
+          }
+
+          setAiStatusText('PRESENÇA ATIVA', 'text-hud-cyan');
+        } else {
+          throw new Error('Status endpoint not OK');
+        }
+      } catch (err) {
+        // Handle Offline Mode gracefully without crashing
+        isNyxalOnline = false;
+        document.getElementById('headerNyxalStatus').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> MODO LOCAL`;
+        document.getElementById('headerNyxalStatus').className = "flex items-center gap-1.5 text-[10px] text-amber-400 font-rajdhani";
+        document.getElementById('footerConnectionStatus').innerHTML = `<i class="fa-solid fa-plane-slash text-[10px]"></i> REDE: OFFLINE (LOCAL)`;
+        
+        document.getElementById('nyxalModeBadge').innerText = `MODO: LOCAL`;
+        document.getElementById('nyxalCycleBadge').innerText = `CICLOS: OFFLINE`;
+        setAiStatusText('MODO LOCAL', 'text-amber-400');
+      }
+    }
+
+    // ================= CHAT COMMAND INTERACTION =================
+    async function handleUserChat(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      playHudSound('send');
+      input.value = '';
+
+      setHologramProcessing(true);
+      setAiStatusText('PROCESSANDO...', 'text-amber-400');
+      showSubtitles(`Analisando ordem: "${msg}"...`);
+
+      try {
+        // Attempt POST to /api/chat
+        const res = await fetch(`${window.NYXAL_API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mensagem: msg })
+        });
+
+        setHologramProcessing(false);
+
+        if (res.ok) {
+          const data = await res.json();
+          const reply = data.resposta || "Ordem processada pelo ExecutorOrdensNixal.";
+          speakGoddessNyxVoice(reply);
+        } else {
+          // If endpoint /api/chat is not created in backend yet, inform gracefully
+          speakGoddessNyxVoice(`Ordem recebida. A rota POST /api/chat será conectada ao ExecutorOrdensNixal no backend.`);
+        }
+      } catch (err) {
+        setHologramProcessing(false);
+        console.warn('Chat API fetch error:', err);
+        speakGoddessNyxVoice(`Ordem registrada no frontend. Conectando ao backend assim que a rota estiver ativa.`);
+      }
+    }
+
+    function sendQuickAction(text) {
+      playHudSound('click');
+      document.getElementById('chatInput').value = text;
+      document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+    }
+
+    function setAiStatusText(text, colorClass = 'text-hud-cyan') {
+      const el = document.getElementById('aiStatusText');
+      el.innerText = `NYXAL • ${text}`;
+      el.className = `font-orbitron text-xs font-bold ${colorClass} tracking-wider`;
+    }
+
+    function showSubtitles(text) {
+      const box = document.getElementById('aiSubtitlesBox');
+      const textEl = document.getElementById('aiSubtitlesText');
+      box.classList.remove('hidden');
+      textEl.innerText = `"${text}"`;
+    }
+
+    function toggleVoiceInput() {
+      playHudSound('click');
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('Reconhecimento de voz não suportado neste navegador.');
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+
+      setAiStatusText('OUVINDO...', 'text-emerald-400');
+      document.getElementById('micBtn').classList.add('text-hud-cyan', 'animate-pulse');
+
+      recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript;
+        document.getElementById('chatInput').value = transcript;
+        document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+        document.getElementById('micBtn').classList.remove('text-hud-cyan', 'animate-pulse');
+      };
+
+      recognition.onerror = () => {
+        setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
+        document.getElementById('micBtn').classList.remove('text-hud-cyan', 'animate-pulse');
+      };
+
+      recognition.start();
+    }
+
+    // ================= HOLOGRAM SOURCE CONTROL =================
+    function toggleAvatarSourceModal() {
+      playHudSound('open');
+      document.getElementById('avatarModal').classList.remove('hidden');
+      setHologramReceded(true);
+    }
+
+    function applyAvatarVideoUrl() {
+      playHudSound('click');
+      const url = document.getElementById('avatarVideoUrlInput').value;
+      const video = document.getElementById('hologramVideo');
+      const img = document.getElementById('hologramImageFallback');
+
+      img.classList.add('hidden');
+      video.classList.remove('hidden');
+      video.src = url;
+      video.play().catch(e => handleVideoLoadError());
+
+      closeModal('avatarModal');
+      speakGoddessNyxVoice("Projeção holográfica calibrada.");
+    }
+
+    function handleLocalAvatarFile(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        const video = document.getElementById('hologramVideo');
+        const img = document.getElementById('hologramImageFallback');
+
+        if (file.type.startsWith('video/')) {
+          img.classList.add('hidden');
+          video.classList.remove('hidden');
+          video.src = url;
+          video.play();
+        } else {
+          video.classList.add('hidden');
+          img.classList.remove('hidden');
+          img.src = url;
+        }
+
+        closeModal('avatarModal');
+        speakGoddessNyxVoice("Arquivo de presença visual atualizado.");
+      }
+    }
+
+    function handleVideoLoadError() {
+      console.warn("Holographic video feed unavailable. Switching to local Nyxal image fallback.");
+      const video = document.getElementById('hologramVideo');
+      const img = document.getElementById('hologramImageFallback');
+      video.classList.add('hidden');
+      img.classList.remove('hidden');
+    }
+
+    // ================= THREE.JS 3D HOLOGRAPHIC COMPUTATIONAL CORE =================
+    let scene, camera, renderer, coreGroup, innerCore, outerGeodesic;
+
+    function init3DGlobe() {
+      const container = document.getElementById('globeContainer');
+      if (!container) return;
+
+      const width = container.clientWidth || 400;
+      const height = container.clientHeight || 400;
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      camera.position.z = 220;
+
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      coreGroup = new THREE.Group();
+      scene.add(coreGroup);
+
+      // Core Inner Dark Energy Sphere
+      const sphereGeo = new THREE.SphereGeometry(62, 32, 32);
+      const sphereMat = new THREE.MeshBasicMaterial({ color: 0x020a1c, transparent: true, opacity: 0.9 });
+      innerCore = new THREE.Mesh(sphereGeo, sphereMat);
+      coreGroup.add(innerCore);
+
+      // Holographic Cyan Wireframe Geodesic Shell
+      const wireframeGeo = new THREE.IcosahedronGeometry(66, 3);
+      const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, wireframe: true, transparent: true, opacity: 0.35 });
+      outerGeodesic = new THREE.Mesh(wireframeGeo, wireframeMat);
+      coreGroup.add(outerGeodesic);
+
+      // Secondary Counter-Rotating Ring
+      const ringGeo = new THREE.TorusGeometry(82, 1.2, 16, 100);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x8a2be2, transparent: true, opacity: 0.4 });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.rotation.x = Math.PI / 3;
+      coreGroup.add(ringMesh);
+
+      // Orbiting Particles / Flight Vector Nodes
+      const count = 140;
+      const positions = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        const u = Math.random();
+        const v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+        const r = 70 + Math.random() * 16;
+
+        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = r * Math.cos(phi);
+      }
+
+      const particlesGeo = new THREE.BufferGeometry();
+      particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const particleMat = new THREE.PointsMaterial({ color: 0x00f2fe, size: 2.2, transparent: true, opacity: 0.8 });
+      const particlePoints = new THREE.Points(particlesGeo, particleMat);
+      coreGroup.add(particlePoints);
+
+      // Mouse Drag Controls
+      let isDragging = false;
+      let prevMousePos = { x: 0, y: 0 };
+
+      container.addEventListener('mousedown', (e) => { isDragging = true; prevMousePos = { x: e.clientX, y: e.clientY }; });
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - prevMousePos.x;
+        const deltaY = e.clientY - prevMousePos.y;
+        coreGroup.rotation.y += deltaX * 0.008;
+        coreGroup.rotation.x += deltaY * 0.008;
+        prevMousePos = { x: e.clientX, y: e.clientY };
+      });
+      window.addEventListener('mouseup', () => { isDragging = false; });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (!isDragging) {
+          coreGroup.rotation.y += 0.003;
+          outerGeodesic.rotation.y -= 0.0015;
+          ringMesh.rotation.z += 0.002;
+        }
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+
+    // Background Space Canvas
+    function initSpaceBgCanvas() {
+      const canvas = document.getElementById('spaceBgCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      let w = (canvas.width = window.innerWidth);
+      let h = (canvas.height = window.innerHeight);
+
+      const stars = Array.from({ length: 80 }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        radius: Math.random() * 1.5,
+        alpha: Math.random(),
+        speed: 0.005 + Math.random() * 0.015
+      }));
+
+      function drawBg() {
+        ctx.clearRect(0, 0, w, h);
+        stars.forEach(s => {
+          s.alpha += s.speed;
+          if (s.alpha > 1 || s.alpha < 0) s.speed = -s.speed;
+          ctx.fillStyle = `rgba(0, 242, 254, ${Math.abs(s.alpha) * 0.6})`;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        requestAnimationFrame(drawBg);
+      }
+      drawBg();
+    }
+
+    // System Graph Animation
+    let graphData = Array(30).fill(10);
+    function initSysGraph() {
+      const canvas = document.getElementById('sysGraphCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+
+      setInterval(() => {
+        const val = Math.floor(15 + Math.random() * 30);
+        graphData.shift();
+        graphData.push(val);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#00f2fe';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+
+        const step = canvas.width / (graphData.length - 1);
+        graphData.forEach((v, i) => {
+          const x = i * step;
+          const y = canvas.height - (v / 100) * canvas.height;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }, 1500);
+    }
+
+    // Orbital Node Modal Trigger
+    function triggerOrbitalNode(nodeName) {
+      playHudSound('open');
+      const modal = document.getElementById('nodeDetailModal');
+      const title = document.getElementById('nodeTitle');
+      const content = document.getElementById('nodeContent');
+
+      title.innerHTML = `<i class="fa-solid fa-atom text-hud-cyan"></i> MÓDULO DELTA: ${nodeName}`;
+
+      const details = {
+        'IA': 'A inteligência Nyxal gerencia a memória, investigação, tarefas e execução de ordens via Agente Qwen.',
+        'PROJETOS': 'Frontier World (Roblox), NyxOS Delta Interface, Sistema de Automação MCP e Integração Blockchain.',
+        'ESTUDOS': 'Tópicos: Ciência de Dados, Engenharia de Prompts, Teoria de Voo e Arquitetura Delta.',
+        'AVIAÇÃO': 'Módulo de Telemetria e Regulamentação da Licença de Piloto Privado (PP).',
+        'JOGOS': 'Simuladores de voo e ambiente de testes virtuais.',
+        'MÍDIA': 'Sintetizador de áudio e visualização holográfica de presenças do sistema.',
+        'UTILITÁRIOS': 'Ferramentas de análise de logs do NyxOS e diagnósticos de rede local.',
+        'SISTEMA': 'Métricas operacionais: CPU, RAM, Disco, Latência do núcleo e status do servidor nyxal_web_api.py.'
+      };
+
+      content.innerText = details[nodeName] || 'Módulo operacional ativado.';
+      modal.classList.remove('hidden');
+      setHologramReceded(true);
+    }
+
+    function switchTab(tabId) {
+      playHudSound('click');
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active', 'text-hud-cyan', 'bg-hud-cyan/15', 'border-hud-cyan/40');
+        btn.classList.add('text-slate-400');
+      });
+      const activeBtn = document.getElementById(`tab-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.add('active', 'text-hud-cyan', 'bg-hud-cyan/15', 'border-hud-cyan/40');
+      }
+    }
+
+    function togglePlayMusic() {
+      playHudSound('click');
+    }
+
+    function addNewEventPrompt() {
+      playHudSound('click');
+      const title = prompt("Digite o nome do novo evento:");
+      const time = prompt("Digite o horário (ex: 19:00):", "19:00");
+      if (title && time) {
+        const list = document.getElementById('eventsList');
+        const newItem = document.createElement('div');
+        newItem.className = "p-2 rounded bg-slate-900/80 border border-slate-800 flex justify-between items-center hover:border-hud-cyan/40 transition-all";
+        newItem.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-hud-cyan"></span>
+            <span class="text-slate-200 font-medium">${title}</span>
+          </div>
+          <span class="px-2 py-0.5 rounded bg-hud-cyan/10 border border-hud-cyan/30 text-hud-cyan font-mono text-[10px]">Hoje, ${time}</span>
+        `;
+        list.appendChild(newItem);
+      }
+    }
+
+    function updateLiveClock() {
+      const now = new Date();
+      document.getElementById('liveClock').innerText = now.toLocaleTimeString('pt-BR');
+    }
+
+    // Initialize Everything
+    window.onload = function() {
+      initSpaceBgCanvas();
+      init3DGlobe();
+      initSysGraph();
+
+      setInterval(updateLiveClock, 1000);
+      updateLiveClock();
+
+      // Initial Status Poll & Poll Every 5s
+      fetchNyxalStatus();
+      setInterval(fetchNyxalStatus, 5000);
+
+      // Pre-load speech synthesis voices
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+      }
+    };
+  </script>
 </body>
 </html>
