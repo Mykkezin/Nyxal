@@ -71,18 +71,79 @@ def transcribe_audio(audio_path: str) -> str:
         vad_filter=True,
     )
 
-    return " ".join(
+    texto = " ".join(
         segmento.text.strip()
         for segmento in segments
         if segmento.text.strip()
     ).strip()
+
+    return normalizar_texto_stt(texto)
+
+
+def texto_para_fala(texto: str) -> str:
+    """
+    Converte os nomes escritos da Nyxal para a pronúncia desejada
+    no TTS, sem alterar o texto visual retornado pela API.
+    """
+    substituicoes = {
+        "Myqueyas": "Mayqueas",
+        "Myke": "Mayque",
+        "MYKE": "MAYQUE",
+        "Nyxal": "Niquischáu",
+        "NYXAL": "NIQUISCHÁU",
+    }
+
+    resultado = texto
+    for escrito, falado in substituicoes.items():
+        resultado = resultado.replace(escrito, falado)
+
+    return resultado
+
+
+def normalizar_texto_stt(texto: str) -> str:
+    """
+    Converte aproximações fonéticas do reconhecimento de voz
+    para a grafia oficial usada pela Nyxal.
+    """
+    variantes_myke = (
+        "myque",
+        "myk",
+        "mike",
+        "mayque",
+        "maique",
+        "maike",
+    )
+    variantes_nyxal = (
+        "nyxal",
+        "nixal",
+        "aniksao",
+        "anixao",
+        "niquischau",
+        "niquichau",
+        "niquis hau",
+        "niquischáu",
+    )
+
+    resultado = texto
+
+    for variante in variantes_myke:
+        resultado = resultado.replace(variante, "Myke")
+        resultado = resultado.replace(variante.capitalize(), "Myke")
+        resultado = resultado.replace(variante.upper(), "Myke")
+
+    for variante in variantes_nyxal:
+        resultado = resultado.replace(variante, "Nyxal")
+        resultado = resultado.replace(variante.capitalize(), "Nyxal")
+        resultado = resultado.replace(variante.upper(), "Nyxal")
+
+    return resultado
 
 
 def generate_kokoro_audio(texto: str) -> bytes:
     chunks = []
 
     for _, _, audio in KOKORO_PIPELINE(
-        texto.strip(),
+        texto_para_fala(texto),
         voice=KOKORO_VOICE,
     ):
         chunks.append(np.asarray(audio))
