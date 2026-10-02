@@ -67,8 +67,18 @@ def format_chat_response(resultado: dict) -> str:
         segundo = valor.get("segundo")
 
         if all(isinstance(item, int) for item in (hora, minuto, segundo)):
+            periodo = (
+                "da madrugada"
+                if hora < 6
+                else "da manhã"
+                if hora < 12
+                else "da tarde"
+                if hora < 18
+                else "da noite"
+            )
             return (
-                f"Agora são {hora:02d}:{minuto:02d}:{segundo:02d}."
+                f"Agora são {hora:02d}:{minuto:02d}:{segundo:02d}, "
+                f"{periodo}, senhor Myke."
             )
 
     if capacidade == "listar_arquivos" and isinstance(valor, list):
@@ -468,6 +478,46 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         resposta = dict(resultado)
         resposta["resposta"] = format_chat_response(resultado)
+
+        if (
+            resultado.get("sucesso")
+            and resultado.get("valor", {}).get("execucao", {}).get("valor", {}).get("capacidade")
+            == "obter_hora"
+        ):
+            hora_valor = (
+                resultado.get("valor", {})
+                .get("execucao", {})
+                .get("valor", {})
+                .get("resultado", {})
+                .get("resultado", {})
+            )
+            hora = hora_valor.get("hora")
+            minuto = hora_valor.get("minuto")
+            if isinstance(hora, int) and isinstance(minuto, int):
+                hora_fala = hora % 12 or 12
+                minuto_fala = (
+                    "zero zero"
+                    if minuto == 0
+                    else (
+                        f"zero {minuto:02d}"
+                        if minuto < 10
+                        else str(minuto)
+                    )
+                )
+                periodo_fala = (
+                    "da madrugada"
+                    if hora < 6
+                    else "da manhã"
+                    if hora < 12
+                    else "da tarde"
+                    if hora < 18
+                    else "da noite"
+                )
+                resposta["fala"] = (
+                    f"Uma e {minuto_fala} {periodo_fala}, senhor Myke."
+                    if hora_fala == 1
+                    else f"{hora_fala} e {minuto_fala} {periodo_fala}, senhor Myke."
+                )
 
         self._send_json(
             200 if resultado.get("sucesso") else 422,
