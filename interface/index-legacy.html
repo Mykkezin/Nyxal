@@ -1,0 +1,1508 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NyxOS — Home</title>
+<style>
+:root{
+  --bg:#03070d;
+  --panel:rgba(7,14,24,.82);
+  --panel-strong:rgba(5,11,19,.94);
+  --line:rgba(117,205,245,.22);
+  --line-strong:rgba(117,205,245,.56);
+  --cyan:#79e4ff;
+  --cyan2:#35b8ee;
+  --white:#ecfaff;
+  --muted:#6f91a4;
+  --green:#7fffd0;
+  --gold:#ffc76b;
+  --shadow:0 18px 52px rgba(0,0,0,.44);
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:#02060a;color:var(--white);font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif}
+body{overflow:hidden}
+button,input{font:inherit}
+button{cursor:pointer}
+.reference-home{position:fixed;inset:0;z-index:100;display:block;background:#000;overflow:hidden;pointer-events:none}
+.reference-home img{display:block;width:100vw;height:100vh;object-fit:fill;object-position:center}
+#nyxos.visual-reference .topbar,#nyxos.visual-reference .workspace{visibility:hidden;pointer-events:none}
+#nyxos{
+  position:relative;width:100vw;height:100vh;overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 44%,rgba(39,156,207,.14),transparent 26%),
+    radial-gradient(circle at 10% 35%,rgba(26,82,115,.10),transparent 24%),
+    radial-gradient(circle at 90% 30%,rgba(31,94,131,.10),transparent 24%),
+    linear-gradient(180deg,#02050a,#030a12 52%,#02050a);
+}
+#nyxos:before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+  background:
+    radial-gradient(circle,rgba(203,239,255,.20) 0 1px,transparent 1.6px) 0 0/92px 74px,
+    radial-gradient(circle,rgba(67,178,224,.13) 0 1px,transparent 1.6px) 31px 24px/127px 103px;
+}
+#nyxos:after{
+  content:"";position:absolute;inset:0;z-index:80;pointer-events:none;opacity:.12;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.035) 0 1px,transparent 2px 5px);
+}
+.glass{
+  border:1px solid var(--line);
+  background:linear-gradient(145deg,rgba(8,20,32,.82),rgba(3,10,17,.74));
+  backdrop-filter:blur(16px);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.topbar{
+  position:relative;z-index:20;height:70px;
+  display:grid;grid-template-columns:235px 1fr 300px;align-items:center;
+  padding:0 20px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(6,17,28,.97),rgba(3,9,15,.78));
+}
+.brand{display:flex;align-items:center;gap:11px}.mark{
+  width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line-strong);
+  color:var(--cyan);font-size:24px;font-weight:200;text-shadow:0 0 16px rgba(121,228,255,.45)
+}
+.brand-name{font-size:14px;font-weight:700;letter-spacing:.28em}.brand-sub{font-size:6px;color:var(--muted);letter-spacing:.20em;margin-top:3px}
+.nav{display:flex;justify-content:center;gap:6px}.nav button{
+  padding:9px 13px;border:1px solid transparent;background:transparent;color:#7e9baa;font-size:7px;letter-spacing:.13em
+}
+.nav button:hover,.nav button.active{color:var(--white);border-color:rgba(117,205,245,.15);background:rgba(117,205,245,.045)}
+.top-right{display:flex;align-items:center;justify-content:flex-end;gap:16px}.meta{font-size:7px;color:var(--muted);letter-spacing:.11em}.meta strong{color:var(--cyan);font-weight:500}.online{width:7px;height:7px;border-radius:50%;display:inline-block;background:var(--green);box-shadow:0 0 10px rgba(127,255,208,.72)}
+.clock{font-size:11px;letter-spacing:.13em;font-variant-numeric:tabular-nums}
+
+.workspace{position:relative;height:calc(100vh - 70px);padding:15px 16px 18px}
+.panel-left,.panel-right{position:absolute;top:15px;bottom:18px;width:255px;display:flex;flex-direction:column;gap:12px;z-index:10}
+.panel-left{left:16px}.panel-right{right:16px;width:360px}
+.panel{padding:12px}.panel-title{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;margin-bottom:9px;border-bottom:1px solid rgba(117,205,245,.10);color:var(--cyan);font-size:7px;letter-spacing:.18em}.panel-title small{color:rgba(111,145,164,.55);font-size:6px}
+.weather .content{display:grid;grid-template-columns:54px 1fr;gap:10px;align-items:center}.weather-icon{width:50px;height:50px;display:grid;place-items:center;border:1px solid rgba(117,205,245,.16);font-size:23px;color:var(--cyan);background:rgba(117,205,245,.025)}.temp{font-size:28px;font-weight:300}.place{font-size:6px;letter-spacing:.14em;color:var(--cyan);margin-top:2px}.condition{font-size:7px;color:var(--muted);margin-top:3px}.weather-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:9px}.weather-grid div{padding:6px 4px;text-align:center;border:1px solid rgba(117,205,245,.08)}.weather-grid span{display:block;color:var(--muted);font-size:5px}.weather-grid b{display:block;margin-top:3px;font-size:7px;font-weight:500}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.metric{padding:8px;border:1px solid rgba(117,205,245,.10);background:rgba(117,205,245,.022)}.metric span{display:block;color:var(--muted);font-size:6px;letter-spacing:.10em}.metric b{display:block;margin-top:4px;font-size:12px;font-weight:400}
+.event-list,.project-list{display:flex;flex-direction:column;gap:7px}.event,.project{display:flex;align-items:center;justify-content:space-between;padding-bottom:7px;border-bottom:1px dashed rgba(117,205,245,.08);font-size:6px}.event:last-child,.project:last-child{border-bottom:0;padding-bottom:0}.event span,.project span{color:var(--muted)}.event b,.project b{font-weight:500}
+.media{min-height:0}.player{display:grid;grid-template-columns:54px 1fr;gap:9px;align-items:center}.cover{width:52px;height:52px;border:1px solid rgba(117,205,245,.15);display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,rgba(150,190,208,.20),rgba(3,10,17,.93) 68%);color:rgba(220,244,255,.75);font-size:18px}.song{font-size:8px}.artist{font-size:6px;color:var(--muted);margin-top:3px}.player-line{height:2px;background:rgba(117,205,245,.10);margin-top:8px;position:relative}.player-line:after{content:"";position:absolute;left:0;top:0;bottom:0;width:36%;background:var(--cyan)}.player-controls{display:flex;justify-content:center;gap:15px;margin-top:8px;color:var(--cyan);font-size:11px}
+.goal-list{display:flex;flex-direction:column;gap:8px}.goal{display:grid;grid-template-columns:18px 1fr auto;gap:7px;align-items:center;font-size:6px}.check{width:13px;height:13px;border:1px solid rgba(117,205,245,.36);display:grid;place-items:center;color:var(--green);font-size:8px}.goal-name{color:var(--white)}.progress{font-size:6px;color:var(--cyan)}.bar{grid-column:2/4;height:3px;border:1px solid rgba(117,205,245,.10)}.bar i{display:block;height:100%;background:linear-gradient(90deg,rgba(117,205,245,.16),rgba(117,205,245,.75))}
+.quote{padding:11px;border:1px solid rgba(117,205,245,.10);color:#aac5d1;font-size:7px;line-height:1.45;font-style:italic}.quote small{display:block;margin-top:5px;color:var(--cyan);font-style:normal}
+
+.center{position:absolute;left:296px;right:346px;top:15px;bottom:18px;display:flex;flex-direction:column;align-items:center;z-index:5}
+.center-tag{position:absolute;top:-1px;left:50%;transform:translateX(-50%);font-size:6px;letter-spacing:.27em;color:rgba(111,145,164,.55);white-space:nowrap}
+.earth-zone{position:relative;width:min(100%,900px);height:calc(100% - 155px);min-height:440px;display:grid;place-items:center;overflow:hidden}
+.earth-zone:before{content:"";position:absolute;inset:6% 4%;background:radial-gradient(circle,rgba(45,178,230,.08),transparent 54%);border-radius:50%}
+.axis-h{position:absolute;width:90%;height:1px;background:rgba(117,205,245,.05);top:50%;left:5%}.axis-v{position:absolute;width:1px;height:88%;background:rgba(117,205,245,.045);top:6%;left:50%}
+.orbit{position:absolute;left:50%;top:52%;border:1px solid rgba(117,205,245,.17);border-radius:50%;transform:translate(-50%,-50%) rotateX(69deg)}.orbit.a{width:88%;height:54%;animation:orbitA 34s linear infinite}.orbit.b{width:75%;height:43%;border-style:dashed;animation:orbitB 26s linear infinite}.orbit.c{width:61%;height:34%;border-color:rgba(117,205,245,.28);animation:orbitA 18s linear infinite}.orbit.d{width:48%;height:27%;border-color:rgba(117,205,245,.12);animation:orbitB 21s linear infinite}
+.earth-wrap{position:absolute;width:365px;height:365px;left:50%;top:52%;transform:translate(-50%,-50%);z-index:6}
+.earth-glow{position:absolute;inset:-25px;border-radius:50%;background:radial-gradient(circle,rgba(62,198,250,.17),transparent 67%);filter:blur(10px);animation:pulse 5s ease-in-out infinite}
+.earth{width:100%;height:100%;position:relative;filter:drop-shadow(0 0 25px rgba(70,202,255,.25))}
+.earth svg{width:100%;height:100%;display:block}
+.earth-r1,.earth-r2{position:absolute;border-radius:50%;border:1px solid rgba(117,205,245,.18);inset:-15px}.earth-r2{inset:-31px;border-style:dashed;opacity:.52}
+.moon{position:absolute;width:64px;height:64px;border-radius:50%;right:8%;top:13%;z-index:8;background:radial-gradient(circle at 30% 28%,#dff2fb 0 6%,#8b9fad 28%,#42525f 70%,#17222b 100%);box-shadow:0 0 18px rgba(187,216,235,.17),inset -10px -8px 14px rgba(0,0,0,.48)}
+.satellite{position:absolute;width:16px;height:16px;border:1px solid rgba(117,205,245,.70);background:rgba(4,14,22,.94);z-index:9;box-shadow:0 0 12px rgba(117,205,245,.40)}.sat1{left:14%;top:27%;animation:sat1 11s linear infinite}.sat2{right:15%;top:40%;animation:sat2 14s linear infinite}.satellite:before,.satellite:after{content:"";position:absolute;top:50%;width:14px;height:4px;border:1px solid rgba(117,205,245,.35);transform:translateY(-50%)}.satellite:before{right:100%}.satellite:after{left:100%}
+.flight{position:absolute;left:7%;top:14%;z-index:12;color:#e9fbff;font-size:20px;filter:drop-shadow(0 0 7px rgba(117,224,255,.95));animation:fly 14s linear infinite}.flight-path{position:absolute;width:73%;height:32%;left:13%;top:13%;border-top:1px dashed rgba(117,205,245,.25);border-radius:50%;transform:rotate(-11deg) scaleY(.72);z-index:10}
+.delta-core{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);z-index:15;width:128px;height:128px;border-radius:50%;border:1px solid rgba(117,205,245,.30);background:radial-gradient(circle,rgba(28,108,147,.30),rgba(2,9,15,.86) 68%);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(117,205,245,.10),inset 0 0 28px rgba(117,205,245,.08)}.delta-core b{font-size:55px;font-weight:200;color:var(--cyan);line-height:1;text-shadow:0 0 18px rgba(117,224,255,.48)}.delta-core span{font-size:7px;letter-spacing:.25em;margin-top:3px}.delta-core small{font-size:5px;color:var(--muted);letter-spacing:.11em;margin-top:4px}
+
+.orbital-nav{position:absolute;left:50%;top:52%;width:760px;height:450px;transform:translate(-50%,-50%);z-index:18;pointer-events:none}.orbit-item{position:absolute;width:82px;height:66px;border:1px solid rgba(117,205,245,.27);background:rgba(4,15,24,.86);clip-path:polygon(12% 0,88% 5%,100% 87%,17% 100%,0 18%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--cyan);pointer-events:auto;transition:.2s;box-shadow:0 0 18px rgba(117,205,245,.05)}.orbit-item:hover{background:rgba(117,205,245,.09);border-color:rgba(117,205,245,.58);transform:scale(1.06)}.orbit-item i{font-style:normal;font-size:16px}.orbit-item span{font-size:6px;letter-spacing:.10em}.i1{left:5%;top:31%}.i2{left:14%;top:15%}.i3{left:28%;top:5%}.i4{left:3%;top:56%}.i5{right:3%;top:56%}.i6{right:28%;top:5%}.i7{right:14%;top:15%}.i8{right:5%;top:31%}
+
+.telemetry{width:min(100%,720px);padding:9px 12px;border:1px solid var(--line);background:rgba(2,10,17,.60);z-index:10}.telemetry-head{display:flex;justify-content:space-between;color:var(--muted);font-size:6px;letter-spacing:.15em}.telemetry-head strong{color:var(--cyan);font-weight:500}.bars{height:30px;display:flex;align-items:center;justify-content:space-between;margin-top:4px}.bars i{width:3px;background:var(--cyan);opacity:.34;animation:bar 1.7s ease-in-out infinite}
+.cycle{width:min(100%,720px);margin-top:9px;padding:9px 11px;border:1px solid rgba(117,205,245,.11);background:rgba(2,10,17,.50)}.cycle-title{text-align:center;color:var(--muted);font-size:6px;letter-spacing:.17em}.cycle-flow{display:flex;align-items:center;margin-top:7px}.cycle-step{min-width:64px;text-align:center;color:rgba(111,145,164,.48)}.cycle-step span{font-size:5px}.cycle-step b{display:block;font-size:5px;margin-top:3px;letter-spacing:.04em;font-weight:500}.cycle-step.active{color:var(--cyan)}.cycle-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(117,205,245,.08),rgba(117,205,245,.30),rgba(117,205,245,.08))}
+
+.nyxal{padding:13px;min-height:0;flex:1}.nyxal-head{display:flex;justify-content:space-between;align-items:flex-start}.nyxal-name{font-size:24px;font-weight:300;letter-spacing:.27em;margin-top:3px}.nyxal-sub{color:var(--cyan);font-size:6px;letter-spacing:.12em;margin-top:4px}.presence{position:relative;height:560px;margin-top:12px;overflow:hidden;border:1px solid rgba(117,205,245,.20);background:
+radial-gradient(circle at 50% 34%,rgba(67,192,237,.18),transparent 26%),
+radial-gradient(circle at 50% 55%,rgba(67,192,237,.07),transparent 51%),
+rgba(2,9,15,.82)}.presence:before{content:"";position:absolute;inset:10px;border:1px solid rgba(117,205,245,.06)}.scan{position:absolute;left:4%;right:4%;top:27%;height:1px;background:linear-gradient(90deg,transparent,rgba(117,224,255,.82),transparent);box-shadow:0 0 16px rgba(117,224,255,.48);animation:scan 4s ease-in-out infinite;z-index:8}
+.face{position:absolute;left:50%;top:50%;width:305px;height:auto;margin-left:-152.5px;margin-top:-271px;object-fit:initial;object-position:50% 50%;z-index:5;filter:drop-shadow(0 0 18px rgba(117,224,255,.22));transform-origin:50% 52%;animation:nyxPresenceBreath 5.6s ease-in-out infinite}
+.face-sweep{position:absolute;left:12%;width:76%;height:18%;top:-22%;z-index:7;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(177,246,255,.04) 35%,rgba(177,246,255,.16) 50%,rgba(177,246,255,.04) 65%,transparent);filter:blur(1px);animation:nyxFaceSweep 7.5s ease-in-out infinite}
+.corner{position:absolute;width:15px;height:15px;border-color:rgba(117,205,245,.58);border-style:solid;z-index:9}.c-tl{left:6px;top:6px;border-width:1px 0 0 1px}.c-tr{right:6px;top:6px;border-width:1px 1px 0 0}.c-bl{left:6px;bottom:6px;border-width:0 0 1px 1px}.c-br{right:6px;bottom:6px;border-width:0 1px 1px 0}
+.face-data{position:absolute;z-index:10;font-size:5px;letter-spacing:.12em;color:var(--muted)}.face-data b{display:block;color:var(--cyan);font-weight:500;font-size:6px;margin-top:3px}.fd1{left:13px;top:17px}.fd2{right:13px;top:17px;text-align:right}.fd3{left:13px;bottom:17px}.fd4{right:13px;bottom:17px;text-align:right}
+.state{margin-top:9px;padding:8px;border:1px solid rgba(117,205,245,.10);background:rgba(117,205,245,.02)}.state-title{font-size:6px;letter-spacing:.15em;color:var(--muted)}.state-main{font-size:10px;letter-spacing:.15em;color:var(--cyan);margin-top:4px}.state-sub{font-size:6px;color:var(--muted);margin-top:3px;line-height:1.4}
+.need-list{margin-top:8px;display:flex;flex-direction:column;gap:6px}.need{display:grid;grid-template-columns:56px 1fr 26px;gap:7px;align-items:center;font-size:5px;color:var(--muted)}.need em{font-style:normal;color:var(--cyan);text-align:right}.need-bar{height:3px;border:1px solid rgba(117,205,245,.08)}.need-bar i{display:block;height:100%;background:linear-gradient(90deg,rgba(117,205,245,.12),rgba(117,205,245,.68))}
+.chatbar{
+  position:absolute;left:50%;bottom:13px;transform:translateX(-50%);z-index:30;width:min(720px,calc(100% - 30px));
+  border:1px solid rgba(117,205,245,.30);border-radius:26px;background:rgba(4,13,21,.92);backdrop-filter:blur(22px);
+  box-shadow:0 18px 55px rgba(0,0,0,.48),0 0 28px rgba(117,205,245,.07);padding:8px 10px 9px
+}
+.chat-input{display:flex;align-items:center;gap:10px;height:36px;border:1px solid rgba(117,205,245,.14);border-radius:18px;padding:0 12px}.chat-input span{color:var(--cyan);font-size:10px}.chat-input input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--white);font-size:8px}.chat-input input::placeholder{color:rgba(111,145,164,.72)}.send{width:29px;height:29px;border-radius:50%;border:1px solid rgba(117,205,245,.22);background:rgba(117,205,245,.05);color:var(--cyan)}
+.chat-actions{display:flex;gap:6px;margin-top:7px}.chat-actions button{border:1px solid rgba(117,205,245,.10);background:rgba(117,205,245,.025);color:var(--muted);padding:5px 9px;border-radius:10px;font-size:5px;letter-spacing:.10em}.chat-actions button:hover{color:var(--cyan);border-color:rgba(117,205,245,.24)}
+
+@keyframes nyxPresenceBreath{0%,100%{transform:scale(1);filter:drop-shadow(0 0 17px rgba(117,224,255,.20));opacity:.96}50%{transform:scale(1.012);filter:drop-shadow(0 0 23px rgba(117,224,255,.32));opacity:1}}@keyframes nyxFaceSweep{0%,100%{top:-22%;opacity:0}12%{opacity:0}28%{opacity:.9}50%{top:58%;opacity:.55}72%{opacity:.12}86%{top:108%;opacity:0}}@keyframes orbitA{from{transform:translate(-50%,-50%) rotateX(69deg) rotateZ(0)}to{transform:translate(-50%,-50%) rotateX(69deg) rotateZ(360deg)}}@keyframes orbitB{from{transform:translate(-50%,-50%) rotateX(69deg) rotateZ(360deg)}to{transform:translate(-50%,-50%) rotateX(69deg) rotateZ(0)}}@keyframes sat1{from{transform:rotate(0)}to{transform:rotate(360deg)}}@keyframes sat2{from{transform:rotate(360deg)}to{transform:rotate(0)}}@keyframes fly{0%{left:7%;top:13%;transform:rotate(8deg)}25%{left:28%;top:7%;transform:rotate(3deg)}50%{left:56%;top:12%;transform:rotate(-4deg)}75%{left:79%;top:25%;transform:rotate(-10deg)}100%{left:101%;top:40%;transform:rotate(-13deg)}}@keyframes pulse{0%,100%{opacity:.55;transform:scale(.97)}50%{opacity:1;transform:scale(1.03)}}@keyframes scan{0%{top:25%;opacity:.03}50%{opacity:.82}100%{top:75%;opacity:.03}}@keyframes bar{0%,100%{opacity:.16;transform:scaleY(.65)}50%{opacity:.75;transform:scaleY(1.18)}}
+@media(max-width:1280px){
+  .topbar{grid-template-columns:210px 1fr 260px}.panel-left{width:220px}.panel-right{width:310px}.center{left:245px;right:325px}.earth-wrap{width:315px;height:315px}.orbital-nav{transform:translate(-50%,-50%) scale(.90)}
+}
+@media(max-width:1050px){
+  body{overflow:auto}#nyxos{height:auto;min-height:100vh}.topbar{position:relative;grid-template-columns:1fr;height:auto;gap:9px;padding:12px}.nav{order:3;overflow:auto;justify-content:flex-start}.top-right{justify-content:flex-start}.workspace{height:auto;min-height:calc(100vh - 150px);padding-bottom:160px}.panel-left,.panel-right,.center{position:relative;left:auto;right:auto;top:auto;bottom:auto;width:auto}.panel-left,.panel-right{display:grid;grid-template-columns:1fr 1fr}.center{margin:0 0 16px}.earth-zone{height:520px}.chatbar{position:fixed;bottom:12px}.orbital-nav{transform:translate(-50%,-50%) scale(.78)}
+}
+@media(max-width:700px){
+  .panel-left,.panel-right{display:flex}.earth-zone{height:440px;min-height:420px}.earth-wrap{width:245px;height:245px}.orbit.a{width:100%}.orbit.b{width:85%}.orbit.c{width:69%}.orbital-nav{width:620px;height:370px;transform:translate(-50%,-50%) scale(.62)}.delta-core{width:94px;height:94px}.delta-core b{font-size:43px}.chat-actions{overflow:auto}.chat-actions button{white-space:nowrap}
+}
+<style>
+/* NyxOS visual polish — presentation only */
+.topbar{
+  height:76px;
+  padding:0 24px;
+  background:
+    radial-gradient(circle at 50% -40%,rgba(121,228,255,.10),transparent 35%),
+    linear-gradient(180deg,rgba(6,18,30,.98),rgba(2,8,14,.88));
+  box-shadow:0 10px 35px rgba(0,0,0,.34),inset 0 -1px 0 rgba(121,228,255,.10);
+}
+.brand{gap:14px}
+.mark{
+  width:44px;height:44px;
+  border-radius:7px;
+  background:linear-gradient(145deg,rgba(117,205,245,.08),rgba(117,205,245,.015));
+  box-shadow:0 0 24px rgba(117,224,255,.08),inset 0 0 18px rgba(117,224,255,.04);
+}
+.brand-name{font-size:16px;letter-spacing:.31em}
+.brand-sub{font-size:6.5px}
+.nav{gap:8px}
+.nav button{
+  min-width:90px;
+  padding:10px 14px;
+  border-radius:8px;
+  transition:background .2s,border-color .2s,color .2s,box-shadow .2s,transform .2s;
+}
+.nav button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.nav button.active{
+  background:linear-gradient(180deg,rgba(117,205,245,.10),rgba(117,205,245,.035));
+  border-color:rgba(117,205,245,.30);
+  box-shadow:inset 0 0 18px rgba(117,205,245,.035),0 0 18px rgba(117,205,245,.05);
+}
+.workspace{padding:18px 18px 20px}
+.panel-left,.panel-right{top:18px;bottom:20px}
+.panel-left{left:18px;width:270px}
+.panel-right{right:18px;width:380px}
+.glass{
+  border-radius:8px;
+  border-color:rgba(117,205,245,.25);
+  background:
+    radial-gradient(circle at 15% 0%,rgba(117,205,245,.055),transparent 32%),
+    linear-gradient(145deg,rgba(8,20,33,.88),rgba(2,9,16,.82));
+  box-shadow:
+    0 16px 44px rgba(0,0,0,.38),
+    inset 0 1px 0 rgba(255,255,255,.035),
+    inset 0 0 30px rgba(117,205,245,.018);
+}
+.panel{padding:14px;position:relative;overflow:hidden}
+.panel:before{
+  content:"";
+  position:absolute;left:14px;right:14px;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(121,228,255,.30),transparent);
+  opacity:.65;
+}
+.panel-title{
+  padding-bottom:10px;
+  margin-bottom:10px;
+  font-size:7.5px;
+}
+.metric,.weather-grid div{
+  border-radius:5px;
+  background:linear-gradient(145deg,rgba(117,205,245,.035),rgba(117,205,245,.01));
+}
+.event,.project{padding-bottom:8px}
+.cover{
+  border-radius:6px;
+  box-shadow:inset 0 0 20px rgba(117,205,245,.035);
+}
+.center-tag{
+  top:0;
+  color:rgba(130,169,187,.62);
+  text-shadow:0 0 14px rgba(117,224,255,.10);
+}
+.earth-zone:after{
+  content:"";
+  position:absolute;inset:7%;pointer-events:none;
+  border:1px solid rgba(117,205,245,.035);
+  border-radius:50%;
+  box-shadow:0 0 80px rgba(45,178,230,.025);
+}
+.orbital-nav .orbit-item{
+  border-radius:7px;
+  background:linear-gradient(145deg,rgba(6,22,34,.94),rgba(2,10,17,.92));
+}
+.nyxal{
+  padding:15px;
+}
+.nyxal-name{
+  font-size:27px;
+  letter-spacing:.30em;
+  text-shadow:0 0 18px rgba(121,228,255,.13);
+}
+.nyxal-sub{font-size:6.5px}
+.presence{
+  height:560px;
+  margin-top:14px;
+  border-radius:9px;
+  border-color:rgba(117,205,245,.28);
+  background:
+    radial-gradient(circle at 50% 30%,rgba(67,192,237,.22),transparent 25%),
+    radial-gradient(circle at 50% 60%,rgba(67,192,237,.09),transparent 52%),
+    linear-gradient(180deg,rgba(3,13,21,.92),rgba(1,7,12,.90));
+  box-shadow:
+    inset 0 0 40px rgba(117,205,245,.025),
+    0 12px 36px rgba(0,0,0,.28);
+}
+.presence:before{
+  inset:9px;
+  border-radius:5px;
+}
+.face{
+  filter:
+    drop-shadow(0 0 18px rgba(117,224,255,.22))
+    drop-shadow(0 0 30px rgba(60,190,235,.08));
+}
+.state{
+  margin-top:10px;
+  padding:10px;
+  border-radius:7px;
+  background:linear-gradient(145deg,rgba(117,205,245,.035),rgba(117,205,245,.012));
+}
+.chatbar{
+  padding:9px 11px 10px;
+  background:
+    linear-gradient(145deg,rgba(7,19,30,.96),rgba(2,9,16,.94));
+  border-color:rgba(117,205,245,.34);
+  box-shadow:
+    0 20px 58px rgba(0,0,0,.50),
+    0 0 32px rgba(117,205,245,.07),
+    inset 0 1px 0 rgba(255,255,255,.035);
+}
+.chat-input{background:rgba(2,10,17,.58);box-shadow:inset 0 0 20px rgba(117,205,245,.018)}
+</style>
+</style>
+
+<style>
+/* Live overlay — first functional layer over the visual reference */
+.live-home{display:none}.live-home-disabled{
+  position:fixed;
+  inset:0;
+  z-index:110;
+  pointer-events:none;
+}
+.live-clock{
+  position:absolute;
+  top:2.1%;
+  right:11.2%;
+  width:16.5%;
+  min-width:150px;
+  text-align:right;
+  text-shadow:0 0 18px rgba(121,228,255,.18);
+}
+.live-clock .date{
+  color:rgba(236,250,255,.82);
+  font-size:clamp(9px,.72vw,13px);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.live-clock .time{
+  margin-top:2px;
+  color:#ecfaff;
+  font-size:clamp(28px,3vw,52px);
+  font-weight:500;
+  line-height:.98;
+  letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;
+}
+.live-clock .place{
+  margin-top:5px;
+  color:rgba(121,228,255,.82);
+  font-size:clamp(7px,.48vw,10px);
+  letter-spacing:.16em;
+}
+.live-clock::after{
+  content:"";
+  display:block;
+  width:44px;
+  height:1px;
+  margin:9px 0 0 auto;
+  background:linear-gradient(90deg,transparent,rgba(121,228,255,.55));
+  box-shadow:0 0 10px rgba(121,228,255,.22);
+}
+@media(max-width:1050px){
+  .live-clock{right:8%;min-width:135px}
+}
+@media(max-width:700px){
+  .live-clock{right:5%;top:2%;min-width:112px}
+  .live-clock .time{font-size:30px}
+}
+</style>
+
+
+<style>
+
+.live-system{display:none}.live-system-disabled{
+  position:absolute;
+  left:2.1%;
+  top:11.5%;
+  width:16.1%;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1.8%;
+  pointer-events:none;
+  text-align:center;
+}
+.live-system>div{
+  min-height:72px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  color:rgba(205,236,247,.72);
+  text-shadow:0 0 12px rgba(0,0,0,.8);
+}
+.live-system span{
+  color:rgba(111,145,164,.86);
+  font-size:clamp(6px,.42vw,8px);
+  letter-spacing:.12em;
+}
+.live-system b{
+  display:block;
+  margin-top:6px;
+  color:#ecfaff;
+  font-size:clamp(11px,.95vw,17px);
+  font-weight:400;
+  font-variant-numeric:tabular-nums;
+}
+@media(max-width:1050px){
+  .live-system{left:2.3%;width:24%;top:11.5%}
+}
+@media(max-width:700px){
+  .live-weather{display:none}.live-weather-disabled{left:4%;top:28%;width:36%;min-width:0}
+  .live-system{left:5%;top:12%;width:31%}
+  .live-system>div{min-height:50px}
+}
+
+/* Live weather — functional data layer over the reference layout */
+.live-weather{
+  position:absolute;
+  left:2.0%;
+  top:29.0%;
+  width:16.7%;
+  height:19.4%;
+  min-width:240px;
+  pointer-events:none;
+  color:#ecfaff;
+  text-shadow:0 0 14px rgba(0,0,0,.78),0 0 12px rgba(121,228,255,.12);
+}
+.live-weather .status{
+  position:absolute;
+  top:6.5%;
+  right:7%;
+  color:rgba(121,228,255,.78);
+  font-size:clamp(6px,.45vw,9px);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.live-weather .main{
+  position:absolute;
+  left:9%;
+  top:32%;
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+}
+.live-weather .temp{
+  font-size:clamp(22px,2.15vw,40px);
+  font-weight:300;
+  line-height:1;
+  letter-spacing:.01em;
+}
+.live-weather .condition{
+  color:rgba(236,250,255,.72);
+  font-size:clamp(6px,.50vw,10px);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.live-weather .meta{
+  position:absolute;
+  right:8%;
+  top:76%;
+  display:flex;
+  gap:10px;
+  color:rgba(190,224,239,.68);
+  font-size:clamp(5px,.40vw,8px);
+  letter-spacing:.08em;
+  text-align:left;
+  text-transform:uppercase;
+}
+.live-weather .meta b{
+  color:rgba(121,228,255,.90);
+  font-weight:500;
+}
+@media(max-width:1050px){
+  .live-weather{left:1.8%;min-width:200px;width:25%}
+}
+@media(max-width:700px){
+  .live-weather{left:4%;top:28%;width:36%;min-width:0}
+  .live-weather .meta{gap:6px}
+}
+</style>
+
+
+<style>
+/* Home reference overlay v2 — functional UI positions aligned to the supplied layout */
+.home-ui{
+  position:fixed;
+  inset:0;
+  z-index:120;
+  pointer-events:none;
+  color:#ecfaff;
+  font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;
+  text-shadow:0 0 12px rgba(0,0,0,.82);
+}
+.home-ui *{box-sizing:border-box}
+.home-ui .hotspot{position:absolute}
+.home-brand{
+  left:1.6%;top:2.0%;width:22%;display:flex;align-items:center;gap:10px
+}
+.home-brand .delta{
+  width:34px;height:34px;display:grid;place-items:center;
+  color:#eafaff;font-size:28px;font-weight:200;line-height:1
+}
+.home-brand .name{
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:clamp(25px,2.55vw,43px);line-height:.9;letter-spacing:-.03em
+}
+.home-brand .version{
+  margin-top:4px;color:rgba(180,220,236,.72);
+  font-size:clamp(6px,.43vw,9px);letter-spacing:.13em
+}
+.home-nav{
+  left:19.5%;top:2.0%;width:54%;height:42px;
+  display:flex;align-items:center;justify-content:center;gap:2.5%;
+  pointer-events:auto
+}
+.home-nav button{
+  border:0;background:rgba(5,14,23,.20);color:rgba(221,242,250,.80);
+  min-width:92px;padding:10px 12px;border-radius:24px;
+  font-size:clamp(7px,.52vw,10px);letter-spacing:.06em;
+  transition:.18s;cursor:pointer
+}
+.home-nav button:hover,.home-nav button.active{
+  color:#effcff;background:rgba(67,143,181,.24);
+  box-shadow:inset 0 0 18px rgba(120,220,255,.07),0 0 18px rgba(120,220,255,.07)
+}
+.home-status{
+  right:1.4%;top:1.8%;width:17.2%;height:58px;
+  display:flex;align-items:center;justify-content:flex-end;gap:12px
+}
+.home-status .date{
+  color:rgba(216,239,248,.76);font-size:clamp(6px,.45vw,9px);
+  letter-spacing:.08em;text-transform:uppercase;text-align:right
+}
+.home-status .time{
+  color:#f3fdff;font-size:clamp(28px,2.85vw,47px);
+  line-height:.88;font-weight:500;letter-spacing:.01em;font-variant-numeric:tabular-nums
+}
+.home-status .place{
+  margin-top:4px;color:rgba(121,228,255,.74);
+  font-size:clamp(5px,.40vw,8px);letter-spacing:.10em;text-align:right
+}
+.home-status .pill{
+  min-width:62px;padding:8px 9px;border-radius:10px;
+  background:rgba(5,13,21,.42);border:1px solid rgba(117,205,245,.10);
+  text-align:center;font-size:6px;color:rgba(218,241,248,.78)
+}
+.home-status .pill b{display:block;margin-top:2px;color:#7fffd0;font-size:7px}
+.home-avatar{
+  width:34px;height:34px;border-radius:50%;overflow:hidden;
+  border:1px solid rgba(117,205,245,.35);box-shadow:0 0 15px rgba(80,190,230,.10)
+}
+.home-avatar img{width:100%;height:100%;display:block;object-fit:cover;object-position:50% 30%}
+
+.home-weather{left:2.0%;top:10.0%;width:15.5%;height:27.8%}
+.home-weather .title{
+  position:absolute;left:8%;top:6%;font-size:clamp(7px,.48vw,9px);
+  font-weight:600;letter-spacing:.12em;color:#eafaff
+}
+.home-weather .location{
+  position:absolute;left:28%;top:17%;font-size:clamp(6px,.42vw,8px);
+  color:rgba(210,237,247,.72);letter-spacing:.03em
+}
+.home-weather .icon{
+  position:absolute;left:14%;top:27%;font-size:clamp(21px,2vw,34px);
+  filter:drop-shadow(0 0 10px rgba(121,228,255,.15))
+}
+.home-weather .temp{
+  position:absolute;left:44%;top:26%;font-size:clamp(22px,2vw,34px);
+  font-weight:300;line-height:1
+}
+.home-weather .cond{
+  position:absolute;left:46%;top:39%;font-size:clamp(6px,.42vw,8px);
+  color:rgba(226,243,248,.72);text-transform:uppercase
+}
+.home-weather .rows{
+  position:absolute;left:8%;right:8%;bottom:8%;display:flex;flex-direction:column;gap:5px
+}
+.home-weather .row{
+  display:grid;grid-template-columns:1fr auto;gap:8px;
+  color:rgba(176,205,217,.72);font-size:clamp(5px,.38vw,7px)
+}
+.home-weather .row b{color:#eafaff;font-weight:400}
+
+.home-system{left:2.0%;top:38.7%;width:15.5%;height:20.2%}
+.home-system .metric{
+  position:absolute;top:13%;width:28%;text-align:center
+}
+.home-system .m1{left:8%}.home-system .m2{left:36%}.home-system .m3{left:64%}
+.home-system .metric .value{
+  font-size:clamp(12px,1.1vw,18px);font-weight:400;line-height:1
+}
+.home-system .metric .label{
+  margin-top:9px;color:rgba(150,183,196,.68);
+  font-size:clamp(5px,.36vw,7px);letter-spacing:.08em
+}
+.home-system .legend{
+  position:absolute;left:7%;right:7%;bottom:7%;
+  display:flex;justify-content:space-between;
+  color:rgba(126,163,179,.62);font-size:clamp(5px,.33vw,7px);letter-spacing:.06em
+}
+
+.home-events{left:2.0%;top:59.6%;width:15.5%;height:18.8%}
+.home-events .head{
+  position:absolute;left:7%;right:7%;top:7%;
+  display:flex;justify-content:space-between;align-items:center;
+  color:#eafaff;font-size:clamp(6px,.40vw,8px);font-weight:600;letter-spacing:.08em
+}
+.home-events .list{
+  position:absolute;left:8%;right:8%;top:27%;
+  display:flex;flex-direction:column;gap:11px
+}
+.home-events .event{
+  display:grid;grid-template-columns:10px 1fr auto;gap:6px;align-items:center;
+  color:rgba(211,235,244,.78);font-size:clamp(5px,.38vw,7px)
+}
+.home-events .event i{
+  width:9px;height:9px;border:1px solid rgba(180,225,241,.42);border-radius:2px;
+  display:block
+}
+.home-events .event b{color:rgba(202,230,240,.62);font-weight:400;white-space:nowrap}
+
+.home-media{left:2.0%;top:79.6%;width:15.5%;height:18.0%}
+.home-media .head{
+  position:absolute;left:7%;right:7%;top:7%;
+  color:#eafaff;font-size:clamp(6px,.40vw,8px);font-weight:600;letter-spacing:.08em
+}
+.home-media .cover{
+  position:absolute;left:8%;top:24%;width:23%;height:47%;
+  border-radius:5px;overflow:hidden;border:1px solid rgba(117,205,245,.15)
+}
+.home-media .cover img{width:100%;height:100%;display:block;object-fit:cover}
+.home-media .track{
+  position:absolute;left:36%;right:8%;top:28%
+}
+.home-media .track b{font-size:clamp(7px,.47vw,9px);font-weight:500}
+.home-media .track span{display:block;margin-top:4px;color:rgba(163,195,208,.70);font-size:clamp(5px,.36vw,7px)}
+.home-media .progress{position:absolute;left:36%;right:8%;top:67%;height:2px;background:rgba(117,205,245,.13)}
+.home-media .progress i{display:block;width:31%;height:100%;background:#79e4ff;box-shadow:0 0 9px rgba(121,228,255,.28)}
+.home-media .controls{
+  position:absolute;left:34%;right:8%;bottom:7%;
+  display:flex;justify-content:center;gap:22%;color:#dffaff;font-size:11px
+}
+
+.home-orbit{pointer-events:auto}
+.home-orbit .label{
+  position:absolute;top:50%;transform:translateY(-50%);
+  padding:6px 12px;border-radius:18px;border:1px solid rgba(117,205,245,.18);
+  background:rgba(3,12,20,.48);color:rgba(230,248,253,.82);
+  font-size:clamp(6px,.43vw,8px);letter-spacing:.04em;white-space:nowrap
+}
+.home-orbit.left .label{right:calc(100% + 9px)}
+.home-orbit.right .label{left:calc(100% + 9px)}
+.home-orbit.l1{left:22.5%;top:28%}.home-orbit.l2{left:22.7%;top:38%}.home-orbit.l3{left:22.7%;top:48%}.home-orbit.l4{left:23.0%;top:59%}
+.home-orbit.r1{left:66.2%;top:28%}.home-orbit.r2{left:67.5%;top:38%}.home-orbit.r3{left:67.5%;top:48%}.home-orbit.r4{left:67.5%;top:59%}
+.home-orbit .dot{
+  width:0;height:0
+}
+.home-orbit button{pointer-events:auto;border:0;background:transparent;color:transparent;width:82px;height:50px;cursor:pointer}
+
+.home-objectives{right:1.7%;top:53.8%;width:18.2%;height:28.0%;pointer-events:auto}
+.home-objectives .head{
+  position:absolute;left:6%;right:6%;top:6%;
+  display:flex;justify-content:space-between;color:#eafaff;
+  font-size:clamp(6px,.42vw,8px);font-weight:600;letter-spacing:.08em
+}
+.home-objectives .head a{color:rgba(211,237,246,.70);font-weight:400}
+.home-objectives .list{
+  position:absolute;left:6%;right:6%;top:17%;bottom:6%;
+  display:flex;flex-direction:column;justify-content:space-evenly
+}
+.home-objectives .obj{
+  display:grid;grid-template-columns:14px 1fr 30px;gap:7px;align-items:center
+}
+.home-objectives .obj .check{
+  width:12px;height:12px;border:1px solid rgba(220,242,250,.58);border-radius:2px;
+  color:#ecfaff;font-size:8px;display:grid;place-items:center
+}
+.home-objectives .obj .txt b{
+  display:block;font-size:clamp(6px,.43vw,8px);font-weight:500
+}
+.home-objectives .obj .txt span{
+  display:block;margin-top:2px;color:rgba(151,184,197,.66);font-size:clamp(5px,.34vw,7px)
+}
+.home-objectives .obj .pct{
+  width:27px;height:27px;border-radius:50%;border:2px solid rgba(117,205,245,.52);
+  display:grid;place-items:center;color:#e8fbff;font-size:clamp(5px,.34vw,7px)
+}
+
+.home-quote{right:1.7%;top:83.7%;width:18.2%;height:14.0%}
+.home-quote .cover{
+  position:absolute;left:5%;top:16%;width:24%;height:62%;
+  border-radius:5px;overflow:hidden
+}
+.home-quote .cover img{width:100%;height:100%;object-fit:cover;display:block}
+.home-quote .text{
+  position:absolute;left:34%;right:6%;top:23%;
+  font-size:clamp(6px,.48vw,9px);line-height:1.35;color:rgba(230,245,249,.82);
+  font-style:italic
+}
+.home-quote .by{
+  position:absolute;left:34%;bottom:17%;font-size:clamp(5px,.36vw,7px);color:rgba(121,228,255,.70)
+}
+
+.home-chat{
+  left:28.6%;right:30.0%;top:72.2%;height:20.0%;
+  pointer-events:auto
+}
+.home-chat form{position:absolute;left:7%;right:7%;top:10%;height:31%;display:flex;align-items:center}
+.home-chat input{
+  flex:1;min-width:0;height:100%;border:0;background:transparent;outline:0;
+  color:#eafaff;font-size:clamp(7px,.53vw,10px);padding:0 12px
+}
+.home-chat input::placeholder{color:rgba(152,184,198,.75)}
+.home-chat button.send{
+  width:39px;height:39px;border-radius:50%;border:0;background:transparent;color:#ecfbff;
+  font-size:18px;cursor:pointer
+}
+.home-chat .actions{
+  position:absolute;left:4%;right:4%;bottom:11%;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:5%
+}
+.home-chat .actions button{
+  border:0;background:rgba(3,13,21,.14);color:rgba(232,247,252,.78);
+  padding:8px 4px;border-radius:12px;font-size:clamp(5px,.36vw,7px);
+  cursor:pointer;transition:.18s
+}
+.home-chat .actions button:hover{background:rgba(89,169,209,.16);color:#effdff}
+
+@media(max-width:1050px){
+  .home-nav{gap:0}.home-nav button{min-width:72px;padding:8px 7px}
+  .home-status{width:24%}
+}
+@media(max-width:700px){
+  .home-brand .name{font-size:28px}.home-nav{display:none}
+  .home-status{width:44%;top:1%;right:4%}
+  .home-weather{left:4%;width:30%}.home-system{left:4%;width:30%}
+  .home-events{left:4%;width:30%}.home-media{left:4%;width:30%}
+  .home-objectives{right:4%;width:30%}.home-quote{right:4%;width:30%}
+  .home-chat{left:29%;right:30%;top:73%}
+}
+</style>
+
+
+<style>
+/* FINAL HOME RECONSTRUCTION — reference image removed; live UI elements remain */
+#nyxos{
+  background:
+    radial-gradient(circle at 50% 48%,rgba(44,163,216,.18),transparent 26%),
+    radial-gradient(circle at 82% 31%,rgba(32,107,151,.12),transparent 20%),
+    radial-gradient(circle at 16% 26%,rgba(32,107,151,.10),transparent 20%),
+    radial-gradient(circle at 50% 115%,rgba(21,75,105,.15),transparent 45%),
+    linear-gradient(180deg,#02060b 0%,#030913 58%,#01050a 100%);
+}
+#nyxos.visual-reference .workspace{
+  visibility:visible;
+  pointer-events:none;
+}
+#nyxos.visual-reference .topbar{visibility:hidden}
+#nyxos .panel-left,
+#nyxos .panel-right{
+  display:none !important;
+}
+#nyxos .center{
+  left:0;right:0;top:0;bottom:0;
+  z-index:2;
+  pointer-events:none;
+}
+#nyxos .center-tag,
+#nyxos .telemetry,
+#nyxos .cycle,
+#nyxos .delta-core,
+#nyxos .orbital-nav{
+  display:none !important;
+}
+#nyxos .earth-zone{
+  position:absolute;
+  left:50%;top:8%;
+  width:68vw;height:70vh;
+  min-height:520px;
+  transform:translateX(-50%);
+  overflow:visible;
+  pointer-events:none;
+}
+#nyxos .earth-zone:before{
+  inset:10% 14%;
+  background:radial-gradient(circle,rgba(62,198,250,.13),transparent 58%);
+}
+#nyxos .earth-zone:after{
+  border-color:rgba(117,205,245,.028);
+}
+#nyxos .axis-h{width:76%;left:12%;top:50%}
+#nyxos .axis-v{height:68%;top:16%}
+#nyxos .orbit.a{width:86%;height:48%}
+#nyxos .orbit.b{width:73%;height:40%}
+#nyxos .orbit.c{width:61%;height:33%}
+#nyxos .orbit.d{width:49%;height:26%}
+#nyxos .earth-wrap{
+  width:min(520px,38vw);height:min(520px,38vw);
+  min-width:420px;min-height:420px;
+  top:54%;
+}
+#nyxos .flight{display:block}
+#nyxos .satellite{opacity:.72}
+#nyxos .moon{opacity:.65}
+
+.home-ui{z-index:120}
+.home-brand{
+  background:linear-gradient(180deg,rgba(4,12,20,.34),rgba(4,12,20,.08));
+  border-radius:12px;
+  padding:5px 9px 7px;
+}
+.home-nav button{
+  border:1px solid rgba(117,205,245,.10);
+  background:linear-gradient(180deg,rgba(7,20,32,.46),rgba(4,11,18,.24));
+  backdrop-filter:blur(10px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+.home-nav button.active{
+  border-color:rgba(117,205,245,.24);
+  background:linear-gradient(180deg,rgba(80,161,202,.25),rgba(33,82,109,.16));
+}
+.home-status{
+  padding:4px 7px;
+  border:1px solid rgba(117,205,245,.10);
+  border-radius:12px;
+  background:linear-gradient(180deg,rgba(4,13,21,.46),rgba(4,10,16,.22));
+  backdrop-filter:blur(10px);
+}
+.home-weather,.home-system,.home-events,.home-media,.home-objectives,.home-quote,.home-chat{
+  border:1px solid rgba(117,205,245,.27);
+  background:
+    radial-gradient(circle at 14% 0%,rgba(121,228,255,.07),transparent 34%),
+    linear-gradient(145deg,rgba(5,17,28,.78),rgba(2,8,14,.69));
+  box-shadow:
+    0 20px 46px rgba(0,0,0,.38),
+    inset 0 1px 0 rgba(255,255,255,.035),
+    inset 0 0 28px rgba(117,205,245,.018);
+  backdrop-filter:blur(11px);
+  overflow:hidden;
+}
+.home-weather::before,.home-system::before,.home-events::before,.home-media::before,
+.home-objectives::before,.home-quote::before,.home-chat::before{
+  content:"";
+  position:absolute;
+  inset:7px;
+  border:1px solid rgba(117,205,245,.045);
+  border-radius:7px;
+  pointer-events:none;
+}
+.home-weather .title,.home-system .legend,.home-events .head,.home-media .head,.home-objectives .head{
+  text-shadow:0 0 10px rgba(121,228,255,.12);
+}
+.home-weather .location{color:rgba(211,237,246,.84)}
+.home-weather .icon{color:#eafaff}
+.home-weather .temp{color:#f2fcff}
+.home-system .metric .value{color:#ecfbff}
+.home-system .metric::before{
+  content:"";
+  position:absolute;
+  left:50%;top:-7px;
+  width:48px;height:48px;
+  transform:translateX(-50%);
+  border-radius:50%;
+  border:2px solid rgba(117,205,245,.35);
+  box-shadow:0 0 18px rgba(117,205,245,.05);
+}
+.home-system .metric .value{position:relative;z-index:1}
+.home-events .list,.home-media .track,.home-media .cover,.home-media .progress,.home-media .controls,
+.home-objectives .list,.home-quote .cover,.home-quote .text,.home-quote .by,
+.home-chat form,.home-chat .actions{z-index:2}
+.home-media .cover{
+  background:
+    radial-gradient(circle at 50% 35%,rgba(184,229,244,.25),rgba(2,10,17,.92) 68%);
+}
+.home-media .cover img{opacity:.55;mix-blend-mode:screen}
+.home-chat{
+  background:
+    radial-gradient(circle at 50% 0%,rgba(117,205,245,.06),transparent 45%),
+    linear-gradient(145deg,rgba(5,17,28,.90),rgba(2,8,14,.84));
+  border-radius:46px;
+}
+.home-chat::after{
+  content:"";
+  position:absolute;
+  left:42%;right:42%;bottom:-1px;height:2px;
+  background:rgba(121,228,255,.82);
+  box-shadow:0 0 14px rgba(121,228,255,.46);
+}
+.home-orbit{
+  width:84px;height:56px;
+}
+.home-orbit::before{
+  content:"";
+  position:absolute;
+  left:0;top:50%;
+  width:76px;height:76px;
+  transform:translate(-20%,-50%);
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 50%,rgba(6,26,39,.92),rgba(2,10,17,.98));
+  border:1px solid rgba(117,205,245,.42);
+  box-shadow:
+    0 0 22px rgba(58,188,235,.11),
+    inset 0 0 22px rgba(117,205,245,.05);
+}
+.home-orbit.left::after,.home-orbit.right::after{
+  content:"";
+  position:absolute;
+  top:50%;height:1px;width:74px;
+  background:linear-gradient(90deg,rgba(117,205,245,.08),rgba(117,205,245,.28));
+}
+.home-orbit.left::after{left:54px}
+.home-orbit.right::after{right:54px}
+.home-orbit .label{
+  z-index:3;
+  top:50%;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:rgba(232,248,253,.86);
+  text-shadow:0 0 9px rgba(0,0,0,.95);
+  font-size:clamp(6px,.43vw,8px);
+}
+.home-orbit.left .label{right:calc(100% + 24px)}
+.home-orbit.right .label{left:calc(100% + 24px)}
+.home-orbit button{
+  position:relative;
+  z-index:4;
+  width:76px;height:76px;
+  margin-top:-10px;
+  transform:translate(-6px,0);
+  border-radius:50%;
+}
+.home-orbit i{
+  position:absolute;left:28px;top:10px;z-index:5;
+  width:36px;height:36px;display:grid;place-items:center;
+  color:#e9fbff;font-style:normal;font-size:19px;
+  pointer-events:none;
+}
+.home-orbit.l1::marker,.home-orbit.l2::marker,.home-orbit.l3::marker,.home-orbit.l4::marker,
+.home-orbit.r1::marker,.home-orbit.r2::marker,.home-orbit.r3::marker,.home-orbit.r4::marker{display:none}
+.home-orbit.l1::before,.home-orbit.l2::before,.home-orbit.l3::before,.home-orbit.l4::before,
+.home-orbit.r1::before,.home-orbit.r2::before,.home-orbit.r3::before,.home-orbit.r4::before{
+  display:block;
+}
+.home-weather .rows .row,.home-events .event,.home-objectives .obj{position:relative;z-index:2}
+.home-objectives .obj .pct{box-shadow:0 0 13px rgba(117,205,245,.08)}
+.home-quote .cover{border:1px solid rgba(117,205,245,.18);background:radial-gradient(circle at 50% 30%,rgba(98,164,191,.16),rgba(2,8,14,.96) 72%)}
+.home-quote .cover img{opacity:.28;filter:grayscale(1)}
+@media(max-width:1050px){
+  #nyxos .earth-zone{width:78vw}
+  #nyxos .earth-wrap{width:470px;height:470px}
+  .home-weather,.home-system,.home-events,.home-media{width:19%}
+  .home-objectives,.home-quote{width:22%}
+}
+@media(max-width:700px){
+  #nyxos .earth-zone{width:110vw;height:64vh;top:17%}
+  #nyxos .earth-wrap{width:360px;height:360px;min-width:360px;min-height:360px}
+  .home-weather,.home-system,.home-events,.home-media{width:31%}
+  .home-objectives,.home-quote{width:31%}
+  .home-orbit .label{display:none}
+}
+</style>
+
+<style>
+.home-orbit .orbit-icon{
+  position:absolute;left:0;top:0;z-index:8;
+  width:76px;height:76px;display:grid;place-items:center;
+  pointer-events:none;color:#effcff;font-size:20px;
+}
+</style>
+
+
+<style>
+/* Remove legacy visual-reference layers; the Home is now composed from live elements */
+#nyxos .reference-home,
+#nyxos .live-home,
+#nyxos .live-weather,
+#nyxos .live-system{
+  display:none !important;
+}
+#nyxos .topbar{
+  display:none !important;
+}
+#nyxos .workspace{
+  position:absolute;
+  inset:0;
+  height:100%;
+  padding:0;
+}
+#nyxos .panel-left,
+#nyxos .panel-right{
+  display:none !important;
+}
+#nyxos .center{
+  position:absolute;
+  inset:0;
+  left:0;
+  right:0;
+  top:0;
+  bottom:0;
+}
+</style>
+
+</head>
+<body>
+<div id="nyxos">
+
+
+
+<div class="live-home" aria-label="Informações em tempo real">
+
+<div class="live-weather" aria-label="Clima em tempo real">
+  <div class="status" id="weatherLiveState">CARREGANDO</div>
+  <div class="main">
+    <div class="temp" id="weatherLiveTemp">--°</div>
+    <div class="condition" id="weatherLiveCond">—</div>
+  </div>
+  <div class="meta">
+    <span>MÍN <b id="weatherLiveMin">--°</b></span>
+    <span>MÁX <b id="weatherLiveMax">--°</b></span>
+    <span>UMID <b id="weatherLiveHum">--%</b></span>
+    <span>VENTO <b id="weatherLiveWind">--</b></span>
+  </div>
+</div>
+<div class="live-system" aria-label="Métricas do sistema">
+  <div><span>CPU</span><b>—</b></div>
+  <div><span>GPU</span><b>—</b></div>
+  <div><span>TEMP</span><b>—</b></div>
+</div>
+  <div class="live-clock">
+    <div class="date" id="liveDate">—</div>
+    <div class="time" id="liveTime">--:--:--</div>
+    <div class="place">SÃO PAULO · BR</div>
+  </div>
+</div>
+
+
+<div class="home-ui" aria-label="NyxOS Home funcional">
+  <div class="home-brand hotspot">
+    <div class="delta">Δ</div>
+    <div><div class="name">NyxOS</div><div class="version">v2.0 · DELTA</div></div>
+  </div>
+
+  <nav class="home-nav hotspot" aria-label="Navegação principal">
+    <button class="active" data-tab="home">⌂ INÍCIO</button>
+    <button data-tab="intelligence">◉ INTELIGÊNCIA</button>
+    <button data-tab="projects">◈ PROJETOS</button>
+    <button data-tab="studies">⌁ ESTUDOS</button>
+    <button data-tab="aviation">✈ AVIAÇÃO</button>
+    <button data-tab="system">⚙ SISTEMA</button>
+  </nav>
+
+  <div class="home-status hotspot">
+    <div>
+      <div class="date" id="homeLiveDate">—</div>
+      <div class="time" id="homeLiveTime">--:--</div>
+      <div class="place">SÃO PAULO · BR</div>
+    </div>
+    <div class="pill">NYXAL<b>● ONLINE</b></div>
+    <div class="home-avatar"><img src="nyxal-presenca.png" alt=""></div>
+  </div>
+
+  <section class="home-weather hotspot">
+    <div class="title">◉ CLIMA</div>
+    <div class="location">⌖ SÃO PAULO, BR</div>
+    <div class="icon" id="homeWeatherIcon">☂</div>
+    <div class="temp" id="homeWeatherTemp">--°C</div>
+    <div class="cond" id="homeWeatherCond">CARREGANDO</div>
+    <div class="rows">
+      <div class="row"><span>Sensação</span><b id="homeWeatherFeels">--°C</b></div>
+      <div class="row"><span>Umidade</span><b id="homeWeatherHum">--%</b></div>
+      <div class="row"><span>Vento</span><b id="homeWeatherWind">-- KM/H</b></div>
+      <div class="row"><span>Precipitação</span><b id="homeWeatherRain">-- MM</b></div>
+    </div>
+  </section>
+
+  <section class="home-system hotspot">
+    <div class="metric m1"><div class="value" id="homeCpu">—</div><div class="label">CPU</div></div>
+    <div class="metric m2"><div class="value" id="homeRam">—</div><div class="label">RAM</div></div>
+    <div class="metric m3"><div class="value" id="homeDisk">—</div><div class="label">DISCO</div></div>
+    <div class="legend"><span>HOST</span><span id="homeSystemState">AGUARDANDO RUNTIME</span></div>
+  </section>
+
+  <section class="home-events hotspot">
+    <div class="head"><span>◉ PRÓXIMOS EVENTOS</span><span>+</span></div>
+    <div class="list">
+      <div class="event"><i></i><span>Estudo · Aviação</span><b>Hoje, 14:00</b></div>
+      <div class="event"><i></i><span>Treino</span><b>Hoje, 17:30</b></div>
+      <div class="event"><i></i><span>Projeto Frontier World</span><b>Hoje, 20:00</b></div>
+      <div class="event"><i></i><span>Reunião / Planejamento</span><b>Hoje, 22:00</b></div>
+    </div>
+  </section>
+
+  <section class="home-media hotspot">
+    <div class="head">♫ MÚSICA</div>
+    <div class="cover"><img src="nyxal-presenca.png" alt=""></div>
+    <div class="track"><b id="homeTrackTitle">Aguardando mídia</b><span id="homeTrackArtist">Player local</span></div>
+    <div class="progress"><i></i></div>
+    <div class="controls"><span>◀</span><span>Ⅱ</span><span>▶</span></div>
+  </section>
+
+  <div class="home-orbit l1 left hotspot"><button data-module="ai" aria-label="IA"></button><div class="orbit-icon">♧</div><div class="label">IA</div></div>
+  <div class="home-orbit l2 left hotspot"><button data-module="projects" aria-label="Projetos"></button><div class="orbit-icon">◇</div><div class="label">PROJETOS</div></div>
+  <div class="home-orbit l3 left hotspot"><button data-module="studies" aria-label="Estudos"></button><div class="orbit-icon">▱</div><div class="label">ESTUDOS</div></div>
+  <div class="home-orbit l4 left hotspot"><button data-module="aviation" aria-label="Aviação"></button><div class="orbit-icon">✈</div><div class="label">AVIAÇÃO</div></div>
+  <div class="home-orbit r1 right hotspot"><button data-module="games" aria-label="Jogos"></button><div class="orbit-icon">⌘</div><div class="label">JOGOS</div></div>
+  <div class="home-orbit r2 right hotspot"><button data-module="media" aria-label="Mídia"></button><div class="orbit-icon">▶</div><div class="label">MÍDIA</div></div>
+  <div class="home-orbit r3 right hotspot"><button data-module="utilities" aria-label="Utilitários"></button><div class="orbit-icon">▦</div><div class="label">UTILITÁRIOS</div></div>
+  <div class="home-orbit r4 right hotspot"><button data-module="system" aria-label="Sistema"></button><div class="orbit-icon">⚙</div><div class="label">SISTEMA</div></div>
+
+  <section class="home-objectives hotspot">
+    <div class="head"><span>◉ OBJETIVOS</span><a href="#" id="homeObjectivesMore">Ver todos →</a></div>
+    <div class="list">
+      <div class="obj"><div class="check">✓</div><div class="txt"><b>Licença de Piloto (PP)</b><span>Em andamento</span></div><div class="pct">35%</div></div>
+      <div class="obj"><div class="check">✓</div><div class="txt"><b>Ciência de Dados & Blockchain</b><span>Em andamento</span></div><div class="pct">48%</div></div>
+      <div class="obj"><div class="check">✓</div><div class="txt"><b>Frontier World (Roblox)</b><span>Em andamento</span></div><div class="pct">62%</div></div>
+      <div class="obj"><div class="check">✓</div><div class="txt"><b>NyxOS / Delta</b><span>Em andamento</span></div><div class="pct">71%</div></div>
+      <div class="obj"><div class="check">✓</div><div class="txt"><b>Projeto Manhwa</b><span>Em andamento</span></div><div class="pct">28%</div></div>
+    </div>
+  </section>
+
+  <section class="home-quote hotspot">
+    <div class="cover"><img src="nyxal-presenca.png" alt=""></div>
+    <div class="text">“Um dia isso tudo será a base de algo grande.”</div>
+    <div class="by">— Nyxal</div>
+  </section>
+
+  <section class="home-chat hotspot">
+    <form id="homeChatForm">
+      <input id="homeChatInput" placeholder="Nyxal, o que vamos fazer hoje?" autocomplete="off">
+      <button class="send" title="Enviar">➤</button>
+    </form>
+    <div class="actions">
+      <button data-action="search">⌕ Pesquisar</button>
+      <button data-action="app">⊞ Abrir app</button>
+      <button data-action="create">✦ Criar</button>
+      <button data-action="analyze">⌁ Analisar</button>
+      <button data-action="automation">↻ Automação</button>
+    </div>
+  </section>
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">Δ</div>
+    <div><div class="brand-name">NYXOS</div><div class="brand-sub">NYXAL OPERATIONAL SYSTEM</div></div>
+  </div>
+
+  <nav class="nav" id="nav">
+    <button class="active" data-tab="home">⌂ INÍCIO</button>
+    <button data-tab="intelligence">◌ INTELIGÊNCIA</button>
+    <button data-tab="projects">◇ PROJETOS</button>
+    <button data-tab="studies">▱ ESTUDOS</button>
+    <button data-tab="aviation">✈ AVIAÇÃO</button>
+    <button data-tab="system">⚙ SISTEMA</button>
+  </nav>
+
+  <div class="top-right">
+    <div class="meta"><span class="online"></span> NYXAL <strong>ONLINE</strong></div>
+    <div class="meta">RUNTIME <strong>WAITING</strong></div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="workspace">
+
+  <aside class="panel-left">
+
+    <section class="glass panel weather">
+      <div class="panel-title"><span>CLIMA</span><small id="weatherState">CARREGANDO</small></div>
+      <div class="content">
+        <div class="weather-icon" id="weatherIcon">☁</div>
+        <div>
+          <div class="temp"><span id="weatherTemp">—</span>°C</div>
+          <div class="place">SÃO PAULO, BR</div>
+          <div class="condition" id="weatherCond">Aguardando dados</div>
+        </div>
+      </div>
+      <div class="weather-grid">
+        <div><span>MÍN</span><b id="weatherMin">—</b></div>
+        <div><span>MÁX</span><b id="weatherMax">—</b></div>
+        <div><span>UMID.</span><b id="weatherHum">—</b></div>
+        <div><span>VENTO</span><b id="weatherWind">—</b></div>
+      </div>
+    </section>
+
+    <section class="glass panel">
+      <div class="panel-title"><span>SISTEMA</span><small>SYS.01</small></div>
+      <div class="metric-grid">
+        <div class="metric"><span>CPU</span><b>—</b></div>
+        <div class="metric"><span>RAM</span><b>—</b></div>
+        <div class="metric"><span>DISCO</span><b>—</b></div>
+        <div class="metric"><span>REDE</span><b>—</b></div>
+      </div>
+    </section>
+
+    <section class="glass panel">
+      <div class="panel-title"><span>PRÓXIMOS EVENTOS</span><small>LOCAL</small></div>
+      <div class="event-list">
+        <div class="event"><span>Estudo / Aviação</span><b>Hoje</b></div>
+        <div class="event"><span>Treino</span><b>Hoje</b></div>
+        <div class="event"><span>Projeto Frontier World</span><b>Hoje</b></div>
+        <div class="event"><span>Planejamento NyxOS</span><b>Hoje</b></div>
+      </div>
+    </section>
+
+    <section class="glass panel media">
+      <div class="panel-title"><span>MÍDIA</span><small>LOCAL</small></div>
+      <div class="player">
+        <div class="cover">♫</div>
+        <div><div class="song">Nenhuma faixa conectada</div><div class="artist">Player aguardando integração</div><div class="player-line"></div></div>
+      </div>
+      <div class="player-controls"><span>◀</span><span>Ⅱ</span><span>▶</span></div>
+    </section>
+
+  </aside>
+
+  <main class="center">
+    <div class="center-tag">NYXOS • EARTH ORBITAL NETWORK • DELTA CORE</div>
+
+    <div class="earth-zone">
+
+      <div class="axis-h"></div><div class="axis-v"></div>
+      <div class="orbit a"></div><div class="orbit b"></div><div class="orbit c"></div><div class="orbit d"></div>
+
+      <div class="flight-path"></div>
+      <div class="flight">✈</div>
+
+      <div class="satellite sat1"></div>
+      <div class="satellite sat2"></div>
+      <div class="moon"></div>
+
+      <div class="earth-wrap">
+        <div class="earth-glow"></div>
+        <div class="earth-r1"></div><div class="earth-r2"></div>
+
+        <div class="earth">
+          <svg viewBox="0 0 500 500" aria-label="Terra holográfica">
+  <defs>
+    <radialGradient id="earthOcean" cx="31%" cy="24%" r="76%">
+      <stop offset="0" stop-color="#bfefff" stop-opacity=".70"/>
+      <stop offset=".20" stop-color="#4fafd1" stop-opacity=".92"/>
+      <stop offset=".48" stop-color="#15506a" stop-opacity=".98"/>
+      <stop offset=".76" stop-color="#071c28" stop-opacity="1"/>
+      <stop offset="1" stop-color="#01080d" stop-opacity="1"/>
+    </radialGradient>
+    <radialGradient id="earthAtmos" cx="34%" cy="28%" r="76%">
+      <stop offset=".62" stop-color="#79e4ff" stop-opacity="0"/>
+      <stop offset=".83" stop-color="#79e4ff" stop-opacity=".12"/>
+      <stop offset=".93" stop-color="#9feeff" stop-opacity=".36"/>
+      <stop offset="1" stop-color="#9feeff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="earthNight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#01060b" stop-opacity="0"/>
+      <stop offset=".52" stop-color="#01060b" stop-opacity=".04"/>
+      <stop offset=".76" stop-color="#01060b" stop-opacity=".54"/>
+      <stop offset="1" stop-color="#01060b" stop-opacity=".82"/>
+    </linearGradient>
+    <linearGradient id="land" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9f5ff" stop-opacity=".88"/>
+      <stop offset=".42" stop-color="#8bbaca" stop-opacity=".78"/>
+      <stop offset="1" stop-color="#3c7183" stop-opacity=".58"/>
+    </linearGradient>
+    <linearGradient id="cloud" x1="0" x2="1">
+      <stop offset="0" stop-color="#eafcff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#eafcff" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#eafcff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="earthClip">
+      <circle cx="250" cy="250" r="186"/>
+    </clipPath>
+    <filter id="cloudBlur">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <filter id="earthSoft">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+  </defs>
+
+  <circle cx="250" cy="250" r="202" fill="url(#earthAtmos)" filter="url(#earthSoft)"/>
+  <circle cx="250" cy="250" r="195" fill="none" stroke="#b9f6ff" stroke-opacity=".34" stroke-width="2"/>
+  <circle cx="250" cy="250" r="186" fill="url(#earthOcean)"/>
+
+  <g clip-path="url(#earthClip)">
+    <!-- latitude / longitude structure -->
+    <g fill="none" stroke="#9deaff" stroke-opacity=".11" stroke-width="1">
+      <ellipse cx="250" cy="250" rx="154" ry="186"/>
+      <ellipse cx="250" cy="250" rx="98" ry="186"/>
+      <ellipse cx="250" cy="250" rx="46" ry="186"/>
+      <path d="M64 250H436"/>
+      <path d="M79 198H421"/>
+      <path d="M79 302H421"/>
+      <path d="M105 151H395"/>
+      <path d="M105 349H395"/>
+      <path d="M150 103H350"/>
+      <path d="M150 397H350"/>
+    </g>
+
+    <!-- continents -->
+    <g fill="url(#land)" stroke="#d9f8ff" stroke-opacity=".16" stroke-width="1.1">
+      <!-- North America -->
+      <path d="M91 127 L112 107 L141 108 L158 122 L178 122 L190 141 L179 157 L158 157 L151 175 L131 170 L119 188 L100 177 L87 156 L75 146 Z"/>
+      <path d="M132 175 L149 183 L157 199 L146 213 L134 207 L127 193 Z"/>
+      <!-- South America -->
+      <path d="M171 218 L191 207 L208 219 L208 241 L198 259 L194 282 L184 307 L175 337 L162 347 L153 324 L158 300 L151 278 L157 256 L150 239 Z"/>
+      <!-- Europe -->
+      <path d="M233 137 L248 128 L263 132 L273 143 L266 152 L250 150 L240 158 L229 151 Z"/>
+      <!-- Asia -->
+      <path d="M263 137 L286 126 L316 130 L346 145 L367 163 L359 179 L338 177 L327 190 L302 184 L288 171 L266 168 L254 155 Z"/>
+      <!-- Africa -->
+      <path d="M242 181 L263 178 L281 191 L286 216 L277 239 L266 260 L260 287 L246 309 L231 296 L226 270 L217 249 L225 227 L220 204 L229 192 Z"/>
+      <!-- Arabia / India -->
+      <path d="M286 194 L304 198 L313 212 L303 225 L289 219 Z"/>
+      <path d="M310 214 L326 223 L332 240 L320 247 L309 234 Z"/>
+      <!-- SE Asia -->
+      <path d="M330 187 L346 194 L353 208 L344 216 L333 210 Z"/>
+      <path d="M349 218 L362 226 L365 239 L356 248 L347 239 Z"/>
+      <!-- Japan -->
+      <path d="M374 177 L380 184 L378 194 L371 188 Z"/>
+      <!-- Australia -->
+      <path d="M331 306 L354 300 L377 310 L385 327 L376 342 L354 346 L334 335 L324 321 Z"/>
+      <!-- Greenland -->
+      <path d="M151 75 L171 68 L190 77 L184 94 L165 98 L149 89 Z"/>
+    </g>
+
+    <!-- relief / cloud belts -->
+    <g fill="none" stroke="url(#cloud)" stroke-linecap="round" filter="url(#cloudBlur)">
+      <path d="M83 118 Q170 83 244 111 T409 119" stroke-width="15"/>
+      <path d="M74 183 Q163 151 247 174 T422 177" stroke-width="11"/>
+      <path d="M80 254 Q170 230 256 256 T420 260" stroke-width="9"/>
+      <path d="M94 327 Q182 299 258 324 T392 329" stroke-width="13"/>
+    </g>
+
+    <!-- night terminator -->
+    <path d="M315 66 Q379 128 400 210 Q414 300 369 388 L500 500 L500 0 Z"
+      fill="url(#earthNight)"/>
+
+    <!-- city lights -->
+    <g fill="#ffd98a" opacity=".86">
+      <circle cx="173" cy="214" r="2.2"/><circle cx="187" cy="222" r="1.7"/>
+      <circle cx="198" cy="235" r="1.8"/><circle cx="207" cy="251" r="1.6"/>
+      <circle cx="171" cy="239" r="1.4"/><circle cx="184" cy="248" r="1.2"/>
+      <circle cx="236" cy="203" r="1.8"/><circle cx="249" cy="215" r="1.5"/>
+      <circle cx="259" cy="232" r="1.6"/><circle cx="269" cy="246" r="1.4"/>
+      <circle cx="286" cy="222" r="1.6"/><circle cx="301" cy="238" r="1.4"/>
+      <circle cx="315" cy="254" r="1.5"/><circle cx="328" cy="269" r="1.2"/>
+      <circle cx="274" cy="280" r="1.3"/><circle cx="288" cy="292" r="1.2"/>
+      <circle cx="343" cy="318" r="1.5"/><circle cx="356" cy="326" r="1.2"/>
+    </g>
+
+    <!-- atmosphere highlights -->
+    <path d="M92 177 Q250 72 408 180" fill="none" stroke="#e5fbff" stroke-opacity=".22" stroke-width="6"/>
+    <path d="M93 319 Q250 412 407 317" fill="none" stroke="#59d7f6" stroke-opacity=".10" stroke-width="5"/>
+  </g>
+</svg>
+        </div>
+      </div>
+
+      <div class="delta-core">
+        <b>Δ</b>
+        <span>DELTA</span>
+        <small>CHANGE ARCHITECTURE</small>
+      </div>
+
+      <div class="orbital-nav">
+
+        <button class="orbit-item i1" data-module="ai"><i>◉</i><span>IA</span></button>
+        <button class="orbit-item i2" data-module="projects"><i>◇</i><span>PROJETOS</span></button>
+        <button class="orbit-item i3" data-module="studies"><i>▱</i><span>ESTUDOS</span></button>
+        <button class="orbit-item i4" data-module="aviation"><i>✈</i><span>AVIAÇÃO</span></button>
+
+        <button class="orbit-item i5" data-module="system"><i>⚙</i><span>SISTEMA</span></button>
+        <button class="orbit-item i6" data-module="games"><i>⌘</i><span>JOGOS</span></button>
+        <button class="orbit-item i7" data-module="media"><i>▶</i><span>MÍDIA</span></button>
+        <button class="orbit-item i8" data-module="utilities"><i>▦</i><span>UTILITÁRIOS</span></button>
+
+      </div>
+
+    </div>
+
+    <div class="telemetry">
+      <div class="telemetry-head"><span>LIVE TELEMETRY</span><strong id="telemetryState">LOCAL UI</strong></div>
+      <div class="bars" id="bars"></div>
+    </div>
+
+    <div class="cycle">
+      <div class="cycle-title">NYXAL OPERATIONAL CYCLE</div>
+      <div class="cycle-flow">
+        <div class="cycle-step active"><span>01</span><b>OBSERVE</b></div><div class="cycle-line"></div>
+        <div class="cycle-step"><span>02</span><b>INVESTIGATE</b></div><div class="cycle-line"></div>
+        <div class="cycle-step"><span>03</span><b>HYPOTHESIS</b></div><div class="cycle-line"></div>
+        <div class="cycle-step"><span>04</span><b>TEST</b></div><div class="cycle-line"></div>
+        <div class="cycle-step"><span>05</span><b>EVALUATE</b></div><div class="cycle-line"></div>
+        <div class="cycle-step"><span>06</span><b>CRYSTALLIZE</b></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel-right">
+
+    <section class="glass panel nyxal">
+      <div class="nyxal-head">
+        <div>
+          <div style="font-size:6px;color:var(--muted);letter-spacing:.17em">ARTIFICIAL INTELLIGENCE</div>
+          <div class="nyxal-name">NYXAL</div>
+          <div class="nyxal-sub">OPERATIONAL PRESENCE</div>
+        </div>
+        <span class="online"></span>
+      </div>
+
+      <div class="presence">
+        <div class="corner c-tl"></div><div class="corner c-tr"></div><div class="corner c-bl"></div><div class="corner c-br"></div>
+        <div class="scan"></div>
+
+        <div class="face-data fd1">STATE<b>STANDBY</b></div>
+        <div class="face-data fd2">SYNC<b>LOCAL</b></div>
+        <div class="face-data fd3">CORE<b>RUNTIME</b></div>
+        <div class="face-data fd4">MODE<b>OPERATIONAL</b></div>
+
+        <img class="face" src="nyxal-presenca.png" alt="Nyxal" aria-label="Presença visual da Nyxal">
+        <div class="face-sweep" aria-hidden="true"></div>
+      </div>
+
+      <div class="state">
+        <div class="state-title">CURRENT STATE</div>
+        <div class="state-main">AWAITING DATA</div>
+        <div class="state-sub">A presença visual está ativa; os dados operacionais virão do Runtime.</div>
+      </div>
+
+      <div class="need-list">
+        <div class="need"><span>COMPUTE</span><div class="need-bar"><i style="width:28%"></i></div><em>—</em></div>
+        <div class="need"><span>MEMORY</span><div class="need-bar"><i style="width:22%"></i></div><em>—</em></div>
+        <div class="need"><span>STORAGE</span><div class="need-bar"><i style="width:34%"></i></div><em>—</em></div>
+      </div>
+    </section>
+
+    <section class="glass panel">
+      <div class="panel-title"><span>OBJETIVOS</span><small>PROGRESS</small></div>
+      <div class="goal-list">
+        <div class="goal"><div class="check">✓</div><div class="goal-name">NyxOS / Delta</div><div class="progress">—</div><div class="bar"><i style="width:38%"></i></div></div>
+        <div class="goal"><div class="check">✓</div><div class="goal-name">Frontier World</div><div class="progress">—</div><div class="bar"><i style="width:26%"></i></div></div>
+        <div class="goal"><div class="check">✓</div><div class="goal-name">Aviation</div><div class="progress">—</div><div class="bar"><i style="width:20%"></i></div></div>
+      </div>
+    </section>
+
+    <div class="quote">“Um sistema bom não é o que parece vivo; é o que torna visível o que realmente está acontecendo.”<small>— princípio de interface NyxOS</small></div>
+
+  </aside>
+
+  <section class="chatbar">
+    <form class="chat-input" id="chatForm">
+      <span>⌁</span>
+      <input id="chatInput" placeholder="Nyxal, o que vamos fazer?" autocomplete="off">
+      <button class="send" title="Enviar">➤</button>
+    </form>
+    <div class="chat-actions">
+      <button data-action="search">⌕ PESQUISAR</button>
+      <button data-action="app">⊞ ABRIR APP</button>
+      <button data-action="create">✦ CRIAR</button>
+      <button data-action="analyze">⌁ ANALISAR</button>
+      <button data-action="automation">↻ AUTOMAÇÃO</button>
+    </div>
+  </section>
+
+</div>
+
+
+<script>
+(() => {
+  "use strict";
+  const dateEl = document.getElementById("liveDate");
+  const timeEl = document.getElementById("liveTime");
+
+  function updateLiveClock(){
+    const now = new Date();
+    if(dateEl){
+      dateEl.textContent = now.toLocaleDateString("pt-BR", {
+        weekday:"short",
+        day:"2-digit",
+        month:"2-digit",
+        year:"numeric"
+      }).replace(".", "").toUpperCase();
+    }
+    if(timeEl){
+      timeEl.textContent = now.toLocaleTimeString("pt-BR", {
+        hour:"2-digit",
+        minute:"2-digit",
+        second:"2-digit",
+        hour12:false
+      });
+    }
+  }
+
+  updateLiveClock();
+  setInterval(updateLiveClock, 1000);
+
+
+  async function updateLiveWeather(){
+    const stateEl=document.getElementById("weatherLiveState");
+    const tempEl=document.getElementById("weatherLiveTemp");
+    const condEl=document.getElementById("weatherLiveCond");
+    const minEl=document.getElementById("weatherLiveMin");
+    const maxEl=document.getElementById("weatherLiveMax");
+    const humEl=document.getElementById("weatherLiveHum");
+    const windEl=document.getElementById("weatherLiveWind");
+    try{
+      const url="https://api.open-meteo.com/v1/forecast?latitude=-23.5505&longitude=-46.6333&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_min,temperature_2m_max&timezone=America%2FSao_Paulo";
+      const response=await fetch(url,{cache:"no-store"});
+      if(!response.ok) throw new Error("weather_http_"+response.status);
+      const data=await response.json();
+      const weatherCode=Number(data?.current?.weather_code);
+      const labels={
+        0:"CÉU LIMPO",1:"PRINC. LIMPO",2:"PARC. NUBLADO",3:"NUBLADO",
+        45:"NEBLINA",48:"NEBLINA",51:"GAROA LEVE",53:"GAROA",55:"GAROA FORTE",
+        61:"CHUVA LEVE",63:"CHUVA",65:"CHUVA FORTE",71:"NEVE LEVE",73:"NEVE",75:"NEVE FORTE",
+        80:"AGUACEIROS",81:"AGUACEIROS",82:"AGUACEIROS FORTES",95:"TROVOADA",96:"TROVOADA",99:"TROVOADA"
+      };
+      if(tempEl) tempEl.textContent=Math.round(Number(data.current.temperature_2m))+"°";
+      if(condEl) condEl.textContent=labels[weatherCode] || "DADOS ATUAIS";
+      if(minEl) minEl.textContent=Math.round(Number(data.daily.temperature_2m_min?.[0]))+"°";
+      if(maxEl) maxEl.textContent=Math.round(Number(data.daily.temperature_2m_max?.[0]))+"°";
+      if(humEl) humEl.textContent=Math.round(Number(data.current.relative_humidity_2m))+"%";
+      if(windEl) windEl.textContent=Math.round(Number(data.current.wind_speed_10m))+" KM/H";
+      if(stateEl) stateEl.textContent="AO VIVO";
+    }catch(error){
+      if(stateEl) stateEl.textContent="SEM CONEXÃO";
+    }
+  }
+
+  updateLiveWeather();
+  setInterval(updateLiveWeather, 10*60*1000);
+
+})();
+</script>
+
+<script>
+(() => {
+  "use strict";
+
+  const clock = document.getElementById("clock");
+  const runtimeTop = document.getElementById("runtimeTop");
+
+  function tickClock(){
+    clock.textContent = new Date().toLocaleTimeString("pt-BR",{hour12:false});
+  }
+  tickClock();
+  setInterval(tickClock,1000);
+
+  const bars = document.getElementById("bars");
+  for(let i=0;i<26;i++){
+    const b=document.createElement("i");
+    b.style.height=(9+(i%9)*3)+"px";
+    b.style.animationDelay=(i*.055)+"s";
+    bars.appendChild(b);
+  }
