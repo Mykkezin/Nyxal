@@ -1102,8 +1102,9 @@
         if (res.ok) {
           const data = await res.json();
           const reply = data.resposta || "Ordem processada pelo ExecutorOrdensNixal.";
+          const speechText = data.fala || reply;
           showSubtitles(reply);
-          speakGoddessNyxVoice(reply);
+          speakGoddessNyxVoice(speechText);
         } else {
           // If endpoint /api/chat is not created in backend yet, inform gracefully
           speakGoddessNyxVoice(`Ordem recebida. A rota POST /api/chat será conectada ao ExecutorOrdensNixal no backend.`);
