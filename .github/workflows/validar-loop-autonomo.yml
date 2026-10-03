@@ -19,7 +19,10 @@ jobs:
           python-version: "3.11"
 
       - name: Validar sintaxe
-        run: python -m py_compile nixal_loop_autonomo.py teste_loop_autonomo_nixal.py
+        run: python -m py_compile nixal_loop_autonomo.py teste_loop_autonomo_nixal.py teste_runtime_real_dois_ciclos.py nixal_runtime.py
 
       - name: Executar teste do ponto de entrada
         run: python teste_loop_autonomo_nixal.py
+
+      - name: Executar prova do Runtime real
+        run: python teste_runtime_real_dois_ciclos.py
