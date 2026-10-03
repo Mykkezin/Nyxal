@@ -1,0 +1,25 @@
+name: Validar loop autonomo
+
+on:
+  push:
+    branches:
+      - desenvolvimento/mcp-bridge
+  workflow_dispatch:
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validar sintaxe
+        run: python -m py_compile nixal_loop_autonomo.py teste_loop_autonomo_nixal.py
+
+      - name: Executar teste do ponto de entrada
+        run: python teste_loop_autonomo_nixal.py
