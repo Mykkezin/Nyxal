@@ -19,10 +19,16 @@ jobs:
           python-version: "3.11"
 
       - name: Validar sintaxe
-        run: python -m py_compile nixal_loop_autonomo.py teste_loop_autonomo_nixal.py teste_runtime_real_dois_ciclos.py teste_nivel_8_aprendizado_persistente.py nixal_aprendizado_persistente.py nixal_runtime.py
+        run: python -m py_compile nixal_loop_autonomo.py teste_loop_autonomo_nixal.py teste_runtime_real_dois_ciclos.py teste_nivel_8_aprendizado_persistente.py nixal_aprendizado_persistente.py nixal_runtime.py nixal_evolucao_controlada.py teste_evolucao_controlada_nixal.py
 
       - name: Executar teste do ponto de entrada
         run: python teste_loop_autonomo_nixal.py
 
       - name: Executar prova do Runtime real
         run: python teste_runtime_real_dois_ciclos.py
+
+      - name: Executar prova do aprendizado persistente
+        run: python teste_nivel_8_aprendizado_persistente.py
+
+      - name: Executar prova de evolucao controlada
+        run: python teste_evolucao_controlada_nixal.py
