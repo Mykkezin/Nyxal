@@ -79,6 +79,7 @@ from nixal_integracao_avaliacao_ciclo_hipotese import (
 )
 from nixal_testador_arquitetural import TestadorArquiteturalNixal
 from nixal_consolidacao_conhecimento import ConsolidacaoConhecimentoNixal
+from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
 
 
 BASE_DIR = Path(__file__).resolve().parent
