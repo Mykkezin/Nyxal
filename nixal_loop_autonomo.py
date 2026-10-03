@@ -22,9 +22,10 @@ import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from nixal_runtime import NyxalRuntime
+if TYPE_CHECKING:
+    from nixal_runtime import NyxalRuntime
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -45,7 +46,11 @@ class LoopAutonomoNixal:
         runtime: NyxalRuntime | None = None,
         estado_path: Path = ARQUIVO_ESTADO,
     ) -> None:
-        self.runtime = runtime or NyxalRuntime()
+        if runtime is None:
+            from nixal_runtime import NyxalRuntime
+
+            runtime = NyxalRuntime()
+        self.runtime = runtime
         self.estado_path = Path(estado_path)
 
     def _salvar(self, estado: dict[str, Any]) -> None:
