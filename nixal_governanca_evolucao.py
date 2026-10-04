@@ -300,6 +300,14 @@ class GovernancaEvolucaoNixal:
             registro = self._carregar(proposta_id)
             if registro["estado"] != "aguardando_autorizacao":
                 raise ValueError("proposta_ja_processada")
+            hash_registrado = registro.get("proposta_sha256")
+            if (
+                isinstance(hash_registrado, str)
+                and hash_registrado
+                and hash_registrado != proposta_sha256
+            ):
+                raise ValueError("proposta_alterada_antes_da_autorizacao")
+            registro["proposta_sha256"] = proposta_sha256
         else:
             timestamp = self._timestamp()
             registro = {
