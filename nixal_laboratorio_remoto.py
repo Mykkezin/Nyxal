@@ -810,9 +810,57 @@ class LaboratorioRemotoNixal:
             ):
                 continue
 
-            logs = self.baixar_logs_job(
-                job_id
-            )
+            # Enquanto o job ainda estiver rodando, o endpoint de logs
+            # pode redirecionar para um blob temporário que ainda não
+            # existe. Não tentamos baixá-lo antes da conclusão.
+            status_job = job.get("status")
+            conclusion_job = job.get("conclusion")
+
+            if status_job != "completed":
+                return {
+                    "sucesso": False,
+                    "estado": "resultado_ainda_nao_disponivel",
+                    "origem": self.FONTE,
+                    "experimento_id": experimento_id,
+                    "run": deepcopy(run),
+                    "job": deepcopy(job),
+                    "motivo": "job_ainda_em_execucao",
+                }
+
+            if conclusion_job is None:
+                return {
+                    "sucesso": False,
+                    "estado": "resultado_ainda_nao_disponivel",
+                    "origem": self.FONTE,
+                    "experimento_id": experimento_id,
+                    "run": deepcopy(run),
+                    "job": deepcopy(job),
+                    "motivo": "job_sem_conclusao",
+                }
+
+            try:
+                logs = self.baixar_logs_job(
+                    job_id
+                )
+            except RuntimeError as erro:
+                # Logs podem demorar alguns instantes para ficar
+                # disponíveis mesmo depois do job concluir.
+                mensagem = str(erro)
+                if (
+                    "github_api_http_404:" in mensagem
+                    or "BlobNotFound" in mensagem
+                ):
+                    return {
+                        "sucesso": False,
+                        "estado": "resultado_ainda_nao_disponivel",
+                        "origem": self.FONTE,
+                        "experimento_id": experimento_id,
+                        "run": deepcopy(run),
+                        "job": deepcopy(job),
+                        "motivo": "logs_ainda_nao_disponiveis",
+                    }
+                raise
+
             resultado = self.extrair_resultado_dos_logs(
                 logs
             )
