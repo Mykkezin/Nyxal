@@ -97,6 +97,19 @@ def main() -> None:
     )
 
     verificar(
+        "limparSessaoConversacionalLocal" in interface
+        and "sessionStorage.removeItem(\"NYXAL_SESSION_ID\")" in interface,
+        "sessão perdida pode ser removida do armazenamento local",
+    )
+
+    verificar(
+        "res.status === 422" in interface
+        and "sessaoConversacionalRecuperavel" in interface
+        and "sendNyxalMessage(\n            msg,\n            false" in interface,
+        "erro de sessão 422 dispara recuperação única sem duplicar o turno",
+    )
+
+    verificar(
         "await speakGoddessNyxVoice" in interface,
         "a conversa aguarda o fim da fala antes de voltar a ouvir",
     )
