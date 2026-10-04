@@ -72,6 +72,7 @@ def main() -> None:
         ("VOICE_UTTERANCE_MAX_MS", "limite de segurança por turno de fala"),
         ("getUserMedia", "captura do microfone"),
         ("currentRecorder.start(100)", "captura em blocos curtos"),
+        ("getFloatTimeDomainData", "leitura precisa do nível do microfone"),
         ("await sendNyxalMessage(transcript)", "encadeamento voz para conversa"),
     ):
         verificar(
@@ -119,6 +120,23 @@ def main() -> None:
         "KOKORO_SPEED" in api
         and "speed=KOKORO_SPEED" in api,
         "velocidade do Kokoro é configurável e aplicada",
+    )
+
+    verificar(
+        'os.environ.get(\n    "NYXAL_WHISPER_MODEL",\n    "base",\n)' in api,
+        "Whisper base é o padrão para maior qualidade de reconhecimento",
+    )
+
+    verificar(
+        "condition_on_previous_text=False" in api
+        and "temperature=0.0" in api,
+        "transcrição usa parâmetros estáveis para fala curta",
+    )
+
+    verificar(
+        "decodeAudioData" in interface
+        and "createBufferSource" in interface,
+        "TTS usa o AudioContext desbloqueado pela interação do usuário",
     )
 
     verificar(
