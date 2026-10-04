@@ -237,6 +237,32 @@ class CicloLocalNivel10Nixal:
                     "tentativa_numero_inconsistente"
                 )
 
+            motivo_reexecucao = cls._texto(
+                registro.get("motivo_reexecucao"),
+                "motivo_reexecucao",
+            )
+            base_reexecucao = json.dumps(
+                {
+                    "ciclo_id": tentativa_de,
+                    "commit_novo": novo,
+                    "tentativa_numero": tentativa_numero,
+                    "motivo": motivo_reexecucao,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            esperado_reexecucao = (
+                "n10-r-"
+                + hashlib.sha256(
+                    base_reexecucao.encode("utf-8")
+                ).hexdigest()[:20]
+            )
+            if ciclo_id != esperado_reexecucao:
+                raise ValueError(
+                    "ciclo_id_reexecucao_inconsistente"
+                )
+
         estado = registro.get("estado")
         if estado not in cls.ESTADOS:
             raise ValueError(
