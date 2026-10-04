@@ -68,6 +68,21 @@ def main() -> int:
             hipotese_provisoria
         )
 
+        try:
+            runtime._capturar_hipotese_provisoria(
+                {
+                    **hipotese_provisoria,
+                    "estado_atual": "confirmada",
+                    "confirmada": True,
+                }
+            )
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(
+                "hipótese não provisória deveria ser rejeitada"
+            )
+
         resultado = runtime.criar_solicitacao_evolucao(
             objetivo="reduzir tempo de execução",
             metrica="tempo_execucao_ms",
