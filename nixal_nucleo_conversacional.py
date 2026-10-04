@@ -301,6 +301,33 @@ class NucleoConversacionalNixal:
 
             return resultado_direto
 
+        origem = contexto.get(
+            "origem",
+            {}
+        )
+
+        melhor_score_origem = (
+            origem.get(
+                "melhor_score",
+                0
+            )
+            if isinstance(
+                origem,
+                dict
+            )
+            else 0
+        )
+
+        if (
+            not isinstance(
+                melhor_score_origem,
+                int
+            )
+            or melhor_score_origem < 2
+        ):
+
+            return resultado_direto
+
         nome_capacidade = prioritarias[0]
 
         capacidade = self.capacidades.get(
