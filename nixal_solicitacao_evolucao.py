@@ -39,7 +39,7 @@ from typing import Any
 
 
 class SolicitacaoEvolucaoNixal:
-    VERSAO = "9.2.0"
+    VERSAO = "9.3.0"
     FONTE = "solicitacao_evolucao_nixal"
 
     def __init__(
@@ -356,6 +356,126 @@ class SolicitacaoEvolucaoNixal:
         registro["artefato_origem"] = artefato
         registro["observacao_artefato"] = observacao
         registro["artefato_anexado_em"] = self._timestamp()
+        registro["execucao_solicitada"] = True
+        registro["execucao_local"] = False
+        registro["autorizacao_explicita"] = False
+        registro["integracao_executada"] = False
+        registro["stable_modificada"] = False
+
+        temporario = caminho.with_name(
+            caminho.name + ".tmp"
+        )
+        temporario.write_text(
+            json.dumps(
+                registro,
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        os.replace(
+            temporario,
+            caminho,
+        )
+
+        return copy.deepcopy(registro)
+
+    def registrar_resultado_experimento(
+        self,
+        solicitacao_id: str,
+        resultado: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Persiste o resultado da execução remota de uma solicitação.
+
+        A solicitação só pode sair de pronta_para_experimento uma
+        vez por este caminho. O resultado é registrado como evidência;
+        autorização de integração continua falsa.
+        """
+        solicitacao_id = self._texto(
+            solicitacao_id,
+            "solicitacao_id",
+        )
+
+        if not isinstance(resultado, dict):
+            raise ValueError("resultado_experimento_invalido")
+
+        caminho = (
+            self.solicitacoes
+            / f"{solicitacao_id}.json"
+        )
+
+        if not caminho.is_file():
+            raise FileNotFoundError(
+                "solicitacao_nao_encontrada"
+            )
+
+        try:
+            registro = json.loads(
+                caminho.read_text(encoding="utf-8")
+            )
+        except (
+            OSError,
+            json.JSONDecodeError,
+        ) as erro:
+            raise ValueError(
+                "solicitacao_invalida"
+            ) from erro
+
+        if not isinstance(registro, dict):
+            raise ValueError("solicitacao_invalida")
+
+        if registro.get("estado") != "pronta_para_experimento":
+            raise ValueError(
+                "solicitacao_nao_pronta_para_registro"
+            )
+
+        valor = resultado.get("valor")
+        resultado_interno = (
+            valor
+            if isinstance(valor, dict)
+            else resultado
+        )
+
+        if not isinstance(resultado_interno, dict):
+            raise ValueError("resultado_experimento_invalido")
+
+        estado_interno = resultado_interno.get("estado")
+        estado_externo = resultado.get("estado")
+
+        if (
+            resultado.get("sucesso") is True
+            and (
+                estado_interno == "proposta_criada"
+                or estado_externo == "solicitacao_executada"
+            )
+        ):
+            estado_final = "experimento_concluido"
+        elif estado_interno == "evolucao_rejeitada":
+            estado_final = "evolucao_rejeitada"
+        else:
+            estado_final = "experimento_falhou"
+
+        registro["estado"] = estado_final
+        registro["resultado_experimento"] = copy.deepcopy(
+            resultado
+        )
+        registro["resultado_registrado_em"] = self._timestamp()
+        registro["experimento_id"] = (
+            resultado_interno.get("experimento_id")
+        )
+        registro["commit_sha"] = (
+            resultado_interno.get("commit_sha")
+        )
+        registro["comparacao"] = copy.deepcopy(
+            resultado_interno.get("comparacao")
+        )
+        registro["candidato"] = copy.deepcopy(
+            resultado_interno.get("candidato")
+        )
+        registro["proposta"] = copy.deepcopy(
+            resultado_interno.get("proposta")
+        )
         registro["execucao_solicitada"] = True
         registro["execucao_local"] = False
         registro["autorizacao_explicita"] = False
