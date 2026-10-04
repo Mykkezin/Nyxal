@@ -328,6 +328,33 @@ class NyxalRuntime:
     # SOLICITAÇÃO FORMAL DE EVOLUÇÃO
     # ============================================================
 
+    def _capturar_hipotese_provisoria(
+        self,
+        ciclo: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Captura a hipótese exatamente no estágio provisório da
+        investigação, antes de teste e avaliação.
+        """
+        if not isinstance(ciclo, dict):
+            raise TypeError("ciclo_hipotese_investigada_invalido")
+
+        if ciclo.get("estado_atual") != "provisoria":
+            raise ValueError("hipotese_investigada_nao_provisoria")
+
+        if ciclo.get("confirmada") is not False:
+            raise ValueError(
+                "hipotese_investigada_nao_pode_estar_confirmada"
+            )
+
+        if ciclo.get("testada") is not False:
+            raise ValueError(
+                "hipotese_investigada_nao_pode_estar_testada"
+            )
+
+        self._ultima_hipotese_investigada = deepcopy(ciclo)
+        return deepcopy(self._ultima_hipotese_investigada)
+
     def criar_solicitacao_evolucao(
         self,
         *,
@@ -1266,7 +1293,7 @@ class NyxalRuntime:
 
         # Captura a hipótese no ponto exato em que o ciclo formal
         # a recebe ainda provisória, antes de teste e avaliação.
-        self._ultima_hipotese_investigada = deepcopy(ciclo)
+        self._capturar_hipotese_provisoria(ciclo)
 
         preparacao_teste = self.preparacao_teste_hipotese.preparar(
             integracao
