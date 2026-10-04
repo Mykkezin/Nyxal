@@ -95,6 +95,31 @@ def main() -> int:
         assert estado["integracao_executada"] is False
         assert estado["stable_modificada"] is False
 
+        rejeitado = gestor.executar_fluxo_aprovado(
+            limitacao="A métrica atual precisa ser comparada com rigor.",
+            hipotese="Uma variante inferior não deve ser promovida.",
+            objetivo="Garantir rejeição quando o experimento piora a métrica.",
+            metrica="pontuacao",
+            direcao_melhor="maior",
+            baseline=0.70,
+            experimental=0.60,
+            arquivo="melhoria_rejeitada.py",
+            manifesto_conteudo=json.dumps(
+                {
+                    "tipo": "experimento_controlado",
+                    "executar": False,
+                },
+                ensure_ascii=False,
+            ),
+            artefato_origem=origem,
+        )
+
+        assert rejeitado["sucesso"] is not True
+        assert rejeitado["estado"] == "rejeitado"
+        assert rejeitado["comparacao"]["aprovado"] is False
+        assert "candidato" not in rejeitado
+        assert "proposta" not in rejeitado
+
         print("=" * 60)
         print("TESTE — NÍVEL 9 / EVOLUÇÃO CONTROLADA")
         print("=" * 60)
@@ -103,6 +128,7 @@ def main() -> int:
         print("BASELINE=OK")
         print("EXPERIMENTO=OK")
         print("COMPARACAO=OK")
+        print("REJEICAO_DE_REGRESSAO=OK")
         print("MELHORIA_APROVADA=OK")
         print("CANDIDATO=OK")
         print("PROPOSTA=OK")
