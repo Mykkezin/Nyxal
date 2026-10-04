@@ -293,6 +293,93 @@ class SolicitacaoEvolucaoNixal:
 
         return copy.deepcopy(registro)
 
+    def anexar_artefato(
+        self,
+        solicitacao_id: str,
+        artefato_origem: str | Path,
+        observacao: str = "",
+    ) -> dict[str, Any]:
+        """
+        Avança uma solicitação já persistida de aguardando_artefato
+        para pronta_para_experimento.
+
+        A anexação não executa o artefato e não concede autorização.
+        """
+        solicitacao_id = self._texto(
+            solicitacao_id,
+            "solicitacao_id",
+        )
+
+        if not isinstance(observacao, str):
+            raise ValueError("observacao_invalida")
+
+        caminho = (
+            self.solicitacoes
+            / f"{solicitacao_id}.json"
+        )
+
+        if not caminho.is_file():
+            raise FileNotFoundError(
+                "solicitacao_nao_encontrada"
+            )
+
+        try:
+            registro = json.loads(
+                caminho.read_text(encoding="utf-8")
+            )
+        except (
+            OSError,
+            json.JSONDecodeError,
+        ) as erro:
+            raise ValueError(
+                "solicitacao_invalida"
+            ) from erro
+
+        if not isinstance(registro, dict):
+            raise ValueError("solicitacao_invalida")
+
+        if registro.get("estado") != "aguardando_artefato":
+            raise ValueError(
+                "solicitacao_nao_aguarda_artefato"
+            )
+
+        artefato = self._validar_arquivo(
+            artefato_origem
+        )
+
+        if artefato is None:
+            raise ValueError(
+                "artefato_experimental_nao_encontrado"
+            )
+
+        registro["estado"] = "pronta_para_experimento"
+        registro["artefato_origem"] = artefato
+        registro["observacao_artefato"] = observacao
+        registro["artefato_anexado_em"] = self._timestamp()
+        registro["execucao_solicitada"] = True
+        registro["execucao_local"] = False
+        registro["autorizacao_explicita"] = False
+        registro["integracao_executada"] = False
+        registro["stable_modificada"] = False
+
+        temporario = caminho.with_name(
+            caminho.name + ".tmp"
+        )
+        temporario.write_text(
+            json.dumps(
+                registro,
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        os.replace(
+            temporario,
+            caminho,
+        )
+
+        return copy.deepcopy(registro)
+
     def consultar(
         self,
         solicitacao_id: str,
