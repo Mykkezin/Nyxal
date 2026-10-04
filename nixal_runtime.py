@@ -79,6 +79,7 @@ from nixal_integracao_avaliacao_ciclo_hipotese import (
 )
 from nixal_testador_arquitetural import TestadorArquiteturalNixal
 from nixal_consolidacao_conhecimento import ConsolidacaoConhecimentoNixal
+from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
 from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
 
 
@@ -124,6 +125,8 @@ class NyxalRuntime:
         arquivo_log: Path = ARQUIVO_LOG_RUNTIME,
         arquivo_memoria_investigacao: Path | None = None,
         memoria_investigacao: MemoriaInvestigacaoNixal | None = None,
+        arquivo_memoria_conhecimento: Path | None = None,
+        memoria_conhecimento: MemoriaConhecimentoNixal | None = None,
     ) -> None:
         if perceber_corpo is None:
             perceber_corpo = corpo_nixal.perceber_corpo
@@ -158,6 +161,15 @@ class NyxalRuntime:
                 "MemoriaInvestigacaoNixal"
             )
 
+        if memoria_conhecimento is not None and not isinstance(
+            memoria_conhecimento,
+            MemoriaConhecimentoNixal,
+        ):
+            raise TypeError(
+                "memoria_conhecimento deve ser uma instância de "
+                "MemoriaConhecimentoNixal"
+            )
+
         self.perceber_corpo = perceber_corpo
         self.estado = (
             estado
@@ -184,6 +196,21 @@ class NyxalRuntime:
             if memoria_investigacao is not None
             else MemoriaInvestigacaoNixal(
                 self.arquivo_memoria_investigacao
+            )
+        )
+
+        self.arquivo_memoria_conhecimento = (
+            Path(arquivo_memoria_conhecimento)
+            if arquivo_memoria_conhecimento is not None
+            else self.arquivo_estado.parent
+            / "memoria_conhecimento_nixal.json"
+        )
+
+        self.memoria_conhecimento = (
+            memoria_conhecimento
+            if memoria_conhecimento is not None
+            else MemoriaConhecimentoNixal(
+                self.arquivo_memoria_conhecimento
             )
         )
 
@@ -1045,7 +1072,52 @@ class NyxalRuntime:
                 ),
             }
 
-        consolidacao_conhecimento = self.consolidacao_conhecimento.consolidar_candidato(ciclo_final)
+        consolidacao_conhecimento = self.consolidacao_conhecimento.consolidar_candidato(
+            ciclo_final
+        )
+
+        memoria_conhecimento = {
+            "sucesso": True,
+            "estado": "nenhum_candidato",
+            "origem": self.FONTE,
+            "valor": None,
+            "conhecimento_permanente": False,
+            "gravado": False,
+            "arquitetura_modificada": False,
+        }
+
+        if (
+            isinstance(consolidacao_conhecimento, dict)
+            and consolidacao_conhecimento.get("estado")
+            == "candidato_conhecimento_criado"
+        ):
+            candidato = consolidacao_conhecimento.get("valor")
+
+            if isinstance(candidato, dict):
+                memoria_conhecimento = (
+                    self.memoria_conhecimento.registrar(
+                        candidato
+                    )
+                )
+
+                if memoria_conhecimento.get("sucesso") is not True:
+                    return {
+                        "sucesso": False,
+                        "estado": "investigacao_falhou",
+                        "origem": self.FONTE,
+                        "valor": {
+                            "consolidacao_conhecimento": deepcopy(
+                                consolidacao_conhecimento
+                            ),
+                            "memoria_conhecimento": deepcopy(
+                                memoria_conhecimento
+                            ),
+                        },
+                        "motivo": (
+                            "A persistência do candidato de conhecimento "
+                            "falhou."
+                        ),
+                    }
 
         return {
             "sucesso": True,
@@ -1078,6 +1150,9 @@ class NyxalRuntime:
                 ),
                 "consolidacao_conhecimento": deepcopy(
                     consolidacao_conhecimento
+                ),
+                "memoria_conhecimento": deepcopy(
+                    memoria_conhecimento
                 ),
                 "hipotese": deepcopy(ciclo_final),
                 "conhecimento_permanente": False,
