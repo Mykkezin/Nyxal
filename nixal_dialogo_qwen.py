@@ -124,16 +124,15 @@ class DialogoQwenNixal:
                 ),
             }
 
-        mensagem = (
-            resposta.get("message", {})
-            if isinstance(resposta, dict)
-            else {}
-        )
-        conteudo = (
-            mensagem.get("content")
-            if isinstance(mensagem, dict)
-            else None
-        )
+        if isinstance(resposta, dict):
+            mensagem = resposta.get("message", {})
+        else:
+            mensagem = getattr(resposta, "message", {})
+
+        if isinstance(mensagem, dict):
+            conteudo = mensagem.get("content")
+        else:
+            conteudo = getattr(mensagem, "content", None)
 
         if not isinstance(conteudo, str) or not conteudo.strip():
             return {
