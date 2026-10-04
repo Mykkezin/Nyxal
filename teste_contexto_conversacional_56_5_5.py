@@ -17,37 +17,43 @@ Nenhum modelo real é consultado.
 
 from __future__ import annotations
 
-# O teste é determinístico e não depende do pacote Ollama.
-# O módulo real é substituído por um stub antes dos imports da Nyxal.
 import sys
 import types
 
 
-sys.modules.setdefault(
-    "ollama",
-    types.SimpleNamespace(),
-)
-
-from nixal_agente_qwen import AgenteNixalQwen
-from nixal_composicao_56_3_9 import CompositorNixal
-from nixal_dialogo_qwen import DialogoQwenNixal
-from nixal_gerenciador_sessoes import GerenciadorSessoesNixal
-from nixal_interface import InterfaceConversacionalNixal
-from nixal_integracao_sessao_transporte import (
-    IntegracaoSessaoTransporteNixal,
-)
-from nixal_memoria_conversacional import (
-    MemoriaConversacionalNixal,
-)
-from nixal_nucleo_conversacional import (
-    NucleoConversacionalNixal,
-)
-from nixal_transporte_conversacional import (
-    TransporteConversacionalNixal,
-)
+# A suíte não precisa de Ollama nem das dependências do catálogo de capacidades.
+# Os contratos-base usados pelo núcleo são substituídos por dublês locais.
+agente_modulo = types.ModuleType("nixal_agente_qwen")
+compositor_modulo = types.ModuleType("nixal_composicao_56_3_9")
+dialogo_modulo = types.ModuleType("nixal_dialogo_qwen")
 
 
-class AgenteSemCapacidade(AgenteNixalQwen):
+class AgenteNixalQwenStub:
+    def __init__(self) -> None:
+        self.capacidades = types.SimpleNamespace(
+            listar_capacidades=lambda: []
+        )
+
+
+class CompositorNixalStub:
+    def obter_contexto_dominio(self, _texto: str) -> dict:
+        return {"capacidades_prioritarias": []}
+
+
+class DialogoQwenNixalStub:
+    VERSAO = "56.5.5"
+
+
+agente_modulo.AgenteNixalQwen = AgenteNixalQwenStub
+compositor_modulo.CompositorNixal = CompositorNixalStub
+dialogo_modulo.DialogoQwenNixal = DialogoQwenNixalStub
+
+sys.modules["nixal_agente_qwen"] = agente_modulo
+sys.modules["nixal_composicao_56_3_9"] = compositor_modulo
+sys.modules["nixal_dialogo_qwen"] = dialogo_modulo
+
+
+class AgenteSemCapacidade(AgenteNixalQwenStub):
     def atender(self, necessidade: str) -> dict:
         return {
             "atendida": False,
@@ -67,7 +73,7 @@ class AgenteSemCapacidade(AgenteNixalQwen):
         }
 
 
-class DialogoFake(DialogoQwenNixal):
+class DialogoFake(DialogoQwenNixalStub):
     def __init__(self) -> None:
         self.chamadas = []
 
@@ -197,7 +203,7 @@ def main() -> None:
     nucleo = NucleoConversacionalNixal(
         interface=InterfaceConversacionalNixal(),
         agente=agente,
-        compositor=CompositorNixal(),
+        compositor=CompositorNixalStub(),
         memoria_conversacional=MemoriaConversacionalNixal(
             max_mensagens=8
         ),
