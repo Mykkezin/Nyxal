@@ -14,7 +14,15 @@ import soundfile as sf
 from faster_whisper import WhisperModel
 from kokoro import KPipeline
 
-from nixal_executor_ordens import ExecutorOrdensNixal
+from nixal_nucleo_conversacional import (
+    NucleoConversacionalNixal,
+)
+from nixal_transporte_conversacional import (
+    TransporteConversacionalNixal,
+)
+from nixal_integracao_sessao_transporte import (
+    IntegracaoSessaoTransporteNixal,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -22,7 +30,10 @@ HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
 CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
-EXECUTOR = ExecutorOrdensNixal()
+NUCLEO_CONVERSACIONAL = NucleoConversacionalNixal()
+INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
+    transporte=TransporteConversacionalNixal(),
+)
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 KOKORO_PIPELINE = KPipeline(
@@ -698,6 +709,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         mensagem = payload.get("mensagem")
+        sessao_id = payload.get("sessao")
 
         if not isinstance(mensagem, str) or not mensagem.strip():
             self._send_json(
@@ -709,60 +721,66 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             )
             return
 
+        if sessao_id is not None and (
+            not isinstance(sessao_id, str)
+            or not sessao_id.strip()
+        ):
+            self._send_json(
+                400,
+                {
+                    "estado": "entrada_invalida",
+                    "motivo": "O campo 'sessao' precisa ser uma string não vazia.",
+                },
+            )
+            return
+
         try:
-            resultado = EXECUTOR.atender(mensagem)
+            resultado = (
+                INTEGRACAO_CONVERSACIONAL.processar_mensagem(
+                    texto=mensagem,
+                    nucleo=NUCLEO_CONVERSACIONAL,
+                    sessao_id=sessao_id,
+                )
+            )
         except Exception as erro:
             self._send_json(
                 500,
                 {
-                    "estado": "erro_ao_atender_ordem",
+                    "estado": "erro_ao_processar_conversa",
                     "motivo": str(erro),
                 },
             )
             return
 
-        resposta = dict(resultado)
-        resposta["resposta"] = format_chat_response(resultado)
+        transporte = (
+            resultado.get("valor", {})
+            if isinstance(resultado.get("valor"), dict)
+            else {}
+        ).get("transporte", {})
 
-        if (
-            resultado.get("sucesso")
-            and resultado.get("valor", {}).get("execucao", {}).get("valor", {}).get("capacidade")
-            == "obter_hora"
-        ):
-            hora_valor = (
-                resultado.get("valor", {})
-                .get("execucao", {})
-                .get("valor", {})
-                .get("resultado", {})
-                .get("resultado", {})
+        resposta_estruturada = (
+            transporte.get("resposta")
+            if isinstance(transporte, dict)
+            else None
+        )
+
+        resposta_textual = (
+            resposta_estruturada.get("resposta")
+            if isinstance(resposta_estruturada, dict)
+            else None
+        )
+
+        resposta = dict(resultado)
+        resposta["resposta"] = (
+            resposta_textual
+            if isinstance(resposta_textual, str)
+            else (
+                resultado.get("erro")
+                or "A Nyxal não conseguiu processar a mensagem."
             )
-            hora = hora_valor.get("hora")
-            minuto = hora_valor.get("minuto")
-            if isinstance(hora, int) and isinstance(minuto, int):
-                hora_fala = hora % 12 or 12
-                minuto_fala = (
-                    "zero zero"
-                    if minuto == 0
-                    else (
-                        f"zero {minuto:02d}"
-                        if minuto < 10
-                        else str(minuto)
-                    )
-                )
-                periodo_fala = (
-                    "da madrugada"
-                    if hora < 6
-                    else "da manhã"
-                    if hora < 12
-                    else "da tarde"
-                    if hora < 18
-                    else "da noite"
-                )
-                resposta["fala"] = (
-                    f"Uma e {minuto_fala} {periodo_fala}, senhor Mayque."
-                    if hora_fala == 1
-                    else f"{hora_fala} e {minuto_fala} {periodo_fala}, senhor Mayque."
-                )
+        )
+
+        resposta["sessao"] = resultado.get("sessao")
 
         self._send_json(
             200 if resultado.get("sucesso") else 422,
