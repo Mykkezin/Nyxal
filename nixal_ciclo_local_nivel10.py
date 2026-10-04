@@ -214,10 +214,28 @@ class CicloLocalNivel10Nixal:
             commit_anterior=anterior,
             commit_novo=novo,
         )
-        if ciclo_id != esperado:
-            raise ValueError(
-                "ciclo_id_inconsistente"
-            )
+
+        tentativa_de = registro.get("tentativa_de")
+        tentativa_numero = registro.get("tentativa_numero")
+
+        if tentativa_de is None:
+            if ciclo_id != esperado:
+                raise ValueError(
+                    "ciclo_id_inconsistente"
+                )
+            if tentativa_numero != 1:
+                raise ValueError(
+                    "tentativa_numero_inconsistente"
+                )
+        else:
+            if not isinstance(tentativa_de, str) or not tentativa_de:
+                raise ValueError(
+                    "tentativa_de_invalida"
+                )
+            if not isinstance(tentativa_numero, int) or tentativa_numero < 2:
+                raise ValueError(
+                    "tentativa_numero_inconsistente"
+                )
 
         estado = registro.get("estado")
         if estado not in cls.ESTADOS:
