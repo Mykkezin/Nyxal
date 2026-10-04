@@ -254,6 +254,74 @@ def teste_construcao() -> None:
     )
 
 
+def teste_pergunta_contextual_prioriza_dialogo() -> None:
+
+    ambiente = AmbienteTeste()
+
+    historico = [
+        {
+            "papel": "user",
+            "texto": "Meu nome é Mykke e estou construindo o NyxOS.",
+        },
+        {
+            "papel": "assistant",
+            "texto": "Entendido. Você está construindo o NyxOS.",
+        },
+    ]
+
+    ambiente.nucleo._obter_historico = (
+        lambda _sessao: historico
+    )
+
+    ambiente.nucleo.dialogo.responder = (
+        lambda texto, historico=None: {
+            "sucesso": True,
+            "estado": "resposta_gerada",
+            "origem": "dialogo_qwen_nixal",
+            "resposta": "O sistema operacional que você está construindo é o NyxOS.",
+            "modelo": "fake",
+            "mensagens_consideradas": len(historico or []) + 1,
+            "permanente": False,
+            "versao_dialogo": "56.5.5",
+        }
+    )
+
+    pergunta = (
+        "Qual é o sistema operacional que estou construindo?"
+    )
+
+    verificar(
+        ambiente.nucleo._deve_priorizar_dialogo(
+            pergunta,
+            historico,
+        ),
+        "pergunta contextual deve priorizar o diálogo",
+    )
+
+    resposta = ambiente.nucleo.processar(
+        ambiente.interface.criar_entrada(
+            pergunta,
+            sessao="sessao-contexto",
+        )
+    )
+
+    verificar(
+        resposta["estado"] == "resposta_conversacional",
+        "pergunta contextual não deve executar capacidade",
+    )
+
+    verificar(
+        resposta["resposta"]
+        == "O sistema operacional que você está construindo é o NyxOS.",
+        "pergunta contextual deve ser respondida pelo diálogo",
+    )
+
+    verificar(
+        ambiente.chamadas_agente == [],
+        "pergunta contextual não deve chamar o agente de capacidades",
+    )
+
+
 def teste_entrada_direta() -> None:
 
     ambiente = AmbienteTeste()
