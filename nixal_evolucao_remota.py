@@ -40,6 +40,7 @@ from typing import Any
 from nixal_evolucao_controlada import EvolucaoControladaNixal
 from nixal_laboratorio_remoto import LaboratorioRemotoNixal
 from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
+from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 
 
 class CicloEvolucaoRemotaNixal:
@@ -54,6 +55,7 @@ class CicloEvolucaoRemotaNixal:
         evolucao: EvolucaoControladaNixal | None = None,
         laboratorio: LaboratorioRemotoNixal | None = None,
         memoria_aprendizado: AprendizadoPersistenteNixal | None = None,
+        solicitacao_evolucao: SolicitacaoEvolucaoNixal | None = None,
         repositorio: str | Path | None = None,
     ) -> None:
         raiz = Path(
@@ -72,6 +74,17 @@ class CicloEvolucaoRemotaNixal:
                 raiz.parent / "memoria_aprendizado_evolucao_nixal.json"
             )
         )
+
+        if solicitacao_evolucao is not None and not isinstance(
+            solicitacao_evolucao,
+            SolicitacaoEvolucaoNixal,
+        ):
+            raise TypeError(
+                "solicitacao_evolucao deve ser uma instância de "
+                "SolicitacaoEvolucaoNixal"
+            )
+
+        self.solicitacao_evolucao = solicitacao_evolucao
 
     @staticmethod
     def _numero(valor: Any, nome: str) -> float:
@@ -490,6 +503,215 @@ class CicloEvolucaoRemotaNixal:
             "integracao_executada": False,
             "stable_modificada": False,
             "branch_removida": branch_removida,
+        }
+
+
+    def executar_solicitacao(
+        self,
+        solicitacao: dict[str, Any],
+        *,
+        arquivo_destino: str = "experimento.py",
+        descricao: str = "",
+        timeout_seconds: int = 60,
+        timeout_resultado_segundos: int = 300,
+        intervalo_resultado_segundos: int = 5,
+    ) -> dict[str, Any]:
+        """
+        Executa explicitamente uma solicitação formal já pronta para
+        experimento remoto.
+
+        A solicitação precisa estar em estado pronto para experimento.
+        Este método não concede autorização de integração e não altera
+        stable; ele apenas traduz a solicitação formal para o ciclo
+        experimental remoto já existente.
+        """
+        if not isinstance(solicitacao, dict):
+            return {
+                "sucesso": False,
+                "estado": "solicitacao_invalida",
+                "origem": self.FONTE,
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        solicitacao_id = solicitacao.get("solicitacao_id")
+        if self.solicitacao_evolucao is not None:
+            if not isinstance(solicitacao_id, str) or not solicitacao_id.strip():
+                return {
+                    "sucesso": False,
+                    "estado": "solicitacao_invalida",
+                    "origem": self.FONTE,
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                }
+            try:
+                solicitacao = self.solicitacao_evolucao.consultar(
+                    solicitacao_id
+                )
+            except Exception as erro:
+                return {
+                    "sucesso": False,
+                    "estado": "solicitacao_nao_encontrada",
+                    "origem": self.FONTE,
+                    "solicitacao_id": solicitacao_id,
+                    "motivo": f"{type(erro).__name__}: {erro}",
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                }
+
+        estado = solicitacao.get("estado")
+        if estado != "pronta_para_experimento":
+            return {
+                "sucesso": False,
+                "estado": "solicitacao_nao_pronta",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao.get("solicitacao_id"),
+                "solicitacao_estado": estado,
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        if solicitacao.get("execucao_local") is not False:
+            return {
+                "sucesso": False,
+                "estado": "execucao_local_nao_permitida",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao.get("solicitacao_id"),
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        if solicitacao.get("autorizacao_explicita") is not False:
+            return {
+                "sucesso": False,
+                "estado": "autorizacao_invalida",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao.get("solicitacao_id"),
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        if solicitacao.get("integracao_executada") is not False:
+            return {
+                "sucesso": False,
+                "estado": "integracao_nao_permitida",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao.get("solicitacao_id"),
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        if solicitacao.get("stable_modificada") is not False:
+            return {
+                "sucesso": False,
+                "estado": "stable_nao_pode_estar_modificada",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao.get("solicitacao_id"),
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        hipotese = solicitacao.get("hipotese")
+        if not isinstance(hipotese, dict):
+            return {
+                "sucesso": False,
+                "estado": "hipotese_formal_invalida",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao.get("solicitacao_id"),
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        if (
+            hipotese.get("estado") != "provisoria"
+            or hipotese.get("confirmada") is not False
+            or hipotese.get("testada") is not False
+        ):
+            return {
+                "sucesso": False,
+                "estado": "hipotese_nao_elegivel",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao.get("solicitacao_id"),
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        if self.solicitacao_evolucao is not None:
+            try:
+                solicitacao = self.solicitacao_evolucao.iniciar_experimento(
+                    solicitacao_id
+                )
+                estado = solicitacao.get("estado")
+            except Exception as erro:
+                return {
+                    "sucesso": False,
+                    "estado": "solicitacao_nao_iniciada",
+                    "origem": self.FONTE,
+                    "solicitacao_id": solicitacao_id,
+                    "motivo": f"{type(erro).__name__}: {erro}",
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                }
+
+        artefato = solicitacao.get("artefato_origem")
+        if not isinstance(artefato, str) or not artefato.strip():
+            return {
+                "sucesso": False,
+                "estado": "artefato_ausente",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao.get("solicitacao_id"),
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        resultado = self.executar(
+            limitacao=str(
+                solicitacao.get("necessidade")
+                or "necessidade_evolutiva"
+            ),
+            hipotese=str(hipotese.get("hipotese")),
+            objetivo=str(solicitacao.get("objetivo")),
+            metrica=str(solicitacao.get("metrica")),
+            direcao_melhor=str(solicitacao.get("direcao_melhor")),
+            baseline=solicitacao.get("baseline"),
+            artefato_origem=artefato,
+            arquivo_destino=arquivo_destino,
+            descricao=descricao or str(solicitacao.get("observacao") or ""),
+            timeout_seconds=timeout_seconds,
+            timeout_resultado_segundos=timeout_resultado_segundos,
+            intervalo_resultado_segundos=intervalo_resultado_segundos,
+        )
+
+        return {
+            "sucesso": bool(
+                isinstance(resultado, dict)
+                and resultado.get("sucesso") is True
+            ),
+            "estado": (
+                "solicitacao_executada"
+                if isinstance(resultado, dict)
+                and resultado.get("sucesso") is True
+                else "solicitacao_experimentada"
+            ),
+            "origem": self.FONTE,
+            "solicitacao_id": solicitacao.get("solicitacao_id"),
+            "solicitacao_estado": estado,
+            "valor": copy.deepcopy(resultado),
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
         }
 
 

@@ -82,6 +82,7 @@ from nixal_consolidacao_conhecimento import ConsolidacaoConhecimentoNixal
 from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
 from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
 from nixal_evolucao_remota import CicloEvolucaoRemotaNixal
+from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -134,6 +135,7 @@ class NyxalRuntime:
         arquivo_memoria_aprendizado: Path | None = None,
         memoria_aprendizado: AprendizadoPersistenteNixal | None = None,
         evolucao_remota: CicloEvolucaoRemotaNixal | None = None,
+        solicitacao_evolucao: SolicitacaoEvolucaoNixal | None = None,
     ) -> None:
         if perceber_corpo is None:
             perceber_corpo = corpo_nixal.perceber_corpo
@@ -193,6 +195,15 @@ class NyxalRuntime:
             raise TypeError(
                 "evolucao_remota deve ser uma instância de "
                 "CicloEvolucaoRemotaNixal"
+            )
+
+        if solicitacao_evolucao is not None and not isinstance(
+            solicitacao_evolucao,
+            SolicitacaoEvolucaoNixal,
+        ):
+            raise TypeError(
+                "solicitacao_evolucao deve ser uma instância de "
+                "SolicitacaoEvolucaoNixal"
             )
 
         self.perceber_corpo = perceber_corpo
@@ -259,6 +270,8 @@ class NyxalRuntime:
         # normal do Runtime.
         self.evolucao_remota = evolucao_remota
 
+        self.solicitacao_evolucao = solicitacao_evolucao
+
         self.formulacao_investigacao = (
             FormulacaoInvestigacaoNixal(
                 necessidades=self.necessidades
@@ -309,6 +322,104 @@ class NyxalRuntime:
 
         self._cpu_anterior: Any = None
         self._ultimo_ciclo: dict[str, Any] | None = None
+        self._ultima_hipotese_investigada: dict[str, Any] | None = None
+
+    # ============================================================
+    # SOLICITAÇÃO FORMAL DE EVOLUÇÃO
+    # ============================================================
+
+    def _capturar_hipotese_provisoria(
+        self,
+        ciclo: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Captura a hipótese exatamente no estágio provisório da
+        investigação, antes de teste e avaliação.
+        """
+        if not isinstance(ciclo, dict):
+            raise TypeError("ciclo_hipotese_investigada_invalido")
+
+        if ciclo.get("estado_atual") != "provisoria":
+            raise ValueError("hipotese_investigada_nao_provisoria")
+
+        if ciclo.get("confirmada") is not False:
+            raise ValueError(
+                "hipotese_investigada_nao_pode_estar_confirmada"
+            )
+
+        if ciclo.get("testada") is not False:
+            raise ValueError(
+                "hipotese_investigada_nao_pode_estar_testada"
+            )
+
+        self._ultima_hipotese_investigada = deepcopy(ciclo)
+        return deepcopy(self._ultima_hipotese_investigada)
+
+    def criar_solicitacao_evolucao(
+        self,
+        *,
+        objetivo: str,
+        metrica: str,
+        direcao_melhor: str,
+        baseline: Any,
+        artefato_origem: str | Path | None = None,
+        observacao: str = "",
+    ) -> dict[str, Any]:
+        """
+        Converte a hipótese provisória produzida pela investigação do
+        Runtime em uma solicitação formal de evolução.
+
+        A solicitação não executa o experimento. Ela apenas estrutura
+        a intenção, preserva a hipótese/evidências e registra os gates
+        para uma futura evolução controlada.
+        """
+        if self.solicitacao_evolucao is None:
+            self.solicitacao_evolucao = SolicitacaoEvolucaoNixal(
+                repositorio=BASE_DIR,
+            )
+
+        hipotese = self._ultima_hipotese_investigada
+        if not isinstance(hipotese, dict):
+            return {
+                "sucesso": False,
+                "estado": "solicitacao_indisponivel",
+                "origem": self.FONTE,
+                "motivo": "Ainda não existe hipótese provisória capturada pela investigação.",
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        try:
+            solicitacao = self.solicitacao_evolucao.criar(
+                ciclo_hipotese=deepcopy(hipotese),
+                objetivo=objetivo,
+                metrica=metrica,
+                direcao_melhor=direcao_melhor,
+                baseline=baseline,
+                artefato_origem=artefato_origem,
+                observacao=observacao,
+            )
+        except Exception as erro:
+            return {
+                "sucesso": False,
+                "estado": "solicitacao_evolucao_falhou",
+                "origem": self.FONTE,
+                "motivo": f"{type(erro).__name__}: {erro}",
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        return {
+            "sucesso": True,
+            "estado": "solicitacao_evolucao_criada",
+            "origem": self.FONTE,
+            "valor": deepcopy(solicitacao),
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
+        }
 
     # ============================================================
     # EVOLUÇÃO REMOTA
@@ -366,6 +477,174 @@ class NyxalRuntime:
             "estado": "evolucao_remota_executada",
             "origem": self.FONTE,
             "valor": deepcopy(resultado),
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
+        }
+
+
+    def executar_solicitacao_evolucao_remota(
+        self,
+        solicitacao_id: str,
+        *,
+        arquivo_destino: str = "experimento.py",
+        descricao: str = "",
+        timeout_seconds: int = 60,
+        timeout_resultado_segundos: int = 300,
+        intervalo_resultado_segundos: int = 5,
+    ) -> dict[str, Any]:
+        """
+        Delega explicitamente uma solicitação formal pronta ao ciclo
+        de evolução remota.
+
+        A solicitação precisa existir, estar pronta para experimento e
+        conter um artefato válido. O Runtime não executa localmente,
+        não concede autorização de integração e não modifica stable.
+        """
+        if self.solicitacao_evolucao is None:
+            self.solicitacao_evolucao = SolicitacaoEvolucaoNixal(
+                repositorio=BASE_DIR,
+            )
+
+        if self.evolucao_remota is None:
+            self.evolucao_remota = CicloEvolucaoRemotaNixal(
+                repositorio=BASE_DIR,
+                memoria_aprendizado=self.memoria_aprendizado,
+            )
+
+        try:
+            solicitacao = self.solicitacao_evolucao.consultar(
+                solicitacao_id
+            )
+        except Exception as erro:
+            return {
+                "sucesso": False,
+                "estado": "solicitacao_evolucao_indisponivel",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao_id,
+                "motivo": f"{type(erro).__name__}: {erro}",
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        try:
+            resultado = self.evolucao_remota.executar_solicitacao(
+                solicitacao,
+                arquivo_destino=arquivo_destino,
+                descricao=descricao,
+                timeout_seconds=timeout_seconds,
+                timeout_resultado_segundos=timeout_resultado_segundos,
+                intervalo_resultado_segundos=intervalo_resultado_segundos,
+            )
+        except Exception as erro:
+            falha = {
+                "sucesso": False,
+                "estado": "solicitacao_experimentada",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao_id,
+                "valor": {
+                    "sucesso": False,
+                    "estado": "experimento_falhou",
+                    "motivo": f"{type(erro).__name__}: {erro}",
+                },
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+            try:
+                persistencia_falha = (
+                    self.solicitacao_evolucao.registrar_resultado_experimento(
+                        solicitacao_id,
+                        falha,
+                    )
+                )
+            except Exception as erro_persistencia:
+                return {
+                    "sucesso": False,
+                    "estado": "persistencia_solicitacao_falhou",
+                    "origem": self.FONTE,
+                    "solicitacao_id": solicitacao_id,
+                    "motivo": (
+                        f"{type(erro).__name__}: {erro}; "
+                        f"persistencia: "
+                        f"{type(erro_persistencia).__name__}: "
+                        f"{erro_persistencia}"
+                    ),
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                }
+
+            return {
+                "sucesso": False,
+                "estado": "evolucao_remota_falhou",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao_id,
+                "motivo": f"{type(erro).__name__}: {erro}",
+                "persistencia_solicitacao": deepcopy(
+                    persistencia_falha
+                ),
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        sucesso = bool(
+            isinstance(resultado, dict)
+            and resultado.get("sucesso") is True
+        )
+        estado_runtime = (
+            "solicitacao_evolucao_remota_executada"
+            if sucesso
+            else "solicitacao_evolucao_remota_falhou"
+        )
+
+        registro_resultado = {
+            "sucesso": sucesso,
+            "estado": (
+                "solicitacao_executada"
+                if sucesso
+                else "solicitacao_experimentada"
+            ),
+            "origem": self.FONTE,
+            "solicitacao_id": solicitacao_id,
+            "valor": deepcopy(resultado),
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
+        }
+
+        try:
+            persistencia = (
+                self.solicitacao_evolucao.registrar_resultado_experimento(
+                    solicitacao_id,
+                    registro_resultado,
+                )
+            )
+        except Exception as erro:
+            return {
+                "sucesso": False,
+                "estado": "persistencia_solicitacao_falhou",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao_id,
+                "valor": deepcopy(resultado),
+                "motivo": f"{type(erro).__name__}: {erro}",
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        return {
+            "sucesso": sucesso,
+            "estado": estado_runtime,
+            "origem": self.FONTE,
+            "solicitacao_id": solicitacao_id,
+            "valor": deepcopy(resultado),
+            "persistencia_solicitacao": deepcopy(
+                persistencia
+            ),
             "autorizacao_explicita": False,
             "integracao_executada": False,
             "stable_modificada": False,
@@ -1093,6 +1372,10 @@ class NyxalRuntime:
                     "A integração não retornou um ciclo de hipótese válido."
                 ),
             }
+
+        # Captura a hipótese no ponto exato em que o ciclo formal
+        # a recebe ainda provisória, antes de teste e avaliação.
+        self._capturar_hipotese_provisoria(ciclo)
 
         preparacao_teste = self.preparacao_teste_hipotese.preparar(
             integracao

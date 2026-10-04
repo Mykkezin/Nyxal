@@ -322,10 +322,14 @@ class IntegracaoControladaDesenvolvimentoNixal:
             f"feat: integra candidato {proposta_id}"
         )
 
-        commit_sha = self._git(
+        self._git(
             "commit",
             "-m",
             mensagem,
+        )
+        commit_sha = self._git(
+            "rev-parse",
+            "HEAD",
         )
 
         return {

@@ -1,0 +1,43 @@
+name: Nyxal Nível 9 — validação determinística
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nivel9:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compilar módulos
+        run: |
+          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py
+
+      - name: Suite Nível 9
+        run: python teste_nivel_9_suite_final.py
+
+      - name: Sanidade de regras de segurança
+        run: |
+          python - <<'PY'
+          from nixal_governanca_evolucao import GovernancaEvolucaoNixal
+          from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
+
+          assert GovernancaEvolucaoNixal.VERSAO == "9.5.0"
+          assert SolicitacaoEvolucaoNixal.VERSAO == "9.4.0"
+          assert "integrada" in GovernancaEvolucaoNixal.ESTADOS
+          assert "rollback_registrado" in GovernancaEvolucaoNixal.ESTADOS
+          assert "experimento_falhou" in SolicitacaoEvolucaoNixal.ESTADOS
+          print("REGRAS_NIVEL9_OK")
+          PY
