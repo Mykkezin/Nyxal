@@ -1,4 +1,5 @@
 name: Nyxal Nível 9/10 — validação determinística
+# 56.5.5: replay final do gate conversacional
 
 on:
   pull_request:
