@@ -704,7 +704,19 @@ class EvolucaoControladaNixal:
         )
 
         if estado_atual["estado"] == "rejeitado":
-            return estado_atual
+            return {
+                "sucesso": False,
+                "estado": "rejeitado",
+                "experimento": estado_atual,
+                "comparacao": copy.deepcopy(
+                    estado_atual.get("comparacao")
+                ),
+                "candidato": None,
+                "proposta": None,
+                "execucao_artefato": False,
+                "autorizacao_explicita": False,
+                "stable_modificada": False,
+            }
 
         self.criar_candidato(
             experimento_id,
