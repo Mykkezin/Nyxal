@@ -1,0 +1,325 @@
+name: NYXAL Remote Laboratory
+
+run-name: "Nyxal Lab • ${{ inputs.experiment_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      experiment_ref:
+        description: "Branch/ref contendo o experimento"
+        required: true
+        type: string
+      experiment_id:
+        description: "Identificador determinístico do experimento"
+        required: true
+        type: string
+      expected_sha:
+        description: "SHA esperado do commit experimental"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nyxal-lab-${{ inputs.experiment_id }}
+  cancel-in-progress: true
+
+jobs:
+  execute:
+    name: Execute isolated experiment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout experiment ref
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.experiment_ref }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate ref and commit
+        env:
+          EXPERIMENT_REF: ${{ inputs.experiment_ref }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+
+          case "${EXPERIMENT_REF}" in
+            experimento/*)
+              ;;
+            *)
+              echo "Ref experimental inválida: ${EXPERIMENT_REF}"
+              exit 1
+              ;;
+          esac
+
+          if ! printf '%s' "${EXPECTED_SHA}" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "expected_sha inválido."
+            exit 1
+          fi
+
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+
+          if [ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]; then
+            echo "SHA recebido não corresponde ao commit executado."
+            echo "esperado=${EXPECTED_SHA}"
+            echo "atual=${ACTUAL_SHA}"
+            exit 1
+          fi
+
+      - name: Validate manifest
+        env:
+          EXPERIMENT_ID: ${{ inputs.experiment_id }}
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import sys
+
+          root = pathlib.Path("experimento")
+          manifest_path = root / "manifesto.json"
+
+          if not manifest_path.is_file():
+              raise SystemExit("manifesto.json ausente em experimento/")
+
+          try:
+              data = json.loads(
+                  manifest_path.read_text(encoding="utf-8")
+              )
+          except (OSError, json.JSONDecodeError) as exc:
+              raise SystemExit(f"manifesto inválido: {exc}")
+
+          if not isinstance(data, dict):
+              raise SystemExit("manifesto precisa ser objeto JSON")
+
+          allowed = {
+              "versao",
+              "experimento_id",
+              "entrypoint",
+              "timeout_seconds",
+              "descricao",
+          }
+
+          extras = sorted(set(data) - allowed)
+          if extras:
+              raise SystemExit(
+                  "campos não permitidos no manifesto: " + ", ".join(extras)
+              )
+
+          if data.get("versao") != 1:
+              raise SystemExit("versao do manifesto precisa ser 1")
+
+          expected_id = os.environ["EXPERIMENT_ID"]
+          if data.get("experimento_id") != expected_id:
+              raise SystemExit("experimento_id do manifesto não corresponde ao dispatch")
+
+          entrypoint = data.get("entrypoint")
+          if not isinstance(entrypoint, str) or not entrypoint.strip():
+              raise SystemExit("entrypoint inválido")
+
+          entrypoint_path = pathlib.PurePosixPath(entrypoint)
+
+          if entrypoint_path.is_absolute():
+              raise SystemExit("entrypoint não pode ser absoluto")
+
+          if ".." in entrypoint_path.parts:
+              raise SystemExit("entrypoint não pode subir diretórios")
+
+          if len(entrypoint_path.parts) < 2 or entrypoint_path.parts[0] != "experimento":
+              raise SystemExit("entrypoint precisa estar dentro de experimento/")
+
+          if entrypoint_path.suffix != ".py":
+              raise SystemExit("entrypoint precisa ser .py")
+
+          entrypoint_file = pathlib.Path(*entrypoint_path.parts)
+
+          if not entrypoint_file.is_file():
+              raise SystemExit("entrypoint não encontrado")
+
+          timeout_seconds = data.get("timeout_seconds", 60)
+
+          if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, int):
+              raise SystemExit("timeout_seconds precisa ser inteiro")
+
+          if timeout_seconds < 1 or timeout_seconds > 120:
+              raise SystemExit("timeout_seconds precisa estar entre 1 e 120")
+
+          descricao = data.get("descricao", "")
+
+          if descricao is not None and not isinstance(descricao, str):
+              raise SystemExit("descricao precisa ser string")
+
+          print("MANIFESTO=OK")
+          print(f"ENTRYPOINT={entrypoint}")
+          print(f"TIMEOUT_SECONDS={timeout_seconds}")
+          PY
+
+      - name: Prepare ephemeral laboratory
+        run: |
+          set -euo pipefail
+
+          rm -rf "${RUNNER_TEMP}/nyxal-lab"
+          mkdir -p "${RUNNER_TEMP}/nyxal-lab"
+          cp -a experimento "${RUNNER_TEMP}/nyxal-lab/"
+
+      - name: Execute experiment
+        env:
+          EXPERIMENT_ID: ${{ inputs.experiment_id }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import resource
+          import signal
+          import subprocess
+          import sys
+          import time
+
+          lab_root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "nyxal-lab"
+          manifest = json.loads(
+              (lab_root / "experimento" / "manifesto.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          entrypoint = manifest["entrypoint"]
+          entrypoint_path = lab_root / pathlib.PurePosixPath(entrypoint)
+          timeout_seconds = int(manifest["timeout_seconds"])
+
+          result_dir = lab_root / "resultado"
+          result_dir.mkdir(parents=True, exist_ok=True)
+
+          stdout_path = result_dir / "stdout.log"
+          stderr_path = result_dir / "stderr.log"
+          result_path = result_dir / "result.json"
+
+          safe_env = {
+              "PATH": "/usr/bin:/bin",
+              "HOME": str(lab_root / "home"),
+              "LANG": "C.UTF-8",
+              "LC_ALL": "C.UTF-8",
+              "PYTHONNOUSERSITE": "1",
+              "PYTHONDONTWRITEBYTECODE": "1",
+          }
+
+          (lab_root / "home").mkdir(parents=True, exist_ok=True)
+
+          def limits() -> None:
+              resource.setrlimit(
+                  resource.RLIMIT_CPU,
+                  (timeout_seconds, timeout_seconds),
+              )
+              resource.setrlimit(
+                  resource.RLIMIT_AS,
+                  (1024 * 1024 * 1024, 1024 * 1024 * 1024),
+              )
+              resource.setrlimit(
+                  resource.RLIMIT_FSIZE,
+                  (16 * 1024 * 1024, 16 * 1024 * 1024),
+              )
+
+          started = time.monotonic()
+          return_code = None
+          timed_out = False
+          runner_error = None
+
+          try:
+              with stdout_path.open("w", encoding="utf-8") as stdout, stderr_path.open(
+                  "w", encoding="utf-8"
+              ) as stderr:
+                  process = subprocess.Popen(
+                      [
+                          sys.executable,
+                          "-I",
+                          str(entrypoint_path),
+                      ],
+                      cwd=str(lab_root),
+                      stdin=subprocess.DEVNULL,
+                      stdout=stdout,
+                      stderr=stderr,
+                      env=safe_env,
+                      start_new_session=True,
+                      preexec_fn=limits,
+                  )
+
+                  try:
+                      return_code = process.wait(timeout=timeout_seconds + 5)
+                  except subprocess.TimeoutExpired:
+                      timed_out = True
+                      os.killpg(process.pid, signal.SIGKILL)
+                      return_code = process.wait(timeout=10)
+
+          except Exception as exc:
+              runner_error = f"{type(exc).__name__}: {exc}"
+
+          elapsed_ms = round(
+              (time.monotonic() - started) * 1000,
+              3,
+          )
+
+          usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+
+          if runner_error is not None:
+              status = "runner_error"
+              experiment_success = False
+          elif timed_out:
+              status = "timeout"
+              experiment_success = False
+          elif return_code == 0:
+              status = "sucesso"
+              experiment_success = True
+          else:
+              status = "falha"
+              experiment_success = False
+
+          result = {
+              "versao_resultado": 1,
+              "laboratorio": "nyxal_remote_lab",
+              "experimento_id": os.environ["EXPERIMENT_ID"],
+              "experiment_sha": os.environ["EXPECTED_SHA"],
+              "entrypoint": entrypoint,
+              "status": status,
+              "experimento_sucesso": experiment_success,
+              "exit_code": return_code,
+              "timeout": timed_out,
+              "tempo_execucao_ms": elapsed_ms,
+              "memoria_maxima_kb": int(usage.ru_maxrss),
+              "runner_error": runner_error,
+              "execucao_sem_secrets": True,
+              "stable_modificada": False,
+              "autorizacao_explicita": False,
+          }
+
+          result_path.write_text(
+              json.dumps(
+                  result,
+                  ensure_ascii=False,
+                  indent=2,
+              ),
+              encoding="utf-8",
+          )
+
+          print("NYXAL_RESULT_JSON=" + json.dumps(result, ensure_ascii=False))
+          print(f"NYXAL_RESULT_FILE={result_path}")
+
+          # Falha do experimento é resultado válido do laboratório.
+          # Falha do próprio runner já foi registrada no result.json.
+          PY
+
+      - name: Publish laboratory result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nyxal-lab-${{ inputs.experiment_id }}
+          path: ${{ runner.temp }}/nyxal-lab/resultado/
+          if-no-files-found: error
+          retention-days: 7
