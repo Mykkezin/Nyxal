@@ -1,4 +1,4 @@
-name: Nyxal Nível 9 — validação determinística
+name: Nyxal Nível 9/10 — validação determinística
 
 on:
   pull_request:
@@ -23,10 +23,13 @@ jobs:
 
       - name: Compilar módulos
         run: |
-          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py
+          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py
 
       - name: Suite Nível 9
         run: python teste_nivel_9_suite_final.py
+
+      - name: Suite Nível 10 — observador de desenvolvimento
+        run: python teste_nivel_10_observador_desenvolvimento.py
 
       - name: Sanidade de regras de segurança
         run: |
