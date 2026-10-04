@@ -72,6 +72,9 @@ def main() -> None:
         ("VOICE_VAD_SILENCE_MS", "fim de fala por silêncio"),
         ("VOICE_MAX_THRESHOLD", "limite superior do limiar VAD"),
         ("voiceConversationActive", "estado persistente da conversa por voz"),
+        ("beginVoiceCapture", "captura iniciada antes da decisão do VAD"),
+        ("voiceSpeechDetectedInCurrentRecording", "marca de fala real dentro da gravação"),
+        ("voiceCaptureStartedAt", "controle de duração da captura contínua"),
         ("startContinuousVoice", "inicialização da escuta contínua"),
         ("stopContinuousVoice", "encerramento explícito da escuta contínua"),
         ("resumeContinuousListening", "retorno automático à escuta após resposta"),
@@ -88,6 +91,18 @@ def main() -> None:
             simbolo in interface,
             f"{descricao} está presente",
         )
+
+    verificar(
+        "beginVoiceCapture();" in interface
+        and "currentRecorder.start(100);" in interface,
+        "gravador inicia sem depender da detecção prévia do VAD",
+    )
+
+    verificar(
+        "voiceSpeechDetectedInCurrentRecording" in interface
+        and "!falaDetectada" in interface,
+        "áudio sem fala não é enviado ao STT",
+    )
 
     verificar(
         "VOICE_RECORDING_MS" not in interface,
