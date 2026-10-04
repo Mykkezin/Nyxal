@@ -549,20 +549,60 @@ class NyxalRuntime:
                 "stable_modificada": False,
             }
 
-        return {
-            "sucesso": bool(
-                isinstance(resultado, dict)
-                and resultado.get("sucesso") is True
-            ),
+        sucesso = bool(
+            isinstance(resultado, dict)
+            and resultado.get("sucesso") is True
+        )
+        estado_runtime = (
+            "solicitacao_evolucao_remota_executada"
+            if sucesso
+            else "solicitacao_evolucao_remota_falhou"
+        )
+
+        registro_resultado = {
+            "sucesso": sucesso,
             "estado": (
-                "solicitacao_evolucao_remota_executada"
-                if isinstance(resultado, dict)
-                and resultado.get("sucesso") is True
-                else "solicitacao_evolucao_remota_falhou"
+                "solicitacao_executada"
+                if sucesso
+                else "solicitacao_experimentada"
             ),
             "origem": self.FONTE,
             "solicitacao_id": solicitacao_id,
             "valor": deepcopy(resultado),
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
+        }
+
+        try:
+            persistencia = (
+                self.solicitacao_evolucao.registrar_resultado_experimento(
+                    solicitacao_id,
+                    registro_resultado,
+                )
+            )
+        except Exception as erro:
+            return {
+                "sucesso": False,
+                "estado": "persistencia_solicitacao_falhou",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao_id,
+                "valor": deepcopy(resultado),
+                "motivo": f"{type(erro).__name__}: {erro}",
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        return {
+            "sucesso": sucesso,
+            "estado": estado_runtime,
+            "origem": self.FONTE,
+            "solicitacao_id": solicitacao_id,
+            "valor": deepcopy(resultado),
+            "persistencia_solicitacao": deepcopy(
+                persistencia
+            ),
             "autorizacao_explicita": False,
             "integracao_executada": False,
             "stable_modificada": False,
