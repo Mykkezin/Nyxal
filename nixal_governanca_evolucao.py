@@ -294,6 +294,7 @@ class GovernancaEvolucaoNixal:
             proposta.get("proposta_id"),
             "proposta_id",
         )
+        proposta_sha256 = self._hash_arquivo(proposta_path)
 
         existente = self._caminho(proposta_id)
         if existente.exists():
@@ -330,6 +331,7 @@ class GovernancaEvolucaoNixal:
                 "rollback": None,
                 "integracao_executada": False,
                 "stable_modificada": False,
+                "proposta_sha256": proposta_sha256,
             }
             self._salvar(registro)
 
