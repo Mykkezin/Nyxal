@@ -98,10 +98,13 @@ Uma execução que falhar tecnicamente durante a validação também termina com
 | observado | alteracao_detectada |
 | alteracao_detectada | sincronizacao_preparada |
 | sincronizacao_preparada | validacao_em_execucao |
-| validacao_em_execucao | validacao_concluida, rejeitado |
+| validacao_em_execucao | validacao_concluida |
 | validacao_concluida | aprovado, rejeitado |
 | aprovado | — |
 | rejeitado | — |
+
+Uma falha técnica durante a validação deve ser registrada como resultado de validação
+malsucedido e então classificada como `rejeitado`, preservando o diagnóstico.
 
 Nenhuma transição pode saltar diretamente de `alteracao_detectada` para
 `aprovado`.
@@ -291,11 +294,19 @@ determinísticos demonstrarem:
 - impossibilidade de transformar aprovação em autorização;
 - `main` inalterada pelo ciclo.
 
-## 14. Limite desta etapa
+## 14. Estado de implementação
 
-Este documento define o contrato.
+O contrato já possui uma implementação inicial dos componentes mínimos:
 
-Ele **não** implementa ainda o observador, sincronizador ou executor de validações.
+- observador determinístico de branch/commit;
+- máquina de estados persistente;
+- executor integrado ao coordenador existente;
+- classificação de aprovação/rejeição;
+- nova tentativa explícita para ciclos rejeitados;
+- suíte consolidada de testes.
 
-A próxima etapa é implementar os componentes mínimos de forma incremental e
-submetê-los a uma suíte determinística específica do Nível 10.
+A sincronização do Nível 10 é deliberadamente uma preparação verificável do commit
+observado. O método legado de sincronização remota continua separado e não é
+acionado automaticamente pelo ciclo Nível 10.
+
+A conclusão formal do Nível 10 exige regressão completa e evidência de CI verde.
