@@ -110,6 +110,35 @@ class ExecutorCicloLocalNivel10Nixal:
         }
 
     def executar(self) -> dict[str, Any]:
+        # Pré-condições são verificadas antes da observação para que uma
+        # árvore suja/branch incorreta não consuma o checkpoint observado.
+        estado_git = self.coordenador.estado()
+
+        if (
+            estado_git.get("branch_atual")
+            != self.branch
+        ):
+            return {
+                "versao": self.VERSAO,
+                "fonte": self.FONTE,
+                "estado": "bloqueado",
+                "alteracao_detectada": False,
+                "motivo": "branch_incorreta",
+                "observacao": None,
+                "ciclo": None,
+            }
+
+        if not estado_git.get("arvore_limpa"):
+            return {
+                "versao": self.VERSAO,
+                "fonte": self.FONTE,
+                "estado": "bloqueado",
+                "alteracao_detectada": False,
+                "motivo": "arvore_de_trabalho_suja",
+                "observacao": None,
+                "ciclo": None,
+            }
+
         observacao = self.observador.observar()
 
         if not observacao["alteracao_detectada"]:
@@ -126,23 +155,6 @@ class ExecutorCicloLocalNivel10Nixal:
             observacao
         )
         ciclo_id = registro["ciclo_id"]
-
-        estado_git = self.coordenador.estado()
-
-        if (
-            estado_git.get("branch_atual")
-            != self.branch
-        ):
-            return self._resultado_precondicao(
-                observacao,
-                motivo="branch_incorreta",
-            )
-
-        if not estado_git.get("arvore_limpa"):
-            return self._resultado_precondicao(
-                observacao,
-                motivo="arvore_de_trabalho_suja",
-            )
 
         commit_atual = self.coordenador._git(
             "rev-parse",
