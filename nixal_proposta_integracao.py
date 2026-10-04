@@ -3,28 +3,49 @@
 """
 NYXAL — PROPOSTA DE INTEGRAÇÃO CONTROLADA
 
-Cria uma proposta persistente a partir de um candidato validado.
-A proposta não modifica o repositório e não integra em stable.
+Mantém a proposta separada do candidato e da árvore Git.
 
-Próxima etapa futura:
-    proposta aprovada
-        ↓
-    integração controlada
-        ↓
-    revisão/testes
-        ↓
-    stable
+A proposta nasce aguardando autorização e só pode avançar por uma
+autorização externa e explícita.
+
+Estados:
+    aguardando_autorizacao
+        -> autorizada_para_integracao
+        -> integracao_preparada
+        -> integracao_em_execucao
+        -> integrada | integracao_falhou
 """
 
 from __future__ import annotations
 
+import copy
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 
 class PropostaIntegracaoDesenvolvimentoNixal:
-    VERSAO = 1
+    VERSAO = 2
+
+    ESTADOS = {
+        "aguardando_autorizacao",
+        "autorizada_para_integracao",
+        "integracao_preparada",
+        "integracao_em_execucao",
+        "integrada",
+        "integracao_falhou",
+    }
+
+    TRANSICOES = {
+        "aguardando_autorizacao": {"autorizada_para_integracao"},
+        "autorizada_para_integracao": {"integracao_preparada"},
+        "integracao_preparada": {"integracao_em_execucao"},
+        "integracao_em_execucao": {"integrada", "integracao_falhou"},
+        "integrada": set(),
+        "integracao_falhou": set(),
+    }
 
     def __init__(
         self,
@@ -34,120 +55,58 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         self.repositorio = Path(
             repositorio or Path(__file__).resolve().parent
         )
-
         base_externa = self.repositorio.parent
-
         self.propostas = Path(
             propostas
-            or base_externa
-            / "Nyxal-integration-proposals"
+            or base_externa / "Nyxal-integration-proposals"
         )
-
         self.propostas.mkdir(
             parents=True,
             exist_ok=True,
         )
 
+    @staticmethod
+    def _texto(valor: Any, nome: str) -> str:
+        if not isinstance(valor, str) or not valor.strip():
+            raise ValueError(f"{nome}_invalido")
+        return valor.strip()
+
     def _timestamp(self) -> str:
-        return datetime.now(
-            timezone.utc
-        ).isoformat()
+        return datetime.now(timezone.utc).isoformat()
 
-    def criar(
-        self,
-        *,
-        candidato_dir: str | Path,
-        destino: str = "main",
-    ) -> dict:
-        origem = Path(candidato_dir)
+    def _caminho(self, proposta_id: str) -> Path:
+        return self.propostas / f"{self._texto(proposta_id, 'proposta_id')}.json"
 
-        if not origem.exists():
-            raise FileNotFoundError(
-                "candidato_nao_encontrado"
-            )
-
-        registro_path = (
-            origem / "candidato.json"
-        )
-
-        if not registro_path.exists():
-            raise FileNotFoundError(
-                "registro_do_candidato_nao_encontrado"
-            )
+    def _carregar(self, proposta_id: str) -> dict[str, Any]:
+        caminho = self._caminho(proposta_id)
+        if not caminho.is_file():
+            raise FileNotFoundError("proposta_nao_encontrada")
 
         try:
-            registro = json.loads(
-                registro_path.read_text(
-                    encoding="utf-8"
-                )
+            dados = json.loads(
+                caminho.read_text(encoding="utf-8")
             )
-        except (
-            OSError,
-            json.JSONDecodeError,
-        ) as erro:
-            raise ValueError(
-                "registro_do_candidato_invalido"
-            ) from erro
+        except (OSError, json.JSONDecodeError) as erro:
+            raise ValueError("proposta_invalida") from erro
 
-        if registro.get("estado") != "candidato":
-            raise ValueError(
-                "estado_do_candidato_invalido"
-            )
+        if not isinstance(dados, dict):
+            raise ValueError("proposta_invalida")
 
-        avaliacao = registro.get(
-            "avaliacao",
-            {},
+        if dados.get("estado") not in self.ESTADOS:
+            raise ValueError("estado_da_proposta_invalido")
+
+        return dados
+
+    def _salvar(self, proposta: dict[str, Any]) -> None:
+        proposta_id = self._texto(
+            proposta.get("proposta_id"),
+            "proposta_id",
         )
-
-        if avaliacao.get("aprovado") is not True:
-            raise ValueError(
-                "candidato_sem_avaliacao_aprovada"
-            )
-
-        candidato_id = registro.get(
-            "candidato_id"
+        caminho = self._caminho(proposta_id)
+        temporario = caminho.with_name(
+            caminho.name + ".tmp"
         )
-
-        if not isinstance(
-            candidato_id,
-            str,
-        ) or not candidato_id:
-            raise ValueError(
-                "candidato_id_invalido"
-            )
-
-        proposta_id = (
-            f"integracao-{candidato_id}"
-        )
-
-        caminho = (
-            self.propostas
-            / f"{proposta_id}.json"
-        )
-
-        if caminho.exists():
-            raise FileExistsError(
-                "proposta_ja_existente"
-            )
-
-        proposta = {
-            "versao_proposta": self.VERSAO,
-            "proposta_id": proposta_id,
-            "estado": "aguardando_autorizacao",
-            "criada_em": self._timestamp(),
-            "candidato_id": candidato_id,
-            "candidato_dir": str(origem),
-            "arquivo": registro.get("arquivo"),
-            "manifesto": registro.get("manifesto"),
-            "fingerprint": registro.get("fingerprint"),
-            "avaliacao": avaliacao,
-            "destino_sugerido": destino,
-            "autorizacao_explicita": False,
-            "integracao_executada": False,
-            "stable_modificada": False,
-        }
-
-        caminho.write_text(
+        temporario.write_text(
             json.dumps(
                 proposta,
                 ensure_ascii=False,
@@ -155,15 +114,340 @@ class PropostaIntegracaoDesenvolvimentoNixal:
             ),
             encoding="utf-8",
         )
+        os.replace(temporario, caminho)
 
-        proposta["arquivo_proposta"] = str(
-            caminho
+    def _transicionar(
+        self,
+        proposta: dict[str, Any],
+        novo_estado: str,
+        *,
+        evento: str,
+    ) -> None:
+        estado_atual = proposta.get("estado")
+        if estado_atual not in self.ESTADOS:
+            raise ValueError("estado_da_proposta_invalido")
+
+        if novo_estado not in self.ESTADOS:
+            raise ValueError("novo_estado_invalido")
+
+        if novo_estado not in self.TRANSICOES.get(
+            estado_atual,
+            set(),
+        ):
+            raise ValueError(
+                "transicao_proposta_nao_permitida:"
+                f"{estado_atual}->{novo_estado}"
+            )
+
+        evento = self._texto(evento, "evento")
+        agora = self._timestamp()
+        historico = proposta.setdefault(
+            "historico_estados",
+            [],
         )
 
-        return proposta
+        if not isinstance(historico, list):
+            raise ValueError("historico_estados_invalido")
+
+        historico.append(
+            {
+                "de": estado_atual,
+                "para": novo_estado,
+                "evento": evento,
+                "em": agora,
+            }
+        )
+        proposta["estado_anterior"] = estado_atual
+        proposta["estado"] = novo_estado
+        proposta["estado_atualizado_em"] = agora
+
+    def criar(
+        self,
+        *,
+        candidato_dir: str | Path,
+        destino: str = "main",
+    ) -> dict[str, Any]:
+        origem = Path(candidato_dir)
+        if not origem.exists():
+            raise FileNotFoundError("candidato_nao_encontrado")
+
+        registro_path = origem / "candidato.json"
+        if not registro_path.exists():
+            raise FileNotFoundError(
+                "registro_do_candidato_nao_encontrado"
+            )
+
+        try:
+            registro = json.loads(
+                registro_path.read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError) as erro:
+            raise ValueError(
+                "registro_do_candidato_invalido"
+            ) from erro
+
+        if registro.get("estado") != "candidato":
+            raise ValueError("estado_do_candidato_invalido")
+
+        avaliacao = registro.get("avaliacao", {})
+        if not isinstance(avaliacao, dict):
+            raise ValueError("avaliacao_do_candidato_invalida")
+
+        if avaliacao.get("aprovado") is not True:
+            raise ValueError(
+                "candidato_sem_avaliacao_aprovada"
+            )
+
+        candidato_id = registro.get("candidato_id")
+        if not isinstance(candidato_id, str) or not candidato_id:
+            raise ValueError("candidato_id_invalido")
+
+        destino = self._texto(destino, "destino")
+        proposta_id = f"integracao-{candidato_id}"
+        caminho = self._caminho(proposta_id)
+
+        if caminho.exists():
+            raise FileExistsError("proposta_ja_existente")
+
+        criada_em = self._timestamp()
+
+        proposta = {
+            "versao_proposta": self.VERSAO,
+            "proposta_id": proposta_id,
+            "estado": "aguardando_autorizacao",
+            "estado_anterior": None,
+            "historico_estados": [
+                {
+                    "de": None,
+                    "para": "aguardando_autorizacao",
+                    "evento": "proposta_criada",
+                    "em": criada_em,
+                }
+            ],
+            "criada_em": criada_em,
+            "candidato_id": candidato_id,
+            "candidato_dir": str(origem.resolve()),
+            "arquivo": registro.get("arquivo"),
+            "manifesto": registro.get("manifesto"),
+            "fingerprint": registro.get("fingerprint"),
+            "avaliacao": copy.deepcopy(avaliacao),
+            "destino_sugerido": destino,
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
+        }
+        self._salvar(proposta)
+        proposta["arquivo_proposta"] = str(caminho)
+        return copy.deepcopy(proposta)
+
+    def consultar(
+        self,
+        proposta_id: str,
+    ) -> dict[str, Any]:
+        return copy.deepcopy(self._carregar(proposta_id))
+
+    def registrar_autorizacao(
+        self,
+        proposta_id: str,
+        autorizacao: dict[str, Any],
+    ) -> dict[str, Any]:
+        proposta = self._carregar(proposta_id)
+
+        if proposta.get("estado") != "aguardando_autorizacao":
+            raise ValueError(
+                "proposta_nao_aguardando_autorizacao"
+            )
+
+        if not isinstance(autorizacao, dict):
+            raise ValueError("autorizacao_invalida")
+
+        campos_texto = {
+            "autorizacao_id": "autorizacao_id",
+            "autorizador": "autorizador",
+            "motivo": "motivo_autorizacao",
+            "proposta_id": "proposta_id",
+            "fingerprint": "fingerprint_autorizacao",
+            "destino": "destino_autorizacao",
+            "confirmacao_explicita": "confirmacao_explicita",
+        }
+
+        valores = {
+            nome: self._texto(
+                autorizacao.get(chave),
+                nome,
+            )
+            for chave, nome in campos_texto.items()
+        }
+
+        if valores["proposta_id"] != proposta_id:
+            raise ValueError("proposta_autorizada_inconsistente")
+
+        if valores["fingerprint"] != proposta.get("fingerprint"):
+            raise ValueError("fingerprint_autorizacao_inconsistente")
+
+        if valores["destino"] != proposta.get("destino_sugerido"):
+            raise ValueError("destino_autorizacao_inconsistente")
+
+        if valores["confirmacao_explicita"] != "AUTORIZAR_INTEGRACAO":
+            raise ValueError("confirmacao_explicita_invalida")
+
+        origem = self._texto(
+            autorizacao.get(
+                "origem",
+                "autorizacao_externa",
+            ),
+            "origem_autorizacao",
+        )
+
+        registro_autorizacao = {
+            "autorizacao_id": valores["autorizacao_id"],
+            "proposta_id": proposta_id,
+            "autorizador": valores["autorizador"],
+            "motivo": valores["motivo"],
+            "fingerprint": valores["fingerprint"],
+            "destino": valores["destino"],
+            "confirmacao_explicita": valores[
+                "confirmacao_explicita"
+            ],
+            "origem": origem,
+            "registrada_em": autorizacao.get(
+                "registrada_em",
+                self._timestamp(),
+            ),
+        }
+
+        self._transicionar(
+            proposta,
+            "autorizada_para_integracao",
+            evento="autorizacao_explicita_registrada",
+        )
+        proposta["autorizacao"] = registro_autorizacao
+        proposta["autorizacao_explicita"] = True
+        proposta["integracao_executada"] = False
+        proposta["stable_modificada"] = False
+
+        self._salvar(proposta)
+        return copy.deepcopy(proposta)
+
+    def registrar_preparacao(
+        self,
+        proposta_id: str,
+        *,
+        branch_integracao: str,
+        commit_integracao: str,
+    ) -> dict[str, Any]:
+        proposta = self._carregar(proposta_id)
+
+        if proposta.get("estado") != "autorizada_para_integracao":
+            raise ValueError(
+                "proposta_nao_autorizada_para_preparacao"
+            )
+
+        branch_integracao = self._texto(
+            branch_integracao,
+            "branch_integracao",
+        )
+        commit_integracao = self._texto(
+            commit_integracao,
+            "commit_integracao",
+        )
+
+        self._transicionar(
+            proposta,
+            "integracao_preparada",
+            evento="branch_de_integracao_preparada",
+        )
+        proposta["branch_integracao"] = branch_integracao
+        proposta["commit_integracao"] = commit_integracao
+        proposta["integracao_executada"] = False
+        proposta["stable_modificada"] = False
+
+        self._salvar(proposta)
+        return copy.deepcopy(proposta)
+
+    def iniciar_integracao(
+        self,
+        proposta_id: str,
+    ) -> dict[str, Any]:
+        proposta = self._carregar(proposta_id)
+
+        if proposta.get("estado") != "integracao_preparada":
+            raise ValueError("integracao_nao_preparada")
+
+        if proposta.get("autorizacao_explicita") is not True:
+            raise ValueError("autorizacao_explicita_ausente")
+
+        if not isinstance(
+            proposta.get("autorizacao"),
+            dict,
+        ):
+            raise ValueError("registro_de_autorizacao_ausente")
+
+        self._transicionar(
+            proposta,
+            "integracao_em_execucao",
+            evento="integracao_em_stable_iniciada",
+        )
+        proposta["integracao_executada"] = False
+        proposta["stable_modificada"] = False
+
+        self._salvar(proposta)
+        return copy.deepcopy(proposta)
+
+    def registrar_resultado_integracao(
+        self,
+        proposta_id: str,
+        *,
+        sucesso: bool,
+        commit_sha: str | None = None,
+        stable_modificada: bool = False,
+        erro: str | None = None,
+    ) -> dict[str, Any]:
+        proposta = self._carregar(proposta_id)
+
+        if proposta.get("estado") != "integracao_em_execucao":
+            raise ValueError("proposta_nao_em_integracao")
+
+        if not isinstance(sucesso, bool):
+            raise ValueError("sucesso_invalido")
+
+        if sucesso:
+            commit_sha = self._texto(
+                commit_sha,
+                "commit_sha",
+            )
+            novo_estado = "integrada"
+        else:
+            commit_sha = (
+                self._texto(commit_sha, "commit_sha")
+                if commit_sha is not None
+                else None
+            )
+            novo_estado = "integracao_falhou"
+
+        self._transicionar(
+            proposta,
+            novo_estado,
+            evento=(
+                "integracao_concluida"
+                if sucesso
+                else "integracao_falhou"
+            ),
+        )
+        proposta["integracao_executada"] = sucesso
+        proposta["stable_modificada"] = bool(
+            stable_modificada
+        )
+
+        if commit_sha is not None:
+            proposta["commit_integracao_final"] = commit_sha
+
+        if erro is not None:
+            proposta["erro_integracao"] = str(erro)
+
+        self._salvar(proposta)
+        return copy.deepcopy(proposta)
 
 
 if __name__ == "__main__":
-    print(
-        "PropostaIntegracaoDesenvolvimentoNixal OK"
-    )
+    print("PropostaIntegracaoDesenvolvimentoNixal OK")
