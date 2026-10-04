@@ -117,8 +117,8 @@ def main() -> int:
         assert rejeitado["sucesso"] is not True
         assert rejeitado["estado"] == "rejeitado"
         assert rejeitado["comparacao"]["aprovado"] is False
-        assert "candidato" not in rejeitado
-        assert "proposta" not in rejeitado
+        assert rejeitado["candidato"] is None
+        assert rejeitado["proposta"] is None
 
         print("=" * 60)
         print("TESTE — NÍVEL 9 / EVOLUÇÃO CONTROLADA")
