@@ -421,7 +421,6 @@ class LaboratorioRemotoNixal:
             method=method,
             headers={
                 "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer {token}",
                 "X-GitHub-Api-Version": "2026-03-10",
                 "User-Agent": "Nyxal-Laboratorio-Remoto",
                 **(
@@ -432,6 +431,16 @@ class LaboratorioRemotoNixal:
                     else {}
                 ),
             },
+        )
+
+        # O endpoint de logs do GitHub responde com 302 para uma URL
+        # temporária em outro domínio. O Authorization não pode ser
+        # propagado para esse redirecionamento, pois o destino não é
+        # a API do GitHub. add_unredirected_header mantém o token na
+        # requisição inicial, mas não no request redirecionado.
+        req.add_unredirected_header(
+            "Authorization",
+            f"Bearer {token}",
         )
 
         try:
