@@ -109,8 +109,24 @@ def main() -> int:
         assert resultado["integracao_executada"] is False
         assert resultado["stable_modificada"] is False
 
-        solicitacoes.iniciar_experimento(
+        try:
+            solicitacoes.iniciar_experimento(
+                resultado["valor"]["solicitacao_id"]
+            )
+        except ValueError as excecao:
+            assert str(excecao) == (
+                "artefato_experimental_nao_encontrado"
+            )
+        else:
+            raise AssertionError(
+                "solicitação sem artefato iniciou experimento"
+            )
+
+        estado_sem_artefato = solicitacoes.consultar(
             resultado["valor"]["solicitacao_id"]
+        )
+        assert estado_sem_artefato["estado"] == (
+            "aguardando_artefato"
         )
 
         erro = NyxalRuntime(
