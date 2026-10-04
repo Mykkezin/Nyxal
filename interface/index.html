@@ -576,9 +576,16 @@
     <!-- ================= RIGHT SIDEBAR (HOLOGRAPHIC NYXAL PRESENCE & GOALS) ================= -->
     <section class="lg:col-span-3 flex flex-col gap-4">
 
-      <!-- TOP INSPIRATIONAL QUOTE HEADER -->
+      <!-- DAILY PHILOSOPHICAL REFLECTION -->
       <div class="hud-card p-3 text-center border border-hud-cyan/30">
-        <p class="font-cinzel italic text-slate-200 text-sm tracking-wide">"Disciplina é liberdade."</p>
+        <p class="text-[9px] font-orbitron font-bold text-hud-cyan tracking-[0.22em] mb-1">REFLEXÃO DO DIA</p>
+        <p id="dailyReflectionText" class="font-cinzel italic text-slate-200 text-sm tracking-wide leading-relaxed">
+          “A qualidade da ação começa pela qualidade da atenção.”
+        </p>
+        <div class="mt-2 text-[9px] font-rajdhani tracking-wider uppercase">
+          <span id="dailyReflectionAuthor" class="text-hud-cyan font-bold">NyxOS</span>
+          <span id="dailyReflectionWork" class="text-slate-500">• reflexão original</span>
+        </div>
       </div>
 
       <!-- HOLOGRAPHIC NYXAL PRESENCE CARD -->
@@ -1436,6 +1443,290 @@
         document.getElementById('nyxalModeBadge').innerText = `MODO: LOCAL`;
         document.getElementById('nyxalCycleBadge').innerText = `CICLOS: OFFLINE`;
         setAiStatusText('MODO LOCAL', 'text-amber-400');
+      }
+    }
+
+    // ================= REFLEXÃO FILOSÓFICA DIÁRIA =================
+    // Catálogo local curado: as entradas abaixo são paráfrases fiéis de
+    // ideias presentes em obras filosóficas reais. Não são citações literais.
+    const REFLEXOES_NYXAL = [
+      {
+        id: 'epicteto-controle',
+        texto: 'Concentre sua energia no que está sob seu controle e aceite com clareza o que não está.',
+        autor: 'Epicteto',
+        obra: 'Enchiridion / Manual',
+        escola: 'Estoicismo'
+      },
+      {
+        id: 'marco-aurelio-resposta',
+        texto: 'Você não escolhe tudo o que acontece; pode escolher a qualidade da resposta que dará ao acontecimento.',
+        autor: 'Marco Aurélio',
+        obra: 'Meditações',
+        escola: 'Estoicismo'
+      },
+      {
+        id: 'seneca-tempo',
+        texto: 'A vida parece curta quando deixamos que o tempo seja gasto sem intenção.',
+        autor: 'Sêneca',
+        obra: 'Sobre a brevidade da vida',
+        escola: 'Estoicismo'
+      },
+      {
+        id: 'aristoteles-habito',
+        texto: 'Caráter e excelência são construídos pelo que praticamos repetidamente.',
+        autor: 'Aristóteles',
+        obra: 'Ética a Nicômaco',
+        escola: 'Ética das virtudes'
+      },
+      {
+        id: 'platao-exame',
+        texto: 'Uma vida examinada exige parar, questionar e olhar para as razões que orientam nossas escolhas.',
+        autor: 'Platão',
+        obra: 'Apologia de Sócrates',
+        escola: 'Filosofia socrática'
+      },
+      {
+        id: 'heraclito-mudanca',
+        texto: 'A mudança não é uma exceção da realidade; compreender a mudança é compreender parte essencial dela.',
+        autor: 'Heráclito',
+        obra: 'Fragmentos',
+        escola: 'Filosofia pré-socrática'
+      },
+      {
+        id: 'epicuro-simplicidade',
+        texto: 'Uma vida tranquila pode depender mais de desejos bem escolhidos do que da acumulação de coisas.',
+        autor: 'Epicuro',
+        obra: 'Carta a Meneceu',
+        escola: 'Epicurismo'
+      },
+      {
+        id: 'confucio-pratica',
+        texto: 'Aprender de verdade envolve transformar conhecimento em prática e caráter.',
+        autor: 'Confúcio',
+        obra: 'Analectos',
+        escola: 'Confucionismo'
+      },
+      {
+        id: 'laozi-nao-forcar',
+        texto: 'Nem toda situação melhora pela força; há momentos em que agir sem excesso produz o melhor movimento.',
+        autor: 'Laozi',
+        obra: 'Tao Te Ching',
+        escola: 'Taoismo'
+      },
+      {
+        id: 'nietzsche-superacao',
+        texto: 'Crescer exige transformar a si mesmo, em vez de permanecer preso à pessoa que você era.',
+        autor: 'Friedrich Nietzsche',
+        obra: 'Assim falou Zaratustra',
+        escola: 'Filosofia da afirmação'
+      },
+      {
+        id: 'kierkegaard-escolha',
+        texto: 'A existência ganha forma quando deixamos de observar a vida apenas de fora e assumimos nossas escolhas.',
+        autor: 'Søren Kierkegaard',
+        obra: 'Ou/Ou',
+        escola: 'Existencialismo'
+      },
+      {
+        id: 'montaigne-experiencia',
+        texto: 'Conhecer a si mesmo também é observar honestamente a própria experiência, inclusive suas contradições.',
+        autor: 'Michel de Montaigne',
+        obra: 'Ensaios',
+        escola: 'Humanismo renascentista'
+      },
+      {
+        id: 'spinoza-liberdade',
+        texto: 'Entender as causas que nos movem amplia a possibilidade de agir com mais liberdade e menos impulso.',
+        autor: 'Baruch Spinoza',
+        obra: 'Ética',
+        escola: 'Racionalismo'
+      },
+      {
+        id: 'descartes-duvida',
+        texto: 'Questionar uma certeza pode ser o começo de uma compreensão mais sólida.',
+        autor: 'René Descartes',
+        obra: 'Meditações Metafísicas',
+        escola: 'Racionalismo'
+      },
+      {
+        id: 'hume-habito',
+        texto: 'Muitas expectativas sobre o mundo nascem do hábito; por isso, convém distinguir experiência de certeza.',
+        autor: 'David Hume',
+        obra: 'Investigação sobre o Entendimento Humano',
+        escola: 'Empirismo'
+      },
+      {
+        id: 'kant-autonomia',
+        texto: 'Liberdade não é apenas fazer o que se quer, mas poder orientar a própria ação por princípios que se reconhece como válidos.',
+        autor: 'Immanuel Kant',
+        obra: 'Fundamentação da Metafísica dos Costumes',
+        escola: 'Filosofia moral'
+      },
+      {
+        id: 'camus-absurdo',
+        texto: 'Mesmo quando a realidade não entrega um sentido pronto, ainda podemos escolher como viver diante dela.',
+        autor: 'Albert Camus',
+        obra: 'O Mito de Sísifo',
+        escola: 'Filosofia do absurdo'
+      },
+      {
+        id: 'simone-beauvoir-liberdade',
+        texto: 'A própria liberdade ganha peso quando reconhecemos que nossas escolhas também afetam a liberdade dos outros.',
+        autor: 'Simone de Beauvoir',
+        obra: 'Por uma Moral da Ambiguidade',
+        escola: 'Existencialismo'
+      },
+      {
+        id: 'sartre-responsabilidade',
+        texto: 'Escolher não é apenas decidir um caminho; é também assumir responsabilidade pela direção que a escolha produz.',
+        autor: 'Jean-Paul Sartre',
+        obra: 'O Existencialismo é um Humanismo',
+        escola: 'Existencialismo'
+      },
+      {
+        id: 'nietzsche-tempo',
+        texto: 'Uma boa pergunta para qualquer decisão é imaginar se você aceitaria viver novamente o caminho que está escolhendo.',
+        autor: 'Friedrich Nietzsche',
+        obra: 'A Gaia Ciência',
+        escola: 'Filosofia da afirmação'
+      }
+    ];
+
+    const REFLEXAO_STORAGE_KEY = 'NYXAL_REFLEXAO_DIARIA_V1';
+
+    function chaveDataReflexao(data = new Date()) {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    }
+
+    function carregarEstadoReflexao() {
+      try {
+        const bruto = localStorage.getItem(REFLEXAO_STORAGE_KEY);
+        if (!bruto) {
+          return {
+            ultimoDia: null,
+            reflexaoId: null,
+            usadas: [],
+            ciclo: 1
+          };
+        }
+
+        const estado = JSON.parse(bruto);
+
+        return {
+          ultimoDia: typeof estado.ultimoDia === 'string'
+            ? estado.ultimoDia
+            : null,
+          reflexaoId: typeof estado.reflexaoId === 'string'
+            ? estado.reflexaoId
+            : null,
+          usadas: Array.isArray(estado.usadas)
+            ? [...new Set(estado.usadas.filter(id => typeof id === 'string'))]
+            : [],
+          ciclo: Number.isInteger(estado.ciclo) && estado.ciclo > 0
+            ? estado.ciclo
+            : 1
+        };
+      } catch (erro) {
+        console.warn('Não foi possível ler o histórico de reflexões:', erro);
+        return {
+          ultimoDia: null,
+          reflexaoId: null,
+          usadas: [],
+          ciclo: 1
+        };
+      }
+    }
+
+    function salvarEstadoReflexao(estado) {
+      try {
+        localStorage.setItem(
+          REFLEXAO_STORAGE_KEY,
+          JSON.stringify(estado)
+        );
+      } catch (erro) {
+        console.warn('Não foi possível persistir o histórico de reflexões:', erro);
+      }
+    }
+
+    function selecionarReflexaoDiaria(agora = new Date()) {
+      const hoje = chaveDataReflexao(agora);
+      const estado = carregarEstadoReflexao();
+
+      if (
+        estado.ultimoDia === hoje &&
+        estado.reflexaoId
+      ) {
+        const atual = REFLEXOES_NYXAL.find(
+          reflexao => reflexao.id === estado.reflexaoId
+        );
+
+        if (atual) {
+          return atual;
+        }
+      }
+
+      let usadas = estado.usadas.filter(id =>
+        REFLEXOES_NYXAL.some(
+          reflexao => reflexao.id === id
+        )
+      );
+
+      let candidatos = REFLEXOES_NYXAL.filter(
+        reflexao => !usadas.includes(reflexao.id)
+      );
+
+      let ciclo = estado.ciclo;
+
+      // O catálogo só reinicia quando todas as entradas do ciclo atual
+      // já foram apresentadas.
+      if (!candidatos.length) {
+        usadas = [];
+        candidatos = [...REFLEXOES_NYXAL];
+        ciclo += 1;
+      }
+
+      const indice = Math.floor(
+        Math.random() * candidatos.length
+      );
+
+      const escolhida = candidatos[indice];
+
+      usadas = [...usadas, escolhida.id];
+
+      const novoEstado = {
+        ultimoDia: hoje,
+        reflexaoId: escolhida.id,
+        usadas,
+        ciclo
+      };
+
+      salvarEstadoReflexao(novoEstado);
+
+      return escolhida;
+    }
+
+    function renderReflexaoDiaria(data = new Date()) {
+      const reflexao = selecionarReflexaoDiaria(data);
+      if (!reflexao) return;
+
+      const texto = document.getElementById('dailyReflectionText');
+      const autor = document.getElementById('dailyReflectionAuthor');
+      const obra = document.getElementById('dailyReflectionWork');
+
+      if (texto) {
+        texto.innerText = `“${reflexao.texto}”`;
+      }
+
+      if (autor) {
+        autor.innerText = reflexao.autor;
+      }
+
+      if (obra) {
+        obra.innerText =
+          `• ${reflexao.obra} • ${reflexao.escola}`;
       }
     }
 
@@ -2531,6 +2822,7 @@
       init3DGlobe();
       initGlobeVoiceControl();
       initSysGraph();
+      renderReflexaoDiaria();
 
       setInterval(updateLiveClock, 1000);
       updateLiveClock();
