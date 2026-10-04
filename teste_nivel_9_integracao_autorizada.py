@@ -265,8 +265,10 @@ def main() -> int:
             f"refs/heads/{branch}:alvo.py",
         )
 
-        assert stable_arquivo == "print('STABLE')\n"
-        assert integrado_arquivo == "print('CANDIDATO')\n"
+        # git() usa stdout.strip(); aqui a comparação deve refletir o conteúdo
+        # textual sem o terminador de linha final.
+        assert stable_arquivo == "print('STABLE')"
+        assert integrado_arquivo == "print('CANDIDATO')"
 
         parentes = git(
             repo,
