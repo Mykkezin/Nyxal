@@ -142,6 +142,16 @@ class AmbienteTeste:
             )
         )
 
+        self.nucleo.dialogo.responder = (
+            lambda _texto, historico=None: {
+                "sucesso": False,
+                "estado": "qwen_nao_respondeu",
+                "origem": "dialogo_qwen_nixal",
+                "resposta": None,
+                "erro": "teste determinístico",
+            }
+        )
+
         self.chamadas_agente = []
 
         self.agente.atender = (
@@ -256,8 +266,8 @@ def teste_entrada_direta() -> None:
 
     verificar(
         resposta["estado"]
-        == "resposta_pronta",
-        "estado da resposta deve ser resposta_pronta",
+        == "resposta_capacidade",
+        "capacidade direta deve produzir resposta_capacidade",
     )
 
     verificar(
@@ -295,6 +305,11 @@ def teste_fallback_dominio() -> None:
         "dominio_origem": (
             "sistema_computacional"
         ),
+        "origem": {
+            "melhor_score": 2,
+            "dominios": ["sistema_computacional"],
+            "evidencias": ["sistema", "maquina"],
+        },
         "capacidades_prioritarias": [
             "obter_hora"
         ],
@@ -370,7 +385,7 @@ def teste_fallback_dominio_fraco_nao_forca_capacidade() -> None:
 
     verificar(
         resposta["estado"]
-        == "resposta_pronta",
+        == "dialogo_indisponivel",
         "evidência de domínio fraca não deve forçar uma capacidade",
     )
 
@@ -417,10 +432,10 @@ def teste_ambiguidade() -> None:
     verificar(
         resposta["resposta"]
         == (
-            "Não consegui atender essa solicitação "
-            "com as capacidades atuais."
+            "Não consegui responder agora. "
+            "O módulo conversacional não está disponível."
         ),
-        "caso ambíguo não deve escolher capacidade automaticamente",
+        "caso ambíguo deve cair no diálogo quando nenhuma capacidade é escolhida",
     )
 
     verificar(
@@ -461,10 +476,10 @@ def teste_externo() -> None:
     verificar(
         resposta["resposta"]
         == (
-            "Não consegui atender essa solicitação "
-            "com as capacidades atuais."
+            "Não consegui responder agora. "
+            "O módulo conversacional não está disponível."
         ),
-        "caso externo não deve inventar capacidade",
+        "caso externo deve cair no diálogo sem capacidade",
     )
 
     verificar(
@@ -648,10 +663,10 @@ def teste_capacidade_inexistente() -> None:
     verificar(
         resposta["resposta"]
         == (
-            "Não consegui atender essa solicitação "
-            "com as capacidades atuais."
+            "Não consegui responder agora. "
+            "O módulo conversacional não está disponível."
         ),
-        "capacidade inexistente não deve ser executada",
+        "capacidade inexistente deve cair no diálogo",
     )
 
     verificar(
