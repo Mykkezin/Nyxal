@@ -109,12 +109,6 @@ def executar() -> None:
             repetido["historico_estados"]
         ) == len(esperado)
 
-        # Reexecução explícita de ciclo rejeitado.
-        rejeicao_primeira = ciclo.criar_nova_tentativa(
-            ciclo_id_rejeicao if "ciclo_id_rejeicao" in locals() else ciclo_id,
-            motivo="corrigir_falha",
-        ) if False else None
-
         # Commit diferente não pode ser apresentado como o mesmo ciclo.
         try:
             ciclo.registrar_sincronizacao_preparada(
