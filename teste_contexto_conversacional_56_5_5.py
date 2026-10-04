@@ -53,6 +53,21 @@ sys.modules["nixal_composicao_56_3_9"] = compositor_modulo
 sys.modules["nixal_dialogo_qwen"] = dialogo_modulo
 
 
+from nixal_gerenciador_sessoes import GerenciadorSessoesNixal
+from nixal_interface import InterfaceConversacionalNixal
+from nixal_integracao_sessao_transporte import (
+    IntegracaoSessaoTransporteNixal,
+)
+from nixal_memoria_conversacional import (
+    MemoriaConversacionalNixal,
+)
+from nixal_nucleo_conversacional import (
+    NucleoConversacionalNixal,
+)
+from nixal_transporte_conversacional import (
+    TransporteConversacionalNixal,
+)
+
 class AgenteSemCapacidade(AgenteNixalQwenStub):
     def atender(self, necessidade: str) -> dict:
         return {
