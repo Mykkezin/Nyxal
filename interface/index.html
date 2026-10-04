@@ -1886,7 +1886,7 @@
           rms * VOICE_NOISE_ALPHA;
       }
 
-      const vozAtiva = !calibrando && rms >= voiceActivityThreshold();
+      const vozAtiva = rms >= voiceActivityThreshold();
       voiceVozDetectada = vozAtiva;
       updateVoiceDiagnostics();
 
