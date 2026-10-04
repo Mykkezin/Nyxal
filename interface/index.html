@@ -407,7 +407,7 @@
         <!-- System Stream Graph -->
         <div class="w-full bg-slate-950/80 rounded-lg p-2 border border-slate-800">
           <div class="flex justify-between items-center text-[10px] font-rajdhani text-slate-400 mb-1">
-            <span>FLUXO DE PROCESSAMENTO DELTA</span>
+            <span id="systemGraphLabel">CARGA COMPUTACIONAL DO HOST</span>
             <span class="text-hud-cyan font-mono">60.0 FPS</span>
           </div>
           <canvas id="sysGraphCanvas" class="w-full h-12 block"></canvas>
@@ -1408,6 +1408,75 @@
     restoreStoredHologram();
 
     // ================= BACKEND STATUS POLLING =================
+    function atualizarGaugeSistema(circleId, textId, valor) {
+      const circle = document.getElementById(circleId);
+      const text = document.getElementById(textId);
+
+      if (!circle || !text) return;
+
+      const numero = Number(valor);
+
+      if (!Number.isFinite(numero)) {
+        text.innerText = '--%';
+        circle.style.strokeDashoffset = '163';
+        return;
+      }
+
+      const limitado = Math.max(0, Math.min(100, numero));
+      text.innerText = `${limitado.toFixed(1)}%`;
+      circle.style.strokeDashoffset =
+        String(163 - (163 * limitado / 100));
+    }
+
+    function atualizarGraficoSistema(valor) {
+      const numero = Number(valor);
+      if (!Number.isFinite(numero)) return;
+
+      graphData.shift();
+      graphData.push(
+        Math.max(0, Math.min(100, numero))
+      );
+
+      desenharGraficoSistema();
+    }
+
+    function desenharGraficoSistema() {
+      const canvas = document.getElementById('sysGraphCanvas');
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      ctx.strokeStyle = '#00f2fe';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+
+      const step =
+        canvas.width / (graphData.length - 1);
+
+      graphData.forEach((valor, indice) => {
+        const x = indice * step;
+        const y =
+          canvas.height -
+          (valor / 100) * canvas.height;
+
+        if (indice === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
+      ctx.stroke();
+    }
+
     async function fetchNyxalStatus() {
       try {
         const response = await fetch(`${window.NYXAL_API_BASE}/api/public/status`, { method: 'GET' });
@@ -1423,6 +1492,41 @@
 
           document.getElementById('nyxalModeBadge').innerText = `MODO: ${(data.estado?.modo || 'PRESENÇA').toUpperCase()}`;
           document.getElementById('nyxalCycleBadge').innerText = `CICLOS: ${data.presenca?.ciclos || 0}`;
+
+          const recursos = data.habitat?.recursos || {};
+          const cpu = recursos.cpu || {};
+          const memoria = recursos.memoria || {};
+          const armazenamento = recursos.armazenamento || {};
+
+          atualizarGaugeSistema(
+            'cpuCircle',
+            'cpuText',
+            cpu.uso_percentual
+          );
+
+          atualizarGaugeSistema(
+            'ramCircle',
+            'ramText',
+            memoria.uso_percentual
+          );
+
+          atualizarGaugeSistema(
+            'diskCircle',
+            'diskText',
+            armazenamento.uso_percentual
+          );
+
+          atualizarGraficoSistema(
+            cpu.uso_percentual
+          );
+
+          if (data.habitat?.host?.sistema) {
+            const label = document.getElementById('systemGraphLabel');
+            if (label) {
+              label.innerText =
+                `CARGA COMPUTACIONAL • ${data.habitat.host.sistema.toUpperCase()}`;
+            }
+          }
 
           if (data.presenca?.ultimo_ciclo) {
             const date = new Date(data.presenca.ultimo_ciclo);
@@ -2721,34 +2825,17 @@
       drawBg();
     }
 
-    // System Graph Animation
-    let graphData = Array(30).fill(10);
+    // System Graph — telemetria real do habitat
+    let graphData = Array(30).fill(0);
+
     function initSysGraph() {
       const canvas = document.getElementById('sysGraphCanvas');
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
+
       canvas.width = canvas.clientWidth;
       canvas.height = canvas.clientHeight;
 
-      setInterval(() => {
-        const val = Math.floor(15 + Math.random() * 30);
-        graphData.shift();
-        graphData.push(val);
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#00f2fe';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-
-        const step = canvas.width / (graphData.length - 1);
-        graphData.forEach((v, i) => {
-          const x = i * step;
-          const y = canvas.height - (v / 100) * canvas.height;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-      }, 1500);
+      desenharGraficoSistema();
     }
 
     // Orbital Node Modal Trigger
