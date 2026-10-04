@@ -654,23 +654,6 @@ class NyxalRuntime:
                 }
             )
 
-            valor_investigacao = investigacao_resultado.get("valor")
-            hipotese_investigada = (
-                valor_investigacao.get("hipotese")
-                if isinstance(valor_investigacao, dict)
-                else None
-            )
-
-            if (
-                investigacao_resultado.get("sucesso") is True
-                and isinstance(hipotese_investigada, dict)
-                and hipotese_investigada.get("estado_atual")
-                == "provisoria"
-            ):
-                self._ultima_hipotese_investigada = deepcopy(
-                    hipotese_investigada
-                )
-
             if not investigacao_resultado.get("sucesso"):
                 return self._encerrar_com_erro(
                     ciclo_id,
@@ -1280,6 +1263,10 @@ class NyxalRuntime:
                     "A integração não retornou um ciclo de hipótese válido."
                 ),
             }
+
+        # Captura a hipótese no ponto exato em que o ciclo formal
+        # a recebe ainda provisória, antes de teste e avaliação.
+        self._ultima_hipotese_investigada = deepcopy(ciclo)
 
         preparacao_teste = self.preparacao_teste_hipotese.preparar(
             integracao
