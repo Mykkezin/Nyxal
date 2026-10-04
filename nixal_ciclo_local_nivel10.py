@@ -470,9 +470,6 @@ class CicloLocalNivel10Nixal:
     ) -> dict[str, Any]:
         registro = self._carregar(ciclo_id)
 
-        if registro["state"] if False else False:
-            raise RuntimeError("invalido")
-
         self._transicionar(
             registro,
             "validacao_em_execucao",
