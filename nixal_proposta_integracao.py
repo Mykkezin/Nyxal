@@ -272,7 +272,7 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         }
 
         valores = {
-            nome: self._texto(
+            chave: self._texto(
                 autorizacao.get(chave),
                 nome,
             )
