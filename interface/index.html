@@ -478,8 +478,8 @@
           <button
             id="globeVoiceButton"
             type="button"
-            aria-label="Falar com Nyxal"
-            title="Clique para falar com Nyxal"
+            aria-label="Iniciar conversa por voz com Nyxal"
+            title="Clique uma vez para iniciar a conversa por voz"
             class="absolute inset-0 z-10 appearance-none border-0 bg-transparent cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-hud-cyan/40"
           ></button>
 
@@ -980,33 +980,37 @@
     // ================= GODDESS NYX SYNTHESIZED VOICE ENGINE =================
     let currentNyxalAudio = null;
 
-    async function speakBrowserFallback(text) {
-      if (!('speechSynthesis' in window)) return;
+    function speakBrowserFallback(text) {
+      return new Promise((resolve) => {
+        if (!('speechSynthesis' in window)) {
+          resolve(false);
+          return;
+        }
 
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
 
-      const voices = window.speechSynthesis.getVoices();
-      const goddessVoice = voices.find(v =>
-        (v.lang.includes('pt') || v.lang.includes('PT')) &&
-        (v.name.includes('Francisca') || v.name.includes('Luciana') || v.name.includes('Helena') || v.name.includes('Maria') || v.name.includes('Google') || v.name.includes('Female'))
-      ) || voices.find(v => v.lang.includes('pt'));
+        const voices = window.speechSynthesis.getVoices();
+        const goddessVoice = voices.find(v =>
+          (v.lang.includes('pt') || v.lang.includes('PT')) &&
+          (v.name.includes('Francisca') || v.name.includes('Luciana') || v.name.includes('Helena') || v.name.includes('Maria') || v.name.includes('Google') || v.name.includes('Female'))
+        ) || voices.find(v => v.lang.includes('pt'));
 
-      if (goddessVoice) utterance.voice = goddessVoice;
+        if (goddessVoice) utterance.voice = goddessVoice;
 
-      utterance.pitch = 0.92;
-      utterance.rate = 0.95;
-      utterance.volume = 1.0;
+        utterance.pitch = 0.94;
+        utterance.rate = 0.98;
+        utterance.volume = 1.0;
 
-      utterance.onend = () => {
-        setGlobeVoiceState('idle');
-        setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
-        setTimeout(() => {
-          document.getElementById('aiSubtitlesBox').classList.add('hidden');
-        }, 4000);
-      };
+        const finalizar = () => {
+          resolve(true);
+        };
 
-      window.speechSynthesis.speak(utterance);
+        utterance.onend = finalizar;
+        utterance.onerror = finalizar;
+
+        window.speechSynthesis.speak(utterance);
+      });
     }
 
     async function speakGoddessNyxVoice(text, updateSubtitle = true) {
@@ -1015,6 +1019,7 @@
       if (updateSubtitle) {
         showSubtitles(text);
       }
+
       setGlobeVoiceState('speaking');
       setAiStatusText('FALANDO...', 'text-hud-cyan');
 
@@ -1037,21 +1042,61 @@
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
+        audio.preload = 'auto';
+        audio.playbackRate = 1.0;
         currentNyxalAudio = audio;
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          currentNyxalAudio = null;
-          setGlobeVoiceState('idle');
-          setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
-          setTimeout(() => {
-            document.getElementById('aiSubtitlesBox').classList.add('hidden');
-          }, 4000);
-        };
 
-        await audio.play();
+        await new Promise(async (resolve, reject) => {
+          let concluido = false;
+
+          const finalizar = () => {
+            if (concluido) return;
+            concluido = true;
+            URL.revokeObjectURL(url);
+            if (currentNyxalAudio === audio) {
+              currentNyxalAudio = null;
+            }
+            resolve();
+          };
+
+          audio.onended = finalizar;
+          audio.onerror = () => {
+            if (concluido) return;
+            concluido = true;
+            URL.revokeObjectURL(url);
+            if (currentNyxalAudio === audio) {
+              currentNyxalAudio = null;
+            }
+            reject(new Error('Falha na reprodução do áudio TTS.'));
+          };
+
+          try {
+            await audio.play();
+          } catch (erro) {
+            if (!concluido) {
+              concluido = true;
+              URL.revokeObjectURL(url);
+              if (currentNyxalAudio === audio) {
+                currentNyxalAudio = null;
+              }
+            }
+            reject(erro);
+          }
+        });
       } catch (err) {
         console.warn('TTS local indisponível; usando voz do navegador:', err);
         await speakBrowserFallback(text);
+      } finally {
+        if (currentNyxalAudio === null) {
+          setGlobeVoiceState('idle');
+        }
+        setAiStatusText(
+          isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+          'text-hud-cyan'
+        );
+        setTimeout(() => {
+          document.getElementById('aiSubtitlesBox')?.classList.add('hidden');
+        }, 4000);
       }
     }
 
@@ -1150,15 +1195,28 @@
       const msg = input.value.trim();
       if (!msg) return;
 
-      playHudSound('send');
       input.value = '';
+      await sendNyxalMessage(msg);
+    }
+
+    async function sendNyxalMessage(msg) {
+      if (!msg) return;
+
+      playHudSound('send');
+
+      const conversaContinua =
+        voiceConversationActive === true;
+
+      if (conversaContinua) {
+        voiceConversationBusy = true;
+        setVoiceMicrophoneEnabled(false);
+      }
 
       setHologramProcessing(true);
       setAiStatusText('PROCESSANDO...', 'text-amber-400');
       showSubtitles(`Entendendo: "${msg}"...`);
 
       try {
-        // Attempt POST to /api/chat
         const res = await fetch(`${window.NYXAL_API_BASE}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1179,12 +1237,15 @@
             sessionStorage.setItem("NYXAL_SESSION_ID", nyxalSessionId);
           }
 
-          const reply = data.resposta || "A Nyxal não retornou uma resposta textual.";
+          const reply = data.resposta ||
+            "A Nyxal não retornou uma resposta textual.";
           const speechText = data.fala || reply;
+
           showSubtitles(reply);
-          speakGoddessNyxVoice(speechText, false);
+          await speakGoddessNyxVoice(speechText, false);
         } else {
-          let errorMessage = `A Nyxal não conseguiu concluir a ordem (HTTP ${res.status}).`;
+          let errorMessage =
+            `A Nyxal não conseguiu concluir a ordem (HTTP ${res.status}).`;
 
           try {
             const errorData = await res.json();
@@ -1196,12 +1257,19 @@
           }
 
           showSubtitles(errorMessage);
-          speakGoddessNyxVoice(errorMessage);
+          await speakGoddessNyxVoice(errorMessage);
         }
       } catch (err) {
         setHologramProcessing(false);
         console.warn('Chat API fetch error:', err);
-        speakGoddessNyxVoice("Não consegui conectar à Nyxal. Verifique se a API local está em execução.");
+        await speakGoddessNyxVoice(
+          "Não consegui conectar à Nyxal. Verifique se a API local está em execução."
+        );
+      } finally {
+        if (conversaContinua && voiceConversationActive) {
+          voiceConversationBusy = false;
+          resumeContinuousListening();
+        }
       }
     }
 
@@ -1256,24 +1324,440 @@
 
     let voiceRecorder = null;
     let voiceChunks = [];
-    let voiceStopTimer = null;
-    const VOICE_RECORDING_MS = 7000;
+    let voiceStream = null;
+    let voiceAudioContext = null;
+    let voiceAnalyser = null;
+    let voiceAnalyserSource = null;
+    let voiceVadFrame = null;
+    let voiceMimeType = '';
+    let voiceConversationActive = false;
+    let voiceConversationBusy = false;
+    let voiceDiscardCurrentRecording = false;
+    let voiceSpeechStartedAt = 0;
+    let voiceLastSpeechAt = 0;
+    let voiceSilenceStartedAt = 0;
+    let voiceNoiseFloor = 0.008;
 
-    async function toggleVoiceInput() {
-      playHudSound('click');
+    const VOICE_VAD_START_MS = 160;
+    const VOICE_VAD_SILENCE_MS = 850;
+    const VOICE_VAD_MIN_UTTERANCE_MS = 420;
+    const VOICE_UTTERANCE_MAX_MS = 12000;
+    const VOICE_NOISE_ALPHA = 0.035;
+    const VOICE_THRESHOLD_MULTIPLIER = 2.8;
+    const VOICE_MIN_THRESHOLD = 0.012;
+    const VOICE_MAX_THRESHOLD = 0.16;
+    const VOICE_RESUME_GUARD_MS = 280;
 
-      if (voiceRecorder && voiceRecorder.state === 'recording') {
-        voiceRecorder.stop();
+    function setVoiceMicrophoneEnabled(enabled) {
+      if (!voiceStream) return;
+      voiceStream.getAudioTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
+
+    function updateVoiceConversationButton() {
+      const button = document.getElementById('globeVoiceButton');
+      if (!button) return;
+
+      if (voiceConversationActive) {
+        button.setAttribute(
+          'aria-label',
+          'Encerrar conversa por voz com Nyxal'
+        );
+        button.title = 'Clique para encerrar a conversa por voz';
+      } else {
+        button.setAttribute(
+          'aria-label',
+          'Iniciar conversa por voz com Nyxal'
+        );
+        button.title = 'Clique uma vez para iniciar a conversa por voz';
+      }
+    }
+
+    function stopVoiceVadLoop() {
+      if (voiceVadFrame !== null) {
+        cancelAnimationFrame(voiceVadFrame);
+        voiceVadFrame = null;
+      }
+    }
+
+    function resetVoiceVadState() {
+      voiceSpeechStartedAt = 0;
+      voiceLastSpeechAt = 0;
+      voiceSilenceStartedAt = 0;
+      voiceNoiseFloor = Math.max(
+        voiceNoiseFloor,
+        VOICE_MIN_THRESHOLD / VOICE_THRESHOLD_MULTIPLIER
+      );
+    }
+
+    function voiceRms(data) {
+      let soma = 0;
+
+      for (let indice = 0; indice < data.length; indice += 1) {
+        const amplitude = (data[indice] - 128) / 128;
+        soma += amplitude * amplitude;
+      }
+
+      return Math.sqrt(soma / data.length);
+    }
+
+    function voiceActivityThreshold() {
+      return Math.min(
+        VOICE_MAX_THRESHOLD,
+        Math.max(
+          VOICE_MIN_THRESHOLD,
+          voiceNoiseFloor * VOICE_THRESHOLD_MULTIPLIER
+        )
+      );
+    }
+
+    function beginVoiceUtterance() {
+      if (
+        !voiceConversationActive ||
+        voiceConversationBusy ||
+        !voiceStream ||
+        voiceRecorder
+      ) {
         return;
       }
 
-      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-        alert('Este navegador não disponibiliza gravação de áudio para a Nyxal.');
+      const Recorder = window.MediaRecorder;
+      voiceChunks = [];
+
+      voiceRecorder = voiceMimeType
+        ? new Recorder(voiceStream, { mimeType: voiceMimeType })
+        : new Recorder(voiceStream);
+
+      const currentRecorder = voiceRecorder;
+      const startedAt = performance.now();
+
+      currentRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          voiceChunks.push(event.data);
+        }
+      };
+
+      currentRecorder.onerror = (event) => {
+        console.warn('Microfone:', event.error || event);
+        voiceChunks = [];
+        voiceRecorder = null;
+        voiceConversationBusy = false;
+        resetVoiceVadState();
+        setVoiceMicrophoneEnabled(true);
+
+        if (voiceConversationActive) {
+          setGlobeVoiceState('listening');
+          setAiStatusText('OUVINDO...', 'text-emerald-400');
+          showSubtitles('O microfone encontrou um erro. Continuando a escuta...');
+          scheduleContinuousVoiceLoop();
+        } else {
+          setGlobeVoiceState('idle');
+        }
+      };
+
+      currentRecorder.onstop = async () => {
+        const actualType =
+          currentRecorder.mimeType ||
+          voiceMimeType ||
+          'audio/webm';
+
+        const blob = new Blob(
+          voiceChunks,
+          { type: actualType }
+        );
+
+        voiceChunks = [];
+        voiceRecorder = null;
+
+        if (
+          voiceDiscardCurrentRecording ||
+          !voiceConversationActive ||
+          !blob.size
+        ) {
+          voiceDiscardCurrentRecording = false;
+          if (voiceConversationActive) {
+            voiceConversationBusy = false;
+            resumeContinuousListening();
+          } else {
+            cleanupContinuousVoice();
+          }
+          return;
+        }
+
+        voiceConversationBusy = true;
+        setVoiceMicrophoneEnabled(false);
+        setGlobeVoiceState('processing');
+        setAiStatusText('TRANSCRIÇÃO...', 'text-emerald-400');
+        setHologramProcessing(true);
+        showSubtitles('Transcrevendo...');
+
+        try {
+          const response = await fetch(
+            `${window.NYXAL_API_BASE}/api/stt`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': actualType.split(';')[0]
+              },
+              body: blob
+            }
+          );
+
+          const data = await response.json();
+
+          if (!response.ok || !data.sucesso) {
+            throw new Error(
+              data.motivo ||
+              `Falha na transcrição (HTTP ${response.status}).`
+            );
+          }
+
+          const transcript = (data.texto || '').trim();
+
+          if (!transcript) {
+            setHologramProcessing(false);
+            showSubtitles('Não identifiquei uma fala no áudio.');
+            return;
+          }
+
+          showSubtitles(`Você disse: "${transcript}"`);
+          await sendNyxalMessage(transcript);
+        } catch (err) {
+          setHologramProcessing(false);
+          console.warn('STT API error:', err);
+          setAiStatusText(
+            isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+            'text-hud-cyan'
+          );
+          showSubtitles(`Erro de reconhecimento: ${err.message}`);
+        } finally {
+          if (voiceConversationActive) {
+            voiceConversationBusy = false;
+            resumeContinuousListening();
+          } else {
+            cleanupContinuousVoice();
+          }
+        }
+      };
+
+      voiceRecorder.start(100);
+      voiceSpeechStartedAt = startedAt;
+      voiceLastSpeechAt = startedAt;
+      voiceSilenceStartedAt = 0;
+
+      setGlobeVoiceState('listening');
+      setAiStatusText('OUVINDO...', 'text-emerald-400');
+      setHologramProcessing(false);
+      showSubtitles('Estou ouvindo...');
+
+      scheduleContinuousVoiceLoop();
+    }
+
+    function finishVoiceUtterance() {
+      if (
+        !voiceRecorder ||
+        voiceRecorder.state !== 'recording'
+      ) {
+        return;
+      }
+
+      voiceRecorder.stop();
+    }
+
+    function runContinuousVoiceVad() {
+      if (
+        !voiceConversationActive ||
+        voiceConversationBusy ||
+        !voiceAnalyser
+      ) {
+        voiceVadFrame = null;
+        return;
+      }
+
+      const data = new Uint8Array(
+        voiceAnalyser.fftSize
+      );
+      voiceAnalyser.getByteTimeDomainData(data);
+
+      const rms = voiceRms(data);
+      const now = performance.now();
+      const threshold = voiceActivityThreshold();
+
+      if (!voiceRecorder) {
+        // Learn the local noise floor only while we're not recording.
+        if (rms < threshold) {
+          voiceNoiseFloor =
+            voiceNoiseFloor * (1 - VOICE_NOISE_ALPHA) +
+            rms * VOICE_NOISE_ALPHA;
+        }
+
+        if (rms >= threshold) {
+          if (!voiceSpeechStartedAt) {
+            voiceSpeechStartedAt = now;
+          }
+
+          if (
+            now - voiceSpeechStartedAt >=
+            VOICE_VAD_START_MS
+          ) {
+            beginVoiceUtterance();
+          }
+        } else {
+          voiceSpeechStartedAt = 0;
+        }
+      } else {
+        const utteranceAge =
+          now - voiceSpeechStartedAt;
+
+        if (rms >= threshold) {
+          voiceLastSpeechAt = now;
+          voiceSilenceStartedAt = 0;
+        } else if (!voiceSilenceStartedAt) {
+          voiceSilenceStartedAt = now;
+        }
+
+        const silenceAge = voiceSilenceStartedAt
+          ? now - voiceSilenceStartedAt
+          : 0;
+
+        const afterSpeechSilence =
+          voiceLastSpeechAt &&
+          now - voiceLastSpeechAt >=
+          VOICE_VAD_SILENCE_MS;
+
+        if (
+          utteranceAge >= VOICE_UTTERANCE_MAX_MS ||
+          (
+            utteranceAge >= VOICE_VAD_MIN_UTTERANCE_MS &&
+            afterSpeechSilence &&
+            silenceAge >= VOICE_VAD_SILENCE_MS
+          )
+        ) {
+          finishVoiceUtterance();
+        }
+      }
+
+      voiceVadFrame = requestAnimationFrame(
+        runContinuousVoiceVad
+      );
+    }
+
+    function scheduleContinuousVoiceLoop(delay = 0) {
+      stopVoiceVadLoop();
+
+      const iniciar = () => {
+        if (
+          !voiceConversationActive ||
+          voiceConversationBusy ||
+          !voiceAnalyser
+        ) {
+          return;
+        }
+
+        voiceVadFrame = requestAnimationFrame(
+          runContinuousVoiceVad
+        );
+      };
+
+      if (delay > 0) {
+        window.setTimeout(iniciar, delay);
+      } else {
+        iniciar();
+      }
+    }
+
+    function resumeContinuousListening() {
+      if (!voiceConversationActive) {
+        return;
+      }
+
+      setVoiceMicrophoneEnabled(true);
+      resetVoiceVadState();
+      setGlobeVoiceState('listening');
+      setAiStatusText('OUVINDO...', 'text-emerald-400');
+      setHologramProcessing(false);
+      showSubtitles('Estou ouvindo...');
+
+      scheduleContinuousVoiceLoop(
+        VOICE_RESUME_GUARD_MS
+      );
+    }
+
+    function cleanupContinuousVoice() {
+      stopVoiceVadLoop();
+
+      if (voiceStream) {
+        voiceStream.getTracks().forEach(track => track.stop());
+        voiceStream = null;
+      }
+
+      if (voiceAudioContext) {
+        voiceAudioContext.close().catch(() => {});
+        voiceAudioContext = null;
+      }
+
+      voiceAnalyser = null;
+      voiceAnalyserSource = null;
+      voiceRecorder = null;
+      voiceChunks = [];
+      voiceConversationBusy = false;
+      resetVoiceVadState();
+
+      setHologramProcessing(false);
+      setGlobeVoiceState('idle');
+      setAiStatusText(
+        isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+        'text-hud-cyan'
+      );
+      updateVoiceConversationButton();
+
+      setTimeout(() => {
+        document.getElementById('aiSubtitlesBox')?.classList.add('hidden');
+      }, 1200);
+    }
+
+    function stopContinuousVoice() {
+      voiceConversationActive = false;
+      voiceDiscardCurrentRecording = true;
+      voiceConversationBusy = false;
+      stopVoiceVadLoop();
+
+      if (currentNyxalAudio) {
+        currentNyxalAudio.pause();
+        currentNyxalAudio.currentTime = 0;
+        currentNyxalAudio = null;
+      }
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      if (
+        voiceRecorder &&
+        voiceRecorder.state === 'recording'
+      ) {
+        voiceRecorder.stop();
+      } else {
+        cleanupContinuousVoice();
+      }
+    }
+
+    async function startContinuousVoice() {
+      if (
+        !navigator.mediaDevices?.getUserMedia ||
+        !window.MediaRecorder ||
+        !window.AudioContext &&
+        !window.webkitAudioContext
+      ) {
+        alert(
+          'Este navegador não disponibiliza os recursos necessários para conversa por voz contínua.'
+        );
         return;
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        voiceStream = await navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
             echoCancellation: true,
@@ -1282,157 +1766,70 @@
           }
         });
 
+        const AudioContextClass =
+          window.AudioContext || window.webkitAudioContext;
+
+        voiceAudioContext = new AudioContextClass();
+        await voiceAudioContext.resume();
+
+        voiceAnalyser = voiceAudioContext.createAnalyser();
+        voiceAnalyser.fftSize = 2048;
+        voiceAnalyser.smoothingTimeConstant = 0.72;
+
+        voiceAnalyserSource =
+          voiceAudioContext.createMediaStreamSource(
+            voiceStream
+          );
+        voiceAnalyserSource.connect(
+          voiceAnalyser
+        );
+
         const preferredTypes = [
-          'audio/ogg;codecs=opus',
           'audio/webm;codecs=opus',
+          'audio/ogg;codecs=opus',
           'audio/webm'
         ];
 
-        const mimeType = preferredTypes.find(type =>
+        voiceMimeType = preferredTypes.find(type =>
           MediaRecorder.isTypeSupported(type)
         ) || '';
 
-        voiceChunks = [];
-        voiceRecorder = mimeType
-          ? new MediaRecorder(stream, { mimeType })
-          : new MediaRecorder(stream);
+        voiceConversationActive = true;
+        voiceConversationBusy = false;
+        voiceDiscardCurrentRecording = false;
+        resetVoiceVadState();
+        updateVoiceConversationButton();
 
-        const currentRecorder = voiceRecorder;
-
-        currentRecorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            voiceChunks.push(event.data);
-          }
-        };
-
-        currentRecorder.onstop = async () => {
-          if (voiceStopTimer) {
-            clearTimeout(voiceStopTimer);
-            voiceStopTimer = null;
-          }
-
-          stream.getTracks().forEach(track => track.stop());
-
-          const actualType =
-            currentRecorder.mimeType ||
-            mimeType ||
-            'audio/webm';
-
-          const blob = new Blob(
-            voiceChunks,
-            { type: actualType }
-          );
-
-          voiceChunks = [];
-
-          if (!blob.size) {
-            setGlobeVoiceState('idle');
-            setHologramProcessing(false);
-            setAiStatusText(
-              isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-              'text-hud-cyan'
-            );
-            return;
-          }
-
-          setGlobeVoiceState('processing');
-          setAiStatusText('TRANSCRIÇÃO...', 'text-emerald-400');
-          setHologramProcessing(true);
-          showSubtitles('Transcrevendo comando de voz...');
-
-          try {
-            const response = await fetch(
-              `${window.NYXAL_API_BASE}/api/stt`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': actualType.split(';')[0]
-                },
-                body: blob
-              }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok || !data.sucesso) {
-              throw new Error(
-                data.motivo || `Falha na transcrição (HTTP ${response.status}).`
-              );
-            }
-
-            const transcript = (data.texto || '').trim();
-
-            if (!transcript) {
-              setGlobeVoiceState('idle');
-              setHologramProcessing(false);
-              setAiStatusText(
-                isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-                'text-hud-cyan'
-              );
-              showSubtitles('Não identifiquei uma fala no áudio.');
-              return;
-            }
-
-            showSubtitles(`Você disse: "${transcript}"`);
-            document.getElementById('chatInput').value = transcript;
-            document.getElementById('chatForm').requestSubmit();
-          } catch (err) {
-            setGlobeVoiceState('idle');
-            setHologramProcessing(false);
-            console.warn('STT API error:', err);
-            setAiStatusText(
-              isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-              'text-hud-cyan'
-            );
-            showSubtitles(`Erro de reconhecimento: ${err.message}`);
-            alert(`Não foi possível transcrever o áudio: ${err.message}`);
-          } finally {
-            voiceRecorder = null;
-          }
-        };
-
-        currentRecorder.onerror = (event) => {
-          if (voiceStopTimer) {
-            clearTimeout(voiceStopTimer);
-            voiceStopTimer = null;
-          }
-
-          stream.getTracks().forEach(track => track.stop());
-          voiceChunks = [];
-          voiceRecorder = null;
-
-          setGlobeVoiceState('idle');
-          setHologramProcessing(false);
-          setAiStatusText(
-            isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-            'text-hud-cyan'
-          );
-          console.warn('Microfone:', event.error || event);
-          alert('Ocorreu um erro durante a gravação do microfone.');
-        };
-
-        currentRecorder.start(250);
-
+        setVoiceMicrophoneEnabled(true);
         setGlobeVoiceState('listening');
         setAiStatusText('OUVINDO...', 'text-emerald-400');
         setHologramProcessing(false);
-        showSubtitles('Estou ouvindo... fale agora.');
+        showSubtitles(
+          'Conversa por voz ativa. Fale normalmente; não é necessário tocar novamente.'
+        );
 
-        voiceStopTimer = setTimeout(() => {
-          if (currentRecorder.state === 'recording') {
-            currentRecorder.stop();
-          }
-        }, VOICE_RECORDING_MS);
+        scheduleContinuousVoiceLoop();
       } catch (err) {
         console.warn('Permissão/áudio do microfone:', err);
-        setGlobeVoiceState('idle');
-        setAiStatusText(
-          isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-          'text-hud-cyan'
+        cleanupContinuousVoice();
+        showSubtitles(
+          'Não foi possível iniciar a conversa por voz. Verifique a permissão do microfone.'
         );
-        showSubtitles('Permissão do microfone necessária.');
-        alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.');
+        alert(
+          'Não foi possível acessar o microfone. Verifique a permissão do navegador.'
+        );
       }
+    }
+
+    async function toggleVoiceInput() {
+      playHudSound('click');
+
+      if (voiceConversationActive) {
+        stopContinuousVoice();
+        return;
+      }
+
+      await startContinuousVoice();
     }
 
     function initGlobeVoiceControl() {
@@ -1447,6 +1844,7 @@
         }
       });
 
+      updateVoiceConversationButton();
       setGlobeVoiceState('idle');
     }
 
