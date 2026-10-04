@@ -15,6 +15,8 @@ Responsabilidade:
             ↓
     fallback por domínio
             ↓
+      diálogo contextual
+            ↓
       resultado interno
             ↓
     resposta estruturada 56.5.1
@@ -22,9 +24,9 @@ Responsabilidade:
 Princípios:
 
 1. Recebe somente entrada estruturada válida.
-2. Não acessa diretamente memória conversacional.
-3. Não modifica a arquitetura.
-4. Não promove conhecimento permanente.
+2. Acessa somente a memória conversacional volátil injetada.
+3. Não promove o contexto conversacional a conhecimento permanente.
+4. Não modifica a arquitetura.
 5. Não altera o cristal diretamente.
 6. Usa o AgenteNixalQwen para seleção e execução.
 7. Usa domínio somente como fallback controlado.
