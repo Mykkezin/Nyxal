@@ -109,6 +109,10 @@ def main() -> int:
         assert resultado["integracao_executada"] is False
         assert resultado["stable_modificada"] is False
 
+        solicitacoes.iniciar_experimento(
+            resultado["valor"]["solicitacao_id"]
+        )
+
         erro = NyxalRuntime(
             arquivo_estado=raiz / "estado_runtime_2.json",
             arquivo_log=raiz / "log_runtime_2.json",
