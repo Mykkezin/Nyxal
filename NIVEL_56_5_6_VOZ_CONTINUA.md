@@ -37,14 +37,18 @@ retorno automático ao VAD
 
 - uma única ativação inicia a conversa por voz;
 - o microfone permanece autorizado durante a sessão;
-- o navegador detecta início e fim de fala por RMS/VAD;
+- o navegador mantém a captura ativa enquanto a conversa está ouvindo;
+- o VAD por RMS detecta a atividade e o fim da fala sem ser responsável por iniciar a gravação;
 - cada turno é enviado como um segmento independente ao STT;
 - o ID de sessão continua sendo reutilizado no `/api/chat`;
 - durante o TTS o microfone é desativado para reduzir autoescuta/eco;
 - após o TTS, a escuta volta automaticamente;
 - um clique encerra explicitamente a conversa por voz;
 - gravação fixa de 7 segundos foi removida;
-- limite de segurança de 12 segundos por turno permanece;
+- a captura começa imediatamente após a ativação da conversa;
+- silêncio sem fala não é enviado ao STT;
+- sem fala, o gravador é reciclado periodicamente para não acumular silêncio;
+- limite de segurança de 12 segundos após o início da fala permanece;
 - TTS Kokoro usa velocidade configurável, com padrão ligeiramente mais ágil;
 - segmentos do Kokoro recebem micro-crossfade e fades curtos para reduzir cortes perceptíveis;
 - fallback do navegador aguarda corretamente o término da fala.
