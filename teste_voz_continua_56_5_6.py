@@ -178,6 +178,20 @@ def main() -> None:
     )
 
     verificar(
+        "prepararSaidaAudioNoGestoDoUsuario" in interface
+        and "criarWavSilencioNyxal" in interface
+        and "audio.play()" in interface,
+        "elemento HTMLAudio é ativado diretamente no gesto do usuário",
+    )
+
+    verificar(
+        "currentNyxalHtmlAudio || new Audio()" in interface
+        and "audio.playsInline = true" in interface
+        and "audio.volume = 1.0" in interface,
+        "mesmo elemento HTMLAudio pode ser reutilizado para o TTS",
+    )
+
+    verificar(
         "new Audio()" in interface
         and "URL.createObjectURL(blob)" in interface
         and "audio.play()" in interface
