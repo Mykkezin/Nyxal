@@ -186,16 +186,52 @@ class ExecutorCicloLocalNivel10Nixal:
             ciclo_id
         )
 
-        validacao = (
-            self.coordenador.validar_python_alterado()
-        )
-        testes = (
-            self.coordenador.executar_testes_alterados()
-        )
+        validacao: dict[str, Any] = {}
+        testes: dict[str, Any] = {}
+        erro_tecnico: str | None = None
+
+        try:
+            validacao = (
+                self.coordenador.validar_python_alterado()
+            )
+            if validacao.get("sucesso"):
+                testes = (
+                    self.coordenador.executar_testes_alterados()
+                )
+            else:
+                testes = {
+                    "sucesso": False,
+                    "estado": "nao_executado",
+                    "motivo": "validacao_python_reprovada",
+                }
+        except Exception as erro:
+            erro_tecnico = f"{type(erro).__name__}: {erro}"
+            validacao = {
+                "sucesso": False,
+                "estado": "erro_tecnico",
+            }
+            testes = {
+                "sucesso": False,
+                "estado": "nao_executado",
+            }
 
         sucesso = bool(
             validacao.get("sucesso")
             and testes.get("sucesso")
+            and erro_tecnico is None
+        )
+
+        diagnostico = (
+            ""
+            if sucesso
+            else (
+                erro_tecnico
+                or (
+                    "falha_em_validacao"
+                    if not validacao.get("sucesso")
+                    else "falha_em_testes"
+                )
+            )
         )
 
         concluido = (
@@ -212,13 +248,7 @@ class ExecutorCicloLocalNivel10Nixal:
                         "resultado": testes,
                     },
                 ],
-                diagnostico=""
-                if sucesso
-                else (
-                    "falha_em_validacao"
-                    if not validacao.get("sucesso")
-                    else "falha_em_testes"
-                ),
+                diagnostico=diagnostico,
             )
         )
 
