@@ -5,7 +5,10 @@
 **IMPLEMENTADO NA BRANCH DE DESENVOLVIMENTO**
 
 Branch:
-`feat/nivel10-ciclo-local-formal`
+`feat/56-5-5-conversa-contextual-ci3`
+
+Pull Request:
+`#16 — 56.5.5: conversa contextual — validação final v3`
 
 ## Objetivo
 
@@ -95,6 +98,16 @@ curl -s -X POST http://127.0.0.1:8010/api/chat \
   -d '{"mensagem":"Você lembra do que acabamos de conversar?","sessao":"SESSAO_AQUI"}'
 ```
 
+## Modo terminal
+
+Para conversar sem abrir a interface web:
+
+```bash
+python3 conversar_nyxal.py
+```
+
+A sessão é criada automaticamente. Digite `sair` para encerrar.
+
 ## Voz
 
 A API mantém:
@@ -120,4 +133,4 @@ O teste usa dublês locais e não precisa consultar um modelo Qwen real.
 
 Esta microetapa é uma extensão operacional da conversa local. Ela não concede autorização de integração e não altera o significado dos estados de aprovação do Nível 10.
 
-O PR #11 permanece Draft e separado de stable/main.
+O PR #11 permanece Draft e separado de stable/main. A 56.5.5 permanece isolada no PR #16.
