@@ -382,7 +382,27 @@ class GovernancaEvolucaoNixal:
             proposta.get("proposta_id"),
             "proposta_id",
         )
-        registro = self._carregar(proposta_id)
+        try:
+            registro = self._carregar(proposta_id)
+        except FileNotFoundError as erro:
+            if str(erro) == "registro_governanca_nao_encontrado":
+                raise ValueError("autorizacao_nao_registrada") from erro
+            raise
+
+        proposta_sha256 = registro.get("proposta_sha256")
+        if not isinstance(proposta_sha256, str) or not proposta_sha256:
+            raise ValueError("hash_da_proposta_ausente")
+        if self._hash_arquivo(proposta_path) != proposta_sha256:
+            raise ValueError("proposta_alterada_apos_autorizacao")
+
+        if proposta.get("estado") != "aguardando_autorizacao":
+            raise ValueError("estado_da_proposta_invalido")
+        if proposta.get("autorizacao_explicita") is not False:
+            raise ValueError("autorizacao_da_proposta_invalida")
+        if proposta.get("integracao_executada") is not False:
+            raise ValueError("integracao_da_proposta_invalida")
+        if proposta.get("stable_modificada") is not False:
+            raise ValueError("stable_da_proposta_invalida")
 
         if registro["estado"] != "autorizada":
             raise ValueError("autorizacao_nao_registrada")
