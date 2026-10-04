@@ -25,6 +25,17 @@ determinísticos depois da construção do núcleo.
 
 from __future__ import annotations
 
+import sys
+import types
+
+# Este teste não consulta o Qwen real.
+# Os módulos estruturais importam Ollama, então usamos um dublê mínimo
+# para manter a suíte determinística e sem dependências externas.
+sys.modules.setdefault(
+    "ollama",
+    types.SimpleNamespace(),
+)
+
 from nixal_interface import InterfaceConversacionalNixal
 from nixal_agente_qwen import AgenteNixalQwen
 from nixal_composicao_56_3_9 import CompositorNixal
