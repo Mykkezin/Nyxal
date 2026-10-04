@@ -62,6 +62,15 @@ def main() -> None:
     # ------------------------------------------------------------
 
     for simbolo, descricao in (
+        ("VOICE_VAD_CALIBRATION_MS", "calibração inicial do piso de ruído"),
+        ("voiceRmsAtual", "leitura atual do nível do microfone"),
+        ("voiceActivityThreshold", "limiar adaptativo de fala"),
+        ("updateVoiceDiagnostics", "diagnóstico visual do microfone"),
+        ("RMS ", "indicador numérico do nível capturado"),
+        ("FALA DETECTADA", "indicação de atividade vocal detectada"),
+        ("VOICE_VAD_START_MS", "início rápido da fala"),
+        ("VOICE_VAD_SILENCE_MS", "fim de fala por silêncio"),
+        ("VOICE_MAX_THRESHOLD", "limite superior do limiar VAD"),
         ("voiceConversationActive", "estado persistente da conversa por voz"),
         ("startContinuousVoice", "inicialização da escuta contínua"),
         ("stopContinuousVoice", "encerramento explícito da escuta contínua"),
