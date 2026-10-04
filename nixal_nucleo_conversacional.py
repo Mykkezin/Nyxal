@@ -178,7 +178,7 @@ class NucleoConversacionalNixal:
             sessao
         )
 
-        self._registrar_contexto(
+        usuario_registrado = self._registrar_contexto(
             sessao,
             "user",
             texto,
@@ -218,7 +218,7 @@ class NucleoConversacionalNixal:
                 )
                 estado_resposta = "dialogo_indisponivel"
 
-        self._registrar_contexto(
+        assistente_registrado = self._registrar_contexto(
             sessao,
             "assistant",
             resposta_textual,
@@ -231,6 +231,12 @@ class NucleoConversacionalNixal:
         )
 
         resposta["valor"]["modo"] = estado_resposta
+        resposta["valor"]["mensagem_armazenada"] = (
+            usuario_registrado and assistente_registrado
+        )
+        resposta["valor"]["memoria_conversacional"] = (
+            usuario_registrado or assistente_registrado
+        )
         resposta["valor"]["conhecimento_permanente"] = False
         resposta["valor"]["arquitetura_modificada"] = False
 
@@ -263,15 +269,17 @@ class NucleoConversacionalNixal:
         sessao: str | None,
         papel: str,
         texto: str,
-    ) -> None:
+    ) -> bool:
         if not isinstance(sessao, str) or not sessao.strip():
-            return
+            return False
 
-        self.memoria_conversacional.registrar(
+        resultado = self.memoria_conversacional.registrar(
             sessao=sessao,
             papel=papel,
             texto=texto,
         )
+
+        return resultado.get("sucesso") is True
 
     def _atender(
         self,
