@@ -84,6 +84,7 @@ def main() -> int:
             evolucao=evolucao,
             laboratorio=laboratorio,
             memoria_aprendizado=memoria,
+            solicitacao_evolucao=solicitacoes,
             repositorio=raiz / "repo",
         )
 
@@ -119,6 +120,15 @@ def main() -> int:
         assert resultado["autorizacao_explicita"] is False
         assert resultado["integracao_executada"] is False
         assert resultado["stable_modificada"] is False
+        estado_em_execucao = solicitacoes.consultar(
+            pronto["solicitacao_id"]
+        )
+        assert estado_em_execucao["estado"] == (
+            "experimento_em_execucao"
+        )
+        assert estado_em_execucao["estado_anterior"] == (
+            "pronta_para_experimento"
+        )
         assert len(chamadas) == 1
         assert chamadas[0]["limitacao"] == "reduzir_latencia"
         assert chamadas[0]["hipotese"] == (
@@ -130,6 +140,13 @@ def main() -> int:
         assert chamadas[0]["baseline"] == 100.0
         assert chamadas[0]["artefato_origem"] == str(
             artefato.resolve()
+        )
+
+        solicitacao_final = solicitacoes.consultar(
+            pronto["solicitacao_id"]
+        )
+        assert solicitacao_final["estado"] == (
+            "experimento_em_execucao"
         )
 
         aguardando = dict(pronto)
