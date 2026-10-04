@@ -29,8 +29,22 @@ def main() -> int:
             solicitacao_evolucao=solicitacoes,
         )
 
-        runtime._ultimo_ciclo = None
-        runtime._ultima_hipotese_investigada = {
+        runtime._ultimo_ciclo = {
+            "sucesso": True,
+            "estado": "ciclo_concluido",
+            "valor": {
+                "hipotese": {
+                    "hipotese": "Esta hipótese posterior já foi confirmada.",
+                    "necessidade": "outra_necessidade",
+                    "pergunta": "Outra pergunta",
+                    "estado_atual": "confirmada",
+                    "confirmada": True,
+                    "testada": True,
+                }
+            },
+        }
+
+        hipotese_provisoria = {
             "hipotese": (
                 "A nova estratégia pode reduzir a latência."
             ),
@@ -50,6 +64,9 @@ def main() -> int:
             "confirmada": False,
             "testada": False,
         }
+        runtime._capturar_hipotese_provisoria(
+            hipotese_provisoria
+        )
 
         resultado = runtime.criar_solicitacao_evolucao(
             objetivo="reduzir tempo de execução",
