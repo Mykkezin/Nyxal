@@ -367,6 +367,8 @@ class CicloLocalNivel10Nixal:
             "validacao": None,
             "resultado_validacao": None,
             "autorizacao_explicita": False,
+            "tentativa_de": None,
+            "tentativa_numero": 1,
         }
 
         self._salvar(registro)
@@ -559,6 +561,82 @@ class CicloLocalNivel10Nixal:
         )
         self._salvar(registro)
         return copy.deepcopy(registro)
+
+    def criar_nova_tentativa(
+        self,
+        ciclo_id: str,
+        *,
+        motivo: str,
+    ) -> dict[str, Any]:
+        """Cria explicitamente uma nova tentativa para um ciclo rejeitado.
+
+        A nova tentativa mantém o mesmo commit-alvo, mas recebe um novo
+        identificador de tentativa e aponta para o ciclo anterior.
+        """
+        registro = self._carregar(ciclo_id)
+
+        if registro["estado"] != "rejeitado":
+            raise ValueError(
+                "nova_tentativa_exige_ciclo_rejeitado"
+            )
+
+        motivo = self._texto(
+            motivo,
+            "motivo_reexecucao",
+        )
+
+        numero = registro.get("tentativa_numero")
+        if not isinstance(numero, int) or numero < 1:
+            raise ValueError(
+                "tentativa_numero_invalido"
+            )
+
+        base = json.dumps(
+            {
+                "ciclo_id": registro["ciclo_id"],
+                "commit_novo": registro["commit_novo"],
+                "tentativa_numero": numero + 1,
+                "motivo": motivo,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        digest = hashlib.sha256(
+            base.encode("utf-8")
+        ).hexdigest()[:20]
+        novo_id = f"n10-r-{digest}"
+
+        novo = {
+            "versao": self.VERSAO,
+            "fonte": self.FONTE,
+            "ciclo_id": novo_id,
+            "branch": registro["branch"],
+            "commit_anterior": registro["commit_anterior"],
+            "commit_novo": registro["commit_novo"],
+            "criado_em": self._timestamp(),
+            "atualizado_em": self._timestamp(),
+            "estado": "alteracao_detectada",
+            "estado_anterior": "observado",
+            "historico_estados": [
+                {
+                    "de": "observado",
+                    "para": "alteracao_detectada",
+                    "evento": "nova_tentativa",
+                    "em": self._timestamp(),
+                }
+            ],
+            "sincronizacao": None,
+            "validacao": None,
+            "resultado_validacao": None,
+            "autorizacao_explicita": False,
+            "tentativa_de": registro["ciclo_id"],
+            "tentativa_numero": numero + 1,
+            "motivo_reexecucao": motivo,
+        }
+
+        self._salvar(novo)
+        return copy.deepcopy(novo)
 
     def consultar(
         self,
