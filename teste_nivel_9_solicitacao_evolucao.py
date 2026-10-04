@@ -62,13 +62,9 @@ def main() -> int:
             encoding="utf-8",
         )
 
-        pronta = modulo.criar(
-            ciclo_hipotese=ciclo,
-            objetivo="reduzir tempo de execução",
-            metrica="tempo_execucao_ms",
-            direcao_melhor="menor",
-            baseline=100.0,
-            artefato_origem=artefato,
+        pronta = modulo.anexar_artefato(
+            aguardando["solicitacao_id"],
+            artefato,
             observacao="Artefato preparado.",
         )
 
@@ -78,6 +74,17 @@ def main() -> int:
         )
         assert pronta["execucao_solicitada"] is True
         assert pronta["execucao_local"] is False
+        assert pronta["autorizacao_explicita"] is False
+        assert pronta["integracao_executada"] is False
+        assert pronta["stable_modificada"] is False
+
+        consultada = modulo.consultar(
+            aguardando["solicitacao_id"]
+        )
+        assert consultada["estado"] == "pronta_para_experimento"
+        assert consultada["artefato_origem"] == str(
+            artefato.resolve()
+        )
 
         rejeitado = dict(ciclo)
         rejeitado["estado_atual"] = "confirmada"
