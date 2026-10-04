@@ -39,8 +39,36 @@ from typing import Any
 
 
 class SolicitacaoEvolucaoNixal:
-    VERSAO = "9.3.0"
+    VERSAO = "9.4.0"
     FONTE = "solicitacao_evolucao_nixal"
+
+    ESTADOS = {
+        "aguardando_artefato",
+        "pronta_para_experimento",
+        "experimento_em_execucao",
+        "experimento_concluido",
+        "evolucao_rejeitada",
+        "experimento_falhou",
+    }
+
+    TRANSICOES = {
+        "aguardando_artefato": {"pronta_para_experimento"},
+        "pronta_para_experimento": {"experimento_em_execucao"},
+        "experimento_em_execucao": {
+            "experimento_concluido",
+            "evolucao_rejeitada",
+            "experimento_falhou",
+        },
+        "experimento_concluido": set(),
+        "evolucao_rejeitada": set(),
+        "experimento_falhou": set(),
+    }
+
+    ESTADOS_FINAIS = {
+        "experimento_concluido",
+        "evolucao_rejeitada",
+        "experimento_falhou",
+    }
 
     def __init__(
         self,
@@ -190,6 +218,153 @@ class SolicitacaoEvolucaoNixal:
         ).hexdigest()[:20]
         return f"solicitacao-{digest}"
 
+    @classmethod
+    def _transicionar_estado(
+        cls,
+        registro: dict[str, Any],
+        novo_estado: str,
+        *,
+        evento: str,
+    ) -> None:
+        if not isinstance(registro, dict):
+            raise ValueError("solicitacao_invalida")
+
+        estado_atual = registro.get("estado")
+
+        if estado_atual not in cls.ESTADOS:
+            raise ValueError("estado_atual_invalido")
+
+        if novo_estado not in cls.ESTADOS:
+            raise ValueError("novo_estado_invalido")
+
+        permitidos = cls.TRANSICOES.get(
+            estado_atual,
+            set(),
+        )
+
+        if novo_estado not in permitidos:
+            raise ValueError(
+                f"transicao_estado_nao_permitida:"
+                f"{estado_atual}->{novo_estado}"
+            )
+
+        if not isinstance(evento, str) or not evento.strip():
+            raise ValueError("evento_invalido")
+
+        agora = cls._timestamp()
+        historico = registro.setdefault(
+            "historico_estados",
+            [],
+        )
+
+        if not isinstance(historico, list):
+            raise ValueError("historico_estados_invalido")
+
+        historico.append(
+            {
+                "de": estado_atual,
+                "para": novo_estado,
+                "evento": evento.strip(),
+                "em": agora,
+            }
+        )
+
+        registro["estado_anterior"] = estado_atual
+        registro["estado"] = novo_estado
+        registro["estado_atualizado_em"] = agora
+
+    @classmethod
+    def _validar_estado_registro(
+        cls,
+        registro: dict[str, Any],
+    ) -> None:
+        if not isinstance(registro, dict):
+            raise ValueError("solicitacao_invalida")
+
+        estado = registro.get("estado")
+        if estado not in cls.ESTADOS:
+            raise ValueError("estado_invalido")
+
+        if (
+            registro.get("estado_anterior") is not None
+            and registro.get("estado_anterior") not in cls.ESTADOS
+        ):
+            raise ValueError("estado_anterior_invalido")
+
+        historico = registro.get("historico_estados", [])
+        if not isinstance(historico, list):
+            raise ValueError("historico_estados_invalido")
+
+    def iniciar_experimento(
+        self,
+        solicitacao_id: str,
+    ) -> dict[str, Any]:
+        solicitacao_id = self._texto(
+            solicitacao_id,
+            "solicitacao_id",
+        )
+
+        caminho = (
+            self.solicitacoes
+            / f"{solicitacao_id}.json"
+        )
+
+        if not caminho.is_file():
+            raise FileNotFoundError(
+                "solicitacao_nao_encontrada"
+            )
+
+        try:
+            registro = json.loads(
+                caminho.read_text(encoding="utf-8")
+            )
+        except (
+            OSError,
+            json.JSONDecodeError,
+        ) as erro:
+            raise ValueError(
+                "solicitacao_invalida"
+            ) from erro
+
+        self._validar_estado_registro(registro)
+
+        if registro.get("execucao_local") is not False:
+            raise ValueError("execucao_local_nao_permitida")
+
+        if registro.get("autorizacao_explicita") is not False:
+            raise ValueError("autorizacao_explicita_invalida")
+
+        if registro.get("integracao_executada") is not False:
+            raise ValueError("integracao_nao_permitida")
+
+        if registro.get("stable_modificada") is not False:
+            raise ValueError("stable_modificada_invalida")
+
+        self._transicionar_estado(
+            registro,
+            "experimento_em_execucao",
+            evento="experimento_remoto_iniciado",
+        )
+        registro["execucao_solicitada"] = True
+
+        temporario = caminho.with_name(
+            caminho.name + ".tmp"
+        )
+        temporario.write_text(
+            json.dumps(
+                registro,
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        os.replace(
+            temporario,
+            caminho,
+        )
+
+        return copy.deepcopy(registro)
+
     def criar(
         self,
         *,
@@ -259,6 +434,15 @@ class SolicitacaoEvolucaoNixal:
             "solicitacao_id": solicitacao_id,
             "criada_em": self._timestamp(),
             "estado": estado,
+            "estado_anterior": None,
+            "historico_estados": [
+                {
+                    "de": None,
+                    "para": estado,
+                    "evento": "solicitacao_criada",
+                    "em": self._timestamp(),
+                }
+            ],
             "necessidade": hipotese.get("necessidade"),
             "pergunta": hipotese.get("pergunta"),
             "hipotese": copy.deepcopy(hipotese),
@@ -338,10 +522,7 @@ class SolicitacaoEvolucaoNixal:
         if not isinstance(registro, dict):
             raise ValueError("solicitacao_invalida")
 
-        if registro.get("estado") != "aguardando_artefato":
-            raise ValueError(
-                "solicitacao_nao_aguarda_artefato"
-            )
+        self._validar_estado_registro(registro)
 
         artefato = self._validar_arquivo(
             artefato_origem
@@ -352,7 +533,11 @@ class SolicitacaoEvolucaoNixal:
                 "artefato_experimental_nao_encontrado"
             )
 
-        registro["estado"] = "pronta_para_experimento"
+        self._transicionar_estado(
+            registro,
+            "pronta_para_experimento",
+            evento="artefato_anexado",
+        )
         registro["artefato_origem"] = artefato
         registro["observacao_artefato"] = observacao
         registro["artefato_anexado_em"] = self._timestamp()
@@ -425,9 +610,11 @@ class SolicitacaoEvolucaoNixal:
         if not isinstance(registro, dict):
             raise ValueError("solicitacao_invalida")
 
-        if registro.get("estado") != "pronta_para_experimento":
+        self._validar_estado_registro(registro)
+
+        if registro.get("estado") != "experimento_em_execucao":
             raise ValueError(
-                "solicitacao_nao_pronta_para_registro"
+                "solicitacao_nao_em_execucao"
             )
 
         valor = resultado.get("valor")
@@ -456,7 +643,11 @@ class SolicitacaoEvolucaoNixal:
         else:
             estado_final = "experimento_falhou"
 
-        registro["estado"] = estado_final
+        self._transicionar_estado(
+            registro,
+            estado_final,
+            evento="resultado_experimento_registrado",
+        )
         registro["resultado_experimento"] = copy.deepcopy(
             resultado
         )
@@ -514,9 +705,11 @@ class SolicitacaoEvolucaoNixal:
                 "solicitacao_nao_encontrada"
             )
 
-        return json.loads(
+        registro = json.loads(
             caminho.read_text(encoding="utf-8")
         )
+        self._validar_estado_registro(registro)
+        return registro
 
 
 __all__ = [
