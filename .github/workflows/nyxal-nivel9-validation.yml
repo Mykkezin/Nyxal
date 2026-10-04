@@ -2,8 +2,6 @@ name: Nyxal Nível 9 — validação determinística
 
 on:
   pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
