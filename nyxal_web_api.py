@@ -9,11 +9,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from secrets import compare_digest
 
-import numpy as np
-import soundfile as sf
-from faster_whisper import WhisperModel
-from kokoro import KPipeline
-
 from nixal_nucleo_conversacional import (
     NucleoConversacionalNixal,
 )
@@ -44,6 +39,7 @@ WHISPER_MODEL_NAME = os.environ.get(
     "tiny",
 )
 WHISPER_MODEL = None
+KOKORO_PIPELINE = None
 TTS_MODEL = Path(
     os.environ.get(
         "NYXAL_TTS_MODEL",
@@ -60,10 +56,12 @@ def json_bytes(payload: dict) -> bytes:
     ).encode("utf-8")
 
 
-def get_whisper_model() -> WhisperModel:
+def get_whisper_model():
     global WHISPER_MODEL
 
     if WHISPER_MODEL is None:
+        from faster_whisper import WhisperModel
+
         WHISPER_MODEL = WhisperModel(
             WHISPER_MODEL_NAME,
             device="cpu",
@@ -159,6 +157,18 @@ def normalizar_texto_stt(texto: str) -> str:
 
 
 def generate_kokoro_audio(texto: str) -> bytes:
+    global KOKORO_PIPELINE
+
+    if KOKORO_PIPELINE is None:
+        from kokoro import KPipeline
+
+        KOKORO_PIPELINE = KPipeline(
+            lang_code="p",
+        )
+
+    import numpy as np
+    import soundfile as sf
+
     chunks = []
 
     for _, _, audio in KOKORO_PIPELINE(
