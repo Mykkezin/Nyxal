@@ -30,6 +30,8 @@ import re
 import subprocess
 import tempfile
 import time
+import io
+import zipfile
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -775,6 +777,168 @@ class LaboratorioRemotoNixal:
             "falha_inesperada_ao_baixar_logs"
         )
 
+    def _api_request_bytes(
+        self,
+        method: str,
+        path: str,
+    ) -> tuple[int, bytes]:
+        token = self._token()
+
+        url = (
+            "https://api.github.com"
+            "/repos/"
+            + self.github_repo
+            + path
+        )
+
+        req = request.Request(
+            url,
+            method=method,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2026-03-10",
+                "User-Agent": "Nyxal-Laboratorio-Remoto",
+            },
+        )
+
+        req.add_unredirected_header(
+            "Authorization",
+            f"Bearer {token}",
+        )
+
+        try:
+            with request.urlopen(
+                req,
+                timeout=30,
+            ) as resposta:
+                return resposta.status, resposta.read()
+
+        except error.HTTPError as exc:
+            corpo = exc.read().decode(
+                "utf-8",
+                errors="replace",
+            )
+            raise RuntimeError(
+                f"github_api_http_{exc.code}:{corpo}"
+            ) from exc
+
+    def listar_artefatos(
+        self,
+        *,
+        run_id: int,
+        nome: str | None = None,
+    ) -> list[dict[str, Any]]:
+        if not isinstance(run_id, int):
+            raise ValueError("run_id_invalido")
+
+        caminho = f"/actions/runs/{run_id}/artifacts?per_page=100"
+
+        if nome is not None:
+            if not isinstance(nome, str) or not nome.strip():
+                raise ValueError("nome_artefato_invalido")
+            caminho += "&" + parse.urlencode({"name": nome})
+
+        _, corpo = self._api_request(
+            "GET",
+            caminho,
+        )
+
+        dados = json.loads(corpo)
+        artefatos = (
+            dados.get("artifacts", [])
+            if isinstance(dados, dict)
+            else []
+        )
+
+        return (
+            [deepcopy(item) for item in artefatos]
+            if isinstance(artefatos, list)
+            else []
+        )
+
+    def baixar_artefato_zip(
+        self,
+        artifact_id: int,
+        max_tentativas: int = 5,
+        atraso_inicial: float = 2.0,
+    ) -> bytes:
+        if not isinstance(artifact_id, int):
+            raise ValueError("artifact_id_invalido")
+
+        if (
+            not isinstance(max_tentativas, int)
+            or max_tentativas < 1
+        ):
+            raise ValueError("max_tentativas_invalido")
+
+        if (
+            not isinstance(atraso_inicial, (int, float))
+            or atraso_inicial < 0
+        ):
+            raise ValueError("atraso_inicial_invalido")
+
+        for tentativa in range(max_tentativas):
+            try:
+                _, conteudo = self._api_request_bytes(
+                    "GET",
+                    f"/actions/artifacts/{artifact_id}/zip",
+                )
+                return conteudo
+
+            except RuntimeError as erro:
+                mensagem = str(erro)
+                artefato_nao_disponivel = (
+                    "github_api_http_404:" in mensagem
+                    and (
+                        "Artifact not found" in mensagem
+                        or "BlobNotFound" in mensagem
+                    )
+                )
+
+                if (
+                    not artefato_nao_disponivel
+                    or tentativa >= max_tentativas - 1
+                ):
+                    raise
+
+                atraso = min(
+                    float(atraso_inicial) * (2 ** tentativa),
+                    30.0,
+                )
+                if atraso > 0:
+                    time.sleep(atraso)
+
+        raise RuntimeError("falha_inesperada_ao_baixar_artefato")
+
+    @staticmethod
+    def extrair_resultado_do_artefato(
+        conteudo: bytes,
+    ) -> dict[str, Any] | None:
+        if not isinstance(conteudo, (bytes, bytearray)):
+            return None
+
+        try:
+            with zipfile.ZipFile(io.BytesIO(conteudo)) as arquivo_zip:
+                candidatos = [
+                    nome
+                    for nome in arquivo_zip.namelist()
+                    if nome.endswith("/result.json")
+                    or nome == "result.json"
+                ]
+
+                if not candidatos:
+                    return None
+
+                texto = arquivo_zip.read(candidatos[0]).decode(
+                    "utf-8"
+                )
+                resultado = json.loads(texto)
+
+        except (zipfile.BadZipFile, KeyError, UnicodeDecodeError, json.JSONDecodeError):
+            return None
+
+        return resultado if isinstance(resultado, dict) else None
+
     @staticmethod
     def extrair_resultado_dos_logs(
         logs: str,
@@ -841,6 +1005,58 @@ class LaboratorioRemotoNixal:
                 "estado": "run_id_invalido",
                 "run": deepcopy(run),
             }
+
+        # O workflow publica result.json como artefato. Esse é o canal
+        # preferencial porque o artefato é finalizado explicitamente antes
+        # do run terminar, evitando depender do timing do endpoint de logs.
+        if run.get("status") == "completed":
+            nome_artefato = f"nyxal-lab-{experimento_id}"
+            try:
+                artefatos = self.listar_artefatos(
+                    run_id=run_id,
+                    nome=nome_artefato,
+                )
+
+                artefatos.sort(
+                    key=lambda item: str(
+                        item.get("created_at", "")
+                    ),
+                    reverse=True,
+                )
+
+                for artefato in artefatos:
+                    artifact_id = artefato.get("id")
+                    if not isinstance(artifact_id, int):
+                        continue
+
+                    try:
+                        zip_bytes = self.baixar_artefato_zip(
+                            artifact_id
+                        )
+                    except RuntimeError as erro:
+                        mensagem = str(erro)
+                        if "github_api_http_404:" in mensagem or "BlobNotFound" in mensagem:
+                            continue
+                        raise
+
+                    resultado_artefato = self.extrair_resultado_do_artefato(
+                        zip_bytes
+                    )
+
+                    if resultado_artefato is not None:
+                        return {
+                            "sucesso": True,
+                            "estado": "resultado_recuperado",
+                            "origem": self.FONTE,
+                            "experimento_id": experimento_id,
+                            "run": deepcopy(run),
+                            "artefato": deepcopy(artefato),
+                            "resultado": resultado_artefato,
+                        }
+            except (RuntimeError, json.JSONDecodeError):
+                # Fallback para logs abaixo. O laboratório já possui o canal
+                # de logs como compatibilidade e diagnóstico.
+                pass
 
         jobs = self.listar_jobs(
             run_id
@@ -927,6 +1143,7 @@ class LaboratorioRemotoNixal:
             "origem": self.FONTE,
             "experimento_id": experimento_id,
             "run": deepcopy(run),
+            "motivo": "jobs_ou_artefato_ainda_nao_disponiveis",
         }
 
     def aguardar_resultado(
