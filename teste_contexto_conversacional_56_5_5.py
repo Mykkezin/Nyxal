@@ -17,6 +17,17 @@ Nenhum modelo real é consultado.
 
 from __future__ import annotations
 
+# O teste é determinístico e não depende do pacote Ollama.
+# O módulo real é substituído por um stub antes dos imports da Nyxal.
+import sys
+import types
+
+
+sys.modules.setdefault(
+    "ollama",
+    types.SimpleNamespace(),
+)
+
 from nixal_agente_qwen import AgenteNixalQwen
 from nixal_composicao_56_3_9 import CompositorNixal
 from nixal_dialogo_qwen import DialogoQwenNixal
