@@ -35,6 +35,9 @@ jobs:
       - name: Suite Conversacional 56.5.5
         run: python teste_contexto_conversacional_56_5_5.py
 
+      - name: Teste adaptador Qwen 56.5.5
+        run: python teste_dialogo_qwen_56_5_5.py
+
       - name: Smoke test API de chat sem voz
         run: python teste_api_chat_sem_voz.py
 
@@ -54,7 +57,7 @@ jobs:
       - name: Empacotar projeto completo
         run: |
           mkdir -p /tmp/nyxal-package
-          git archive --format=zip --output="/tmp/nyxal-package/Nyxal-N10-${GITHUB_SHA}.zip" "${GITHUB_SHA}"
+          git archive --format=zip --output="/tmp/nyxal-package/Nyxal-N10-$\{GITHUB_SHA\}.zip" "$\{GITHUB_SHA\}"
 
       - name: Publicar projeto completo
         uses: actions/upload-artifact@v4
