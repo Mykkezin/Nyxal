@@ -243,7 +243,15 @@ class LaboratorioRemotoNixal:
                 "branch_experimental_ja_existe"
             )
 
-        base = base_ref or self.workflow_ref
+        if base_ref is None:
+            self._git(
+                "fetch",
+                self.remote,
+                self.workflow_ref,
+            )
+            base = f"{self.remote}/{self.workflow_ref}"
+        else:
+            base = base_ref
 
         with tempfile.TemporaryDirectory(
             prefix="nyxal-lab-worktree-"
@@ -444,6 +452,37 @@ class LaboratorioRemotoNixal:
             raise RuntimeError(
                 f"github_api_http_{exc.code}:{corpo}"
             ) from exc
+
+    def remover_branch_experimento(
+        self,
+        branch: str,
+    ) -> dict[str, Any]:
+        if not re.fullmatch(
+            r"experimento/[A-Za-z0-9._/-]+",
+            branch,
+        ):
+            raise ValueError(
+                "branch_experimental_invalida"
+            )
+
+        self._git(
+            "push",
+            self.remote,
+            "--delete",
+            branch,
+        )
+
+        return {
+            "sucesso": True,
+            "estado": "branch_experimental_removida",
+            "origem": self.FONTE,
+            "branch": branch,
+            "stable_modificada": False,
+        }
+
+    # ==========================================================
+    # GITHUB API
+    # ==========================================================
 
     def disparar_workflow(
         self,
