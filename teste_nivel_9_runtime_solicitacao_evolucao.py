@@ -41,7 +41,7 @@ def main() -> int:
                     "pergunta": (
                         "Como reduzir a latência do componente?"
                     ),
-                    "estado": "provisoria",
+                    "estado_atual": "provisoria",
                     "tipo": "explicacao_candidata",
                     "razao": "Hipótese derivada das evidências.",
                     "evidencias_de_suporte": [
