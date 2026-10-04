@@ -38,6 +38,9 @@ jobs:
       - name: Teste adaptador Qwen 56.5.5
         run: python teste_dialogo_qwen_56_5_5.py
 
+      - name: Teste Núcleo Conversacional
+        run: python teste_nucleo_conversacional.py
+
       - name: Smoke test API de chat sem voz
         run: python teste_api_chat_sem_voz.py
 
