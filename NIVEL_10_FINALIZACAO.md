@@ -95,5 +95,5 @@ checkpoint certificado  ← ATUAL
         ↓
 revisão/autorização externa para integração
         ↓
-integrção conforme Nível 9
+integração conforme Nível 9
 ```
