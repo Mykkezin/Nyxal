@@ -167,6 +167,17 @@ def main() -> int:
         assert ponte["autorizacao_explicita"] is False
         assert ponte["integracao_executada"] is False
         assert ponte["stable_modificada"] is False
+        assert ponte["persistencia_solicitacao"]["estado"] == (
+            "experimento_concluido"
+        )
+        solicitacao_final = solicitacoes.consultar(
+            pronto["solicitacao_id"]
+        )
+        assert solicitacao_final["estado"] == "experimento_concluido"
+        assert solicitacao_final["resultado_experimento"]["sucesso"] is True
+        assert solicitacao_final["autorizacao_explicita"] is False
+        assert solicitacao_final["integracao_executada"] is False
+        assert solicitacao_final["stable_modificada"] is False
         assert len(chamadas) == 1
 
     print("=" * 64)
