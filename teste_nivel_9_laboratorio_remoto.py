@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import io
 import json
+import zipfile
 
 from nixal_laboratorio_remoto import LaboratorioRemotoNixal
 
@@ -63,6 +65,34 @@ def main() -> int:
     assert resultado["experiment_sha"] == "a" * 40
     assert resultado["stable_modificada"] is False
     assert resultado["autorizacao_explicita"] is False
+
+    memoria = io.BytesIO()
+    with zipfile.ZipFile(memoria, "w", zipfile.ZIP_DEFLATED) as arquivo_zip:
+        arquivo_zip.writestr(
+            "resultado/result.json",
+            json.dumps(
+                {
+                    "experimento_id": "stt-001",
+                    "status": "sucesso",
+                    "experimento_sucesso": True,
+                    "experiment_sha": "b" * 40,
+                    "stable_modificada": False,
+                    "autorizacao_explicita": False,
+                },
+                ensure_ascii=False,
+            ),
+        )
+
+    resultado_artefato = laboratorio.extrair_resultado_do_artefato(
+        memoria.getvalue()
+    )
+    assert resultado_artefato is not None
+    assert resultado_artefato["experimento_id"] == "stt-001"
+    assert resultado_artefato["status"] == "sucesso"
+    assert resultado_artefato["experimento_sucesso"] is True
+    assert resultado_artefato["experiment_sha"] == "b" * 40
+
+    assert laboratorio.extrair_resultado_do_artefato(b"nao-e-zip") is None
 
     invalido = (
         laboratorio.extrair_resultado_dos_logs(
@@ -136,6 +166,7 @@ def main() -> int:
     print("MANIFESTO=OK")
     print("BRANCH_EXPERIMENTO=OK")
     print("LEITURA_RESULTADO=OK")
+    print("ARTEFATO_RESULTADO=OK")
     print("RETRY_BLOB_NOT_FOUND=OK")
     print("VALIDACAO_ENTRADAS=OK")
     print("SEM_EXECUCAO_LOCAL=OK")
