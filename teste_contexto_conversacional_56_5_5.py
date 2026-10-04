@@ -250,6 +250,20 @@ def main() -> None:
     )
 
     verificar(
+        primeira["valor"]["mensagem_armazenada"] is True,
+        "primeira mensagem é registrada na memória contextual",
+        falhas,
+        total,
+    )
+
+    verificar(
+        primeira["valor"]["memoria_conversacional"] is True,
+        "integração sinaliza memória conversacional ativa",
+        falhas,
+        total,
+    )
+
+    verificar(
         isinstance(sessao, str) and bool(sessao),
         "primeira mensagem recebe uma sessão",
         falhas,
@@ -289,6 +303,20 @@ def main() -> None:
     verificar(
         segunda["sucesso"] is True,
         "segunda mensagem reutiliza a sessão",
+        falhas,
+        total,
+    )
+
+    verificar(
+        segunda["valor"]["mensagem_armazenada"] is True,
+        "segunda mensagem também é registrada",
+        falhas,
+        total,
+    )
+
+    verificar(
+        segunda["valor"]["memoria_conversacional"] is True,
+        "segunda resposta mantém memória conversacional ativa",
         falhas,
         total,
     )
