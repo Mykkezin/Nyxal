@@ -85,6 +85,116 @@ def main() -> int:
         assert consultada["artefato_origem"] == str(
             artefato.resolve()
         )
+        assert consultada["estado_anterior"] == (
+            "aguardando_artefato"
+        )
+        assert len(consultada["historico_estados"]) == 2
+
+        try:
+            modulo.anexar_artefato(
+                aguardando["solicitacao_id"],
+                artefato,
+            )
+        except ValueError as erro:
+            assert "transicao_estado_nao_permitida" in str(erro)
+        else:
+            raise AssertionError(
+                "solicitação pronta aceitou transição repetida"
+            )
+
+        modulo_sem_artefato = SolicitacaoEvolucaoNixal(
+            repositorio=raiz / "repo2",
+            solicitacoes=raiz / "solicitacoes2",
+        )
+        sem_artefato = modulo_sem_artefato.criar(
+            ciclo_hipotese=ciclo,
+            objetivo="objetivo",
+            metrica="tempo",
+            direcao_melhor="menor",
+            baseline=1.0,
+        )
+        try:
+            modulo_sem_artefato.iniciar_experimento(
+                sem_artefato["solicitacao_id"]
+            )
+        except ValueError as erro:
+            assert str(erro) == (
+                "artefato_experimental_nao_encontrado"
+            )
+        else:
+            raise AssertionError(
+                "solicitação sem artefato iniciou experimento"
+            )
+
+        assert modulo_sem_artefato.consultar(
+            sem_artefato["solicitacao_id"]
+        )["estado"] == "aguardando_artefato"
+
+        resultado = modulo.iniciar_experimento(
+            aguardando["solicitacao_id"]
+        )
+        assert resultado["estado"] == "experimento_em_execucao"
+        assert resultado["estado_anterior"] == (
+            "pronta_para_experimento"
+        )
+
+        resultado = modulo.registrar_resultado_experimento(
+            resultado["solicitacao_id"],
+            {
+                "sucesso": True,
+                "estado": "solicitacao_executada",
+                "valor": {
+                    "estado": "proposta_criada",
+                    "experimento_id": "exp-final",
+                    "comparacao": {"aprovado": True},
+                },
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            },
+        )
+        assert resultado["estado"] == "experimento_concluido"
+        assert resultado["estado_anterior"] == (
+            "experimento_em_execucao"
+        )
+
+        try:
+            modulo.anexar_artefato(
+                resultado["solicitacao_id"],
+                artefato,
+            )
+        except ValueError as erro:
+            assert "transicao_estado_nao_permitida" in str(erro)
+        else:
+            raise AssertionError(
+                "solicitação final aceitou nova transição"
+            )
+
+        try:
+            modulo.registrar_resultado_experimento(
+                resultado["solicitacao_id"],
+                {
+                    "sucesso": True,
+                    "estado": "solicitacao_executada",
+                    "valor": {
+                        "estado": "proposta_criada",
+                    },
+                },
+            )
+        except ValueError as erro:
+            assert str(erro) == "solicitacao_nao_em_execucao"
+        else:
+            raise AssertionError(
+                "solicitação final aceitou novo resultado"
+            )
+
+        historico = resultado["historico_estados"]
+        assert [item["para"] for item in historico] == [
+            "aguardando_artefato",
+            "pronta_para_experimento",
+            "experimento_em_execucao",
+            "experimento_concluido",
+        ]
 
         rejeitado = dict(ciclo)
         rejeitado["estado_atual"] = "confirmada"
@@ -111,6 +221,7 @@ def main() -> int:
     print("SOLICITACAO_CRIADA=OK")
     print("AGUARDANDO_ARTEFATO=OK")
     print("ARTEFATO_VALIDADO=OK")
+    print("MAQUINA_ESTADOS_MONOTONICA=OK")
     print("HIPOTESE_NAO_CONFIRMADA=OK")
     print("SEM_EXECUCAO_LOCAL=OK")
     print("SEM_AUTORIZACAO_DE_INTEGRACAO=OK")
