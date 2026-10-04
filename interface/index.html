@@ -1924,6 +1924,7 @@
       const data = new Float32Array(
         voiceAnalyser.fftSize
       );
+
       voiceAnalyser.getFloatTimeDomainData(data);
 
       const rms = voiceRms(data);
@@ -1935,29 +1936,24 @@
       voiceRmsAtual = rms;
 
       if (!voiceRecorder) {
-        // Durante a calibração inicial, aprendemos o ruído sem tentar
-        // iniciar uma gravação com o próprio ruído.
-        if (calibrando || rms < voiceActivityThreshold()) {
-          voiceNoiseFloor =
-            voiceNoiseFloor * (1 - VOICE_NOISE_ALPHA) +
-            rms * VOICE_NOISE_ALPHA;
-        }
-
-        const threshold = voiceActivityThreshold();
-
-      // O gravador permanece ativo enquanto a conversa está ouvindo.
-      // O VAD só decide quando a fala terminou.
-      if (!voiceRecorder) {
         beginVoiceCapture();
       }
 
-      if (!voiceVozDetectada && (calibrando || rms < threshold)) {
+      const threshold = voiceActivityThreshold();
+
+      // Aprende o ruído somente quando não há atividade vocal.
+      if (
+        !voiceVozDetectada &&
+        (calibrando || rms < threshold)
+      ) {
         voiceNoiseFloor =
           voiceNoiseFloor * (1 - VOICE_NOISE_ALPHA) +
           rms * VOICE_NOISE_ALPHA;
       }
 
-      const vozAtiva = rms >= voiceActivityThreshold();
+      const vozAtiva =
+        rms >= voiceActivityThreshold();
+
       voiceVozDetectada = vozAtiva;
       updateVoiceDiagnostics();
 
@@ -1976,10 +1972,11 @@
           ) {
             voiceSpeechDetectedInCurrentRecording = true;
           }
-        } else if (voiceSpeechDetectedInCurrentRecording) {
-          if (!voiceSilenceStartedAt) {
-            voiceSilenceStartedAt = now;
-          }
+        } else if (
+          voiceSpeechDetectedInCurrentRecording &&
+          !voiceSilenceStartedAt
+        ) {
+          voiceSilenceStartedAt = now;
         }
 
         const speechAge = voiceSpeechStartedAt
