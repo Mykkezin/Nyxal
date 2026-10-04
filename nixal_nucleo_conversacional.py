@@ -48,6 +48,12 @@ from nixal_agente_qwen import (
 from nixal_composicao_56_3_9 import (
     CompositorNixal,
 )
+from nixal_memoria_conversacional import (
+    MemoriaConversacionalNixal,
+)
+from nixal_dialogo_qwen import (
+    DialogoQwenNixal,
+)
 
 
 class NucleoConversacionalNixal:
@@ -60,6 +66,8 @@ class NucleoConversacionalNixal:
         interface: InterfaceConversacionalNixal | None = None,
         agente: AgenteNixalQwen | None = None,
         compositor: CompositorNixal | None = None,
+        memoria_conversacional: MemoriaConversacionalNixal | None = None,
+        dialogo: DialogoQwenNixal | None = None,
     ) -> None:
 
         if interface is not None and not isinstance(
@@ -89,6 +97,24 @@ class NucleoConversacionalNixal:
                 "CompositorNixal"
             )
 
+        if memoria_conversacional is not None and not isinstance(
+            memoria_conversacional,
+            MemoriaConversacionalNixal,
+        ):
+            raise TypeError(
+                "memoria_conversacional deve ser uma instância de "
+                "MemoriaConversacionalNixal"
+            )
+
+        if dialogo is not None and not isinstance(
+            dialogo,
+            DialogoQwenNixal,
+        ):
+            raise TypeError(
+                "dialogo deve ser uma instância de "
+                "DialogoQwenNixal"
+            )
+
         self.interface = (
             interface
             if interface is not None
@@ -105,6 +131,18 @@ class NucleoConversacionalNixal:
             compositor
             if compositor is not None
             else CompositorNixal()
+        )
+
+        self.memoria_conversacional = (
+            memoria_conversacional
+            if memoria_conversacional is not None
+            else MemoriaConversacionalNixal()
+        )
+
+        self.dialogo = (
+            dialogo
+            if dialogo is not None
+            else DialogoQwenNixal()
         )
 
         self.capacidades = {
@@ -134,18 +172,21 @@ class NucleoConversacionalNixal:
         texto = entrada["valor"]["texto"]
         sessao = entrada["valor"].get("sessao")
 
+        historico = self._obter_historico(
+            sessao
+        )
+
+        self._registrar_contexto(
+            sessao,
+            "user",
+            texto,
+        )
+
         resultado = self._atender(
             texto
         )
 
-        if not resultado["atendida"]:
-
-            resposta_textual = (
-                "Não consegui atender essa solicitação "
-                "com as capacidades atuais."
-            )
-
-        else:
+        if resultado["atendida"]:
 
             resposta_textual = (
                 self._formatar_resultado(
@@ -153,9 +194,81 @@ class NucleoConversacionalNixal:
                 )
             )
 
-        return self.interface.criar_resposta(
+            estado_resposta = "resposta_capacidade"
+
+        else:
+
+            resposta_dialogo = self.dialogo.responder(
+                texto,
+                historico=historico,
+            )
+
+            if resposta_dialogo.get("sucesso") is True:
+
+                resposta_textual = resposta_dialogo["resposta"]
+                estado_resposta = "resposta_conversacional"
+
+            else:
+
+                resposta_textual = (
+                    "Não consegui responder agora. "
+                    "O módulo conversacional não está disponível."
+                )
+                estado_resposta = "dialogo_indisponivel"
+
+        self._registrar_contexto(
+            sessao,
+            "assistant",
+            resposta_textual,
+        )
+
+        resposta = self.interface.criar_resposta(
             resposta_textual,
             sessao=sessao,
+            estado=estado_resposta,
+        )
+
+        resposta["valor"]["modo"] = estado_resposta
+        resposta["valor"]["conhecimento_permanente"] = False
+        resposta["valor"]["arquitetura_modificada"] = False
+
+        return resposta
+
+    def _obter_historico(
+        self,
+        sessao: str | None,
+    ) -> list[dict[str, str]]:
+        if not isinstance(sessao, str) or not sessao.strip():
+            return []
+
+        resultado = self.memoria_conversacional.obter(
+            sessao
+        )
+
+        if resultado.get("sucesso") is not True:
+            return []
+
+        mensagens = resultado.get("mensagens", [])
+
+        return (
+            mensagens
+            if isinstance(mensagens, list)
+            else []
+        )
+
+    def _registrar_contexto(
+        self,
+        sessao: str | None,
+        papel: str,
+        texto: str,
+    ) -> None:
+        if not isinstance(sessao, str) or not sessao.strip():
+            return
+
+        self.memoria_conversacional.registrar(
+            sessao=sessao,
+            papel=papel,
+            texto=texto,
         )
 
     def _atender(
