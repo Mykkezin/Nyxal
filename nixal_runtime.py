@@ -538,12 +538,54 @@ class NyxalRuntime:
                 intervalo_resultado_segundos=intervalo_resultado_segundos,
             )
         except Exception as erro:
+            falha = {
+                "sucesso": False,
+                "estado": "solicitacao_experimentada",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao_id,
+                "valor": {
+                    "sucesso": False,
+                    "estado": "experimento_falhou",
+                    "motivo": f"{type(erro).__name__}: {erro}",
+                },
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+            try:
+                persistencia_falha = (
+                    self.solicitacao_evolucao.registrar_resultado_experimento(
+                        solicitacao_id,
+                        falha,
+                    )
+                )
+            except Exception as erro_persistencia:
+                return {
+                    "sucesso": False,
+                    "estado": "persistencia_solicitacao_falhou",
+                    "origem": self.FONTE,
+                    "solicitacao_id": solicitacao_id,
+                    "motivo": (
+                        f"{type(erro).__name__}: {erro}; "
+                        f"persistencia: "
+                        f"{type(erro_persistencia).__name__}: "
+                        f"{erro_persistencia}"
+                    ),
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                }
+
             return {
                 "sucesso": False,
                 "estado": "evolucao_remota_falhou",
                 "origem": self.FONTE,
                 "solicitacao_id": solicitacao_id,
                 "motivo": f"{type(erro).__name__}: {erro}",
+                "persistencia_solicitacao": deepcopy(
+                    persistencia_falha
+                ),
                 "autorizacao_explicita": False,
                 "integracao_executada": False,
                 "stable_modificada": False,
