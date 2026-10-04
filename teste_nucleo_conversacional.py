@@ -758,6 +758,7 @@ def teste_capacidade_inexistente() -> None:
 def executar_testes() -> None:
 
     teste_construcao()
+    teste_pergunta_contextual_prioriza_dialogo()
     teste_entrada_direta()
     teste_fallback_dominio()
     teste_fallback_dominio_fraco_nao_forca_capacidade()
