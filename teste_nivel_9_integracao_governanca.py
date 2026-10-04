@@ -107,6 +107,40 @@ def executar() -> None:
         assert autorizada["integracao_executada"] is False
         assert autorizada["stable_modificada"] is False
 
+        # Qualquer alteração na proposta depois da autorização invalida a preparação.
+        dados = json.loads(proposta.read_text(encoding="utf-8"))
+        dados["destino_sugerido"] = "main-alterada"
+        proposta.write_text(json.dumps(dados, ensure_ascii=False), encoding="utf-8")
+        try:
+            governanca.preparar_integracao(proposta_path=proposta)
+        except ValueError as erro:
+            assert str(erro) == "proposta_alterada_apos_autorizacao"
+        else:
+            raise AssertionError("proposta alterada foi aceita após autorização")
+
+        dados["destino_sugerido"] = "main"
+        proposta.write_text(json.dumps(dados, ensure_ascii=False), encoding="utf-8")
+
+        # Restaurar exatamente o conteúdo autorizado não é suficiente: o hash
+        # precisa corresponder ao conteúdo que foi autorizado. O arquivo foi
+        # reserializado, portanto a autorização antiga continua inválida.
+        try:
+            governanca.preparar_integracao(proposta_path=proposta)
+        except ValueError as erro:
+            assert str(erro) == "proposta_alterada_apos_autorizacao"
+        else:
+            raise AssertionError("resserialização não deveria recuperar a autorização")
+
+        # Recriar uma proposta equivalente para testar o caminho autorizado.
+        proposta.unlink()
+        proposta = preparar_candidato(raiz)[1]
+        autorizada = governanca.autorizar_proposta(
+            proposta_path=proposta,
+            autorizador="operador_humano",
+            motivo="Aprovacao explicita para integrar o candidato.",
+        )
+        assert autorizada["estado"] == "autorizada"
+
         preparada = governanca.preparar_integracao(
             proposta_path=proposta,
             branch_integracao="integracao/integracao-candidato-001",
@@ -177,6 +211,7 @@ def executar() -> None:
         assert len(consultado["historico_estados"]) == 5
 
         print("AUTORIZACAO_EXPLICITA=OK")
+        print("INTEGRIDADE_PROPOSTA=OK")
         print("INTEGRACAO_PREPARADA=OK")
         print("STABLE_BLOQUEADA_ATE_MERGE=OK")
         print("INTEGRACAO_REGISTRADA=OK")
