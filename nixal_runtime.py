@@ -81,6 +81,7 @@ from nixal_testador_arquitetural import TestadorArquiteturalNixal
 from nixal_consolidacao_conhecimento import ConsolidacaoConhecimentoNixal
 from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
 from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
+from nixal_evolucao_remota import CicloEvolucaoRemotaNixal
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -132,6 +133,7 @@ class NyxalRuntime:
         memoria_conhecimento: MemoriaConhecimentoNixal | None = None,
         arquivo_memoria_aprendizado: Path | None = None,
         memoria_aprendizado: AprendizadoPersistenteNixal | None = None,
+        evolucao_remota: CicloEvolucaoRemotaNixal | None = None,
     ) -> None:
         if perceber_corpo is None:
             perceber_corpo = corpo_nixal.perceber_corpo
@@ -182,6 +184,15 @@ class NyxalRuntime:
             raise TypeError(
                 "memoria_aprendizado deve ser uma instância de "
                 "AprendizadoPersistenteNixal"
+            )
+
+        if evolucao_remota is not None and not isinstance(
+            evolucao_remota,
+            CicloEvolucaoRemotaNixal,
+        ):
+            raise TypeError(
+                "evolucao_remota deve ser uma instância de "
+                "CicloEvolucaoRemotaNixal"
             )
 
         self.perceber_corpo = perceber_corpo
@@ -243,6 +254,11 @@ class NyxalRuntime:
             )
         )
 
+        # A evolução remota é criada sob demanda para evitar
+        # qualquer efeito colateral de laboratório durante a inicialização
+        # normal do Runtime.
+        self.evolucao_remota = evolucao_remota
+
         self.formulacao_investigacao = (
             FormulacaoInvestigacaoNixal(
                 necessidades=self.necessidades
@@ -293,6 +309,67 @@ class NyxalRuntime:
 
         self._cpu_anterior: Any = None
         self._ultimo_ciclo: dict[str, Any] | None = None
+
+    # ============================================================
+    # EVOLUÇÃO REMOTA
+    # ============================================================
+
+    def executar_evolucao_remota(
+        self,
+        *,
+        limitacao: str,
+        hipotese: str,
+        objetivo: str,
+        metrica: str,
+        direcao_melhor: str,
+        baseline: Any,
+        artefato_origem: str | Path,
+        arquivo_destino: str = "experimento.py",
+        descricao: str = "",
+        timeout_seconds: int = 60,
+        timeout_resultado_segundos: int = 300,
+        intervalo_resultado_segundos: int = 5,
+    ) -> dict[str, Any]:
+        """
+        Delega explicitamente uma evolução experimental ao ciclo remoto.
+
+        Esta ponte NÃO é chamada automaticamente pelo ciclo Runtime.
+        A execução remota só acontece quando este método é invocado de forma
+        explícita por uma camada de decisão/coordenação superior.
+        """
+        if self.evolucao_remota is None:
+            self.evolucao_remota = CicloEvolucaoRemotaNixal(
+                repositorio=BASE_DIR,
+                memoria_aprendizado=self.memoria_aprendizado,
+            )
+
+        resultado = self.evolucao_remota.executar(
+            limitacao=limitacao,
+            hipotese=hipotese,
+            objetivo=objetivo,
+            metrica=metrica,
+            direcao_melhor=direcao_melhor,
+            baseline=baseline,
+            artefato_origem=artefato_origem,
+            arquivo_destino=arquivo_destino,
+            descricao=descricao,
+            timeout_seconds=timeout_seconds,
+            timeout_resultado_segundos=timeout_resultado_segundos,
+            intervalo_resultado_segundos=intervalo_resultado_segundos,
+        )
+
+        return {
+            "sucesso": bool(
+                isinstance(resultado, dict)
+                and resultado.get("sucesso") is True
+            ),
+            "estado": "evolucao_remota_executada",
+            "origem": self.FONTE,
+            "valor": deepcopy(resultado),
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
+        }
 
     # ============================================================
     # CICLO
