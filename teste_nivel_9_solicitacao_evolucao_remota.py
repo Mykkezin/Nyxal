@@ -145,10 +145,12 @@ def main() -> int:
         runtime = NyxalRuntime(
             arquivo_estado=raiz / "estado_runtime.json",
             arquivo_log=raiz / "log_runtime.json",
-            arquivo_memoria_investigacao=MemoriaInvestigacaoNixal(
+            arquivo_memoria_investigacao=raiz / "memoria_investigacao.json",
+            memoria_investigacao=MemoriaInvestigacaoNixal(
                 raiz / "memoria_investigacao.json"
             ),
-            arquivo_memoria_aprendizado=memoria,
+            arquivo_memoria_aprendizado=raiz / "memoria_aprendizado.json",
+            memoria_aprendizado=memoria,
             evolucao_remota=remoto,
             solicitacao_evolucao=solicitacoes,
         )
