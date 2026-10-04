@@ -1,5 +1,5 @@
 name: Nyxal Nível 9/10 — validação determinística
-# 56.5.5: replay final do gate conversacional
+# 56.5.6: integração conversacional e voz contínua
 
 on:
   pull_request:
@@ -43,6 +43,12 @@ jobs:
 
       - name: Smoke test API de chat sem voz
         run: python teste_api_chat_sem_voz.py
+
+      - name: Teste Voz Contínua 56.5.6
+        run: python teste_voz_continua_56_5_6.py
+
+      - name: Teste Reflexão Diária 56.5.6
+        run: python teste_reflexao_diaria_56_5_6.py
 
       - name: Sanidade de regras de segurança
         run: |

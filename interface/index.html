@@ -478,8 +478,8 @@
           <button
             id="globeVoiceButton"
             type="button"
-            aria-label="Falar com Nyxal"
-            title="Clique para falar com Nyxal"
+            aria-label="Iniciar conversa por voz com Nyxal"
+            title="Clique uma vez para iniciar a conversa por voz"
             class="absolute inset-0 z-10 appearance-none border-0 bg-transparent cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-hud-cyan/40"
           ></button>
 
@@ -576,9 +576,16 @@
     <!-- ================= RIGHT SIDEBAR (HOLOGRAPHIC NYXAL PRESENCE & GOALS) ================= -->
     <section class="lg:col-span-3 flex flex-col gap-4">
 
-      <!-- TOP INSPIRATIONAL QUOTE HEADER -->
+      <!-- DAILY PHILOSOPHICAL REFLECTION -->
       <div class="hud-card p-3 text-center border border-hud-cyan/30">
-        <p class="font-cinzel italic text-slate-200 text-sm tracking-wide">"Disciplina é liberdade."</p>
+        <p class="text-[9px] font-orbitron font-bold text-hud-cyan tracking-[0.22em] mb-1">REFLEXÃO DO DIA</p>
+        <p id="dailyReflectionText" class="font-cinzel italic text-slate-200 text-sm tracking-wide leading-relaxed">
+          “A qualidade da ação começa pela qualidade da atenção.”
+        </p>
+        <div class="mt-2 text-[9px] font-rajdhani tracking-wider uppercase">
+          <span id="dailyReflectionAuthor" class="text-hud-cyan font-bold">NyxOS</span>
+          <span id="dailyReflectionWork" class="text-slate-500">• reflexão original</span>
+        </div>
       </div>
 
       <!-- HOLOGRAPHIC NYXAL PRESENCE CARD -->
@@ -644,7 +651,8 @@
           />
 
           <!-- Subtitle / Voice Output Overlay -->
-          <div id="aiSubtitlesBox" class="absolute bottom-2 left-2 right-2 z-30 bg-slate-950/95 border border-hud-cyan/60 p-2.5 rounded-lg text-center shadow-lg backdrop-blur-md hidden">
+          <div id="voiceDiagnostics" class="fixed bottom-2 left-2 z-50 hidden px-2 py-1 rounded bg-black/70 border border-hud-cyan/20 text-[9px] font-mono text-hud-cyan pointer-events-none"></div>
+      <div id="aiSubtitlesBox" class="absolute bottom-2 left-2 right-2 z-30 bg-slate-950/95 border border-hud-cyan/60 p-2.5 rounded-lg text-center shadow-lg backdrop-blur-md hidden">
             <p id="aiSubtitlesText" class="text-xs font-rajdhani text-hud-cyan font-semibold leading-tight">"Sistemas operacionais iniciados, Nyxal ao seu dispor."</p>
           </div>
         </div>
@@ -932,14 +940,140 @@
     }
 
     // WEB AUDIO SYNTHESIZER FOR HUD SFX & VOICE REVERB
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
+    let audioCtx = null;
+    let currentNyxalHtmlAudio = null;
+
+    function getNyxalAudioContext() {
+      if (audioCtx) return audioCtx;
+
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        throw new Error('Web Audio não está disponível neste navegador.');
+      }
+
+      audioCtx = new AudioContextClass();
+      return audioCtx;
+    }
+
+    function criarWavSilencioNyxal(duracaoMs = 120) {
+      const sampleRate = 8000;
+      const samples = Math.max(
+        1,
+        Math.round(sampleRate * duracaoMs / 1000)
+      );
+      const dataBytes = samples * 2;
+      const buffer = new ArrayBuffer(44 + dataBytes);
+      const view = new DataView(buffer);
+
+      const escreverTexto = (offset, texto) => {
+        for (let i = 0; i < texto.length; i += 1) {
+          view.setUint8(offset + i, texto.charCodeAt(i));
+        }
+      };
+
+      escreverTexto(0, 'RIFF');
+      view.setUint32(4, 36 + dataBytes, true);
+      escreverTexto(8, 'WAVE');
+      escreverTexto(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      escreverTexto(36, 'data');
+      view.setUint32(40, dataBytes, true);
+
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    function prepararSaidaAudioNoGestoDoUsuario() {
+      if (currentNyxalHtmlAudio) {
+        return currentNyxalHtmlAudio;
+      }
+
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.autoplay = false;
+      audio.controls = false;
+      audio.playsInline = true;
+      audio.volume = 1.0;
+
+      const url = URL.createObjectURL(
+        criarWavSilencioNyxal()
+      );
+
+      audio.src = url;
+      currentNyxalHtmlAudio = audio;
+
+      // play() é chamado diretamente dentro do clique do usuário.
+      // Depois disso o mesmo elemento pode receber o TTS assíncrono.
+      const ativacao = audio.play();
+
+      if (ativacao && typeof ativacao.catch === 'function') {
+        ativacao
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+          })
+          .catch((erro) => {
+            console.warn(
+              'Ativação inicial do elemento de áudio falhou:',
+              erro
+            );
+          });
+      }
+
+      return audio;
+    }
+
+    async function desbloquearAudioNyxal() {
+      const contexto = getNyxalAudioContext();
+
+      if (contexto.state !== 'running') {
+        await contexto.resume();
+      }
+
+      if (contexto.state !== 'running') {
+        throw new Error(
+          'AudioContext não entrou em execução: ' + contexto.state
+        );
+      }
+
+      return contexto;
+    }
+
+    document.addEventListener(
+      'pointerdown',
+      () => {
+        desbloquearAudioNyxal().catch((erro) => {
+          console.warn('Desbloqueio de áudio Nyxal:', erro);
+        });
+      },
+      { once: true, passive: true }
+    );
+
+    document.addEventListener(
+      'keydown',
+      () => {
+        desbloquearAudioNyxal().catch((erro) => {
+          console.warn('Desbloqueio de áudio Nyxal:', erro);
+        });
+      },
+      { once: true, passive: true }
+    );
+
     function playHudSound(type) {
       const soundEnabled = document.getElementById('soundToggle')?.checked ?? true;
       if (!soundEnabled || !audioCtx) return;
 
       try {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
@@ -979,34 +1113,195 @@
 
     // ================= GODDESS NYX SYNTHESIZED VOICE ENGINE =================
     let currentNyxalAudio = null;
+    let currentNyxalAudioSource = null;
+    let cancelCurrentNyxalSpeech = null;
 
-    async function speakBrowserFallback(text) {
-      if (!('speechSynthesis' in window)) return;
+    function speakBrowserFallback(text) {
+      return new Promise((resolve) => {
+        if (!('speechSynthesis' in window)) {
+          resolve(false);
+          return;
+        }
 
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
 
-      const voices = window.speechSynthesis.getVoices();
-      const goddessVoice = voices.find(v =>
-        (v.lang.includes('pt') || v.lang.includes('PT')) &&
-        (v.name.includes('Francisca') || v.name.includes('Luciana') || v.name.includes('Helena') || v.name.includes('Maria') || v.name.includes('Google') || v.name.includes('Female'))
-      ) || voices.find(v => v.lang.includes('pt'));
+        const voices = window.speechSynthesis.getVoices();
+        const goddessVoice = voices.find(v =>
+          (v.lang.includes('pt') || v.lang.includes('PT')) &&
+          (v.name.includes('Francisca') || v.name.includes('Luciana') || v.name.includes('Helena') || v.name.includes('Maria') || v.name.includes('Google') || v.name.includes('Female'))
+        ) || voices.find(v => v.lang.includes('pt'));
 
-      if (goddessVoice) utterance.voice = goddessVoice;
+        if (goddessVoice) utterance.voice = goddessVoice;
 
-      utterance.pitch = 0.92;
-      utterance.rate = 0.95;
-      utterance.volume = 1.0;
+        utterance.pitch = 0.94;
+        utterance.rate = 0.98;
+        utterance.volume = 1.0;
 
-      utterance.onend = () => {
-        setGlobeVoiceState('idle');
-        setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
-        setTimeout(() => {
-          document.getElementById('aiSubtitlesBox').classList.add('hidden');
-        }, 4000);
-      };
+        let concluido = false;
+        const finalizar = () => {
+          if (concluido) return;
+          concluido = true;
 
-      window.speechSynthesis.speak(utterance);
+          if (cancelCurrentNyxalSpeech === cancelar) {
+            cancelCurrentNyxalSpeech = null;
+          }
+
+          resolve(true);
+        };
+
+        const cancelar = () => {
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+          }
+          finalizar();
+        };
+
+        cancelCurrentNyxalSpeech = cancelar;
+        utterance.onend = finalizar;
+        utterance.onerror = finalizar;
+
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+
+    async function tocarAudioTtsComContexto(blob) {
+      if (!blob || !blob.size) {
+        throw new Error('A Nyxal recebeu um áudio TTS vazio.');
+      }
+
+      await desbloquearAudioNyxal();
+      const contexto = audioCtx;
+      const objectUrl = URL.createObjectURL(blob);
+
+      try {
+        await new Promise((resolve, reject) => {
+          const audio = currentNyxalHtmlAudio || new Audio();
+          let concluido = false;
+
+          audio.preload = 'auto';
+          audio.autoplay = false;
+          audio.controls = false;
+          audio.playsInline = true;
+          audio.volume = 1.0;
+
+          audio.src = objectUrl;
+          currentNyxalHtmlAudio = audio;
+
+          const finalizar = () => {
+            if (concluido) return;
+            concluido = true;
+
+            if (currentNyxalHtmlAudio === audio) {
+              currentNyxalHtmlAudio = null;
+            }
+
+            resolve(true);
+          };
+
+          const cancelar = () => {
+            try {
+              audio.pause();
+              audio.currentTime = 0;
+            } catch (_) {}
+            finalizar();
+          };
+
+          cancelCurrentNyxalSpeech = cancelar;
+          audio.onended = finalizar;
+          audio.onerror = () => reject(
+            new Error('O navegador não conseguiu reproduzir o áudio TTS.')
+          );
+
+          audio.play().catch(reject);
+        });
+
+        return;
+      } catch (erroHtmlAudio) {
+        console.warn(
+          'HTMLAudio TTS falhou; tentando Web Audio:',
+          erroHtmlAudio
+        );
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+
+      const arrayBuffer = await blob.arrayBuffer();
+      const audioBuffer = await contexto.decodeAudioData(arrayBuffer);
+
+      if (!audioBuffer.duration || audioBuffer.duration <= 0) {
+        throw new Error('O áudio TTS decodificado possui duração inválida.');
+      }
+
+      await new Promise((resolve, reject) => {
+        let concluido = false;
+        const source = contexto.createBufferSource();
+        const gainNode = contexto.createGain();
+
+        source.buffer = audioBuffer;
+        gainNode.gain.value = 1.0;
+
+        source.connect(gainNode);
+        gainNode.connect(contexto.destination);
+
+        currentNyxalAudioSource = source;
+        currentNyxalAudio = {
+          stop() {
+            try {
+              source.stop();
+            } catch (_) {
+              // Fonte já encerrada.
+            }
+          }
+        };
+
+        const finalizar = () => {
+          if (concluido) return;
+          concluido = true;
+
+          if (currentNyxalAudioSource === source) {
+            currentNyxalAudioSource = null;
+          }
+
+          if (currentNyxalAudio?.stop) {
+            currentNyxalAudio = null;
+          }
+
+          if (cancelCurrentNyxalSpeech === cancelar) {
+            cancelCurrentNyxalSpeech = null;
+          }
+
+          resolve();
+        };
+
+        const cancelar = () => {
+          try {
+            source.stop();
+          } catch (_) {
+            // Fonte já encerrada.
+          }
+          finalizar();
+        };
+
+        cancelCurrentNyxalSpeech = cancelar;
+        source.onended = finalizar;
+
+        try {
+          source.start(0);
+        } catch (erro) {
+          if (!concluido) {
+            concluido = true;
+            if (currentNyxalAudioSource === source) {
+              currentNyxalAudioSource = null;
+            }
+            currentNyxalAudio = null;
+            if (cancelCurrentNyxalSpeech === cancelar) {
+              cancelCurrentNyxalSpeech = null;
+            }
+          }
+          reject(erro);
+        }
+      });
     }
 
     async function speakGoddessNyxVoice(text, updateSubtitle = true) {
@@ -1015,15 +1310,23 @@
       if (updateSubtitle) {
         showSubtitles(text);
       }
+
       setGlobeVoiceState('speaking');
       setAiStatusText('FALANDO...', 'text-hud-cyan');
 
-      if (currentNyxalAudio) {
-        currentNyxalAudio.pause();
+      if (currentNyxalAudioSource) {
+        try {
+          currentNyxalAudioSource.stop();
+        } catch (_) {
+          // Reprodução já encerrada.
+        }
+        currentNyxalAudioSource = null;
         currentNyxalAudio = null;
       }
 
       try {
+        await desbloquearAudioNyxal();
+
         const response = await fetch(`${window.NYXAL_API_BASE}/api/tts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1035,23 +1338,23 @@
         }
 
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        currentNyxalAudio = audio;
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
-          currentNyxalAudio = null;
-          setGlobeVoiceState('idle');
-          setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
-          setTimeout(() => {
-            document.getElementById('aiSubtitlesBox').classList.add('hidden');
-          }, 4000);
-        };
-
-        await audio.play();
+        await tocarAudioTtsComContexto(blob);
       } catch (err) {
         console.warn('TTS local indisponível; usando voz do navegador:', err);
         await speakBrowserFallback(text);
+      } finally {
+        if (currentNyxalAudio === null && currentNyxalAudioSource === null) {
+          setGlobeVoiceState('idle');
+        }
+
+        setAiStatusText(
+          isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+          'text-hud-cyan'
+        );
+
+        setTimeout(() => {
+          document.getElementById('aiSubtitlesBox')?.classList.add('hidden');
+        }, 4000);
       }
     }
 
@@ -1143,6 +1446,290 @@
       }
     }
 
+    // ================= REFLEXÃO FILOSÓFICA DIÁRIA =================
+    // Catálogo local curado: as entradas abaixo são paráfrases fiéis de
+    // ideias presentes em obras filosóficas reais. Não são citações literais.
+    const REFLEXOES_NYXAL = [
+      {
+        id: 'epicteto-controle',
+        texto: 'Concentre sua energia no que está sob seu controle e aceite com clareza o que não está.',
+        autor: 'Epicteto',
+        obra: 'Enchiridion / Manual',
+        escola: 'Estoicismo'
+      },
+      {
+        id: 'marco-aurelio-resposta',
+        texto: 'Você não escolhe tudo o que acontece; pode escolher a qualidade da resposta que dará ao acontecimento.',
+        autor: 'Marco Aurélio',
+        obra: 'Meditações',
+        escola: 'Estoicismo'
+      },
+      {
+        id: 'seneca-tempo',
+        texto: 'A vida parece curta quando deixamos que o tempo seja gasto sem intenção.',
+        autor: 'Sêneca',
+        obra: 'Sobre a brevidade da vida',
+        escola: 'Estoicismo'
+      },
+      {
+        id: 'aristoteles-habito',
+        texto: 'Caráter e excelência são construídos pelo que praticamos repetidamente.',
+        autor: 'Aristóteles',
+        obra: 'Ética a Nicômaco',
+        escola: 'Ética das virtudes'
+      },
+      {
+        id: 'platao-exame',
+        texto: 'Uma vida examinada exige parar, questionar e olhar para as razões que orientam nossas escolhas.',
+        autor: 'Platão',
+        obra: 'Apologia de Sócrates',
+        escola: 'Filosofia socrática'
+      },
+      {
+        id: 'heraclito-mudanca',
+        texto: 'A mudança não é uma exceção da realidade; compreender a mudança é compreender parte essencial dela.',
+        autor: 'Heráclito',
+        obra: 'Fragmentos',
+        escola: 'Filosofia pré-socrática'
+      },
+      {
+        id: 'epicuro-simplicidade',
+        texto: 'Uma vida tranquila pode depender mais de desejos bem escolhidos do que da acumulação de coisas.',
+        autor: 'Epicuro',
+        obra: 'Carta a Meneceu',
+        escola: 'Epicurismo'
+      },
+      {
+        id: 'confucio-pratica',
+        texto: 'Aprender de verdade envolve transformar conhecimento em prática e caráter.',
+        autor: 'Confúcio',
+        obra: 'Analectos',
+        escola: 'Confucionismo'
+      },
+      {
+        id: 'laozi-nao-forcar',
+        texto: 'Nem toda situação melhora pela força; há momentos em que agir sem excesso produz o melhor movimento.',
+        autor: 'Laozi',
+        obra: 'Tao Te Ching',
+        escola: 'Taoismo'
+      },
+      {
+        id: 'nietzsche-superacao',
+        texto: 'Crescer exige transformar a si mesmo, em vez de permanecer preso à pessoa que você era.',
+        autor: 'Friedrich Nietzsche',
+        obra: 'Assim falou Zaratustra',
+        escola: 'Filosofia da afirmação'
+      },
+      {
+        id: 'kierkegaard-escolha',
+        texto: 'A existência ganha forma quando deixamos de observar a vida apenas de fora e assumimos nossas escolhas.',
+        autor: 'Søren Kierkegaard',
+        obra: 'Ou/Ou',
+        escola: 'Existencialismo'
+      },
+      {
+        id: 'montaigne-experiencia',
+        texto: 'Conhecer a si mesmo também é observar honestamente a própria experiência, inclusive suas contradições.',
+        autor: 'Michel de Montaigne',
+        obra: 'Ensaios',
+        escola: 'Humanismo renascentista'
+      },
+      {
+        id: 'spinoza-liberdade',
+        texto: 'Entender as causas que nos movem amplia a possibilidade de agir com mais liberdade e menos impulso.',
+        autor: 'Baruch Spinoza',
+        obra: 'Ética',
+        escola: 'Racionalismo'
+      },
+      {
+        id: 'descartes-duvida',
+        texto: 'Questionar uma certeza pode ser o começo de uma compreensão mais sólida.',
+        autor: 'René Descartes',
+        obra: 'Meditações Metafísicas',
+        escola: 'Racionalismo'
+      },
+      {
+        id: 'hume-habito',
+        texto: 'Muitas expectativas sobre o mundo nascem do hábito; por isso, convém distinguir experiência de certeza.',
+        autor: 'David Hume',
+        obra: 'Investigação sobre o Entendimento Humano',
+        escola: 'Empirismo'
+      },
+      {
+        id: 'kant-autonomia',
+        texto: 'Liberdade não é apenas fazer o que se quer, mas poder orientar a própria ação por princípios que se reconhece como válidos.',
+        autor: 'Immanuel Kant',
+        obra: 'Fundamentação da Metafísica dos Costumes',
+        escola: 'Filosofia moral'
+      },
+      {
+        id: 'camus-absurdo',
+        texto: 'Mesmo quando a realidade não entrega um sentido pronto, ainda podemos escolher como viver diante dela.',
+        autor: 'Albert Camus',
+        obra: 'O Mito de Sísifo',
+        escola: 'Filosofia do absurdo'
+      },
+      {
+        id: 'simone-beauvoir-liberdade',
+        texto: 'A própria liberdade ganha peso quando reconhecemos que nossas escolhas também afetam a liberdade dos outros.',
+        autor: 'Simone de Beauvoir',
+        obra: 'Por uma Moral da Ambiguidade',
+        escola: 'Existencialismo'
+      },
+      {
+        id: 'sartre-responsabilidade',
+        texto: 'Escolher não é apenas decidir um caminho; é também assumir responsabilidade pela direção que a escolha produz.',
+        autor: 'Jean-Paul Sartre',
+        obra: 'O Existencialismo é um Humanismo',
+        escola: 'Existencialismo'
+      },
+      {
+        id: 'nietzsche-tempo',
+        texto: 'Uma boa pergunta para qualquer decisão é imaginar se você aceitaria viver novamente o caminho que está escolhendo.',
+        autor: 'Friedrich Nietzsche',
+        obra: 'A Gaia Ciência',
+        escola: 'Filosofia da afirmação'
+      }
+    ];
+
+    const REFLEXAO_STORAGE_KEY = 'NYXAL_REFLEXAO_DIARIA_V1';
+
+    function chaveDataReflexao(data = new Date()) {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    }
+
+    function carregarEstadoReflexao() {
+      try {
+        const bruto = localStorage.getItem(REFLEXAO_STORAGE_KEY);
+        if (!bruto) {
+          return {
+            ultimoDia: null,
+            reflexaoId: null,
+            usadas: [],
+            ciclo: 1
+          };
+        }
+
+        const estado = JSON.parse(bruto);
+
+        return {
+          ultimoDia: typeof estado.ultimoDia === 'string'
+            ? estado.ultimoDia
+            : null,
+          reflexaoId: typeof estado.reflexaoId === 'string'
+            ? estado.reflexaoId
+            : null,
+          usadas: Array.isArray(estado.usadas)
+            ? [...new Set(estado.usadas.filter(id => typeof id === 'string'))]
+            : [],
+          ciclo: Number.isInteger(estado.ciclo) && estado.ciclo > 0
+            ? estado.ciclo
+            : 1
+        };
+      } catch (erro) {
+        console.warn('Não foi possível ler o histórico de reflexões:', erro);
+        return {
+          ultimoDia: null,
+          reflexaoId: null,
+          usadas: [],
+          ciclo: 1
+        };
+      }
+    }
+
+    function salvarEstadoReflexao(estado) {
+      try {
+        localStorage.setItem(
+          REFLEXAO_STORAGE_KEY,
+          JSON.stringify(estado)
+        );
+      } catch (erro) {
+        console.warn('Não foi possível persistir o histórico de reflexões:', erro);
+      }
+    }
+
+    function selecionarReflexaoDiaria(agora = new Date()) {
+      const hoje = chaveDataReflexao(agora);
+      const estado = carregarEstadoReflexao();
+
+      if (
+        estado.ultimoDia === hoje &&
+        estado.reflexaoId
+      ) {
+        const atual = REFLEXOES_NYXAL.find(
+          reflexao => reflexao.id === estado.reflexaoId
+        );
+
+        if (atual) {
+          return atual;
+        }
+      }
+
+      let usadas = estado.usadas.filter(id =>
+        REFLEXOES_NYXAL.some(
+          reflexao => reflexao.id === id
+        )
+      );
+
+      let candidatos = REFLEXOES_NYXAL.filter(
+        reflexao => !usadas.includes(reflexao.id)
+      );
+
+      let ciclo = estado.ciclo;
+
+      // O catálogo só reinicia quando todas as entradas do ciclo atual
+      // já foram apresentadas.
+      if (!candidatos.length) {
+        usadas = [];
+        candidatos = [...REFLEXOES_NYXAL];
+        ciclo += 1;
+      }
+
+      const indice = Math.floor(
+        Math.random() * candidatos.length
+      );
+
+      const escolhida = candidatos[indice];
+
+      usadas = [...usadas, escolhida.id];
+
+      const novoEstado = {
+        ultimoDia: hoje,
+        reflexaoId: escolhida.id,
+        usadas,
+        ciclo
+      };
+
+      salvarEstadoReflexao(novoEstado);
+
+      return escolhida;
+    }
+
+    function renderReflexaoDiaria(data = new Date()) {
+      const reflexao = selecionarReflexaoDiaria(data);
+      if (!reflexao) return;
+
+      const texto = document.getElementById('dailyReflectionText');
+      const autor = document.getElementById('dailyReflectionAuthor');
+      const obra = document.getElementById('dailyReflectionWork');
+
+      if (texto) {
+        texto.innerText = `“${reflexao.texto}”`;
+      }
+
+      if (autor) {
+        autor.innerText = reflexao.autor;
+      }
+
+      if (obra) {
+        obra.innerText =
+          `• ${reflexao.obra} • ${reflexao.escola}`;
+      }
+    }
+
     // ================= CHAT COMMAND INTERACTION =================
     async function handleUserChat(e) {
       e.preventDefault();
@@ -1150,15 +1737,49 @@
       const msg = input.value.trim();
       if (!msg) return;
 
-      playHudSound('send');
       input.value = '';
+      await sendNyxalMessage(msg);
+    }
+
+    function limparSessaoConversacionalLocal() {
+      nyxalSessionId = null;
+      sessionStorage.removeItem("NYXAL_SESSION_ID");
+    }
+
+    function sessaoConversacionalRecuperavel(data) {
+      if (!data || typeof data !== 'object') {
+        return false;
+      }
+
+      return [
+        'sessao_nao_valida',
+        'sessao_inativa',
+        'sessao_nao_consultavel',
+        'estrutura_sessao_invalida'
+      ].includes(data.estado);
+    }
+
+    async function sendNyxalMessage(
+      msg,
+      permitirRecuperacaoSessao = true,
+    ) {
+      if (!msg) return;
+
+      playHudSound('send');
+
+      const conversaContinua =
+        voiceConversationActive === true;
+
+      if (conversaContinua) {
+        voiceConversationBusy = true;
+        setVoiceMicrophoneEnabled(false);
+      }
 
       setHologramProcessing(true);
       setAiStatusText('PROCESSANDO...', 'text-amber-400');
       showSubtitles(`Entendendo: "${msg}"...`);
 
       try {
-        // Attempt POST to /api/chat
         const res = await fetch(`${window.NYXAL_API_BASE}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1169,39 +1790,86 @@
           )
         });
 
+        let data = null;
+
+        try {
+          data = await res.json();
+        } catch (_) {
+          data = null;
+        }
+
+        if (
+          !res.ok &&
+          res.status === 422 &&
+          permitirRecuperacaoSessao &&
+          sessaoConversacionalRecuperavel(data) &&
+          nyxalSessionId
+        ) {
+          console.warn(
+            '[Nyxal] Sessão conversacional perdida; criando uma nova sessão.'
+          );
+
+          limparSessaoConversacionalLocal();
+
+          setHologramProcessing(false);
+          setAiStatusText('RECUPERANDO SESSÃO...', 'text-amber-400');
+          showSubtitles(
+            'A sessão anterior foi encerrada. Retomando a conversa...'
+          );
+
+          await sendNyxalMessage(
+            msg,
+            false,
+          );
+          return;
+        }
+
         setHologramProcessing(false);
 
         if (res.ok) {
-          const data = await res.json();
-
-          if (data.sessao) {
+          if (data?.sessao) {
             nyxalSessionId = data.sessao;
-            sessionStorage.setItem("NYXAL_SESSION_ID", nyxalSessionId);
+            sessionStorage.setItem(
+              "NYXAL_SESSION_ID",
+              nyxalSessionId
+            );
           }
 
-          const reply = data.resposta || "A Nyxal não retornou uma resposta textual.";
-          const speechText = data.fala || reply;
-          showSubtitles(reply);
-          speakGoddessNyxVoice(speechText, false);
-        } else {
-          let errorMessage = `A Nyxal não conseguiu concluir a ordem (HTTP ${res.status}).`;
+          const reply = data?.resposta ||
+            "A Nyxal não retornou uma resposta textual.";
+          const speechText = data?.fala || reply;
 
-          try {
-            const errorData = await res.json();
-            if (errorData.motivo) {
-              errorMessage = errorData.motivo;
-            }
-          } catch (_) {
-            // Mantém a mensagem HTTP caso a API não retorne JSON.
+          showSubtitles(reply);
+          await speakGoddessNyxVoice(
+            speechText,
+            false
+          );
+        } else {
+          let errorMessage =
+            `A Nyxal não conseguiu concluir a ordem (HTTP ${res.status}).`;
+
+          if (data?.motivo) {
+            errorMessage = data.motivo;
+          } else if (data?.erro) {
+            errorMessage = data.erro;
           }
 
           showSubtitles(errorMessage);
-          speakGoddessNyxVoice(errorMessage);
+          await speakGoddessNyxVoice(
+            errorMessage
+          );
         }
       } catch (err) {
         setHologramProcessing(false);
         console.warn('Chat API fetch error:', err);
-        speakGoddessNyxVoice("Não consegui conectar à Nyxal. Verifique se a API local está em execução.");
+        await speakGoddessNyxVoice(
+          "Não consegui conectar à Nyxal. Verifique se a API local está em execução."
+        );
+      } finally {
+        if (conversaContinua && voiceConversationActive) {
+          voiceConversationBusy = false;
+          resumeContinuousListening();
+        }
       }
     }
 
@@ -1222,6 +1890,11 @@
       const textEl = document.getElementById('aiSubtitlesText');
       box.classList.remove('hidden');
       textEl.innerText = `"${text}"`;
+    }
+
+    function showVoiceDiagnostics() {
+      const box = document.getElementById('voiceDiagnostics');
+      if (box) box.classList.remove('hidden');
     }
 
     function setGlobeVoiceState(state) {
@@ -1256,24 +1929,519 @@
 
     let voiceRecorder = null;
     let voiceChunks = [];
-    let voiceStopTimer = null;
-    const VOICE_RECORDING_MS = 7000;
+    let voiceStream = null;
+    let voiceAudioContext = null;
+    let voiceAnalyser = null;
+    let voiceAnalyserSource = null;
+    let voiceVadFrame = null;
+    let voiceMimeType = '';
+    let voiceConversationActive = false;
+    let voiceConversationBusy = false;
+    let voiceDiscardCurrentRecording = false;
+    let voiceSpeechStartedAt = 0;
+    let voiceLastSpeechAt = 0;
+    let voiceSilenceStartedAt = 0;
+    let voiceCaptureStartedAt = 0;
+    let voiceSpeechDetectedInCurrentRecording = false;
+    let voiceNoiseFloor = 0.003;
+    let voiceRmsAtual = 0;
+    let voiceVozDetectada = false;
+    let voiceCalibracaoIniciadaAt = 0;
 
-    async function toggleVoiceInput() {
-      playHudSound('click');
+    const VOICE_VAD_CALIBRATION_MS = 450;
+    const VOICE_VAD_START_MS = 90;
+    const VOICE_VAD_SILENCE_MS = 850;
+    const VOICE_VAD_MIN_UTTERANCE_MS = 280;
+    const VOICE_UTTERANCE_MAX_MS = 12000;
+    const VOICE_NOISE_ALPHA = 0.035;
+    const VOICE_THRESHOLD_MULTIPLIER = 2.4;
+    const VOICE_MIN_THRESHOLD = 0.004;
+    const VOICE_MAX_THRESHOLD = 0.08;
+    const VOICE_RESUME_GUARD_MS = 320;
 
-      if (voiceRecorder && voiceRecorder.state === 'recording') {
-        voiceRecorder.stop();
+    function setVoiceMicrophoneEnabled(enabled) {
+      if (!voiceStream) return;
+      voiceStream.getAudioTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
+
+    function updateVoiceConversationButton() {
+      const button = document.getElementById('globeVoiceButton');
+      if (!button) return;
+
+      if (voiceConversationActive) {
+        button.setAttribute(
+          'aria-label',
+          'Encerrar conversa por voz com Nyxal'
+        );
+        button.title = 'Clique para encerrar a conversa por voz';
+      } else {
+        button.setAttribute(
+          'aria-label',
+          'Iniciar conversa por voz com Nyxal'
+        );
+        button.title = 'Clique uma vez para iniciar a conversa por voz';
+      }
+    }
+
+    function stopVoiceVadLoop() {
+      if (voiceVadFrame !== null) {
+        cancelAnimationFrame(voiceVadFrame);
+        voiceVadFrame = null;
+      }
+    }
+
+    function resetVoiceVadState() {
+      voiceSpeechStartedAt = 0;
+      voiceLastSpeechAt = 0;
+      voiceSilenceStartedAt = 0;
+      voiceCaptureStartedAt = 0;
+      voiceSpeechDetectedInCurrentRecording = false;
+      voiceRmsAtual = 0;
+      voiceVozDetectada = false;
+      voiceCalibracaoIniciadaAt = performance.now();
+      voiceNoiseFloor = Math.max(
+        0.0015,
+        Math.min(0.008, voiceNoiseFloor || 0.003)
+      );
+    }
+
+    function voiceRms(data) {
+      let soma = 0;
+
+      for (let indice = 0; indice < data.length; indice += 1) {
+        const amplitude = data[indice];
+        soma += amplitude * amplitude;
+      }
+
+      return Math.sqrt(soma / data.length);
+    }
+
+    function voiceActivityThreshold() {
+      // O piso de ruído é aprendido continuamente, mas a sensibilidade
+      // nunca sobe indefinidamente: fala baixa continua sendo detectável.
+      const threshold = voiceNoiseFloor * VOICE_THRESHOLD_MULTIPLIER + 0.0025;
+      return Math.min(
+        VOICE_MAX_THRESHOLD,
+        Math.max(
+          VOICE_MIN_THRESHOLD,
+          threshold
+        )
+      );
+    }
+
+    function updateVoiceDiagnostics() {
+      const diagnostics = document.getElementById('voiceDiagnostics');
+      if (!diagnostics) return;
+
+      diagnostics.textContent =
+        'RMS ' + voiceRmsAtual.toFixed(4) +
+        ' • LIMIAR ' + voiceActivityThreshold().toFixed(4) +
+        ' • ' + (voiceVozDetectada ? 'FALA DETECTADA' : 'OUVINDO');
+    }
+
+    function beginVoiceCapture() {
+      if (
+        !voiceConversationActive ||
+        voiceConversationBusy ||
+        !voiceStream ||
+        voiceRecorder
+      ) {
         return;
       }
 
-      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-        alert('Este navegador não disponibiliza gravação de áudio para a Nyxal.');
+      const Recorder = window.MediaRecorder;
+      voiceChunks = [];
+
+      voiceRecorder = voiceMimeType
+        ? new Recorder(voiceStream, { mimeType: voiceMimeType })
+        : new Recorder(voiceStream);
+
+      const currentRecorder = voiceRecorder;
+      const startedAt = performance.now();
+      voiceCaptureStartedAt = startedAt;
+      voiceSpeechDetectedInCurrentRecording = false;
+
+      currentRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          voiceChunks.push(event.data);
+        }
+      };
+
+      currentRecorder.onerror = (event) => {
+        console.warn('Microfone:', event.error || event);
+        voiceChunks = [];
+        voiceRecorder = null;
+        voiceConversationBusy = false;
+        resetVoiceVadState();
+        setVoiceMicrophoneEnabled(true);
+
+        if (voiceConversationActive) {
+          setGlobeVoiceState('listening');
+          setAiStatusText('OUVINDO...', 'text-emerald-400');
+          showSubtitles('O microfone encontrou um erro. Continuando a escuta...');
+          scheduleContinuousVoiceLoop();
+        } else {
+          setGlobeVoiceState('idle');
+        }
+      };
+
+      currentRecorder.onstop = async () => {
+        const actualType =
+          currentRecorder.mimeType ||
+          voiceMimeType ||
+          'audio/webm';
+
+        const blob = new Blob(
+          voiceChunks,
+          { type: actualType }
+        );
+
+        const falaDetectada =
+          voiceSpeechDetectedInCurrentRecording;
+
+        voiceChunks = [];
+        voiceRecorder = null;
+        voiceCaptureStartedAt = 0;
+        voiceSpeechDetectedInCurrentRecording = false;
+
+        if (
+          voiceDiscardCurrentRecording ||
+          !voiceConversationActive ||
+          !blob.size ||
+          !falaDetectada
+        ) {
+          voiceDiscardCurrentRecording = false;
+          if (voiceConversationActive) {
+            voiceConversationBusy = false;
+            resumeContinuousListening();
+          } else {
+            cleanupContinuousVoice();
+          }
+          return;
+        }
+
+        voiceConversationBusy = true;
+        setVoiceMicrophoneEnabled(false);
+        setGlobeVoiceState('processing');
+        setAiStatusText('TRANSCRIÇÃO...', 'text-emerald-400');
+        setHologramProcessing(true);
+        showSubtitles('Transcrevendo...');
+
+        try {
+          const response = await fetch(
+            `${window.NYXAL_API_BASE}/api/stt`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': actualType.split(';')[0]
+              },
+              body: blob
+            }
+          );
+
+          const data = await response.json();
+
+          if (!response.ok || !data.sucesso) {
+            throw new Error(
+              data.motivo ||
+              `Falha na transcrição (HTTP ${response.status}).`
+            );
+          }
+
+          const transcript = (data.texto || '').trim();
+
+          if (!transcript) {
+            setHologramProcessing(false);
+            showSubtitles('Não identifiquei uma fala no áudio.');
+            return;
+          }
+
+          showSubtitles(`Você disse: "${transcript}"`);
+          await sendNyxalMessage(transcript);
+        } catch (err) {
+          setHologramProcessing(false);
+          console.warn('STT API error:', err);
+          setAiStatusText(
+            isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+            'text-hud-cyan'
+          );
+          showSubtitles(`Erro de reconhecimento: ${err.message}`);
+        } finally {
+          if (voiceConversationActive) {
+            voiceConversationBusy = false;
+            resumeContinuousListening();
+          } else {
+            cleanupContinuousVoice();
+          }
+        }
+      };
+
+      currentRecorder.start(100);
+      voiceSpeechStartedAt = 0;
+      voiceLastSpeechAt = 0;
+      voiceSilenceStartedAt = 0;
+
+      setGlobeVoiceState('listening');
+      setAiStatusText('OUVINDO...', 'text-emerald-400');
+      setHologramProcessing(false);
+      showSubtitles('Estou ouvindo...');
+
+      scheduleContinuousVoiceLoop();
+    }
+
+    function finishVoiceUtterance() {
+      if (
+        !voiceRecorder ||
+        voiceRecorder.state !== 'recording'
+      ) {
+        return;
+      }
+
+      voiceRecorder.stop();
+    }
+
+    function runContinuousVoiceVad() {
+      if (
+        !voiceConversationActive ||
+        voiceConversationBusy ||
+        !voiceAnalyser
+      ) {
+        voiceVadFrame = null;
+        return;
+      }
+
+      const data = new Float32Array(
+        voiceAnalyser.fftSize
+      );
+
+      voiceAnalyser.getFloatTimeDomainData(data);
+
+      const rms = voiceRms(data);
+      const now = performance.now();
+      const calibrando =
+        voiceCalibracaoIniciadaAt > 0 &&
+        now - voiceCalibracaoIniciadaAt < VOICE_VAD_CALIBRATION_MS;
+
+      voiceRmsAtual = rms;
+
+      if (!voiceRecorder) {
+        beginVoiceCapture();
+      }
+
+      const threshold = voiceActivityThreshold();
+
+      // Aprende o ruído somente quando não há atividade vocal.
+      if (
+        !voiceVozDetectada &&
+        (calibrando || rms < threshold)
+      ) {
+        voiceNoiseFloor =
+          voiceNoiseFloor * (1 - VOICE_NOISE_ALPHA) +
+          rms * VOICE_NOISE_ALPHA;
+      }
+
+      const vozAtiva =
+        rms >= voiceActivityThreshold();
+
+      voiceVozDetectada = vozAtiva;
+      updateVoiceDiagnostics();
+
+      if (voiceRecorder) {
+        if (vozAtiva) {
+          if (!voiceSpeechStartedAt) {
+            voiceSpeechStartedAt = now;
+          }
+
+          voiceLastSpeechAt = now;
+          voiceSilenceStartedAt = 0;
+
+          if (
+            now - voiceSpeechStartedAt >=
+            VOICE_VAD_START_MS
+          ) {
+            voiceSpeechDetectedInCurrentRecording = true;
+          }
+        } else if (
+          voiceSpeechDetectedInCurrentRecording &&
+          !voiceSilenceStartedAt
+        ) {
+          voiceSilenceStartedAt = now;
+        }
+
+        const speechAge = voiceSpeechStartedAt
+          ? now - voiceSpeechStartedAt
+          : 0;
+
+        const silenceAge = voiceSilenceStartedAt
+          ? now - voiceSilenceStartedAt
+          : 0;
+
+        const captureAge = voiceCaptureStartedAt
+          ? now - voiceCaptureStartedAt
+          : 0;
+
+        const afterSpeechSilence =
+          voiceSpeechDetectedInCurrentRecording &&
+          voiceLastSpeechAt &&
+          now - voiceLastSpeechAt >=
+          VOICE_VAD_SILENCE_MS;
+
+        const deveReiniciarSemFala =
+          !voiceSpeechDetectedInCurrentRecording &&
+          captureAge >= 15000;
+
+        if (
+          speechAge >= VOICE_UTTERANCE_MAX_MS ||
+          (
+            speechAge >= VOICE_VAD_MIN_UTTERANCE_MS &&
+            afterSpeechSilence &&
+            silenceAge >= VOICE_VAD_SILENCE_MS
+          ) ||
+          deveReiniciarSemFala
+        ) {
+          finishVoiceUtterance();
+        }
+      }
+
+      voiceVadFrame = requestAnimationFrame(
+        runContinuousVoiceVad
+      );
+    }
+
+    function scheduleContinuousVoiceLoop(delay = 0) {
+      stopVoiceVadLoop();
+
+      const iniciar = () => {
+        if (
+          !voiceConversationActive ||
+          voiceConversationBusy ||
+          !voiceAnalyser
+        ) {
+          return;
+        }
+
+        voiceVadFrame = requestAnimationFrame(
+          runContinuousVoiceVad
+        );
+      };
+
+      if (delay > 0) {
+        window.setTimeout(iniciar, delay);
+      } else {
+        iniciar();
+      }
+    }
+
+    function resumeContinuousListening() {
+      if (!voiceConversationActive) {
+        return;
+      }
+
+      setVoiceMicrophoneEnabled(true);
+      resetVoiceVadState();
+      setGlobeVoiceState('listening');
+      setAiStatusText('OUVINDO...', 'text-emerald-400');
+      setHologramProcessing(false);
+      showSubtitles('Estou ouvindo...');
+
+      scheduleContinuousVoiceLoop(
+        VOICE_RESUME_GUARD_MS
+      );
+    }
+
+    function cleanupContinuousVoice() {
+      stopVoiceVadLoop();
+
+      if (voiceStream) {
+        voiceStream.getTracks().forEach(track => track.stop());
+        voiceStream = null;
+      }
+
+      if (voiceAudioContext) {
+        voiceAudioContext.close().catch(() => {});
+        voiceAudioContext = null;
+      }
+
+      voiceAnalyser = null;
+      voiceAnalyserSource = null;
+      voiceRecorder = null;
+      voiceChunks = [];
+      voiceConversationBusy = false;
+      resetVoiceVadState();
+
+      setHologramProcessing(false);
+      setGlobeVoiceState('idle');
+      setAiStatusText(
+        isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+        'text-hud-cyan'
+      );
+      updateVoiceConversationButton();
+
+      setTimeout(() => {
+        document.getElementById('aiSubtitlesBox')?.classList.add('hidden');
+      }, 1200);
+    }
+
+    function stopContinuousVoice() {
+      voiceConversationActive = false;
+      voiceDiscardCurrentRecording = true;
+      voiceConversationBusy = false;
+      stopVoiceVadLoop();
+
+      if (cancelCurrentNyxalSpeech) {
+        cancelCurrentNyxalSpeech();
+      }
+
+      if (currentNyxalHtmlAudio) {
+        try {
+          currentNyxalHtmlAudio.pause();
+          currentNyxalHtmlAudio.currentTime = 0;
+        } catch (_) {}
+      } else if (currentNyxalAudio) {
+        currentNyxalAudio.pause();
+        currentNyxalAudio.currentTime = 0;
+        currentNyxalAudio = null;
+      }
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      if (
+        voiceRecorder &&
+        voiceRecorder.state === 'recording'
+      ) {
+        voiceRecorder.stop();
+      } else {
+        cleanupContinuousVoice();
+      }
+    }
+
+    async function startContinuousVoice() {
+      try {
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+      } catch (erro) {
+        console.warn('Não foi possível desbloquear o áudio principal:', erro);
+      }
+
+      if (
+        !navigator.mediaDevices?.getUserMedia ||
+        !window.MediaRecorder ||
+        !window.AudioContext &&
+        !window.webkitAudioContext
+      ) {
+        alert(
+          'Este navegador não disponibiliza os recursos necessários para conversa por voz contínua.'
+        );
         return;
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        voiceStream = await navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
             echoCancellation: true,
@@ -1282,157 +2450,85 @@
           }
         });
 
+        const AudioContextClass =
+          window.AudioContext || window.webkitAudioContext;
+
+        voiceAudioContext = new AudioContextClass();
+        await voiceAudioContext.resume();
+
+        voiceAnalyser = voiceAudioContext.createAnalyser();
+        voiceAnalyser.fftSize = 2048;
+        voiceAnalyser.smoothingTimeConstant = 0.72;
+
+        voiceAnalyserSource =
+          voiceAudioContext.createMediaStreamSource(
+            voiceStream
+          );
+        voiceAnalyserSource.connect(
+          voiceAnalyser
+        );
+
         const preferredTypes = [
-          'audio/ogg;codecs=opus',
           'audio/webm;codecs=opus',
+          'audio/ogg;codecs=opus',
           'audio/webm'
         ];
 
-        const mimeType = preferredTypes.find(type =>
+        voiceMimeType = preferredTypes.find(type =>
           MediaRecorder.isTypeSupported(type)
         ) || '';
 
-        voiceChunks = [];
-        voiceRecorder = mimeType
-          ? new MediaRecorder(stream, { mimeType })
-          : new MediaRecorder(stream);
+        voiceConversationActive = true;
+        voiceConversationBusy = false;
+        voiceDiscardCurrentRecording = false;
+        resetVoiceVadState();
+        updateVoiceConversationButton();
 
-        const currentRecorder = voiceRecorder;
-
-        currentRecorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            voiceChunks.push(event.data);
-          }
-        };
-
-        currentRecorder.onstop = async () => {
-          if (voiceStopTimer) {
-            clearTimeout(voiceStopTimer);
-            voiceStopTimer = null;
-          }
-
-          stream.getTracks().forEach(track => track.stop());
-
-          const actualType =
-            currentRecorder.mimeType ||
-            mimeType ||
-            'audio/webm';
-
-          const blob = new Blob(
-            voiceChunks,
-            { type: actualType }
-          );
-
-          voiceChunks = [];
-
-          if (!blob.size) {
-            setGlobeVoiceState('idle');
-            setHologramProcessing(false);
-            setAiStatusText(
-              isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-              'text-hud-cyan'
-            );
-            return;
-          }
-
-          setGlobeVoiceState('processing');
-          setAiStatusText('TRANSCRIÇÃO...', 'text-emerald-400');
-          setHologramProcessing(true);
-          showSubtitles('Transcrevendo comando de voz...');
-
-          try {
-            const response = await fetch(
-              `${window.NYXAL_API_BASE}/api/stt`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': actualType.split(';')[0]
-                },
-                body: blob
-              }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok || !data.sucesso) {
-              throw new Error(
-                data.motivo || `Falha na transcrição (HTTP ${response.status}).`
-              );
-            }
-
-            const transcript = (data.texto || '').trim();
-
-            if (!transcript) {
-              setGlobeVoiceState('idle');
-              setHologramProcessing(false);
-              setAiStatusText(
-                isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-                'text-hud-cyan'
-              );
-              showSubtitles('Não identifiquei uma fala no áudio.');
-              return;
-            }
-
-            showSubtitles(`Você disse: "${transcript}"`);
-            document.getElementById('chatInput').value = transcript;
-            document.getElementById('chatForm').requestSubmit();
-          } catch (err) {
-            setGlobeVoiceState('idle');
-            setHologramProcessing(false);
-            console.warn('STT API error:', err);
-            setAiStatusText(
-              isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-              'text-hud-cyan'
-            );
-            showSubtitles(`Erro de reconhecimento: ${err.message}`);
-            alert(`Não foi possível transcrever o áudio: ${err.message}`);
-          } finally {
-            voiceRecorder = null;
-          }
-        };
-
-        currentRecorder.onerror = (event) => {
-          if (voiceStopTimer) {
-            clearTimeout(voiceStopTimer);
-            voiceStopTimer = null;
-          }
-
-          stream.getTracks().forEach(track => track.stop());
-          voiceChunks = [];
-          voiceRecorder = null;
-
-          setGlobeVoiceState('idle');
-          setHologramProcessing(false);
-          setAiStatusText(
-            isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-            'text-hud-cyan'
-          );
-          console.warn('Microfone:', event.error || event);
-          alert('Ocorreu um erro durante a gravação do microfone.');
-        };
-
-        currentRecorder.start(250);
-
+        setVoiceMicrophoneEnabled(true);
         setGlobeVoiceState('listening');
         setAiStatusText('OUVINDO...', 'text-emerald-400');
         setHologramProcessing(false);
-        showSubtitles('Estou ouvindo... fale agora.');
+        showSubtitles(
+          'Conversa por voz ativa. Fale normalmente; não é necessário tocar novamente.'
+        );
+        showVoiceDiagnostics();
 
-        voiceStopTimer = setTimeout(() => {
-          if (currentRecorder.state === 'recording') {
-            currentRecorder.stop();
-          }
-        }, VOICE_RECORDING_MS);
+        // Captura começa imediatamente; não dependemos de o VAD conseguir
+        // detectar o primeiro fonema para começar a gravar.
+        beginVoiceCapture();
+        scheduleContinuousVoiceLoop();
       } catch (err) {
         console.warn('Permissão/áudio do microfone:', err);
-        setGlobeVoiceState('idle');
-        setAiStatusText(
-          isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-          'text-hud-cyan'
+        cleanupContinuousVoice();
+        showSubtitles(
+          'Não foi possível iniciar a conversa por voz. Verifique a permissão do microfone.'
         );
-        showSubtitles('Permissão do microfone necessária.');
-        alert('Não foi possível acessar o microfone. Verifique a permissão do navegador.');
+        alert(
+          'Não foi possível acessar o microfone. Verifique a permissão do navegador.'
+        );
       }
+    }
+
+    async function toggleVoiceInput() {
+      prepararSaidaAudioNoGestoDoUsuario();
+
+      try {
+        await desbloquearAudioNyxal();
+      } catch (erro) {
+        console.warn(
+          'Saída de áudio não desbloqueada antes da conversa:',
+          erro
+        );
+      }
+
+      playHudSound('click');
+
+      if (voiceConversationActive) {
+        stopContinuousVoice();
+        return;
+      }
+
+      await startContinuousVoice();
     }
 
     function initGlobeVoiceControl() {
@@ -1447,6 +2543,7 @@
         }
       });
 
+      updateVoiceConversationButton();
       setGlobeVoiceState('idle');
     }
 
@@ -1725,6 +2822,7 @@
       init3DGlobe();
       initGlobeVoiceControl();
       initSysGraph();
+      renderReflexaoDiaria();
 
       setInterval(updateLiveClock, 1000);
       updateLiveClock();
