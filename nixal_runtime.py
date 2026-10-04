@@ -642,8 +642,12 @@ class NyxalRuntime:
                 prioridade.get("selecionada")
             )
 
-            investigacao_resultado.get("sucesso")
-                ),
+            etapas.append(
+                {
+                    "etapa": "investigacao",
+                    "sucesso": bool(
+                        investigacao_resultado.get("sucesso")
+                    ),
                     "resultado": deepcopy(
                         investigacao_resultado
                     ),
