@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Suite determinística consolidada para o Nível 9."""
+"""Suite determinística consolidada para o Nível 9 / M4."""
 
 from __future__ import annotations
 
