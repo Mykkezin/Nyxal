@@ -134,12 +134,38 @@ def executar() -> None:
         assert quinto["alteracao_detectada"] is False
         assert git_before == git_after
 
+        # A API formal Nível 10 não substitui o observador legado.
+        assert hasattr(observador, "ciclo")
+        assert hasattr(observador, "iniciar")
+        assert hasattr(observador, "parar")
+
+        # Estado persistente adulterado deve ser rejeitado.
+        adulterado = json.loads(
+            estado_path.read_text(encoding="utf-8")
+        )
+        adulterado["ultimo_commit_observado"] = "0" * 40
+        estado_path.write_text(
+            json.dumps(adulterado, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        try:
+            reloaded.observar()
+        except ValueError as erro:
+            assert str(erro) == "ultimo_commit_inconsistente"
+        else:
+            raise AssertionError(
+                "estado_adulterado_aceito"
+            )
+
     print("TESTE_NIVEL10_OBSERVADOR_OK")
     print("DETECCAO_COMMIT_NOVO=OK")
     print("SEM_FALSO_POSITIVO=OK")
     print("CICLO_ID_DETERMINISTICO=OK")
     print("ESTADO_PERSISTENTE=OK")
     print("SEM_ALTERACAO_GIT=OK")
+    print("LEGADO_PRESERVADO=OK")
+    print("ESTADO_ADULTERADO_BLOQUEADO=OK")
     print("PASSOU: True")
 
 
