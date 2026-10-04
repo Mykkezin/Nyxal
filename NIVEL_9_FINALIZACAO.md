@@ -80,4 +80,4 @@ Testes do Nível 9 cobrem:
 - ciclo formal integrado;
 - governança de autorização, integração e rollback.
 
-A validação global deve ser executada após o checkpoint de implementação. Qualquer falha deve ser tratada como regressão/defeito de integração, não como motivo para remover os gates de segurança.
+A validação determinística consolidada foi executada no GitHub Actions após o checkpoint de implementação e passou com sucesso. O workflow também compila os módulos do Nível 9 antes da suite. A validação E2E do laboratório remoto continua sendo uma prova separada, já demonstrada anteriormente. Qualquer falha futura deve ser tratada como regressão/defeito de integração, não como motivo para remover os gates de segurança.
