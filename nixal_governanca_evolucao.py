@@ -508,7 +508,7 @@ class GovernancaEvolucaoNixal:
                 resultado["commit_integracao"],
                 "commit_integracao",
             ),
-            "arquivo_integrado": resultado["arquivo_integrado"],
+            "arquivo_integrado": proposta.get("arquivo"),
             "preparada_em": self._timestamp(),
         }
         registro["integracao_executada"] = False
