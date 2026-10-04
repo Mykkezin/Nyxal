@@ -319,11 +319,14 @@ class NucleoConversacionalNixal:
         )
 
         if (
-            not isinstance(
-                melhor_score_origem,
-                int
+            isinstance(origem, dict)
+            and (
+                not isinstance(
+                    melhor_score_origem,
+                    int
+                )
+                or melhor_score_origem < 2
             )
-            or melhor_score_origem < 2
         ):
 
             return resultado_direto
