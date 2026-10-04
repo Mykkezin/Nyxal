@@ -511,14 +511,14 @@ class LaboratorioRemotoNixal:
                 "expected_sha_invalido"
             )
 
-        status, _ = self._api_request(
+        status, corpo = self._api_request(
             "POST",
             "/actions/workflows/"
             + parse.quote(
                 self.WORKFLOW,
                 safe="",
             )
-            + "/dispatches",
+            + "/dispatches?return_run_details=true",
             {
                 "ref": self.workflow_ref,
                 "inputs": {
@@ -529,10 +529,33 @@ class LaboratorioRemotoNixal:
             },
         )
 
-        if status != 204:
+        if status not in {200, 204}:
             raise RuntimeError(
                 f"workflow_dispatch_status_inesperado:{status}"
             )
+
+        detalhes: dict[str, Any] = {}
+
+        if corpo.strip():
+            try:
+                dados = json.loads(corpo)
+            except json.JSONDecodeError as erro:
+                raise RuntimeError(
+                    "workflow_dispatch_resposta_invalida"
+                ) from erro
+
+            if isinstance(dados, dict):
+                detalhes = {
+                    "workflow_run_id": dados.get(
+                        "workflow_run_id"
+                    ),
+                    "run_url": dados.get(
+                        "run_url"
+                    ),
+                    "html_url": dados.get(
+                        "html_url"
+                    ),
+                }
 
         return {
             "sucesso": True,
@@ -543,6 +566,11 @@ class LaboratorioRemotoNixal:
             "expected_sha": expected_sha,
             "workflow": self.WORKFLOW,
             "workflow_ref": self.workflow_ref,
+            **{
+                chave: valor
+                for chave, valor in detalhes.items()
+                if valor is not None
+            },
         }
 
     def listar_execucoes(
