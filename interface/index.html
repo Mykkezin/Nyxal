@@ -932,14 +932,67 @@
     }
 
     // WEB AUDIO SYNTHESIZER FOR HUD SFX & VOICE REVERB
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
+    let audioCtx = null;
+    let currentNyxalHtmlAudio = null;
+
+    function getNyxalAudioContext() {
+      if (audioCtx) return audioCtx;
+
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        throw new Error('Web Audio não está disponível neste navegador.');
+      }
+
+      audioCtx = new AudioContextClass();
+      return audioCtx;
+    }
+
+    async function desbloquearAudioNyxal() {
+      const contexto = getNyxalAudioContext();
+
+      if (contexto.state !== 'running') {
+        await contexto.resume();
+      }
+
+      if (contexto.state !== 'running') {
+        throw new Error(
+          'AudioContext não entrou em execução: ' + contexto.state
+        );
+      }
+
+      return contexto;
+    }
+
+    document.addEventListener(
+      'pointerdown',
+      () => {
+        desbloquearAudioNyxal().catch((erro) => {
+          console.warn('Desbloqueio de áudio Nyxal:', erro);
+        });
+      },
+      { once: true, passive: true }
+    );
+
+    document.addEventListener(
+      'keydown',
+      () => {
+        desbloquearAudioNyxal().catch((erro) => {
+          console.warn('Desbloqueio de áudio Nyxal:', erro);
+        });
+      },
+      { once: true, passive: true }
+    );
+
     function playHudSound(type) {
       const soundEnabled = document.getElementById('soundToggle')?.checked ?? true;
       if (!soundEnabled || !audioCtx) return;
 
       try {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
@@ -1032,14 +1085,74 @@
     }
 
     async function tocarAudioTtsComContexto(blob) {
-      const contexto = audioCtx;
+      if (!blob || !blob.size) {
+        throw new Error('A Nyxal recebeu um áudio TTS vazio.');
+      }
 
-      if (contexto.state === 'suspended') {
-        await contexto.resume();
+      await desbloquearAudioNyxal();
+      const contexto = audioCtx;
+      const objectUrl = URL.createObjectURL(blob);
+
+      try {
+        await new Promise((resolve, reject) => {
+          const audio = new Audio();
+          let concluido = false;
+
+          audio.preload = 'auto';
+          audio.autoplay = false;
+          audio.controls = false;
+          audio.volume = 1.0;
+          audio.src = objectUrl;
+
+          currentNyxalHtmlAudio = audio;
+
+          const finalizar = () => {
+            if (concluido) return;
+            concluido = true;
+
+            if (currentNyxalHtmlAudio === audio) {
+              currentNyxalHtmlAudio = null;
+            }
+
+            resolve(true);
+          };
+
+          const cancelar = () => {
+            try {
+              audio.pause();
+              audio.currentTime = 0;
+            } catch (_) {}
+            finalizar();
+          };
+
+          cancelCurrentNyxalSpeech = cancelar;
+          audio.onended = finalizar;
+          audio.onerror = () => reject(
+            new Error('O navegador não conseguiu reproduzir o áudio TTS.')
+          );
+
+          audio.play().catch(reject);
+        });
+
+        return;
+      } catch (erroHtmlAudio) {
+        console.warn(
+          'HTMLAudio TTS falhou; tentando Web Audio:',
+          erroHtmlAudio
+        );
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+        if (currentNyxalHtmlAudio) {
+          currentNyxalHtmlAudio = null;
+        }
       }
 
       const arrayBuffer = await blob.arrayBuffer();
       const audioBuffer = await contexto.decodeAudioData(arrayBuffer);
+
+      if (!audioBuffer.duration || audioBuffer.duration <= 0) {
+        throw new Error('O áudio TTS decodificado possui duração inválida.');
+      }
 
       await new Promise((resolve, reject) => {
         let concluido = false;
@@ -1133,9 +1246,7 @@
       }
 
       try {
-        if (audioCtx.state === 'suspended') {
-          await audioCtx.resume();
-        }
+        await desbloquearAudioNyxal();
 
         const response = await fetch(`${window.NYXAL_API_BASE}/api/tts`, {
           method: 'POST',
@@ -1851,6 +1962,14 @@
 
       if (cancelCurrentNyxalSpeech) {
         cancelCurrentNyxalSpeech();
+      }
+
+      if (currentNyxalHtmlAudio) {
+        try {
+          currentNyxalHtmlAudio.pause();
+          currentNyxalHtmlAudio.currentTime = 0;
+        } catch (_) {}
+        currentNyxalHtmlAudio = null;
       } else if (currentNyxalAudio) {
         currentNyxalAudio.pause();
         currentNyxalAudio.currentTime = 0;
@@ -1958,6 +2077,15 @@
     }
 
     async function toggleVoiceInput() {
+      try {
+        await desbloquearAudioNyxal();
+      } catch (erro) {
+        console.warn(
+          'Saída de áudio não desbloqueada antes da conversa:',
+          erro
+        );
+      }
+
       playHudSound('click');
 
       if (voiceConversationActive) {
