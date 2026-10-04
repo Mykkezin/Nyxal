@@ -109,6 +109,12 @@ def executar() -> None:
             repetido["historico_estados"]
         ) == len(esperado)
 
+        # Reexecução explícita de ciclo rejeitado.
+        rejeicao_primeira = ciclo.criar_nova_tentativa(
+            ciclo_id_rejeicao if "ciclo_id_rejeicao" in locals() else ciclo_id,
+            motivo="corrigir_falha",
+        ) if False else None
+
         # Commit diferente não pode ser apresentado como o mesmo ciclo.
         try:
             ciclo.registrar_sincronizacao_preparada(
@@ -167,6 +173,33 @@ def executar() -> None:
             ]
             == "teste_falhou"
         )
+
+        tentativa = ciclo.criar_nova_tentativa(
+            ciclo_id_rejeicao,
+            motivo="corrigir_falha",
+        )
+        assert tentativa["estado"] == "alteracao_detectada"
+        assert tentativa["tentativa_de"] == ciclo_id_rejeicao
+        assert tentativa["tentativa_numero"] == 2
+        assert tentativa["ciclo_id"] != ciclo_id_rejeicao
+        assert tentativa["autorizacao_explicita"] is False
+
+        # A nova tentativa percorre novamente todo o ciclo.
+        ciclo.registrar_sincronizacao_preparada(
+            tentativa["ciclo_id"],
+            commit_validado="3" * 40,
+        )
+        ciclo.iniciar_validacao(
+            tentativa["ciclo_id"]
+        )
+        ciclo.concluir_validacao(
+            tentativa["ciclo_id"],
+            sucesso=True,
+        )
+        tentativa_final = ciclo.classificar_resultado(
+            tentativa["ciclo_id"]
+        )
+        assert tentativa_final["estado"] == "aprovado"
 
         # Transição ilegal a partir de estado inicial deve bloquear.
         novo_ciclo = ciclo.abrir_ciclo(
