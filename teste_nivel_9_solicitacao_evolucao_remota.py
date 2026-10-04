@@ -159,6 +159,18 @@ def main() -> int:
         assert rejeitada["estado"] == "solicitacao_nao_pronta"
         assert chamadas == []
 
+        criado_runtime = solicitacoes.criar(
+            ciclo_hipotese=ciclo_hipotese,
+            objetivo="reduzir tempo de execução via Runtime",
+            metrica="tempo_execucao_ms",
+            direcao_melhor="menor",
+            baseline=100.0,
+        )
+        pronto_runtime = solicitacoes.anexar_artefato(
+            criado_runtime["solicitacao_id"],
+            artefato,
+        )
+
         runtime = NyxalRuntime(
             arquivo_estado=raiz / "estado_runtime.json",
             arquivo_log=raiz / "log_runtime.json",
@@ -172,15 +184,16 @@ def main() -> int:
             solicitacao_evolucao=solicitacoes,
         )
 
+        chamadas.clear()
         ponte = runtime.executar_solicitacao_evolucao_remota(
-            pronto["solicitacao_id"]
+            pronto_runtime["solicitacao_id"]
         )
 
         assert ponte["sucesso"] is True
         assert ponte["estado"] == (
             "solicitacao_evolucao_remota_executada"
         )
-        assert ponte["solicitacao_id"] == pronto["solicitacao_id"]
+        assert ponte["solicitacao_id"] == pronto_runtime["solicitacao_id"]
         assert ponte["autorizacao_explicita"] is False
         assert ponte["integracao_executada"] is False
         assert ponte["stable_modificada"] is False
@@ -188,7 +201,7 @@ def main() -> int:
             "experimento_concluido"
         )
         solicitacao_final = solicitacoes.consultar(
-            pronto["solicitacao_id"]
+            pronto_runtime["solicitacao_id"]
         )
         assert solicitacao_final["estado"] == "experimento_concluido"
         assert solicitacao_final["resultado_experimento"]["sucesso"] is True
