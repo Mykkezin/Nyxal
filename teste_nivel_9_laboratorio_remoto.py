@@ -71,6 +71,39 @@ def main() -> int:
     )
     assert invalido is None
 
+    respostas = iter(
+        [
+            RuntimeError(
+                "github_api_http_404:<Error><Code>BlobNotFound</Code></Error>"
+            ),
+            RuntimeError(
+                "github_api_http_404:<Error><Code>BlobNotFound</Code></Error>"
+            ),
+            (302, "logs\nNYXAL_RESULT_JSON={\"status\":\"sucesso\"}\n"),
+        ]
+    )
+
+    chamada_original = laboratorio._api_request
+
+    def api_fake(*args, **kwargs):
+        resposta = next(respostas)
+        if isinstance(resposta, Exception):
+            raise resposta
+        return resposta
+
+    laboratorio._api_request = api_fake
+
+    try:
+        logs = laboratorio.baixar_logs_job(
+            123,
+            max_tentativas=3,
+            atraso_inicial=0,
+        )
+    finally:
+        laboratorio._api_request = chamada_original
+
+    assert "NYXAL_RESULT_JSON" in logs
+
     testes_invalidos = [
         lambda: laboratorio.branch_experimento("../x"),
         lambda: laboratorio.construir_manifesto(
@@ -103,6 +136,7 @@ def main() -> int:
     print("MANIFESTO=OK")
     print("BRANCH_EXPERIMENTO=OK")
     print("LEITURA_RESULTADO=OK")
+    print("RETRY_BLOB_NOT_FOUND=OK")
     print("VALIDACAO_ENTRADAS=OK")
     print("SEM_EXECUCAO_LOCAL=OK")
     print("SEM_AUTORIZACAO_DE_INTEGRACAO=OK")
