@@ -50,7 +50,7 @@ except ValueError:
 
 WHISPER_MODEL_NAME = os.environ.get(
     "NYXAL_WHISPER_MODEL",
-    "tiny",
+    "base",
 )
 WHISPER_MODEL = None
 KOKORO_PIPELINE = None
@@ -92,6 +92,8 @@ def transcribe_audio(audio_path: str) -> str:
         audio_path,
         language="pt",
         vad_filter=True,
+        condition_on_previous_text=False,
+        temperature=0.0,
     )
 
     texto = " ".join(
