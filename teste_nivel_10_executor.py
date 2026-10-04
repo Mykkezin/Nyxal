@@ -46,27 +46,6 @@ class ObservadorFalso:
         }
 
 
-class CoordenadorBranchIncorreta(CoordenadorFalso):
-    def estado(self) -> dict:
-        return {
-            "branch_atual": "outra-branch",
-            "arvore_limpa": True,
-        }
-
-
-class CoordenadorArvoreSuja(CoordenadorFalso):
-    def estado(self) -> dict:
-        return {
-            "branch_atual": "desenvolvimento",
-            "arvore_limpa": False,
-        }
-
-
-class CoordenadorFalhaTecnica(CoordenadorFalso):
-    def validar_python_alterado(self) -> dict:
-        raise RuntimeError("falha_tecnica_teste")
-
-
 class CoordenadorFalso:
     def __init__(self) -> None:
         self.validacoes = 0
@@ -99,6 +78,27 @@ class CoordenadorFalso:
             "sucesso": True,
             "testes_python": [],
         }
+
+
+class CoordenadorBranchIncorreta(CoordenadorFalso):
+    def estado(self) -> dict:
+        return {
+            "branch_atual": "outra-branch",
+            "arvore_limpa": True,
+        }
+
+
+class CoordenadorArvoreSuja(CoordenadorFalso):
+    def estado(self) -> dict:
+        return {
+            "branch_atual": "desenvolvimento",
+            "arvore_limpa": False,
+        }
+
+
+class CoordenadorFalhaTecnica(CoordenadorFalso):
+    def validar_python_alterado(self) -> dict:
+        raise RuntimeError("falha_tecnica_teste")
 
 
 def executar() -> None:
