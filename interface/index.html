@@ -644,7 +644,8 @@
           />
 
           <!-- Subtitle / Voice Output Overlay -->
-          <div id="aiSubtitlesBox" class="absolute bottom-2 left-2 right-2 z-30 bg-slate-950/95 border border-hud-cyan/60 p-2.5 rounded-lg text-center shadow-lg backdrop-blur-md hidden">
+          <div id="voiceDiagnostics" class="fixed bottom-2 left-2 z-50 hidden px-2 py-1 rounded bg-black/70 border border-hud-cyan/20 text-[9px] font-mono text-hud-cyan pointer-events-none"></div>
+      <div id="aiSubtitlesBox" class="absolute bottom-2 left-2 right-2 z-30 bg-slate-950/95 border border-hud-cyan/60 p-2.5 rounded-lg text-center shadow-lg backdrop-blur-md hidden">
             <p id="aiSubtitlesText" class="text-xs font-rajdhani text-hud-cyan font-semibold leading-tight">"Sistemas operacionais iniciados, Nyxal ao seu dispor."</p>
           </div>
         </div>
@@ -1529,6 +1530,11 @@
       textEl.innerText = `"${text}"`;
     }
 
+    function showVoiceDiagnostics() {
+      const box = document.getElementById('voiceDiagnostics');
+      if (box) box.classList.remove('hidden');
+    }
+
     function setGlobeVoiceState(state) {
       const globe = document.getElementById('globeContainer');
       const hud = document.getElementById('globeVoiceState');
@@ -1573,17 +1579,21 @@
     let voiceSpeechStartedAt = 0;
     let voiceLastSpeechAt = 0;
     let voiceSilenceStartedAt = 0;
-    let voiceNoiseFloor = 0.008;
+    let voiceNoiseFloor = 0.003;
+    let voiceRmsAtual = 0;
+    let voiceVozDetectada = false;
+    let voiceCalibracaoIniciadaAt = 0;
 
-    const VOICE_VAD_START_MS = 120;
-    const VOICE_VAD_SILENCE_MS = 1100;
-    const VOICE_VAD_MIN_UTTERANCE_MS = 350;
+    const VOICE_VAD_CALIBRATION_MS = 450;
+    const VOICE_VAD_START_MS = 90;
+    const VOICE_VAD_SILENCE_MS = 850;
+    const VOICE_VAD_MIN_UTTERANCE_MS = 280;
     const VOICE_UTTERANCE_MAX_MS = 12000;
-    const VOICE_NOISE_ALPHA = 0.025;
-    const VOICE_THRESHOLD_MULTIPLIER = 2.2;
-    const VOICE_MIN_THRESHOLD = 0.008;
-    const VOICE_MAX_THRESHOLD = 0.12;
-    const VOICE_RESUME_GUARD_MS = 280;
+    const VOICE_NOISE_ALPHA = 0.035;
+    const VOICE_THRESHOLD_MULTIPLIER = 2.4;
+    const VOICE_MIN_THRESHOLD = 0.004;
+    const VOICE_MAX_THRESHOLD = 0.08;
+    const VOICE_RESUME_GUARD_MS = 320;
 
     function setVoiceMicrophoneEnabled(enabled) {
       if (!voiceStream) return;
@@ -1622,9 +1632,12 @@
       voiceSpeechStartedAt = 0;
       voiceLastSpeechAt = 0;
       voiceSilenceStartedAt = 0;
+      voiceRmsAtual = 0;
+      voiceVozDetectada = false;
+      voiceCalibracaoIniciadaAt = performance.now();
       voiceNoiseFloor = Math.max(
-        voiceNoiseFloor,
-        VOICE_MIN_THRESHOLD / VOICE_THRESHOLD_MULTIPLIER
+        0.0015,
+        Math.min(0.008, voiceNoiseFloor || 0.003)
       );
     }
 
@@ -1640,13 +1653,26 @@
     }
 
     function voiceActivityThreshold() {
+      // O piso de ruído é aprendido continuamente, mas a sensibilidade
+      // nunca sobe indefinidamente: fala baixa continua sendo detectável.
+      const threshold = voiceNoiseFloor * VOICE_THRESHOLD_MULTIPLIER + 0.0025;
       return Math.min(
         VOICE_MAX_THRESHOLD,
         Math.max(
           VOICE_MIN_THRESHOLD,
-          voiceNoiseFloor * VOICE_THRESHOLD_MULTIPLIER
+          threshold
         )
       );
+    }
+
+    function updateVoiceDiagnostics() {
+      const diagnostics = document.getElementById('voiceDiagnostics');
+      if (!diagnostics) return;
+
+      diagnostics.textContent =
+        'RMS ' + voiceRmsAtual.toFixed(4) +
+        ' • LIMIAR ' + voiceActivityThreshold().toFixed(4) +
+        ' • ' + (voiceVozDetectada ? 'FALA DETECTADA' : 'OUVINDO');
     }
 
     function beginVoiceUtterance() {
@@ -1819,17 +1845,27 @@
 
       const rms = voiceRms(data);
       const now = performance.now();
-      const threshold = voiceActivityThreshold();
+      const calibrando =
+        voiceCalibracaoIniciadaAt > 0 &&
+        now - voiceCalibracaoIniciadaAt < VOICE_VAD_CALIBRATION_MS;
+
+      voiceRmsAtual = rms;
 
       if (!voiceRecorder) {
-        // Learn the local noise floor only while we're not recording.
-        if (rms < threshold) {
+        // Durante a calibração inicial, aprendemos o ruído sem tentar
+        // iniciar uma gravação com o próprio ruído.
+        if (calibrando || rms < voiceActivityThreshold()) {
           voiceNoiseFloor =
             voiceNoiseFloor * (1 - VOICE_NOISE_ALPHA) +
             rms * VOICE_NOISE_ALPHA;
         }
 
-        if (rms >= threshold) {
+        const threshold = voiceActivityThreshold();
+        const vozAtiva = !calibrando && rms >= threshold;
+        voiceVozDetectada = vozAtiva;
+        updateVoiceDiagnostics();
+
+        if (vozAtiva) {
           if (!voiceSpeechStartedAt) {
             voiceSpeechStartedAt = now;
           }
@@ -1842,8 +1878,11 @@
           }
         } else {
           voiceSpeechStartedAt = 0;
+          voiceVozDetectada = false;
         }
       } else {
+        voiceVozDetectada = rms >= voiceActivityThreshold();
+        updateVoiceDiagnostics();
         const utteranceAge =
           now - voiceSpeechStartedAt;
 
@@ -2062,6 +2101,7 @@
         showSubtitles(
           'Conversa por voz ativa. Fale normalmente; não é necessário tocar novamente.'
         );
+        showVoiceDiagnostics();
 
         scheduleContinuousVoiceLoop();
       } catch (err) {
