@@ -129,6 +129,17 @@ python3 teste_contexto_conversacional_56_5_5.py
 
 O teste usa dublês locais e não precisa consultar um modelo Qwen real.
 
+## Telemetria da sessão
+
+Quando uma mensagem é processada com uma sessão ativa, a resposta integrada pode indicar:
+
+- `mensagem_armazenada: true` quando a mensagem do usuário e a resposta da Nyxal foram registradas no contexto volátil da sessão;
+- `memoria_conversacional: true` quando o processamento utilizou ou registrou memória conversacional;
+- `conhecimento_permanente: false` para este fluxo;
+- `arquitetura_modificada: false`.
+
+Esses campos descrevem o estado operacional da conversa e não transformam o contexto volátil em conhecimento permanente.
+
 ## Relação com Nível 10
 
 Esta microetapa é uma extensão operacional da conversa local. Ela não concede autorização de integração e não altera o significado dos estados de aprovação do Nível 10.
