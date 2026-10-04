@@ -31,6 +31,23 @@ INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
 )
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
+
+try:
+    KOKORO_SPEED = min(
+        1.15,
+        max(
+            0.90,
+            float(
+                os.environ.get(
+                    "NYXAL_KOKORO_SPEED",
+                    "1.03",
+                )
+            ),
+        ),
+    )
+except ValueError:
+    KOKORO_SPEED = 1.03
+
 WHISPER_MODEL_NAME = os.environ.get(
     "NYXAL_WHISPER_MODEL",
     "tiny",
@@ -153,6 +170,94 @@ def normalizar_texto_stt(texto: str) -> str:
     return resultado
 
 
+def suavizar_audio_kokoro(
+    chunks,
+    sample_rate: int = 24000,
+):
+    """
+    Junta segmentos do Kokoro com micro-fades/crossfade para reduzir
+    pequenos cliques ou cortes perceptíveis entre trechos.
+    """
+    import numpy as np
+
+    segmentos = [
+        np.asarray(chunk, dtype=np.float32).reshape(-1)
+        for chunk in chunks
+        if np.asarray(chunk).size
+    ]
+
+    if not segmentos:
+        raise RuntimeError(
+            "O Kokoro não gerou nenhum segmento de áudio."
+        )
+
+    if len(segmentos) == 1:
+        audio = segmentos[0].copy()
+    else:
+        audio = segmentos[0].copy()
+
+        for segmento in segmentos[1:]:
+            sobreposicao = min(
+                int(sample_rate * 0.008),
+                len(audio),
+                len(segmento),
+            )
+
+            if sobreposicao <= 1:
+                audio = np.concatenate(
+                    (audio, segmento)
+                )
+                continue
+
+            rampa = np.linspace(
+                0.0,
+                1.0,
+                sobreposicao,
+                dtype=np.float32,
+            )
+
+            trecho_final = audio[-sobreposicao:]
+            trecho_inicial = segmento[:sobreposicao]
+
+            audio[-sobreposicao:] = (
+                trecho_final * (1.0 - rampa)
+                + trecho_inicial * rampa
+            )
+
+            audio = np.concatenate(
+                (audio, segmento[sobreposicao:])
+            )
+
+    fade = min(
+        int(sample_rate * 0.005),
+        len(audio) // 2,
+    )
+
+    if fade > 1:
+        rampa_entrada = np.linspace(
+            0.0,
+            1.0,
+            fade,
+            dtype=np.float32,
+        )
+        rampa_saida = np.linspace(
+            1.0,
+            0.0,
+            fade,
+            dtype=np.float32,
+        )
+
+        audio[:fade] *= rampa_entrada
+        audio[-fade:] *= rampa_saida
+
+    pico = float(np.max(np.abs(audio)))
+
+    if pico > 0.98:
+        audio = audio * (0.98 / pico)
+
+    return audio
+
+
 def generate_kokoro_audio(texto: str) -> bytes:
     global KOKORO_PIPELINE
 
@@ -171,13 +276,13 @@ def generate_kokoro_audio(texto: str) -> bytes:
     for _, _, audio in KOKORO_PIPELINE(
         texto_para_fala(texto),
         voice=KOKORO_VOICE,
+        speed=KOKORO_SPEED,
     ):
-        chunks.append(np.asarray(audio))
+        chunks.append(audio)
 
-    if not chunks:
-        raise RuntimeError("O Kokoro não gerou nenhum segmento de áudio.")
-
-    audio = np.concatenate(chunks)
+    audio = suavizar_audio_kokoro(
+        chunks
+    )
 
     with tempfile.NamedTemporaryFile(
         suffix=".wav",
@@ -190,7 +295,6 @@ def generate_kokoro_audio(texto: str) -> bytes:
         )
         arquivo_audio.seek(0)
         return arquivo_audio.read()
-
 
 def format_chat_response(resultado: dict) -> str:
     if not resultado.get("sucesso"):
