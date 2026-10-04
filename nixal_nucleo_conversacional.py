@@ -39,6 +39,8 @@ Princípios:
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from typing import Any
 
 from nixal_interface import (
@@ -184,9 +186,30 @@ class NucleoConversacionalNixal:
             texto,
         )
 
-        resultado = self._atender(
-            texto
-        )
+        if self._deve_priorizar_dialogo(
+            texto,
+            historico,
+        ):
+            resultado = {
+                "atendida": False,
+                "necessidade": texto,
+                "capacidade_escolhida": None,
+                "argumentos": {},
+                "selecao": {
+                    "sucesso": True,
+                    "capacidade": None,
+                    "argumentos": {},
+                    "candidatos": [],
+                    "tentativa_correcao": False,
+                    "erro": None,
+                    "motivo": "pergunta_contextual",
+                },
+                "resultado": None,
+            }
+        else:
+            resultado = self._atender(
+                texto
+            )
 
         if resultado["atendida"]:
 
@@ -280,6 +303,63 @@ class NucleoConversacionalNixal:
         )
 
         return resultado.get("sucesso") is True
+
+    def _normalizar_texto_contextual(
+        self,
+        texto: str,
+    ) -> str:
+        normalizado = unicodedata.normalize(
+            "NFD",
+            texto.lower(),
+        )
+        normalizado = "".join(
+            caractere
+            for caractere in normalizado
+            if unicodedata.category(caractere) != "Mn"
+        )
+        normalizado = re.sub(
+            r"[^a-z0-9]+",
+            " ",
+            normalizado,
+        )
+        return re.sub(
+            r"\\s+",
+            " ",
+            normalizado,
+        ).strip()
+
+    def _deve_priorizar_dialogo(
+        self,
+        texto: str,
+        historico: list[dict[str, str]],
+    ) -> bool:
+        if not historico:
+            return False
+
+        texto_normalizado = self._normalizar_texto_contextual(
+            texto
+        )
+
+        marcadores_contextuais = (
+            "voce lembra",
+            "lembra de mim",
+            "lembra do que",
+            "eu disse",
+            "eu falei",
+            "o que eu",
+            "qual foi o",
+            "estou construindo",
+            "estou criando",
+            "estou desenvolvendo",
+            "estamos construindo",
+            "estamos criando",
+            "estamos desenvolvendo",
+        )
+
+        return any(
+            marcador in texto_normalizado
+            for marcador in marcadores_contextuais
+        )
 
     def _atender(
         self,
