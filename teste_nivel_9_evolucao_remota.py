@@ -61,6 +61,7 @@ class LaboratorioFalso:
 
 
 def executar_caso_aprovado(raiz: Path) -> None:
+    raiz.mkdir(parents=True, exist_ok=True)
     arquivo = raiz / "melhoria.py"
     arquivo.write_text(
         "print('EXPERIMENTO')\n",
@@ -121,6 +122,7 @@ def executar_caso_aprovado(raiz: Path) -> None:
 
 
 def executar_caso_rejeitado(raiz: Path) -> None:
+    raiz.mkdir(parents=True, exist_ok=True)
     arquivo = raiz / "regressao.py"
     arquivo.write_text(
         "print('REGRESSAO')\n",
