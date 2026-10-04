@@ -46,6 +46,11 @@ class ObservadorFalso:
         }
 
 
+class CoordenadorFalhaTecnica(CoordenadorFalso):
+    def validar_python_alterado(self) -> dict:
+        raise RuntimeError("falha_tecnica_teste")
+
+
 class CoordenadorFalso:
     def __init__(self) -> None:
         self.validacoes = 0
@@ -172,6 +177,27 @@ def executar() -> None:
                 "resultado_validacao"
             ]["sucesso"]
             is False
+        )
+
+        # Exceção técnica durante validação também encerra o ciclo como
+        # rejeitado, preservando o diagnóstico.
+        coordenador_tecnico = CoordenadorFalhaTecnica()
+        executor_tecnico = ExecutorCicloLocalNivel10Nixal(
+            repositorio=raiz,
+            branch="desenvolvimento",
+            observador=ObservadorFalso(True),
+            ciclo=CicloLocalNivel10Nixal(
+                diretorio_registros=registros / "tecnico"
+            ),
+            coordenador=coordenador_tecnico,
+        )
+        resultado_tecnico = executor_tecnico.executar()
+        assert resultado_tecnico["estado"] == "rejeitado"
+        assert (
+            "RuntimeError: falha_tecnica_teste"
+            == resultado_tecnico["ciclo"][
+                "resultado_validacao"
+            ]["diagnostico"]
         )
 
     print("TESTE_NIVEL10_EXECUTOR_OK")
