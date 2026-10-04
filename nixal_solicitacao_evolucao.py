@@ -295,6 +295,60 @@ class SolicitacaoEvolucaoNixal:
         if not isinstance(historico, list):
             raise ValueError("historico_estados_invalido")
 
+        estado_anterior = registro.get("estado_anterior")
+        if historico:
+            ultimo = historico[-1]
+            if not isinstance(ultimo, dict):
+                raise ValueError("historico_estados_invalido")
+            if ultimo.get("para") != estado:
+                raise ValueError("historico_estado_atual_inconsistente")
+            if estado_anterior != ultimo.get("de"):
+                raise ValueError("historico_estado_anterior_inconsistente")
+
+            estado_caminho = None
+            for indice, transicao in enumerate(historico):
+                if not isinstance(transicao, dict):
+                    raise ValueError(
+                        f"historico_estados_invalido:{indice}"
+                    )
+
+                de = transicao.get("de")
+                para = transicao.get("para")
+
+                if para not in cls.ESTADOS:
+                    raise ValueError(
+                        f"historico_estado_destino_invalido:{indice}"
+                    )
+
+                if indice == 0:
+                    if de is not None:
+                        raise ValueError(
+                            "historico_primeira_origem_invalida"
+                        )
+                elif de != estado_caminho:
+                    raise ValueError(
+                        f"historico_transicao_desconectada:{indice}"
+                    )
+
+                if de is not None and de not in cls.ESTADOS:
+                    raise ValueError(
+                        f"historico_estado_origem_invalido:{indice}"
+                    )
+
+                permitidos = cls.TRANSICOES.get(
+                    de,
+                    cls.ESTADOS if de is None else set(),
+                )
+                if para not in permitidos:
+                    raise ValueError(
+                        f"historico_transicao_nao_permitida:{indice}"
+                    )
+
+                estado_caminho = para
+
+            if estado_caminho != estado:
+                raise ValueError("historico_estado_final_inconsistente")
+
     def iniciar_experimento(
         self,
         solicitacao_id: str,
@@ -327,6 +381,14 @@ class SolicitacaoEvolucaoNixal:
             ) from erro
 
         self._validar_estado_registro(registro)
+
+        artefato = self._validar_arquivo(
+            registro.get("artefato_origem")
+        )
+        if artefato is None:
+            raise ValueError(
+                "artefato_experimental_nao_encontrado"
+            )
 
         if registro.get("execucao_local") is not False:
             raise ValueError("execucao_local_nao_permitida")
