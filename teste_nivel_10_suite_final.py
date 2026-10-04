@@ -11,6 +11,7 @@ TESTES = [
     "teste_nivel_10_contrato.py",
     "teste_nivel_10_observador_desenvolvimento.py",
     "teste_nivel_10_ciclo_local.py",
+    "teste_nivel_10_executor.py",
 ]
 
 
@@ -64,6 +65,7 @@ def executar() -> None:
     print("CONTRATO=OK")
     print("OBSERVADOR=OK")
     print("CICLO_LOCAL=OK")
+    print("EXECUTOR=OK")
     print("PASSOU: True")
 
 
