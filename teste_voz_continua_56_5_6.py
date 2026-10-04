@@ -147,9 +147,30 @@ def main() -> None:
     )
 
     verificar(
+        "getNyxalAudioContext" in interface
+        and "desbloquearAudioNyxal" in interface
+        and "document.addEventListener(" in interface,
+        "saída de áudio é criada/desbloqueada após interação real do usuário",
+    )
+
+    verificar(
+        "new Audio()" in interface
+        and "URL.createObjectURL(blob)" in interface
+        and "audio.play()" in interface
+        and "audio.volume = 1.0" in interface,
+        "TTS possui rota direta por HTMLAudio antes do fallback Web Audio",
+    )
+
+    verificar(
+        "O áudio TTS decodificado possui duração inválida." in interface,
+        "áudio TTS vazio ou inválido não é tratado como reprodução válida",
+    )
+
+    verificar(
         "decodeAudioData" in interface
-        and "createBufferSource" in interface,
-        "TTS usa o AudioContext desbloqueado pela interação do usuário",
+        and "createBufferSource" in interface
+        and "desbloquearAudioNyxal()" in interface,
+        "fallback TTS por Web Audio usa contexto explicitamente desbloqueado",
     )
 
     verificar(
