@@ -36,7 +36,36 @@ Estabelecer um ciclo versionado para desenvolvimento supervisionado da Nyxal:
 - Não executar autoalteração fora das permissões e ferramentas explicitamente definidas.
 - Toda mudança automática deve deixar rastros verificáveis: arquivo alterado, teste executado e commit correspondente.
 
+## Estado consolidado
+
+A sequência Nível 9 / Nível 10 foi concluída e integrada em `main`, com regressão final validada.
+
+Estado atual:
+
+- Nível 9 — evolução controlada: concluído.
+- Nível 10 — ciclo local formal: concluído.
+- 56.5.5 — conversa contextual: integrado.
+- 56.5.6 — voz contínua: integrado.
+- M5 — Habitat NyxOS: iniciado.
+- M5.1 — observabilidade real do host: implementado e validado.
+
 ## Próximo objetivo
 
-Criar um ciclo local capaz de detectar novas alterações na branch de desenvolvimento, sincronizá-las, executar validações e registrar o resultado para o próximo ciclo de desenvolvimento.
+Avançar o M5/Habitat sem criar um kernel próprio.
+
+Primeiro ciclo:
+
+```
+host
+→ observabilidade
+→ processos
+→ persistência
+→ eventos Delta
+→ interface orientada a estado real
+→ ciclo operacional residente
+```
+
+O primeiro marco M5.1 mantém a ponte somente leitura e não altera hardware, estado persistente ou os gates de evolução.
+
+A prioridade agora é transformar o NyxOS em um ambiente operacional persistente sobre o sistema hospedeiro, aumentando observabilidade e controle antes de aumentar o poder da Nyxal.
 
