@@ -8,6 +8,7 @@ from pathlib import Path
 
 from nixal_evolucao_controlada import EvolucaoControladaNixal
 from nixal_evolucao_remota import CicloEvolucaoRemotaNixal
+from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
 
 
 class LaboratorioFalso:
@@ -86,9 +87,14 @@ def executar_caso_aprovado(raiz: Path) -> None:
         }
     )
 
+    memoria = AprendizadoPersistenteNixal(
+        raiz / "memoria_aprendizado.json"
+    )
+
     ciclo = CicloEvolucaoRemotaNixal(
         evolucao=evolucao,
         laboratorio=laboratorio,
+        memoria_aprendizado=memoria,
         repositorio=raiz / "repo",
     )
 
@@ -113,6 +119,14 @@ def executar_caso_aprovado(raiz: Path) -> None:
     assert resultado["integracao_executada"] is False
     assert resultado["stable_modificada"] is False
     assert resultado["branch_removida"] is True
+    assert resultado["aprendizado"]["sucesso"] is True
+    assert resultado["aprendizado"]["estado"] == "aprendizado_persistido"
+    assert resultado["aprendizado"]["valor"]["cristal"]
+    contexto = memoria.contexto_para_proximo_ciclo()
+    assert contexto["disponivel"] is True
+    assert contexto["cristal"]
+    assert contexto["conhecimento_permanente"] is False
+    assert contexto["arquitetura_modificada"] is False
     assert laboratorio.publicou is True
     assert laboratorio.disparou is True
     assert laboratorio.removida is True
@@ -147,9 +161,14 @@ def executar_caso_rejeitado(raiz: Path) -> None:
         }
     )
 
+    memoria = AprendizadoPersistenteNixal(
+        raiz / "memoria_aprendizado.json"
+    )
+
     ciclo = CicloEvolucaoRemotaNixal(
         evolucao=evolucao,
         laboratorio=laboratorio,
+        memoria_aprendizado=memoria,
         repositorio=raiz / "repo",
     )
 
@@ -171,6 +190,9 @@ def executar_caso_rejeitado(raiz: Path) -> None:
     assert resultado["stable_modificada"] is False
     assert resultado["autorizacao_explicita"] is False
     assert resultado["branch_removida"] is True
+    assert resultado["aprendizado"]["sucesso"] is True
+    assert resultado["aprendizado"]["valor"]["cristal"]
+    assert resultado["candidato"] is None
 
 
 def main() -> int:
@@ -191,6 +213,8 @@ def main() -> int:
     print("COMPARACAO=OK")
     print("CANDIDATO=OK")
     print("PROPOSTA=OK")
+    print("APRENDIZADO_PERSISTENTE=OK")
+    print("CRISTALIZACAO=OK")
     print("REJEICAO_REGRESSAO=OK")
     print("SEM_EXECUCAO_LOCAL=OK")
     print("SEM_AUTORIZACAO_DE_INTEGRACAO=OK")
