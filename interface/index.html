@@ -1,0 +1,2841 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NyxOS v2.0 DELTA | Nyxal Holographic Interface</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Orbitron, Rajdhani, Inter, Cinzel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    #globeContainer {
+      transition: transform .35s ease, filter .35s ease;
+      will-change: transform, filter;
+    }
+
+    #globeVoiceButton {
+      border-radius: 9999px;
+      touch-action: manipulation;
+    }
+
+    #globeVoiceButton:hover {
+      background: radial-gradient(circle at center, rgba(0,242,254,.035), transparent 52%);
+    }
+
+    #globeContainer.globe-voice-listening {
+      transform: scale(1.035);
+      filter: drop-shadow(0 0 34px rgba(0,242,254,.42));
+      animation: globeVoicePulse 1.15s ease-in-out infinite;
+    }
+
+    #globeContainer.globe-voice-processing {
+      transform: scale(1.02);
+      filter: drop-shadow(0 0 30px rgba(180,120,255,.38));
+      animation: globeVoiceProcess 1.4s ease-in-out infinite;
+    }
+
+    #globeContainer.globe-voice-speaking {
+      transform: scale(1.025);
+      filter: drop-shadow(0 0 34px rgba(120,255,210,.40));
+      animation: globeVoiceSpeak 1.05s ease-in-out infinite;
+    }
+
+    @keyframes globeVoicePulse {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.045); }
+    }
+
+    @keyframes globeVoiceProcess {
+      0%,100% { transform: scale(1.015) rotate(0deg); }
+      50% { transform: scale(1.03) rotate(1deg); }
+    }
+
+    @keyframes globeVoiceSpeak {
+      0%,100% { transform: scale(1.015); }
+      50% { transform: scale(1.035); }
+    }
+  </style>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            hud: {
+              bg: '#02050e',
+              card: 'rgba(6, 14, 28, 0.78)',
+              border: 'rgba(0, 242, 254, 0.22)',
+              cyan: '#00f2fe',
+              blue: '#4facfe',
+              purple: '#8a2be2',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              muted: '#64748b'
+            }
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            rajdhani: ['Rajdhani', 'sans-serif'],
+            cinzel: ['Cinzel', 'serif'],
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Global Sci-Fi Theme */
+    body {
+      background-color: #02050e;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    /* Cyber Glassmorphism Card */
+    .hud-card {
+      background: rgba(6, 14, 28, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 242, 254, 0.18);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(0, 242, 254, 0.05);
+      border-radius: 12px;
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .hud-card:hover {
+      border-color: rgba(0, 242, 254, 0.45);
+      box-shadow: 0 8px 32px 0 rgba(0, 242, 254, 0.18), inset 0 0 20px rgba(0, 242, 254, 0.1);
+    }
+
+    /* Sci-Fi Corner Brackets */
+    .cyber-brackets::before, .cyber-brackets::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-color: #00f2fe;
+      pointer-events: none;
+    }
+    .cyber-brackets::before {
+      top: -1px; left: -1px;
+      border-top: 2px solid #00f2fe;
+      border-left: 2px solid #00f2fe;
+      border-top-left-radius: 4px;
+    }
+    .cyber-brackets::after {
+      bottom: -1px; right: -1px;
+      border-bottom: 2px solid #00f2fe;
+      border-right: 2px solid #00f2fe;
+      border-bottom-right-radius: 4px;
+    }
+
+    /* HOLOGRAPHIC PRESENCE CONTAINER & ANIMATIONS */
+    .holo-container {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Floating & Breathing Animation for Nyxal Hologram */
+    @keyframes holoFloat {
+      0% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 15px rgba(0,242,254,0.3)); }
+      50% { transform: translateY(-7px) scale(1.012); filter: drop-shadow(0 0 25px rgba(0,242,254,0.5)); }
+      100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 15px rgba(0,242,254,0.3)); }
+    }
+
+    .animate-holo-float {
+      animation: holoFloat 5.5s ease-in-out infinite;
+    }
+
+    /* Receded state when modals/drawers are open */
+    .nyxal-receded {
+      opacity: 0.2 !important;
+      filter: blur(8px) grayscale(50%) !important;
+      transform: scale(0.92) translateY(12px) !important;
+      pointer-events: none;
+    }
+
+    /* Processing visual state */
+    .nyxal-processing {
+      animation: holoPulseProcessing 1.2s infinite ease-in-out !important;
+    }
+
+    @keyframes holoPulseProcessing {
+      0% { filter: drop-shadow(0 0 10px #f59e0b) brightness(1); }
+      50% { filter: drop-shadow(0 0 30px #00f2fe) brightness(1.3); }
+      100% { filter: drop-shadow(0 0 10px #f59e0b) brightness(1); }
+    }
+
+    /* Holographic Scanlines */
+    .holo-scanline {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 242, 254, 0.08) 50%,
+        rgba(0, 242, 254, 0.08)
+      );
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    .holo-beam {
+      position: absolute;
+      top: -100%; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(0deg, rgba(0, 242, 254, 0.35) 0%, rgba(0, 242, 254, 0) 100%);
+      animation: holoBeam 3.8s infinite linear;
+      pointer-events: none;
+      z-index: 16;
+    }
+
+    @keyframes holoBeam {
+      0% { top: -100%; }
+      100% { top: 100%; }
+    }
+
+    /* Goddess Nyx Voice Aura Pulse */
+    @keyframes goddessPulse {
+      0% { transform: scale(0.9); opacity: 0.4; filter: blur(20px); }
+      50% { transform: scale(1.2); opacity: 0.9; filter: blur(30px); }
+      100% { transform: scale(0.9); opacity: 0.4; filter: blur(20px); }
+    }
+
+    .voice-aura-nyx {
+      animation: goddessPulse 3.2s infinite ease-in-out;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: rgba(2, 5, 14, 0.8); }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 242, 254, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 242, 254, 0.7); }
+
+    /* Orbital Nodes */
+    .orbital-node {
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .orbital-node:hover {
+      transform: scale(1.18);
+      box-shadow: 0 0 25px #00f2fe, inset 0 0 10px #00f2fe;
+    }
+
+    .glow-text-cyan {
+      text-shadow: 0 0 10px rgba(0, 242, 254, 0.7), 0 0 20px rgba(0, 242, 254, 0.4);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-[#02050e] text-slate-100 flex flex-col justify-between relative selection:bg-hud-cyan selection:text-black">
+
+  <!-- Background Space Canvas -->
+  <canvas id="spaceBgCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+
+  <!-- ================= HEADER NAVBAR ================= -->
+  <header class="relative z-20 w-full px-4 lg:px-8 py-3 bg-[#030816]/85 backdrop-blur-md border-b border-hud-border/40 flex flex-wrap items-center justify-between gap-4">
+    
+    <!-- Logo & System Info -->
+    <div class="flex items-center gap-3 cursor-pointer" onclick="playHudSound('click');">
+      <div class="relative w-10 h-10 rounded-lg bg-gradient-to-br from-hud-cyan/25 to-hud-purple/20 border border-hud-cyan/50 flex items-center justify-center shadow-lg shadow-hud-cyan/10">
+        <i class="fa-solid fa-moon text-hud-cyan text-lg"></i>
+        <span class="absolute -top-1 -right-1 flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-hud-cyan opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-hud-cyan"></span>
+        </span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-orbitron font-bold text-lg md:text-xl tracking-wider text-white">
+            Nyx<span class="text-hud-cyan glow-text-cyan">OS</span>
+          </h1>
+          <span class="text-[10px] font-orbitron px-1.5 py-0.5 rounded bg-hud-cyan/10 border border-hud-cyan/30 text-hud-cyan">DELTA</span>
+        </div>
+        <p class="text-[10px] font-rajdhani text-slate-400 tracking-widest uppercase">NÚCLEO OPERACIONAL • NYXAL INTEGRATED</p>
+      </div>
+    </div>
+
+    <!-- Center Nav Tabs -->
+    <nav class="hidden md:flex items-center gap-1 lg:gap-2 bg-slate-950/70 p-1 rounded-xl border border-slate-800/80">
+      <button onclick="switchTab('inicio')" id="tab-inicio" class="nav-btn active px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-hud-cyan bg-hud-cyan/15 border border-hud-cyan/40 transition-all flex items-center gap-2">
+        <i class="fa-solid fa-house text-xs"></i> INÍCIO
+      </button>
+      <button onclick="switchTab('inteligencia')" id="tab-inteligencia" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-brain text-xs"></i> INTELIGÊNCIA
+      </button>
+      <button onclick="switchTab('projetos')" id="tab-projetos" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-cube text-xs"></i> PROJETOS
+      </button>
+      <button onclick="switchTab('estudos')" id="tab-estudos" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-book text-xs"></i> ESTUDOS
+      </button>
+      <button onclick="switchTab('aviacao')" id="tab-aviacao" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-plane text-xs"></i> AVIAÇÃO
+      </button>
+      <button onclick="switchTab('sistema')" id="tab-sistema" class="nav-btn px-3 lg:px-4 py-1.5 rounded-lg text-xs font-orbitron uppercase tracking-wider text-slate-400 hover:text-hud-cyan transition-all flex items-center gap-2">
+        <i class="fa-solid fa-gear text-xs"></i> SISTEMA
+      </button>
+    </nav>
+
+    <!-- Right Controls & Status -->
+    <div class="flex items-center gap-4">
+      <!-- API Connection Setup Button -->
+      <button onclick="openConfigModal();" title="Configurar Conexão API Nyxal" class="w-9 h-9 rounded-lg bg-slate-900 border border-hud-border/50 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan flex items-center justify-center transition-all">
+        <i class="fa-solid fa-network-wired text-sm"></i>
+      </button>
+
+      <!-- Date & Time -->
+      <div class="text-right hidden sm:block">
+        <div id="liveClock" class="font-orbitron font-bold text-sm tracking-widest text-white glow-text-cyan">
+          00:00:00
+        </div>
+        <div id="liveDate" class="text-[11px] font-rajdhani text-slate-400 uppercase tracking-wider">
+          SÃO PAULO - BR
+        </div>
+      </div>
+
+      <!-- User Badge -->
+      <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-hud-cyan/30">
+        <div class="relative w-8 h-8 rounded-full overflow-hidden border border-hud-cyan">
+          <img src="https://placehold.co/100x100/030712/00f2fe?text=NYX" alt="Nyxal Avatar" class="w-full h-full object-cover">
+        </div>
+        <div class="hidden xl:block text-left">
+          <div class="text-xs font-bold font-orbitron text-white">NYXAL</div>
+          <div id="headerNyxalStatus" class="flex items-center gap-1.5 text-[10px] text-emerald-400 font-rajdhani">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> CONECTADA
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN DASHBOARD CONTENT ================= -->
+  <main class="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 lg:p-6 max-w-[1920px] mx-auto w-full">
+
+    <!-- ================= LEFT SIDEBAR (WIDGETS) ================= -->
+    <section class="lg:col-span-3 flex flex-col gap-4">
+      
+      <!-- WEATHER WIDGET (CLIMA) -->
+      <div class="hud-card cyber-brackets p-4">
+        <div class="flex items-center justify-between pb-2 mb-3 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-cloud-sun-rain text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">CLIMA</h2>
+          </div>
+          <span class="text-[11px] font-rajdhani text-slate-400"><i class="fa-solid fa-location-dot text-hud-cyan"></i> São Paulo, BR</span>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="text-3xl text-hud-cyan animate-pulse">
+              <i class="fa-solid fa-cloud-showers-heavy"></i>
+            </div>
+            <div>
+              <div id="weatherTemp" class="text-3xl font-orbitron font-bold text-white tracking-tighter">--°C</div>
+              <div id="weatherCond" class="text-xs text-slate-300 font-rajdhani font-medium">Aguardando dados...</div>
+            </div>
+          </div>
+          <div class="text-right text-[11px] font-rajdhani text-slate-400 space-y-0.5">
+            <div>Sensação: <span id="weatherFeels" class="text-slate-200 font-bold">--°C</span></div>
+            <div>Umidade: <span id="weatherHumidity" class="text-hud-cyan font-bold">--%</span></div>
+            <div>Vento: <span id="weatherWind" class="text-slate-200 font-bold">-- km/h</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SYSTEM METRICS (SISTEMA) -->
+      <div class="hud-card cyber-brackets p-4 flex-1 flex flex-col justify-between">
+        <div class="flex items-center justify-between pb-2 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-microchip text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">SISTEMA</h2>
+          </div>
+          <span class="text-[10px] font-rajdhani text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded bg-emerald-950/30">DELTA ACTIVE</span>
+        </div>
+
+        <!-- 3 Gauges -->
+        <div class="grid grid-cols-3 gap-2 my-3 text-center">
+          <div class="flex flex-col items-center">
+            <div class="relative w-16 h-16 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90">
+                <circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,0.08)" stroke-width="4" fill="transparent"/>
+                <circle id="cpuCircle" cx="32" cy="32" r="26" stroke="#00f2fe" stroke-width="4" stroke-dasharray="163" stroke-dashoffset="163" stroke-linecap="round" fill="transparent" class="transition-all duration-700"/>
+              </svg>
+              <span id="cpuText" class="absolute text-xs font-orbitron font-bold text-white">--%</span>
+            </div>
+            <span class="text-[11px] font-rajdhani text-slate-400 font-semibold uppercase mt-1">CPU</span>
+          </div>
+
+          <div class="flex flex-col items-center">
+            <div class="relative w-16 h-16 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90">
+                <circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,0.08)" stroke-width="4" fill="transparent"/>
+                <circle id="ramCircle" cx="32" cy="32" r="26" stroke="#4facfe" stroke-width="4" stroke-dasharray="163" stroke-dashoffset="163" stroke-linecap="round" fill="transparent" class="transition-all duration-700"/>
+              </svg>
+              <span id="ramText" class="absolute text-xs font-orbitron font-bold text-white">--%</span>
+            </div>
+            <span class="text-[11px] font-rajdhani text-slate-400 font-semibold uppercase mt-1">RAM</span>
+          </div>
+
+          <div class="flex flex-col items-center">
+            <div class="relative w-16 h-16 flex items-center justify-center">
+              <svg class="w-full h-full transform -rotate-90">
+                <circle cx="32" cy="32" r="26" stroke="rgba(255,255,255,0.08)" stroke-width="4" fill="transparent"/>
+                <circle id="diskCircle" cx="32" cy="32" r="26" stroke="#38ef7d" stroke-width="4" stroke-dasharray="163" stroke-dashoffset="163" stroke-linecap="round" fill="transparent" class="transition-all duration-700"/>
+              </svg>
+              <span id="diskText" class="absolute text-xs font-orbitron font-bold text-white">--%</span>
+            </div>
+            <span class="text-[11px] font-rajdhani text-slate-400 font-semibold uppercase mt-1">DISCO</span>
+          </div>
+        </div>
+
+        <!-- System Stream Graph -->
+        <div class="w-full bg-slate-950/80 rounded-lg p-2 border border-slate-800">
+          <div class="flex justify-between items-center text-[10px] font-rajdhani text-slate-400 mb-1">
+            <span>FLUXO DE PROCESSAMENTO DELTA</span>
+            <span class="text-hud-cyan font-mono">60.0 FPS</span>
+          </div>
+          <canvas id="sysGraphCanvas" class="w-full h-12 block"></canvas>
+        </div>
+      </div>
+
+      <!-- UPCOMING EVENTS (EVENTOS) -->
+      <div class="hud-card cyber-brackets p-4">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-calendar-check text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">PRÓXIMOS EVENTOS</h2>
+          </div>
+          <button onclick="addNewEventPrompt()" class="w-5 h-5 rounded bg-hud-cyan/20 border border-hud-cyan/50 hover:bg-hud-cyan hover:text-black text-hud-cyan flex items-center justify-center transition-all text-xs">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+
+        <div id="eventsList" class="space-y-2 text-xs font-rajdhani">
+          <!-- Dinamicamente alimentado pelo Backend/Script -->
+          <div class="p-2 rounded bg-slate-900/80 border border-slate-800 flex justify-between items-center text-slate-500 italic">
+            <span>Nenhum evento agendado</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MUSIC PLAYER (MÚSICA) -->
+      <div class="hud-card cyber-brackets p-4">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-music text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">MÚSICA</h2>
+          </div>
+          <span class="text-[10px] font-rajdhani text-hud-cyan">STANDBY</span>
+        </div>
+
+        <div class="flex items-center gap-3 mb-2">
+          <div class="relative w-12 h-12 rounded-lg bg-slate-800 border border-hud-cyan/40 overflow-hidden flex-shrink-0 flex items-center justify-center">
+            <i class="fa-solid fa-compact-disc text-slate-600 text-xl"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 id="musicTrackTitle" class="text-xs font-orbitron font-bold text-slate-400 truncate">Sem Reprodução</h3>
+            <p id="musicArtist" class="text-[11px] font-rajdhani text-slate-500 truncate">--</p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-center gap-4 pt-1">
+          <button onclick="playHudSound('click')" class="text-slate-500 hover:text-white transition-colors"><i class="fa-solid fa-backward-step text-xs"></i></button>
+          <button id="playPauseBtn" onclick="togglePlayMusic()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center hover:text-hud-cyan hover:border hover:border-hud-cyan transition-all">
+            <i class="fa-solid fa-play text-xs"></i>
+          </button>
+          <button onclick="playHudSound('click')" class="text-slate-500 hover:text-white transition-colors"><i class="fa-solid fa-forward-step text-xs"></i></button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= CENTER HUB (3D HOLOGRAPHIC COMPUTATIONAL CORE & ORBITAL NODES) ================= -->
+    <section class="lg:col-span-6 flex flex-col justify-between relative min-h-[550px] lg:min-h-full">
+      
+      <!-- Central Holographic Canvas Container -->
+      <div class="relative flex-1 w-full flex items-center justify-center min-h-[380px]">
+        
+        <!-- Three.js 3D Holographic Core Canvas Container -->
+        <div class="relative w-full h-[380px] sm:h-[450px] lg:h-[500px] flex items-center justify-center">
+          <div id="globeContainer" class="relative w-full h-full flex items-center justify-center"></div>
+
+          <button
+            id="globeVoiceButton"
+            type="button"
+            aria-label="Iniciar conversa por voz com Nyxal"
+            title="Clique uma vez para iniciar a conversa por voz"
+            class="absolute inset-0 z-10 appearance-none border-0 bg-transparent cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-hud-cyan/40"
+          ></button>
+
+          <div id="globeVoiceState" class="absolute left-1/2 bottom-2 sm:bottom-4 -translate-x-1/2 z-20 pointer-events-none hidden">
+            <div class="px-3 py-1.5 rounded-full border border-hud-cyan/30 bg-slate-950/75 backdrop-blur-md text-[10px] font-mono text-hud-cyan tracking-[0.18em] shadow-lg shadow-hud-cyan/10">
+              <span id="globeVoiceStateText">OUVINDO...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RADIAL ORBITAL HUD NODES -->
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div class="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] rounded-full border border-hud-cyan/20 animate-[spin_60s_linear_infinite]"></div>
+          <div class="absolute w-[260px] h-[260px] sm:w-[350px] sm:h-[350px] rounded-full border border-dashed border-hud-blue/30 animate-[spin_40s_linear_infinite_reverse]"></div>
+
+          <!-- Nodes positioned radially around core -->
+          <button onclick="triggerOrbitalNode('IA')" class="orbital-node pointer-events-auto absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-hud-cyan text-hud-cyan hover:bg-hud-cyan hover:text-black px-3 py-1.5 rounded-full text-xs font-orbitron font-bold flex items-center gap-1.5 shadow-lg shadow-hud-cyan/20">
+            <i class="fa-solid fa-brain"></i> IA
+          </button>
+
+          <button onclick="triggerOrbitalNode('PROJETOS')" class="orbital-node pointer-events-auto absolute top-12 left-2 sm:top-16 sm:left-6 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-cube text-hud-cyan"></i> PROJETOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('ESTUDOS')" class="orbital-node pointer-events-auto absolute bottom-24 left-0 sm:bottom-28 sm:left-4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-book text-hud-cyan"></i> ESTUDOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('AVIAÇÃO')" class="orbital-node pointer-events-auto absolute bottom-4 left-1/4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-plane text-hud-cyan"></i> AVIAÇÃO
+          </button>
+
+          <button onclick="triggerOrbitalNode('JOGOS')" class="orbital-node pointer-events-auto absolute top-12 right-2 sm:top-16 sm:right-6 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-gamepad text-hud-cyan"></i> JOGOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('MÍDIA')" class="orbital-node pointer-events-auto absolute top-1/2 -right-4 sm:-right-6 -translate-y-1/2 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-play text-hud-cyan"></i> MÍDIA
+          </button>
+
+          <button onclick="triggerOrbitalNode('UTILITÁRIOS')" class="orbital-node pointer-events-auto absolute bottom-24 right-0 sm:bottom-28 sm:right-4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-border-all text-hud-cyan"></i> UTILITÁRIOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('SISTEMA')" class="orbital-node pointer-events-auto absolute bottom-4 right-1/4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-gear text-hud-cyan"></i> SISTEMA
+          </button>
+        </div>
+      </div>
+
+      <!-- BOTTOM INTERACTION / CHAT COMMAND BAR -->
+      <div class="hud-card cyber-brackets p-3 sm:p-4 mt-4">
+        <!-- Quick Action Shortcuts -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 mb-2 no-scrollbar text-[11px] font-rajdhani">
+          <button onclick="sendQuickAction('Status operacional da Nyxal')" class="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan transition-all flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid fa-magnifying-glass text-hud-cyan"></i> Status Nyxal
+          </button>
+          <button onclick="sendQuickAction('Abrir módulo de Aviação')" class="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan transition-all flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid fa-plane text-hud-cyan"></i> Módulo Aviação
+          </button>
+          <button onclick="sendQuickAction('Listar tarefas pendentes')" class="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan transition-all flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid fa-list-check text-hud-cyan"></i> Tarefas Pendentes
+          </button>
+          <button onclick="sendQuickAction('Executar ciclo de desenvolvimento')" class="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 hover:border-hud-cyan text-slate-300 hover:text-hud-cyan transition-all flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid fa-code text-hud-cyan"></i> Ciclo Delta
+          </button>
+        </div>
+
+        <!-- Interactive Chat Form -->
+        <form id="chatForm" onsubmit="handleUserChat(event)" class="relative flex items-center">
+          <input 
+            type="text" 
+            id="chatInput" 
+            placeholder="Enviar ordem para Nyxal (ExecutorOrdensNixal)..."
+            class="w-full bg-slate-950/90 border border-hud-border/60 focus:border-hud-cyan text-slate-100 placeholder-slate-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-hud-cyan transition-all font-sans pr-24"
+            autocomplete="off"
+          />
+
+          <div class="absolute right-2 flex items-center gap-1.5">
+            <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs flex items-center gap-1 transition-all shadow-md shadow-hud-cyan/20">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+        </form>
+
+        <div class="flex justify-between items-center text-[10px] font-mono text-slate-500 mt-2 px-1">
+          <span id="apiStatusBadge"><i class="fa-solid fa-circle text-[8px] text-emerald-400"></i> ENDPOINT: <span id="currentEndpointLabel">http://127.0.0.1:8010</span></span>
+          <span class="hover:text-hud-cyan cursor-pointer" onclick="openConfigModal()">[ CONEXÃO NYXAL ]</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= RIGHT SIDEBAR (HOLOGRAPHIC NYXAL PRESENCE & GOALS) ================= -->
+    <section class="lg:col-span-3 flex flex-col gap-4">
+
+      <!-- DAILY PHILOSOPHICAL REFLECTION -->
+      <div class="hud-card p-3 text-center border border-hud-cyan/30">
+        <p class="text-[9px] font-orbitron font-bold text-hud-cyan tracking-[0.22em] mb-1">REFLEXÃO DO DIA</p>
+        <p id="dailyReflectionText" class="font-cinzel italic text-slate-200 text-sm tracking-wide leading-relaxed">
+          “A qualidade da ação começa pela qualidade da atenção.”
+        </p>
+        <div class="mt-2 text-[9px] font-rajdhani tracking-wider uppercase">
+          <span id="dailyReflectionAuthor" class="text-hud-cyan font-bold">NyxOS</span>
+          <span id="dailyReflectionWork" class="text-slate-500">• reflexão original</span>
+        </div>
+      </div>
+
+      <!-- HOLOGRAPHIC NYXAL PRESENCE CARD -->
+      <div id="nyxalHoloContainer" class="hud-card cyber-brackets p-4 flex flex-col items-center holo-container relative overflow-hidden animate-holo-float">
+        
+        <!-- Hologram Effects Layers -->
+        <div class="holo-scanline"></div>
+        <div class="holo-beam"></div>
+
+        <!-- Presence Header / Live Telemetry -->
+        <div class="w-full flex items-center justify-between pb-2 mb-2 border-b border-hud-border/30 z-20">
+          <div class="flex items-center gap-2">
+            <span id="aiPulseIndicator" class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-hud-cyan opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-hud-cyan"></span>
+            </span>
+            <span id="aiStatusText" class="font-orbitron text-xs font-bold text-hud-cyan tracking-wider">NYXAL • PRESENÇA ATIVA</span>
+          </div>
+          <button onclick="toggleAvatarSourceModal()" class="text-[10px] font-mono text-slate-400 hover:text-hud-cyan transition-colors" title="Ajustar Vídeo/Imagem Holográfica">
+            <i class="fa-solid fa-sliders text-xs"></i> VIDEO
+          </button>
+        </div>
+
+        <!-- Video Hologram Container -->
+        <div class="relative w-full h-72 rounded-xl bg-slate-950/90 border border-hud-cyan/40 overflow-hidden flex items-center justify-center my-1 group">
+          
+          <!-- Goddess Nyx Voice Aura Glow -->
+          <div id="avatarVoiceAura" class="absolute w-52 h-52 rounded-full bg-gradient-to-r from-hud-cyan/20 via-hud-purple/20 to-hud-blue/20 blur-xl voice-aura-nyx pointer-events-none z-0"></div>
+
+          <!-- Futuristic Target Overlay -->
+          <div class="absolute inset-0 pointer-events-none z-20 border border-hud-cyan/20 p-2 flex flex-col justify-between text-[8px] font-mono text-hud-cyan/70">
+            <div class="flex justify-between">
+              <span>TRK: #NYXAL-DELTA</span>
+              <span id="nyxalModeBadge">MODO: PRESENÇA</span>
+            </div>
+            <div class="flex justify-between">
+              <span id="nyxalCycleBadge">CICLOS: ---</span>
+              <span id="nyxalLatencyBadge">SYNC: 100%</span>
+            </div>
+          </div>
+
+          <!-- Video Element (Loading user's generated holographic video) -->
+          <video 
+            id="hologramVideo" 
+            autoplay 
+            loop 
+            muted 
+            playsinline 
+            class="w-full h-full object-cover object-center relative z-10 filter brightness-110 contrast-125 saturate-125 transition-all duration-500"
+            onerror="handleVideoLoadError()"
+          >
+            <!-- Generated Video Source -->
+            <source id="videoSource" src="http://googleusercontent.com/generated_video_content/8567766849646079774" type="video/mp4">
+          </video>
+
+          <!-- Fallback Image Element if Video unavailable -->
+          <img 
+            id="hologramImageFallback" 
+            src="nyxal-presenca.jpg" 
+            alt="Nyxal Hologram Fallback" 
+            class="w-full h-full object-cover object-center relative z-10 hidden filter brightness-110 contrast-125"
+            onerror="this.src='https://placehold.co/400x600/030712/00f2fe?text=NYXAL+HOLOGRAPHIC+CORE'"
+          />
+
+          <!-- Subtitle / Voice Output Overlay -->
+          <div id="voiceDiagnostics" class="fixed bottom-2 left-2 z-50 hidden px-2 py-1 rounded bg-black/70 border border-hud-cyan/20 text-[9px] font-mono text-hud-cyan pointer-events-none"></div>
+      <div id="aiSubtitlesBox" class="absolute bottom-2 left-2 right-2 z-30 bg-slate-950/95 border border-hud-cyan/60 p-2.5 rounded-lg text-center shadow-lg backdrop-blur-md hidden">
+            <p id="aiSubtitlesText" class="text-xs font-rajdhani text-hud-cyan font-semibold leading-tight">"Sistemas operacionais iniciados, Nyxal ao seu dispor."</p>
+          </div>
+        </div>
+
+        <!-- Telemetry Details Footer -->
+        <div class="w-full space-y-1.5 pt-2 border-t border-slate-800 text-[11px] font-rajdhani">
+          <div class="flex justify-between text-slate-300">
+            <span>Último Ciclo Operacional:</span>
+            <span id="lastCycleText" class="font-mono text-hud-cyan text-[10px]">---</span>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>Arquitetura Interna:</span>
+            <span class="text-slate-200 font-bold">Delta / MCP Bridge</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOALS TRACKER (OBJETIVOS) -->
+      <div class="hud-card cyber-brackets p-4">
+        <div class="flex items-center justify-between pb-2 mb-3 border-b border-hud-border/30">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-bullseye text-hud-cyan text-sm"></i>
+            <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">OBJETIVOS</h2>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400 hover:text-hud-cyan cursor-pointer" onclick="triggerOrbitalNode('PROJETOS')">Ver todos <i class="fa-solid fa-arrow-right text-[8px]"></i></span>
+        </div>
+
+        <div id="goalsList" class="space-y-3 text-xs font-rajdhani">
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-200 font-medium">Licença de Piloto (PP)</span>
+              <span id="goal1Perc" class="text-hud-cyan font-mono text-[11px] font-bold">--%</span>
+            </div>
+            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div id="goal1Bar" class="bg-gradient-to-r from-hud-cyan to-blue-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-200 font-medium">Ciência de Dados & Blockchain</span>
+              <span id="goal2Perc" class="text-hud-cyan font-mono text-[11px] font-bold">--%</span>
+            </div>
+            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div id="goal2Bar" class="bg-gradient-to-r from-hud-cyan to-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-200 font-medium">Frontier World (Roblox)</span>
+              <span id="goal3Perc" class="text-hud-cyan font-mono text-[11px] font-bold">--%</span>
+            </div>
+            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div id="goal3Bar" class="bg-gradient-to-r from-hud-cyan to-emerald-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-slate-200 font-medium">NyxOS / Delta Interface</span>
+              <span id="goal4Perc" class="text-hud-cyan font-mono text-[11px] font-bold">--%</span>
+            </div>
+            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div id="goal4Bar" class="bg-gradient-to-r from-hud-cyan to-purple-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM QUOTE CARD -->
+      <div class="hud-card p-4 text-center border-t-2 border-t-hud-cyan flex-1 flex flex-col justify-center">
+        <p class="text-xs font-serif italic text-slate-300 mb-1">"Um dia isso tudo será a base de algo grande."</p>
+        <span class="text-[10px] font-orbitron font-bold text-hud-cyan uppercase tracking-wider">— Nyxal</span>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= FOOTER STATUS BAR ================= -->
+  <footer class="relative z-20 w-full px-6 py-2 bg-[#020612]/90 border-t border-hud-border/30 flex justify-between items-center text-[11px] font-mono text-slate-500">
+    <div>NYXOS • NYXAL • DELTA ARCHITECTURE</div>
+    <div class="flex gap-4 items-center">
+      <span id="footerConnectionStatus" class="text-emerald-400"><i class="fa-solid fa-wifi text-[10px]"></i> REDE: ONLINE</span>
+      <span class="text-hud-cyan/80 border border-hud-cyan/20 rounded px-1.5 py-0.5 tracking-widest" title="Easter egg inspirado em Satoru Gojo — Six Eyes / Infinity">六眼 • INFINITY</span>
+      <span>BRANCH: desenvolvimento/mcp-bridge</span>
+      <span>GPU: ENABLED</span>
+    </div>
+  </footer>
+
+  <!-- ================= MODALS & DRAWERS ================= -->
+  
+  <!-- 1. API CONFIG MODAL -->
+  <div id="configModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="hud-card cyber-brackets w-full max-w-lg p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-hud-border/40 pb-3">
+        <h3 class="font-orbitron font-bold text-hud-cyan text-base flex items-center gap-2">
+          <i class="fa-solid fa-network-wired"></i> CONEXÃO API NYXAL
+        </h3>
+        <button onclick="closeModal('configModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4 text-xs font-rajdhani">
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">URL BASE DA API (window.NYXAL_API_BASE)</label>
+          <input 
+            type="text" 
+            id="apiBaseInput" 
+            class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg p-2.5 font-mono text-xs focus:border-hud-cyan outline-none" 
+            placeholder="http://127.0.0.1:8010" 
+          />
+          <p class="text-[10px] text-slate-400 mt-1">Exemplo Local: <code class="text-hud-cyan">http://127.0.0.1:8010</code> | Cloudflare Quick Tunnel: <code class="text-hud-cyan">https://antarctica-tremendous-writings-kirk.trycloudflare.com</code></p>
+        </div>
+        <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px] text-slate-300 space-y-1">
+          <div class="font-bold text-hud-cyan">ENDPOINTS CONECTADOS:</div>
+          <div>• Operational Status: <code class="text-emerald-400">GET /api/public/status</code></div>
+          <div>• Chat / Conversa: <code class="text-emerald-400">POST /api/chat</code> (sessão conversacional ativa)</div>
+        </div>
+
+        <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800">
+          <span class="text-slate-200 font-medium">Sintetizador Sonoro HUD</span>
+          <input type="checkbox" id="soundToggle" checked class="w-4 h-4 accent-hud-cyan cursor-pointer" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeModal('configModal')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-orbitron">Cancelar</button>
+        <button onclick="saveApiConfig()" class="px-4 py-2 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs">Salvar Configuração</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. AVATAR / HOLOGRAM SOURCE MODAL -->
+  <div id="avatarModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="hud-card cyber-brackets w-full max-w-md p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-hud-border/40 pb-3">
+        <h3 class="font-orbitron font-bold text-hud-cyan text-base flex items-center gap-2">
+          <i class="fa-solid fa-video"></i> CARREGAR HOLOGRAMA DA NYXAL
+        </h3>
+        <button onclick="closeModal('avatarModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs font-rajdhani">
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">URL DO VÍDEO (.MP4)</label>
+          <input type="text" id="avatarVideoUrlInput" value="http://googleusercontent.com/generated_video_content/8567766849646079774" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg p-2.5 font-mono text-xs focus:border-hud-cyan outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">ARQUIVO LOCAL DE VÍDEO / IMAGEM</label>
+          <input type="file" id="avatarFileInput" accept="video/*,image/*" onchange="handleLocalAvatarFile(event)" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-orbitron file:bg-hud-cyan file:text-black hover:file:bg-cyan-300 cursor-pointer" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeModal('avatarModal')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-orbitron">Fechar</button>
+        <button onclick="applyAvatarVideoUrl()" class="px-4 py-2 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs">Aplicar Holograma</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ORBITAL NODE DETAIL MODAL -->
+  <div id="nodeDetailModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="hud-card cyber-brackets w-full max-w-lg p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-hud-border/40 pb-3">
+        <h3 id="nodeTitle" class="font-orbitron font-bold text-hud-cyan text-base flex items-center gap-2">
+          <i class="fa-solid fa-atom"></i> MÓDULO DETALHADO
+        </h3>
+        <button onclick="closeModal('nodeDetailModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div id="nodeContent" class="space-y-3 text-xs font-rajdhani text-slate-300 min-h-[120px]">
+        <!-- Dynamic Content -->
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-800">
+        <button onclick="closeModal('nodeDetailModal')" class="px-4 py-2 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // ================= CONFIGURATION & GLOBAL STATE =================
+    window.NYXAL_API_BASE = localStorage.getItem('NYXAL_API_BASE') || 'http://127.0.0.1:8010';
+    let isNyxalOnline = false;
+    let nyxalSessionId = sessionStorage.getItem('NYXAL_SESSION_ID') || null;
+
+    // ================= NYXAL HOLOGRAM PERSISTENCE =================
+    const NYXAL_AVATAR_DB = 'nyxal-interface-storage';
+    const NYXAL_AVATAR_STORE = 'settings';
+    const NYXAL_AVATAR_KEY = 'hologram';
+
+    function openAvatarDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(NYXAL_AVATAR_DB, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(NYXAL_AVATAR_STORE)) {
+            db.createObjectStore(NYXAL_AVATAR_STORE);
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function saveHologramBlob(file) {
+      const db = await openAvatarDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(NYXAL_AVATAR_STORE, 'readwrite');
+        tx.objectStore(NYXAL_AVATAR_STORE).put({
+          kind: file.type,
+          blob: file,
+          name: file.name,
+          updatedAt: Date.now()
+        }, NYXAL_AVATAR_KEY);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    }
+
+    async function loadHologramBlob() {
+      const db = await openAvatarDB();
+      const value = await new Promise((resolve, reject) => {
+        const tx = db.transaction(NYXAL_AVATAR_STORE, 'readonly');
+        const request = tx.objectStore(NYXAL_AVATAR_STORE).get(NYXAL_AVATAR_KEY);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      return value;
+    }
+
+    function clearStoredHologram() {
+      return openAvatarDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(NYXAL_AVATAR_STORE, 'readwrite');
+        tx.objectStore(NYXAL_AVATAR_STORE).delete(NYXAL_AVATAR_KEY);
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      }));
+    }
+
+    function setHologramMedia(url, kind) {
+      const video = document.getElementById('hologramVideo');
+      const img = document.getElementById('hologramImageFallback');
+      if (!video || !img) return;
+
+      if (kind.startsWith('video/')) {
+        img.classList.add('hidden');
+        video.classList.remove('hidden');
+        video.src = url;
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        video.classList.add('hidden');
+        img.classList.remove('hidden');
+        img.src = url;
+      }
+    }
+
+    async function restoreStoredHologram() {
+      try {
+        const stored = await loadHologramBlob();
+        if (stored?.blob instanceof Blob) {
+          setHologramMedia(URL.createObjectURL(stored.blob), stored.kind || stored.blob.type || 'image/*');
+          return;
+        }
+
+        const savedUrl = localStorage.getItem('NYXAL_AVATAR_VIDEO_URL');
+        if (savedUrl) {
+          const video = document.getElementById('hologramVideo');
+          if (video) {
+            video.src = savedUrl;
+            video.play().catch(() => handleVideoLoadError());
+          }
+        }
+      } catch (err) {
+        console.warn('Não foi possível restaurar a presença holográfica:', err);
+      }
+    }
+
+    // WEB AUDIO SYNTHESIZER FOR HUD SFX & VOICE REVERB
+    let audioCtx = null;
+    let currentNyxalHtmlAudio = null;
+
+    function getNyxalAudioContext() {
+      if (audioCtx) return audioCtx;
+
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        throw new Error('Web Audio não está disponível neste navegador.');
+      }
+
+      audioCtx = new AudioContextClass();
+      return audioCtx;
+    }
+
+    function criarWavSilencioNyxal(duracaoMs = 120) {
+      const sampleRate = 8000;
+      const samples = Math.max(
+        1,
+        Math.round(sampleRate * duracaoMs / 1000)
+      );
+      const dataBytes = samples * 2;
+      const buffer = new ArrayBuffer(44 + dataBytes);
+      const view = new DataView(buffer);
+
+      const escreverTexto = (offset, texto) => {
+        for (let i = 0; i < texto.length; i += 1) {
+          view.setUint8(offset + i, texto.charCodeAt(i));
+        }
+      };
+
+      escreverTexto(0, 'RIFF');
+      view.setUint32(4, 36 + dataBytes, true);
+      escreverTexto(8, 'WAVE');
+      escreverTexto(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      escreverTexto(36, 'data');
+      view.setUint32(40, dataBytes, true);
+
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    function prepararSaidaAudioNoGestoDoUsuario() {
+      if (currentNyxalHtmlAudio) {
+        return currentNyxalHtmlAudio;
+      }
+
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.autoplay = false;
+      audio.controls = false;
+      audio.playsInline = true;
+      audio.volume = 1.0;
+
+      const url = URL.createObjectURL(
+        criarWavSilencioNyxal()
+      );
+
+      audio.src = url;
+      currentNyxalHtmlAudio = audio;
+
+      // play() é chamado diretamente dentro do clique do usuário.
+      // Depois disso o mesmo elemento pode receber o TTS assíncrono.
+      const ativacao = audio.play();
+
+      if (ativacao && typeof ativacao.catch === 'function') {
+        ativacao
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+          })
+          .catch((erro) => {
+            console.warn(
+              'Ativação inicial do elemento de áudio falhou:',
+              erro
+            );
+          });
+      }
+
+      return audio;
+    }
+
+    async function desbloquearAudioNyxal() {
+      const contexto = getNyxalAudioContext();
+
+      if (contexto.state !== 'running') {
+        await contexto.resume();
+      }
+
+      if (contexto.state !== 'running') {
+        throw new Error(
+          'AudioContext não entrou em execução: ' + contexto.state
+        );
+      }
+
+      return contexto;
+    }
+
+    document.addEventListener(
+      'pointerdown',
+      () => {
+        desbloquearAudioNyxal().catch((erro) => {
+          console.warn('Desbloqueio de áudio Nyxal:', erro);
+        });
+      },
+      { once: true, passive: true }
+    );
+
+    document.addEventListener(
+      'keydown',
+      () => {
+        desbloquearAudioNyxal().catch((erro) => {
+          console.warn('Desbloqueio de áudio Nyxal:', erro);
+        });
+      },
+      { once: true, passive: true }
+    );
+
+    function playHudSound(type) {
+      const soundEnabled = document.getElementById('soundToggle')?.checked ?? true;
+      if (!soundEnabled || !audioCtx) return;
+
+      try {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'open') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === 'send') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(500, now);
+          osc.frequency.exponentialRampToValueAtTime(1400, now + 0.15);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        }
+      } catch (e) {
+        console.warn('Audio play error:', e);
+      }
+    }
+
+    // ================= GODDESS NYX SYNTHESIZED VOICE ENGINE =================
+    let currentNyxalAudio = null;
+    let currentNyxalAudioSource = null;
+    let cancelCurrentNyxalSpeech = null;
+
+    function speakBrowserFallback(text) {
+      return new Promise((resolve) => {
+        if (!('speechSynthesis' in window)) {
+          resolve(false);
+          return;
+        }
+
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        const voices = window.speechSynthesis.getVoices();
+        const goddessVoice = voices.find(v =>
+          (v.lang.includes('pt') || v.lang.includes('PT')) &&
+          (v.name.includes('Francisca') || v.name.includes('Luciana') || v.name.includes('Helena') || v.name.includes('Maria') || v.name.includes('Google') || v.name.includes('Female'))
+        ) || voices.find(v => v.lang.includes('pt'));
+
+        if (goddessVoice) utterance.voice = goddessVoice;
+
+        utterance.pitch = 0.94;
+        utterance.rate = 0.98;
+        utterance.volume = 1.0;
+
+        let concluido = false;
+        const finalizar = () => {
+          if (concluido) return;
+          concluido = true;
+
+          if (cancelCurrentNyxalSpeech === cancelar) {
+            cancelCurrentNyxalSpeech = null;
+          }
+
+          resolve(true);
+        };
+
+        const cancelar = () => {
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+          }
+          finalizar();
+        };
+
+        cancelCurrentNyxalSpeech = cancelar;
+        utterance.onend = finalizar;
+        utterance.onerror = finalizar;
+
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+
+    async function tocarAudioTtsComContexto(blob) {
+      if (!blob || !blob.size) {
+        throw new Error('A Nyxal recebeu um áudio TTS vazio.');
+      }
+
+      await desbloquearAudioNyxal();
+      const contexto = audioCtx;
+      const objectUrl = URL.createObjectURL(blob);
+
+      try {
+        await new Promise((resolve, reject) => {
+          const audio = currentNyxalHtmlAudio || new Audio();
+          let concluido = false;
+
+          audio.preload = 'auto';
+          audio.autoplay = false;
+          audio.controls = false;
+          audio.playsInline = true;
+          audio.volume = 1.0;
+
+          audio.src = objectUrl;
+          currentNyxalHtmlAudio = audio;
+
+          const finalizar = () => {
+            if (concluido) return;
+            concluido = true;
+
+            if (currentNyxalHtmlAudio === audio) {
+              currentNyxalHtmlAudio = null;
+            }
+
+            resolve(true);
+          };
+
+          const cancelar = () => {
+            try {
+              audio.pause();
+              audio.currentTime = 0;
+            } catch (_) {}
+            finalizar();
+          };
+
+          cancelCurrentNyxalSpeech = cancelar;
+          audio.onended = finalizar;
+          audio.onerror = () => reject(
+            new Error('O navegador não conseguiu reproduzir o áudio TTS.')
+          );
+
+          audio.play().catch(reject);
+        });
+
+        return;
+      } catch (erroHtmlAudio) {
+        console.warn(
+          'HTMLAudio TTS falhou; tentando Web Audio:',
+          erroHtmlAudio
+        );
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+
+      const arrayBuffer = await blob.arrayBuffer();
+      const audioBuffer = await contexto.decodeAudioData(arrayBuffer);
+
+      if (!audioBuffer.duration || audioBuffer.duration <= 0) {
+        throw new Error('O áudio TTS decodificado possui duração inválida.');
+      }
+
+      await new Promise((resolve, reject) => {
+        let concluido = false;
+        const source = contexto.createBufferSource();
+        const gainNode = contexto.createGain();
+
+        source.buffer = audioBuffer;
+        gainNode.gain.value = 1.0;
+
+        source.connect(gainNode);
+        gainNode.connect(contexto.destination);
+
+        currentNyxalAudioSource = source;
+        currentNyxalAudio = {
+          stop() {
+            try {
+              source.stop();
+            } catch (_) {
+              // Fonte já encerrada.
+            }
+          }
+        };
+
+        const finalizar = () => {
+          if (concluido) return;
+          concluido = true;
+
+          if (currentNyxalAudioSource === source) {
+            currentNyxalAudioSource = null;
+          }
+
+          if (currentNyxalAudio?.stop) {
+            currentNyxalAudio = null;
+          }
+
+          if (cancelCurrentNyxalSpeech === cancelar) {
+            cancelCurrentNyxalSpeech = null;
+          }
+
+          resolve();
+        };
+
+        const cancelar = () => {
+          try {
+            source.stop();
+          } catch (_) {
+            // Fonte já encerrada.
+          }
+          finalizar();
+        };
+
+        cancelCurrentNyxalSpeech = cancelar;
+        source.onended = finalizar;
+
+        try {
+          source.start(0);
+        } catch (erro) {
+          if (!concluido) {
+            concluido = true;
+            if (currentNyxalAudioSource === source) {
+              currentNyxalAudioSource = null;
+            }
+            currentNyxalAudio = null;
+            if (cancelCurrentNyxalSpeech === cancelar) {
+              cancelCurrentNyxalSpeech = null;
+            }
+          }
+          reject(erro);
+        }
+      });
+    }
+
+    async function speakGoddessNyxVoice(text, updateSubtitle = true) {
+      if (!text) return;
+
+      if (updateSubtitle) {
+        showSubtitles(text);
+      }
+
+      setGlobeVoiceState('speaking');
+      setAiStatusText('FALANDO...', 'text-hud-cyan');
+
+      if (currentNyxalAudioSource) {
+        try {
+          currentNyxalAudioSource.stop();
+        } catch (_) {
+          // Reprodução já encerrada.
+        }
+        currentNyxalAudioSource = null;
+        currentNyxalAudio = null;
+      }
+
+      try {
+        await desbloquearAudioNyxal();
+
+        const response = await fetch(`${window.NYXAL_API_BASE}/api/tts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto: text })
+        });
+
+        if (!response.ok) {
+          throw new Error(`TTS HTTP ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        await tocarAudioTtsComContexto(blob);
+      } catch (err) {
+        console.warn('TTS local indisponível; usando voz do navegador:', err);
+        await speakBrowserFallback(text);
+      } finally {
+        if (currentNyxalAudio === null && currentNyxalAudioSource === null) {
+          setGlobeVoiceState('idle');
+        }
+
+        setAiStatusText(
+          isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+          'text-hud-cyan'
+        );
+
+        setTimeout(() => {
+          document.getElementById('aiSubtitlesBox')?.classList.add('hidden');
+        }, 4000);
+      }
+    }
+
+    // ================= HOLOGRAM RECEDED & VISUAL STATE CONTROL =================
+    function setHologramReceded(receded) {
+      const container = document.getElementById('nyxalHoloContainer');
+      if (!container) return;
+      if (receded) {
+        container.classList.add('nyxal-receded');
+      } else {
+        container.classList.remove('nyxal-receded');
+      }
+    }
+
+    function setHologramProcessing(processing) {
+      const container = document.getElementById('nyxalHoloContainer');
+      if (!container) return;
+      if (processing) {
+        container.classList.add('nyxal-processing');
+      } else {
+        container.classList.remove('nyxal-processing');
+      }
+    }
+
+    function openConfigModal() {
+      playHudSound('open');
+      document.getElementById('apiBaseInput').value = window.NYXAL_API_BASE;
+      document.getElementById('configModal').classList.remove('hidden');
+      setHologramReceded(true);
+    }
+
+    function closeModal(id) {
+      playHudSound('click');
+      document.getElementById(id).classList.add('hidden');
+      setHologramReceded(false);
+    }
+
+    function saveApiConfig() {
+      playHudSound('open');
+      const val = document.getElementById('apiBaseInput').value.trim();
+      if (val) {
+        window.NYXAL_API_BASE = val.replace(/\/$/, '');
+        localStorage.setItem('NYXAL_API_BASE', window.NYXAL_API_BASE);
+        document.getElementById('currentEndpointLabel').innerText = window.NYXAL_API_BASE;
+        fetchNyxalStatus();
+      }
+      closeModal('configModal');
+      speakGoddessNyxVoice("Configuração de rede atualizada. Conectando à ponte Nyxal.");
+    }
+
+    restoreStoredHologram();
+
+    // ================= BACKEND STATUS POLLING =================
+    async function fetchNyxalStatus() {
+      try {
+        const response = await fetch(`${window.NYXAL_API_BASE}/api/public/status`, { method: 'GET' });
+        
+        if (response.ok) {
+          const data = await response.json();
+          isNyxalOnline = true;
+
+          // Update UI elements with real status data
+          document.getElementById('headerNyxalStatus').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> ONLINE`;
+          document.getElementById('headerNyxalStatus').className = "flex items-center gap-1.5 text-[10px] text-emerald-400 font-rajdhani";
+          document.getElementById('footerConnectionStatus').innerHTML = `<i class="fa-solid fa-wifi text-[10px]"></i> REDE: ESTÁVEL (${data.identidade?.nome || 'Nyxal'})`;
+
+          document.getElementById('nyxalModeBadge').innerText = `MODO: ${(data.estado?.modo || 'PRESENÇA').toUpperCase()}`;
+          document.getElementById('nyxalCycleBadge').innerText = `CICLOS: ${data.presenca?.ciclos || 0}`;
+
+          if (data.presenca?.ultimo_ciclo) {
+            const date = new Date(data.presenca.ultimo_ciclo);
+            document.getElementById('lastCycleText').innerText = date.toLocaleTimeString('pt-BR');
+          }
+
+          setAiStatusText('PRESENÇA ATIVA', 'text-hud-cyan');
+        } else {
+          throw new Error('Status endpoint not OK');
+        }
+      } catch (err) {
+        // Handle Offline Mode gracefully without crashing
+        isNyxalOnline = false;
+        document.getElementById('headerNyxalStatus').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> MODO LOCAL`;
+        document.getElementById('headerNyxalStatus').className = "flex items-center gap-1.5 text-[10px] text-amber-400 font-rajdhani";
+        document.getElementById('footerConnectionStatus').innerHTML = `<i class="fa-solid fa-plane-slash text-[10px]"></i> REDE: OFFLINE (LOCAL)`;
+        
+        document.getElementById('nyxalModeBadge').innerText = `MODO: LOCAL`;
+        document.getElementById('nyxalCycleBadge').innerText = `CICLOS: OFFLINE`;
+        setAiStatusText('MODO LOCAL', 'text-amber-400');
+      }
+    }
+
+    // ================= REFLEXÃO FILOSÓFICA DIÁRIA =================
+    // Catálogo local curado: as entradas abaixo são paráfrases fiéis de
+    // ideias presentes em obras filosóficas reais. Não são citações literais.
+    const REFLEXOES_NYXAL = [
+      {
+        id: 'epicteto-controle',
+        texto: 'Concentre sua energia no que está sob seu controle e aceite com clareza o que não está.',
+        autor: 'Epicteto',
+        obra: 'Enchiridion / Manual',
+        escola: 'Estoicismo'
+      },
+      {
+        id: 'marco-aurelio-resposta',
+        texto: 'Você não escolhe tudo o que acontece; pode escolher a qualidade da resposta que dará ao acontecimento.',
+        autor: 'Marco Aurélio',
+        obra: 'Meditações',
+        escola: 'Estoicismo'
+      },
+      {
+        id: 'seneca-tempo',
+        texto: 'A vida parece curta quando deixamos que o tempo seja gasto sem intenção.',
+        autor: 'Sêneca',
+        obra: 'Sobre a brevidade da vida',
+        escola: 'Estoicismo'
+      },
+      {
+        id: 'aristoteles-habito',
+        texto: 'Caráter e excelência são construídos pelo que praticamos repetidamente.',
+        autor: 'Aristóteles',
+        obra: 'Ética a Nicômaco',
+        escola: 'Ética das virtudes'
+      },
+      {
+        id: 'platao-exame',
+        texto: 'Uma vida examinada exige parar, questionar e olhar para as razões que orientam nossas escolhas.',
+        autor: 'Platão',
+        obra: 'Apologia de Sócrates',
+        escola: 'Filosofia socrática'
+      },
+      {
+        id: 'heraclito-mudanca',
+        texto: 'A mudança não é uma exceção da realidade; compreender a mudança é compreender parte essencial dela.',
+        autor: 'Heráclito',
+        obra: 'Fragmentos',
+        escola: 'Filosofia pré-socrática'
+      },
+      {
+        id: 'epicuro-simplicidade',
+        texto: 'Uma vida tranquila pode depender mais de desejos bem escolhidos do que da acumulação de coisas.',
+        autor: 'Epicuro',
+        obra: 'Carta a Meneceu',
+        escola: 'Epicurismo'
+      },
+      {
+        id: 'confucio-pratica',
+        texto: 'Aprender de verdade envolve transformar conhecimento em prática e caráter.',
+        autor: 'Confúcio',
+        obra: 'Analectos',
+        escola: 'Confucionismo'
+      },
+      {
+        id: 'laozi-nao-forcar',
+        texto: 'Nem toda situação melhora pela força; há momentos em que agir sem excesso produz o melhor movimento.',
+        autor: 'Laozi',
+        obra: 'Tao Te Ching',
+        escola: 'Taoismo'
+      },
+      {
+        id: 'nietzsche-superacao',
+        texto: 'Crescer exige transformar a si mesmo, em vez de permanecer preso à pessoa que você era.',
+        autor: 'Friedrich Nietzsche',
+        obra: 'Assim falou Zaratustra',
+        escola: 'Filosofia da afirmação'
+      },
+      {
+        id: 'kierkegaard-escolha',
+        texto: 'A existência ganha forma quando deixamos de observar a vida apenas de fora e assumimos nossas escolhas.',
+        autor: 'Søren Kierkegaard',
+        obra: 'Ou/Ou',
+        escola: 'Existencialismo'
+      },
+      {
+        id: 'montaigne-experiencia',
+        texto: 'Conhecer a si mesmo também é observar honestamente a própria experiência, inclusive suas contradições.',
+        autor: 'Michel de Montaigne',
+        obra: 'Ensaios',
+        escola: 'Humanismo renascentista'
+      },
+      {
+        id: 'spinoza-liberdade',
+        texto: 'Entender as causas que nos movem amplia a possibilidade de agir com mais liberdade e menos impulso.',
+        autor: 'Baruch Spinoza',
+        obra: 'Ética',
+        escola: 'Racionalismo'
+      },
+      {
+        id: 'descartes-duvida',
+        texto: 'Questionar uma certeza pode ser o começo de uma compreensão mais sólida.',
+        autor: 'René Descartes',
+        obra: 'Meditações Metafísicas',
+        escola: 'Racionalismo'
+      },
+      {
+        id: 'hume-habito',
+        texto: 'Muitas expectativas sobre o mundo nascem do hábito; por isso, convém distinguir experiência de certeza.',
+        autor: 'David Hume',
+        obra: 'Investigação sobre o Entendimento Humano',
+        escola: 'Empirismo'
+      },
+      {
+        id: 'kant-autonomia',
+        texto: 'Liberdade não é apenas fazer o que se quer, mas poder orientar a própria ação por princípios que se reconhece como válidos.',
+        autor: 'Immanuel Kant',
+        obra: 'Fundamentação da Metafísica dos Costumes',
+        escola: 'Filosofia moral'
+      },
+      {
+        id: 'camus-absurdo',
+        texto: 'Mesmo quando a realidade não entrega um sentido pronto, ainda podemos escolher como viver diante dela.',
+        autor: 'Albert Camus',
+        obra: 'O Mito de Sísifo',
+        escola: 'Filosofia do absurdo'
+      },
+      {
+        id: 'simone-beauvoir-liberdade',
+        texto: 'A própria liberdade ganha peso quando reconhecemos que nossas escolhas também afetam a liberdade dos outros.',
+        autor: 'Simone de Beauvoir',
+        obra: 'Por uma Moral da Ambiguidade',
+        escola: 'Existencialismo'
+      },
+      {
+        id: 'sartre-responsabilidade',
+        texto: 'Escolher não é apenas decidir um caminho; é também assumir responsabilidade pela direção que a escolha produz.',
+        autor: 'Jean-Paul Sartre',
+        obra: 'O Existencialismo é um Humanismo',
+        escola: 'Existencialismo'
+      },
+      {
+        id: 'nietzsche-tempo',
+        texto: 'Uma boa pergunta para qualquer decisão é imaginar se você aceitaria viver novamente o caminho que está escolhendo.',
+        autor: 'Friedrich Nietzsche',
+        obra: 'A Gaia Ciência',
+        escola: 'Filosofia da afirmação'
+      }
+    ];
+
+    const REFLEXAO_STORAGE_KEY = 'NYXAL_REFLEXAO_DIARIA_V1';
+
+    function chaveDataReflexao(data = new Date()) {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    }
+
+    function carregarEstadoReflexao() {
+      try {
+        const bruto = localStorage.getItem(REFLEXAO_STORAGE_KEY);
+        if (!bruto) {
+          return {
+            ultimoDia: null,
+            reflexaoId: null,
+            usadas: [],
+            ciclo: 1
+          };
+        }
+
+        const estado = JSON.parse(bruto);
+
+        return {
+          ultimoDia: typeof estado.ultimoDia === 'string'
+            ? estado.ultimoDia
+            : null,
+          reflexaoId: typeof estado.reflexaoId === 'string'
+            ? estado.reflexaoId
+            : null,
+          usadas: Array.isArray(estado.usadas)
+            ? [...new Set(estado.usadas.filter(id => typeof id === 'string'))]
+            : [],
+          ciclo: Number.isInteger(estado.ciclo) && estado.ciclo > 0
+            ? estado.ciclo
+            : 1
+        };
+      } catch (erro) {
+        console.warn('Não foi possível ler o histórico de reflexões:', erro);
+        return {
+          ultimoDia: null,
+          reflexaoId: null,
+          usadas: [],
+          ciclo: 1
+        };
+      }
+    }
+
+    function salvarEstadoReflexao(estado) {
+      try {
+        localStorage.setItem(
+          REFLEXAO_STORAGE_KEY,
+          JSON.stringify(estado)
+        );
+      } catch (erro) {
+        console.warn('Não foi possível persistir o histórico de reflexões:', erro);
+      }
+    }
+
+    function selecionarReflexaoDiaria(agora = new Date()) {
+      const hoje = chaveDataReflexao(agora);
+      const estado = carregarEstadoReflexao();
+
+      if (
+        estado.ultimoDia === hoje &&
+        estado.reflexaoId
+      ) {
+        const atual = REFLEXOES_NYXAL.find(
+          reflexao => reflexao.id === estado.reflexaoId
+        );
+
+        if (atual) {
+          return atual;
+        }
+      }
+
+      let usadas = estado.usadas.filter(id =>
+        REFLEXOES_NYXAL.some(
+          reflexao => reflexao.id === id
+        )
+      );
+
+      let candidatos = REFLEXOES_NYXAL.filter(
+        reflexao => !usadas.includes(reflexao.id)
+      );
+
+      let ciclo = estado.ciclo;
+
+      // O catálogo só reinicia quando todas as entradas do ciclo atual
+      // já foram apresentadas.
+      if (!candidatos.length) {
+        usadas = [];
+        candidatos = [...REFLEXOES_NYXAL];
+        ciclo += 1;
+      }
+
+      const indice = Math.floor(
+        Math.random() * candidatos.length
+      );
+
+      const escolhida = candidatos[indice];
+
+      usadas = [...usadas, escolhida.id];
+
+      const novoEstado = {
+        ultimoDia: hoje,
+        reflexaoId: escolhida.id,
+        usadas,
+        ciclo
+      };
+
+      salvarEstadoReflexao(novoEstado);
+
+      return escolhida;
+    }
+
+    function renderReflexaoDiaria(data = new Date()) {
+      const reflexao = selecionarReflexaoDiaria(data);
+      if (!reflexao) return;
+
+      const texto = document.getElementById('dailyReflectionText');
+      const autor = document.getElementById('dailyReflectionAuthor');
+      const obra = document.getElementById('dailyReflectionWork');
+
+      if (texto) {
+        texto.innerText = `“${reflexao.texto}”`;
+      }
+
+      if (autor) {
+        autor.innerText = reflexao.autor;
+      }
+
+      if (obra) {
+        obra.innerText =
+          `• ${reflexao.obra} • ${reflexao.escola}`;
+      }
+    }
+
+    // ================= CHAT COMMAND INTERACTION =================
+    async function handleUserChat(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      input.value = '';
+      await sendNyxalMessage(msg);
+    }
+
+    function limparSessaoConversacionalLocal() {
+      nyxalSessionId = null;
+      sessionStorage.removeItem("NYXAL_SESSION_ID");
+    }
+
+    function sessaoConversacionalRecuperavel(data) {
+      if (!data || typeof data !== 'object') {
+        return false;
+      }
+
+      return [
+        'sessao_nao_valida',
+        'sessao_inativa',
+        'sessao_nao_consultavel',
+        'estrutura_sessao_invalida'
+      ].includes(data.estado);
+    }
+
+    async function sendNyxalMessage(
+      msg,
+      permitirRecuperacaoSessao = true,
+    ) {
+      if (!msg) return;
+
+      playHudSound('send');
+
+      const conversaContinua =
+        voiceConversationActive === true;
+
+      if (conversaContinua) {
+        voiceConversationBusy = true;
+        setVoiceMicrophoneEnabled(false);
+      }
+
+      setHologramProcessing(true);
+      setAiStatusText('PROCESSANDO...', 'text-amber-400');
+      showSubtitles(`Entendendo: "${msg}"...`);
+
+      try {
+        const res = await fetch(`${window.NYXAL_API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            nyxalSessionId
+              ? { mensagem: msg, sessao: nyxalSessionId }
+              : { mensagem: msg }
+          )
+        });
+
+        let data = null;
+
+        try {
+          data = await res.json();
+        } catch (_) {
+          data = null;
+        }
+
+        if (
+          !res.ok &&
+          res.status === 422 &&
+          permitirRecuperacaoSessao &&
+          sessaoConversacionalRecuperavel(data) &&
+          nyxalSessionId
+        ) {
+          console.warn(
+            '[Nyxal] Sessão conversacional perdida; criando uma nova sessão.'
+          );
+
+          limparSessaoConversacionalLocal();
+
+          setHologramProcessing(false);
+          setAiStatusText('RECUPERANDO SESSÃO...', 'text-amber-400');
+          showSubtitles(
+            'A sessão anterior foi encerrada. Retomando a conversa...'
+          );
+
+          await sendNyxalMessage(
+            msg,
+            false,
+          );
+          return;
+        }
+
+        setHologramProcessing(false);
+
+        if (res.ok) {
+          if (data?.sessao) {
+            nyxalSessionId = data.sessao;
+            sessionStorage.setItem(
+              "NYXAL_SESSION_ID",
+              nyxalSessionId
+            );
+          }
+
+          const reply = data?.resposta ||
+            "A Nyxal não retornou uma resposta textual.";
+          const speechText = data?.fala || reply;
+
+          showSubtitles(reply);
+          await speakGoddessNyxVoice(
+            speechText,
+            false
+          );
+        } else {
+          let errorMessage =
+            `A Nyxal não conseguiu concluir a ordem (HTTP ${res.status}).`;
+
+          if (data?.motivo) {
+            errorMessage = data.motivo;
+          } else if (data?.erro) {
+            errorMessage = data.erro;
+          }
+
+          showSubtitles(errorMessage);
+          await speakGoddessNyxVoice(
+            errorMessage
+          );
+        }
+      } catch (err) {
+        setHologramProcessing(false);
+        console.warn('Chat API fetch error:', err);
+        await speakGoddessNyxVoice(
+          "Não consegui conectar à Nyxal. Verifique se a API local está em execução."
+        );
+      } finally {
+        if (conversaContinua && voiceConversationActive) {
+          voiceConversationBusy = false;
+          resumeContinuousListening();
+        }
+      }
+    }
+
+    function sendQuickAction(text) {
+      playHudSound('click');
+      document.getElementById('chatInput').value = text;
+      document.getElementById('chatForm').dispatchEvent(new Event('submit'));
+    }
+
+    function setAiStatusText(text, colorClass = 'text-hud-cyan') {
+      const el = document.getElementById('aiStatusText');
+      el.innerText = `NYXAL • ${text}`;
+      el.className = `font-orbitron text-xs font-bold ${colorClass} tracking-wider`;
+    }
+
+    function showSubtitles(text) {
+      const box = document.getElementById('aiSubtitlesBox');
+      const textEl = document.getElementById('aiSubtitlesText');
+      box.classList.remove('hidden');
+      textEl.innerText = `"${text}"`;
+    }
+
+    function showVoiceDiagnostics() {
+      const box = document.getElementById('voiceDiagnostics');
+      if (box) box.classList.remove('hidden');
+    }
+
+    function setGlobeVoiceState(state) {
+      const globe = document.getElementById('globeContainer');
+      const hud = document.getElementById('globeVoiceState');
+      const label = document.getElementById('globeVoiceStateText');
+
+      if (!globe || !hud || !label) return;
+
+      globe.classList.remove(
+        'globe-voice-listening',
+        'globe-voice-processing',
+        'globe-voice-speaking'
+      );
+
+      if (state === 'listening') {
+        globe.classList.add('globe-voice-listening');
+        hud.classList.remove('hidden');
+        label.innerText = 'OUVINDO...';
+      } else if (state === 'processing') {
+        globe.classList.add('globe-voice-processing');
+        hud.classList.remove('hidden');
+        label.innerText = 'PROCESSANDO...';
+      } else if (state === 'speaking') {
+        globe.classList.add('globe-voice-speaking');
+        hud.classList.remove('hidden');
+        label.innerText = 'NYXAL FALANDO...';
+      } else {
+        hud.classList.add('hidden');
+      }
+    }
+
+    let voiceRecorder = null;
+    let voiceChunks = [];
+    let voiceStream = null;
+    let voiceAudioContext = null;
+    let voiceAnalyser = null;
+    let voiceAnalyserSource = null;
+    let voiceVadFrame = null;
+    let voiceMimeType = '';
+    let voiceConversationActive = false;
+    let voiceConversationBusy = false;
+    let voiceDiscardCurrentRecording = false;
+    let voiceSpeechStartedAt = 0;
+    let voiceLastSpeechAt = 0;
+    let voiceSilenceStartedAt = 0;
+    let voiceCaptureStartedAt = 0;
+    let voiceSpeechDetectedInCurrentRecording = false;
+    let voiceNoiseFloor = 0.003;
+    let voiceRmsAtual = 0;
+    let voiceVozDetectada = false;
+    let voiceCalibracaoIniciadaAt = 0;
+
+    const VOICE_VAD_CALIBRATION_MS = 450;
+    const VOICE_VAD_START_MS = 90;
+    const VOICE_VAD_SILENCE_MS = 850;
+    const VOICE_VAD_MIN_UTTERANCE_MS = 280;
+    const VOICE_UTTERANCE_MAX_MS = 12000;
+    const VOICE_NOISE_ALPHA = 0.035;
+    const VOICE_THRESHOLD_MULTIPLIER = 2.4;
+    const VOICE_MIN_THRESHOLD = 0.004;
+    const VOICE_MAX_THRESHOLD = 0.08;
+    const VOICE_RESUME_GUARD_MS = 320;
+
+    function setVoiceMicrophoneEnabled(enabled) {
+      if (!voiceStream) return;
+      voiceStream.getAudioTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
+
+    function updateVoiceConversationButton() {
+      const button = document.getElementById('globeVoiceButton');
+      if (!button) return;
+
+      if (voiceConversationActive) {
+        button.setAttribute(
+          'aria-label',
+          'Encerrar conversa por voz com Nyxal'
+        );
+        button.title = 'Clique para encerrar a conversa por voz';
+      } else {
+        button.setAttribute(
+          'aria-label',
+          'Iniciar conversa por voz com Nyxal'
+        );
+        button.title = 'Clique uma vez para iniciar a conversa por voz';
+      }
+    }
+
+    function stopVoiceVadLoop() {
+      if (voiceVadFrame !== null) {
+        cancelAnimationFrame(voiceVadFrame);
+        voiceVadFrame = null;
+      }
+    }
+
+    function resetVoiceVadState() {
+      voiceSpeechStartedAt = 0;
+      voiceLastSpeechAt = 0;
+      voiceSilenceStartedAt = 0;
+      voiceCaptureStartedAt = 0;
+      voiceSpeechDetectedInCurrentRecording = false;
+      voiceRmsAtual = 0;
+      voiceVozDetectada = false;
+      voiceCalibracaoIniciadaAt = performance.now();
+      voiceNoiseFloor = Math.max(
+        0.0015,
+        Math.min(0.008, voiceNoiseFloor || 0.003)
+      );
+    }
+
+    function voiceRms(data) {
+      let soma = 0;
+
+      for (let indice = 0; indice < data.length; indice += 1) {
+        const amplitude = data[indice];
+        soma += amplitude * amplitude;
+      }
+
+      return Math.sqrt(soma / data.length);
+    }
+
+    function voiceActivityThreshold() {
+      // O piso de ruído é aprendido continuamente, mas a sensibilidade
+      // nunca sobe indefinidamente: fala baixa continua sendo detectável.
+      const threshold = voiceNoiseFloor * VOICE_THRESHOLD_MULTIPLIER + 0.0025;
+      return Math.min(
+        VOICE_MAX_THRESHOLD,
+        Math.max(
+          VOICE_MIN_THRESHOLD,
+          threshold
+        )
+      );
+    }
+
+    function updateVoiceDiagnostics() {
+      const diagnostics = document.getElementById('voiceDiagnostics');
+      if (!diagnostics) return;
+
+      diagnostics.textContent =
+        'RMS ' + voiceRmsAtual.toFixed(4) +
+        ' • LIMIAR ' + voiceActivityThreshold().toFixed(4) +
+        ' • ' + (voiceVozDetectada ? 'FALA DETECTADA' : 'OUVINDO');
+    }
+
+    function beginVoiceCapture() {
+      if (
+        !voiceConversationActive ||
+        voiceConversationBusy ||
+        !voiceStream ||
+        voiceRecorder
+      ) {
+        return;
+      }
+
+      const Recorder = window.MediaRecorder;
+      voiceChunks = [];
+
+      voiceRecorder = voiceMimeType
+        ? new Recorder(voiceStream, { mimeType: voiceMimeType })
+        : new Recorder(voiceStream);
+
+      const currentRecorder = voiceRecorder;
+      const startedAt = performance.now();
+      voiceCaptureStartedAt = startedAt;
+      voiceSpeechDetectedInCurrentRecording = false;
+
+      currentRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          voiceChunks.push(event.data);
+        }
+      };
+
+      currentRecorder.onerror = (event) => {
+        console.warn('Microfone:', event.error || event);
+        voiceChunks = [];
+        voiceRecorder = null;
+        voiceConversationBusy = false;
+        resetVoiceVadState();
+        setVoiceMicrophoneEnabled(true);
+
+        if (voiceConversationActive) {
+          setGlobeVoiceState('listening');
+          setAiStatusText('OUVINDO...', 'text-emerald-400');
+          showSubtitles('O microfone encontrou um erro. Continuando a escuta...');
+          scheduleContinuousVoiceLoop();
+        } else {
+          setGlobeVoiceState('idle');
+        }
+      };
+
+      currentRecorder.onstop = async () => {
+        const actualType =
+          currentRecorder.mimeType ||
+          voiceMimeType ||
+          'audio/webm';
+
+        const blob = new Blob(
+          voiceChunks,
+          { type: actualType }
+        );
+
+        const falaDetectada =
+          voiceSpeechDetectedInCurrentRecording;
+
+        voiceChunks = [];
+        voiceRecorder = null;
+        voiceCaptureStartedAt = 0;
+        voiceSpeechDetectedInCurrentRecording = false;
+
+        if (
+          voiceDiscardCurrentRecording ||
+          !voiceConversationActive ||
+          !blob.size ||
+          !falaDetectada
+        ) {
+          voiceDiscardCurrentRecording = false;
+          if (voiceConversationActive) {
+            voiceConversationBusy = false;
+            resumeContinuousListening();
+          } else {
+            cleanupContinuousVoice();
+          }
+          return;
+        }
+
+        voiceConversationBusy = true;
+        setVoiceMicrophoneEnabled(false);
+        setGlobeVoiceState('processing');
+        setAiStatusText('TRANSCRIÇÃO...', 'text-emerald-400');
+        setHologramProcessing(true);
+        showSubtitles('Transcrevendo...');
+
+        try {
+          const response = await fetch(
+            `${window.NYXAL_API_BASE}/api/stt`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': actualType.split(';')[0]
+              },
+              body: blob
+            }
+          );
+
+          const data = await response.json();
+
+          if (!response.ok || !data.sucesso) {
+            throw new Error(
+              data.motivo ||
+              `Falha na transcrição (HTTP ${response.status}).`
+            );
+          }
+
+          const transcript = (data.texto || '').trim();
+
+          if (!transcript) {
+            setHologramProcessing(false);
+            showSubtitles('Não identifiquei uma fala no áudio.');
+            return;
+          }
+
+          showSubtitles(`Você disse: "${transcript}"`);
+          await sendNyxalMessage(transcript);
+        } catch (err) {
+          setHologramProcessing(false);
+          console.warn('STT API error:', err);
+          setAiStatusText(
+            isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+            'text-hud-cyan'
+          );
+          showSubtitles(`Erro de reconhecimento: ${err.message}`);
+        } finally {
+          if (voiceConversationActive) {
+            voiceConversationBusy = false;
+            resumeContinuousListening();
+          } else {
+            cleanupContinuousVoice();
+          }
+        }
+      };
+
+      currentRecorder.start(100);
+      voiceSpeechStartedAt = 0;
+      voiceLastSpeechAt = 0;
+      voiceSilenceStartedAt = 0;
+
+      setGlobeVoiceState('listening');
+      setAiStatusText('OUVINDO...', 'text-emerald-400');
+      setHologramProcessing(false);
+      showSubtitles('Estou ouvindo...');
+
+      scheduleContinuousVoiceLoop();
+    }
+
+    function finishVoiceUtterance() {
+      if (
+        !voiceRecorder ||
+        voiceRecorder.state !== 'recording'
+      ) {
+        return;
+      }
+
+      voiceRecorder.stop();
+    }
+
+    function runContinuousVoiceVad() {
+      if (
+        !voiceConversationActive ||
+        voiceConversationBusy ||
+        !voiceAnalyser
+      ) {
+        voiceVadFrame = null;
+        return;
+      }
+
+      const data = new Float32Array(
+        voiceAnalyser.fftSize
+      );
+
+      voiceAnalyser.getFloatTimeDomainData(data);
+
+      const rms = voiceRms(data);
+      const now = performance.now();
+      const calibrando =
+        voiceCalibracaoIniciadaAt > 0 &&
+        now - voiceCalibracaoIniciadaAt < VOICE_VAD_CALIBRATION_MS;
+
+      voiceRmsAtual = rms;
+
+      if (!voiceRecorder) {
+        beginVoiceCapture();
+      }
+
+      const threshold = voiceActivityThreshold();
+
+      // Aprende o ruído somente quando não há atividade vocal.
+      if (
+        !voiceVozDetectada &&
+        (calibrando || rms < threshold)
+      ) {
+        voiceNoiseFloor =
+          voiceNoiseFloor * (1 - VOICE_NOISE_ALPHA) +
+          rms * VOICE_NOISE_ALPHA;
+      }
+
+      const vozAtiva =
+        rms >= voiceActivityThreshold();
+
+      voiceVozDetectada = vozAtiva;
+      updateVoiceDiagnostics();
+
+      if (voiceRecorder) {
+        if (vozAtiva) {
+          if (!voiceSpeechStartedAt) {
+            voiceSpeechStartedAt = now;
+          }
+
+          voiceLastSpeechAt = now;
+          voiceSilenceStartedAt = 0;
+
+          if (
+            now - voiceSpeechStartedAt >=
+            VOICE_VAD_START_MS
+          ) {
+            voiceSpeechDetectedInCurrentRecording = true;
+          }
+        } else if (
+          voiceSpeechDetectedInCurrentRecording &&
+          !voiceSilenceStartedAt
+        ) {
+          voiceSilenceStartedAt = now;
+        }
+
+        const speechAge = voiceSpeechStartedAt
+          ? now - voiceSpeechStartedAt
+          : 0;
+
+        const silenceAge = voiceSilenceStartedAt
+          ? now - voiceSilenceStartedAt
+          : 0;
+
+        const captureAge = voiceCaptureStartedAt
+          ? now - voiceCaptureStartedAt
+          : 0;
+
+        const afterSpeechSilence =
+          voiceSpeechDetectedInCurrentRecording &&
+          voiceLastSpeechAt &&
+          now - voiceLastSpeechAt >=
+          VOICE_VAD_SILENCE_MS;
+
+        const deveReiniciarSemFala =
+          !voiceSpeechDetectedInCurrentRecording &&
+          captureAge >= 15000;
+
+        if (
+          speechAge >= VOICE_UTTERANCE_MAX_MS ||
+          (
+            speechAge >= VOICE_VAD_MIN_UTTERANCE_MS &&
+            afterSpeechSilence &&
+            silenceAge >= VOICE_VAD_SILENCE_MS
+          ) ||
+          deveReiniciarSemFala
+        ) {
+          finishVoiceUtterance();
+        }
+      }
+
+      voiceVadFrame = requestAnimationFrame(
+        runContinuousVoiceVad
+      );
+    }
+
+    function scheduleContinuousVoiceLoop(delay = 0) {
+      stopVoiceVadLoop();
+
+      const iniciar = () => {
+        if (
+          !voiceConversationActive ||
+          voiceConversationBusy ||
+          !voiceAnalyser
+        ) {
+          return;
+        }
+
+        voiceVadFrame = requestAnimationFrame(
+          runContinuousVoiceVad
+        );
+      };
+
+      if (delay > 0) {
+        window.setTimeout(iniciar, delay);
+      } else {
+        iniciar();
+      }
+    }
+
+    function resumeContinuousListening() {
+      if (!voiceConversationActive) {
+        return;
+      }
+
+      setVoiceMicrophoneEnabled(true);
+      resetVoiceVadState();
+      setGlobeVoiceState('listening');
+      setAiStatusText('OUVINDO...', 'text-emerald-400');
+      setHologramProcessing(false);
+      showSubtitles('Estou ouvindo...');
+
+      scheduleContinuousVoiceLoop(
+        VOICE_RESUME_GUARD_MS
+      );
+    }
+
+    function cleanupContinuousVoice() {
+      stopVoiceVadLoop();
+
+      if (voiceStream) {
+        voiceStream.getTracks().forEach(track => track.stop());
+        voiceStream = null;
+      }
+
+      if (voiceAudioContext) {
+        voiceAudioContext.close().catch(() => {});
+        voiceAudioContext = null;
+      }
+
+      voiceAnalyser = null;
+      voiceAnalyserSource = null;
+      voiceRecorder = null;
+      voiceChunks = [];
+      voiceConversationBusy = false;
+      resetVoiceVadState();
+
+      setHologramProcessing(false);
+      setGlobeVoiceState('idle');
+      setAiStatusText(
+        isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
+        'text-hud-cyan'
+      );
+      updateVoiceConversationButton();
+
+      setTimeout(() => {
+        document.getElementById('aiSubtitlesBox')?.classList.add('hidden');
+      }, 1200);
+    }
+
+    function stopContinuousVoice() {
+      voiceConversationActive = false;
+      voiceDiscardCurrentRecording = true;
+      voiceConversationBusy = false;
+      stopVoiceVadLoop();
+
+      if (cancelCurrentNyxalSpeech) {
+        cancelCurrentNyxalSpeech();
+      }
+
+      if (currentNyxalHtmlAudio) {
+        try {
+          currentNyxalHtmlAudio.pause();
+          currentNyxalHtmlAudio.currentTime = 0;
+        } catch (_) {}
+      } else if (currentNyxalAudio) {
+        currentNyxalAudio.pause();
+        currentNyxalAudio.currentTime = 0;
+        currentNyxalAudio = null;
+      }
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      if (
+        voiceRecorder &&
+        voiceRecorder.state === 'recording'
+      ) {
+        voiceRecorder.stop();
+      } else {
+        cleanupContinuousVoice();
+      }
+    }
+
+    async function startContinuousVoice() {
+      try {
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+      } catch (erro) {
+        console.warn('Não foi possível desbloquear o áudio principal:', erro);
+      }
+
+      if (
+        !navigator.mediaDevices?.getUserMedia ||
+        !window.MediaRecorder ||
+        !window.AudioContext &&
+        !window.webkitAudioContext
+      ) {
+        alert(
+          'Este navegador não disponibiliza os recursos necessários para conversa por voz contínua.'
+        );
+        return;
+      }
+
+      try {
+        voiceStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+
+        const AudioContextClass =
+          window.AudioContext || window.webkitAudioContext;
+
+        voiceAudioContext = new AudioContextClass();
+        await voiceAudioContext.resume();
+
+        voiceAnalyser = voiceAudioContext.createAnalyser();
+        voiceAnalyser.fftSize = 2048;
+        voiceAnalyser.smoothingTimeConstant = 0.72;
+
+        voiceAnalyserSource =
+          voiceAudioContext.createMediaStreamSource(
+            voiceStream
+          );
+        voiceAnalyserSource.connect(
+          voiceAnalyser
+        );
+
+        const preferredTypes = [
+          'audio/webm;codecs=opus',
+          'audio/ogg;codecs=opus',
+          'audio/webm'
+        ];
+
+        voiceMimeType = preferredTypes.find(type =>
+          MediaRecorder.isTypeSupported(type)
+        ) || '';
+
+        voiceConversationActive = true;
+        voiceConversationBusy = false;
+        voiceDiscardCurrentRecording = false;
+        resetVoiceVadState();
+        updateVoiceConversationButton();
+
+        setVoiceMicrophoneEnabled(true);
+        setGlobeVoiceState('listening');
+        setAiStatusText('OUVINDO...', 'text-emerald-400');
+        setHologramProcessing(false);
+        showSubtitles(
+          'Conversa por voz ativa. Fale normalmente; não é necessário tocar novamente.'
+        );
+        showVoiceDiagnostics();
+
+        // Captura começa imediatamente; não dependemos de o VAD conseguir
+        // detectar o primeiro fonema para começar a gravar.
+        beginVoiceCapture();
+        scheduleContinuousVoiceLoop();
+      } catch (err) {
+        console.warn('Permissão/áudio do microfone:', err);
+        cleanupContinuousVoice();
+        showSubtitles(
+          'Não foi possível iniciar a conversa por voz. Verifique a permissão do microfone.'
+        );
+        alert(
+          'Não foi possível acessar o microfone. Verifique a permissão do navegador.'
+        );
+      }
+    }
+
+    async function toggleVoiceInput() {
+      prepararSaidaAudioNoGestoDoUsuario();
+
+      try {
+        await desbloquearAudioNyxal();
+      } catch (erro) {
+        console.warn(
+          'Saída de áudio não desbloqueada antes da conversa:',
+          erro
+        );
+      }
+
+      playHudSound('click');
+
+      if (voiceConversationActive) {
+        stopContinuousVoice();
+        return;
+      }
+
+      await startContinuousVoice();
+    }
+
+    function initGlobeVoiceControl() {
+      const globeButton = document.getElementById('globeVoiceButton');
+      if (!globeButton) return;
+
+      globeButton.addEventListener('click', toggleVoiceInput);
+      globeButton.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggleVoiceInput();
+        }
+      });
+
+      updateVoiceConversationButton();
+      setGlobeVoiceState('idle');
+    }
+
+    // ================= HOLOGRAM SOURCE CONTROL =================
+    function toggleAvatarSourceModal() {
+      playHudSound('open');
+      document.getElementById('avatarModal').classList.remove('hidden');
+      setHologramReceded(true);
+    }
+
+    async function applyAvatarVideoUrl() {
+      playHudSound('click');
+      const url = document.getElementById('avatarVideoUrlInput').value.trim();
+      if (!url) return;
+
+      localStorage.setItem('NYXAL_AVATAR_VIDEO_URL', url);
+      await clearStoredHologram().catch(() => {});
+
+      const video = document.getElementById('hologramVideo');
+      if (video) {
+        video.src = url;
+        video.classList.remove('hidden');
+        document.getElementById('hologramImageFallback')?.classList.add('hidden');
+        video.play().catch(() => handleVideoLoadError());
+      }
+
+      closeModal('avatarModal');
+      speakGoddessNyxVoice("Projeção holográfica calibrada e salva.");
+    }
+
+    async function handleLocalAvatarFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        await saveHologramBlob(file);
+        localStorage.removeItem('NYXAL_AVATAR_VIDEO_URL');
+        const url = URL.createObjectURL(file);
+        setHologramMedia(url, file.type || 'image/*');
+
+        closeModal('avatarModal');
+        speakGoddessNyxVoice("Arquivo de presença visual atualizado e salvo.");
+      } catch (err) {
+        console.error('Falha ao salvar o arquivo holográfico:', err);
+        alert('Não foi possível salvar esse arquivo no armazenamento local do navegador.');
+      }
+    }
+
+    function handleVideoLoadError() {
+      console.warn("Holographic video feed unavailable. Switching to local Nyxal image fallback.");
+      const video = document.getElementById('hologramVideo');
+      const img = document.getElementById('hologramImageFallback');
+      video.classList.add('hidden');
+      img.classList.remove('hidden');
+    }
+
+    // ================= THREE.JS 3D HOLOGRAPHIC COMPUTATIONAL CORE =================
+    let scene, camera, renderer, coreGroup, innerCore, outerGeodesic;
+
+    function init3DGlobe() {
+      const container = document.getElementById('globeContainer');
+      if (!container) return;
+
+      const width = container.clientWidth || 400;
+      const height = container.clientHeight || 400;
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      camera.position.z = 220;
+
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      coreGroup = new THREE.Group();
+      scene.add(coreGroup);
+
+      // Core Inner Dark Energy Sphere
+      const sphereGeo = new THREE.SphereGeometry(62, 32, 32);
+      const sphereMat = new THREE.MeshBasicMaterial({ color: 0x020a1c, transparent: true, opacity: 0.9 });
+      innerCore = new THREE.Mesh(sphereGeo, sphereMat);
+      coreGroup.add(innerCore);
+
+      // Holographic Cyan Wireframe Geodesic Shell
+      const wireframeGeo = new THREE.IcosahedronGeometry(66, 3);
+      const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, wireframe: true, transparent: true, opacity: 0.35 });
+      outerGeodesic = new THREE.Mesh(wireframeGeo, wireframeMat);
+      coreGroup.add(outerGeodesic);
+
+      // Secondary Counter-Rotating Ring
+      const ringGeo = new THREE.TorusGeometry(82, 1.2, 16, 100);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x8a2be2, transparent: true, opacity: 0.4 });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.rotation.x = Math.PI / 3;
+      coreGroup.add(ringMesh);
+
+      // Orbiting Particles / Flight Vector Nodes
+      const count = 140;
+      const positions = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        const u = Math.random();
+        const v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+        const r = 70 + Math.random() * 16;
+
+        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = r * Math.cos(phi);
+      }
+
+      const particlesGeo = new THREE.BufferGeometry();
+      particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const particleMat = new THREE.PointsMaterial({ color: 0x00f2fe, size: 2.2, transparent: true, opacity: 0.8 });
+      const particlePoints = new THREE.Points(particlesGeo, particleMat);
+      coreGroup.add(particlePoints);
+
+      // Mouse Drag Controls
+      let isDragging = false;
+      let prevMousePos = { x: 0, y: 0 };
+
+      container.addEventListener('mousedown', (e) => { isDragging = true; prevMousePos = { x: e.clientX, y: e.clientY }; });
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - prevMousePos.x;
+        const deltaY = e.clientY - prevMousePos.y;
+        coreGroup.rotation.y += deltaX * 0.008;
+        coreGroup.rotation.x += deltaY * 0.008;
+        prevMousePos = { x: e.clientX, y: e.clientY };
+      });
+      window.addEventListener('mouseup', () => { isDragging = false; });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (!isDragging) {
+          coreGroup.rotation.y += 0.003;
+          outerGeodesic.rotation.y -= 0.0015;
+          ringMesh.rotation.z += 0.002;
+        }
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+
+    // Background Space Canvas
+    function initSpaceBgCanvas() {
+      const canvas = document.getElementById('spaceBgCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      let w = (canvas.width = window.innerWidth);
+      let h = (canvas.height = window.innerHeight);
+
+      const stars = Array.from({ length: 80 }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        radius: Math.random() * 1.5,
+        alpha: Math.random(),
+        speed: 0.005 + Math.random() * 0.015
+      }));
+
+      function drawBg() {
+        ctx.clearRect(0, 0, w, h);
+        stars.forEach(s => {
+          s.alpha += s.speed;
+          if (s.alpha > 1 || s.alpha < 0) s.speed = -s.speed;
+          ctx.fillStyle = `rgba(0, 242, 254, ${Math.abs(s.alpha) * 0.6})`;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        requestAnimationFrame(drawBg);
+      }
+      drawBg();
+    }
+
+    // System Graph Animation
+    let graphData = Array(30).fill(10);
+    function initSysGraph() {
+      const canvas = document.getElementById('sysGraphCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+
+      setInterval(() => {
+        const val = Math.floor(15 + Math.random() * 30);
+        graphData.shift();
+        graphData.push(val);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#00f2fe';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+
+        const step = canvas.width / (graphData.length - 1);
+        graphData.forEach((v, i) => {
+          const x = i * step;
+          const y = canvas.height - (v / 100) * canvas.height;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }, 1500);
+    }
+
+    // Orbital Node Modal Trigger
+    function triggerOrbitalNode(nodeName) {
+      playHudSound('open');
+      const modal = document.getElementById('nodeDetailModal');
+      const title = document.getElementById('nodeTitle');
+      const content = document.getElementById('nodeContent');
+
+      title.innerHTML = `<i class="fa-solid fa-atom text-hud-cyan"></i> MÓDULO DELTA: ${nodeName}`;
+
+      const details = {
+        'IA': 'A inteligência Nyxal gerencia a memória, investigação, tarefas e execução de ordens via Agente Qwen.',
+        'PROJETOS': 'Frontier World (Roblox), NyxOS Delta Interface, Sistema de Automação MCP e Integração Blockchain.',
+        'ESTUDOS': 'Tópicos: Ciência de Dados, Engenharia de Prompts, Teoria de Voo e Arquitetura Delta.',
+        'AVIAÇÃO': 'Módulo de Telemetria e Regulamentação da Licença de Piloto Privado (PP).',
+        'JOGOS': 'Simuladores de voo e ambiente de testes virtuais.',
+        'MÍDIA': 'Sintetizador de áudio e visualização holográfica de presenças do sistema.',
+        'UTILITÁRIOS': 'Ferramentas de análise de logs do NyxOS e diagnósticos de rede local.',
+        'SISTEMA': 'Métricas operacionais: CPU, RAM, Disco, Latência do núcleo e status do servidor nyxal_web_api.py.'
+      };
+
+      content.innerText = details[nodeName] || 'Módulo operacional ativado.';
+      modal.classList.remove('hidden');
+      setHologramReceded(true);
+    }
+
+    function switchTab(tabId) {
+      playHudSound('click');
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active', 'text-hud-cyan', 'bg-hud-cyan/15', 'border-hud-cyan/40');
+        btn.classList.add('text-slate-400');
+      });
+      const activeBtn = document.getElementById(`tab-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.add('active', 'text-hud-cyan', 'bg-hud-cyan/15', 'border-hud-cyan/40');
+      }
+    }
+
+    function togglePlayMusic() {
+      playHudSound('click');
+    }
+
+    function addNewEventPrompt() {
+      playHudSound('click');
+      const title = prompt("Digite o nome do novo evento:");
+      const time = prompt("Digite o horário (ex: 19:00):", "19:00");
+      if (title && time) {
+        const list = document.getElementById('eventsList');
+        const newItem = document.createElement('div');
+        newItem.className = "p-2 rounded bg-slate-900/80 border border-slate-800 flex justify-between items-center hover:border-hud-cyan/40 transition-all";
+        newItem.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-hud-cyan"></span>
+            <span class="text-slate-200 font-medium">${title}</span>
+          </div>
+          <span class="px-2 py-0.5 rounded bg-hud-cyan/10 border border-hud-cyan/30 text-hud-cyan font-mono text-[10px]">Hoje, ${time}</span>
+        `;
+        list.appendChild(newItem);
+      }
+    }
+
+    function updateLiveClock() {
+      const now = new Date();
+      document.getElementById('liveClock').innerText = now.toLocaleTimeString('pt-BR');
+    }
+
+    // Initialize Everything
+    window.onload = function() {
+      initSpaceBgCanvas();
+      init3DGlobe();
+      initGlobeVoiceControl();
+      initSysGraph();
+      renderReflexaoDiaria();
+
+      setInterval(updateLiveClock, 1000);
+      updateLiveClock();
+
+      // Initial Status Poll & Poll Every 5s
+      fetchNyxalStatus();
+      setInterval(fetchNyxalStatus, 5000);
+
+      // Pre-load speech synthesis voices
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+      }
+    };
+  </script>
+</body>
+</html>

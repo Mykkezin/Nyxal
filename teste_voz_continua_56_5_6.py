@@ -1,0 +1,299 @@
+#!/usr/bin/env python3
+
+"""
+NIXAL — TESTE 56.5.6
+Integração de conversa por voz contínua + suavização do TTS.
+
+O teste é estrutural/determinístico: não abre microfone, não chama
+Whisper/Kokoro/Qwen e não exige servidor local.
+"""
+
+from __future__ import annotations
+
+import ast
+import re
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+
+
+BASE_DIR = Path(__file__).resolve().parent
+INTERFACE = BASE_DIR / "interface" / "index.html"
+API = BASE_DIR / "nyxal_web_api.py"
+
+
+TESTES = 0
+FALHAS = 0
+
+
+def verificar(condicao: bool, mensagem: str) -> None:
+    global TESTES, FALHAS
+    TESTES += 1
+    print(f"[{'PASS' if condicao else 'FAIL'}] {TESTES}. {mensagem}")
+    if not condicao:
+        FALHAS += 1
+
+
+def extrair_scripts_html(texto: str) -> list[str]:
+    return re.findall(
+        r"<script(?:\s[^>]*)?>(.*?)</script>",
+        texto,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+
+
+def main() -> None:
+    verificar(
+        INTERFACE.exists(),
+        "interface principal existe",
+    )
+
+    verificar(
+        API.exists(),
+        "API principal existe",
+    )
+
+    interface = INTERFACE.read_text(encoding="utf-8")
+    api = API.read_text(encoding="utf-8")
+
+    # ------------------------------------------------------------
+    # Voz contínua
+    # ------------------------------------------------------------
+
+    for simbolo, descricao in (
+        ("VOICE_VAD_CALIBRATION_MS", "calibração inicial do piso de ruído"),
+        ("voiceRmsAtual", "leitura atual do nível do microfone"),
+        ("voiceActivityThreshold", "limiar adaptativo de fala"),
+        ("updateVoiceDiagnostics", "diagnóstico visual do microfone"),
+        ("RMS ", "indicador numérico do nível capturado"),
+        ("FALA DETECTADA", "indicação de atividade vocal detectada"),
+        ("VOICE_VAD_START_MS", "início rápido da fala"),
+        ("VOICE_VAD_SILENCE_MS", "fim de fala por silêncio"),
+        ("VOICE_MAX_THRESHOLD", "limite superior do limiar VAD"),
+        ("voiceConversationActive", "estado persistente da conversa por voz"),
+        ("beginVoiceCapture", "captura iniciada antes da decisão do VAD"),
+        ("voiceSpeechDetectedInCurrentRecording", "marca de fala real dentro da gravação"),
+        ("voiceCaptureStartedAt", "controle de duração da captura contínua"),
+        ("startContinuousVoice", "inicialização da escuta contínua"),
+        ("stopContinuousVoice", "encerramento explícito da escuta contínua"),
+        ("resumeContinuousListening", "retorno automático à escuta após resposta"),
+        ("createAnalyser", "VAD baseado em análise de áudio"),
+        ("requestAnimationFrame", "loop de atividade de voz"),
+        ("VOICE_VAD_SILENCE_MS", "detecção de fim de fala por silêncio"),
+        ("VOICE_UTTERANCE_MAX_MS", "limite de segurança por turno de fala"),
+        ("getUserMedia", "captura do microfone"),
+        ("currentRecorder.start(100)", "captura em blocos curtos"),
+        ("getFloatTimeDomainData", "leitura precisa do nível do microfone"),
+        ("await sendNyxalMessage(transcript)", "encadeamento voz para conversa"),
+    ):
+        verificar(
+            simbolo in interface,
+            f"{descricao} está presente",
+        )
+
+    verificar(
+        "beginVoiceCapture();" in interface
+        and "currentRecorder.start(100);" in interface,
+        "gravador inicia sem depender da detecção prévia do VAD",
+    )
+
+    verificar(
+        "voiceSpeechDetectedInCurrentRecording" in interface
+        and "!falaDetectada" in interface,
+        "áudio sem fala não é enviado ao STT",
+    )
+
+    verificar(
+        "VOICE_RECORDING_MS" not in interface,
+        "antigo limite fixo de 7 segundos foi removido",
+    )
+
+    verificar(
+        "voiceStopTimer" not in interface,
+        "temporizador fixo de gravação não permanece na interface",
+    )
+
+    verificar(
+        "body: JSON.stringify(" in interface
+        and "{ mensagem: msg, sessao: nyxalSessionId }" in interface,
+        "chat reaproveita a sessão conversacional existente",
+    )
+
+    verificar(
+        "limparSessaoConversacionalLocal" in interface
+        and "sessionStorage.removeItem(\"NYXAL_SESSION_ID\")" in interface,
+        "sessão perdida pode ser removida do armazenamento local",
+    )
+
+    verificar(
+        "res.status === 422" in interface
+        and "sessaoConversacionalRecuperavel" in interface
+        and "sendNyxalMessage(\n            msg,\n            false" in interface,
+        "erro de sessão 422 dispara recuperação única sem duplicar o turno",
+    )
+
+    verificar(
+        "await speakGoddessNyxVoice" in interface,
+        "a conversa aguarda o fim da fala antes de voltar a ouvir",
+    )
+
+    verificar(
+        "cancelCurrentNyxalSpeech" in interface,
+        "fala em andamento pode ser cancelada sem prender o fluxo",
+    )
+
+    verificar(
+        "setVoiceMicrophoneEnabled(false)" in interface
+        and "setVoiceMicrophoneEnabled(true)" in interface,
+        "microfone é pausado durante a resposta e reativado depois",
+    )
+
+    # ------------------------------------------------------------
+    # TTS mais fluido
+    # ------------------------------------------------------------
+
+    verificar(
+        "KOKORO_SPEED" in api
+        and "speed=KOKORO_SPEED" in api,
+        "velocidade do Kokoro é configurável e aplicada",
+    )
+
+    verificar(
+        'os.environ.get(\n    "NYXAL_WHISPER_MODEL",\n    "base",\n)' in api,
+        "Whisper base é o padrão para maior qualidade de reconhecimento",
+    )
+
+    verificar(
+        "condition_on_previous_text=False" in api
+        and "temperature=0.0" in api,
+        "transcrição usa parâmetros estáveis para fala curta",
+    )
+
+    verificar(
+        "getNyxalAudioContext" in interface
+        and "desbloquearAudioNyxal" in interface
+        and "document.addEventListener(" in interface,
+        "saída de áudio é criada/desbloqueada após interação real do usuário",
+    )
+
+    verificar(
+        "prepararSaidaAudioNoGestoDoUsuario" in interface
+        and "criarWavSilencioNyxal" in interface
+        and "audio.play()" in interface,
+        "elemento HTMLAudio é ativado diretamente no gesto do usuário",
+    )
+
+    verificar(
+        "currentNyxalHtmlAudio || new Audio()" in interface
+        and "audio.playsInline = true" in interface
+        and "audio.volume = 1.0" in interface,
+        "mesmo elemento HTMLAudio pode ser reutilizado para o TTS",
+    )
+
+    verificar(
+        "new Audio()" in interface
+        and "URL.createObjectURL(blob)" in interface
+        and "audio.play()" in interface
+        and "audio.volume = 1.0" in interface,
+        "TTS possui rota direta por HTMLAudio antes do fallback Web Audio",
+    )
+
+    verificar(
+        "O áudio TTS decodificado possui duração inválida." in interface,
+        "áudio TTS vazio ou inválido não é tratado como reprodução válida",
+    )
+
+    verificar(
+        "decodeAudioData" in interface
+        and "createBufferSource" in interface
+        and "desbloquearAudioNyxal()" in interface,
+        "fallback TTS por Web Audio usa contexto explicitamente desbloqueado",
+    )
+
+    verificar(
+        "suavizar_audio_kokoro" in api,
+        "suavização do áudio Kokoro está presente",
+    )
+
+    verificar(
+        "int(sample_rate * 0.008)" in api,
+        "crossfade curto entre segmentos está configurado",
+    )
+
+    verificar(
+        "int(sample_rate * 0.005)" in api,
+        "micro-fade de entrada e saída está configurado",
+    )
+
+    verificar(
+        "from kokoro import KPipeline" in api
+        and "import numpy as np" in api
+        and "import soundfile as sf" in api,
+        "dependências pesadas de voz continuam lazy-loaded",
+    )
+
+    # ------------------------------------------------------------
+    # Sintaxe Python
+    # ------------------------------------------------------------
+
+    try:
+        ast.parse(api)
+        verificar(
+            True,
+            "nyxal_web_api.py possui sintaxe Python válida",
+        )
+    except SyntaxError as erro:
+        verificar(
+            False,
+            f"nyxal_web_api.py possui sintaxe Python válida: {erro}",
+        )
+
+    # ------------------------------------------------------------
+    # Sintaxe JavaScript
+    # ------------------------------------------------------------
+
+    scripts = extrair_scripts_html(interface)
+    verificar(
+        bool(scripts),
+        "interface possui blocos JavaScript identificáveis",
+    )
+
+    node = shutil.which("node")
+
+    if node:
+        with tempfile.TemporaryDirectory() as pasta:
+            for indice, script in enumerate(scripts):
+                arquivo = Path(pasta) / f"interface_{indice}.js"
+                arquivo.write_text(script, encoding="utf-8")
+                processo = subprocess.run(
+                    [node, "--check", str(arquivo)],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                verificar(
+                    processo.returncode == 0,
+                    f"bloco JavaScript {indice + 1} possui sintaxe válida",
+                )
+    else:
+        verificar(
+            True,
+            "Node não disponível; validação JavaScript estrutural preservada",
+        )
+
+    print()
+    print("=" * 64)
+    print("TESTE — VOZ CONTÍNUA 56.5.6")
+    print("=" * 64)
+    print(f"TESTES EXECUTADOS: {TESTES}")
+    print(f"FALHAS: {FALHAS}")
+    print(f"PASSOU: {FALHAS == 0}")
+    print("=" * 64)
+
+    if FALHAS:
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()

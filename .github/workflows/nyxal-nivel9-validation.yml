@@ -1,0 +1,76 @@
+name: Nyxal Nível 9/10 — validação determinística
+# 56.5.6: integração conversacional e voz contínua
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nivel9:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compilar módulos
+        run: |
+          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nyxal_web_api.py
+
+      - name: Suite Nível 9
+        run: python teste_nivel_9_suite_final.py
+
+      - name: Suite Nível 10
+        run: python teste_nivel_10_suite_final.py
+
+      - name: Suite Conversacional 56.5.5
+        run: python teste_contexto_conversacional_56_5_5.py
+
+      - name: Teste adaptador Qwen 56.5.5
+        run: python teste_dialogo_qwen_56_5_5.py
+
+      - name: Teste Núcleo Conversacional
+        run: python teste_nucleo_conversacional.py
+
+      - name: Smoke test API de chat sem voz
+        run: python teste_api_chat_sem_voz.py
+
+      - name: Teste Voz Contínua 56.5.6
+        run: python teste_voz_continua_56_5_6.py
+
+      - name: Teste Reflexão Diária 56.5.6
+        run: python teste_reflexao_diaria_56_5_6.py
+
+      - name: Sanidade de regras de segurança
+        run: |
+          python - <<'PY'
+          from nixal_governanca_evolucao import GovernancaEvolucaoNixal
+          from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
+
+          assert GovernancaEvolucaoNixal.VERSAO == "9.5.0"
+          assert SolicitacaoEvolucaoNixal.VERSAO == "9.4.0"
+          assert "integrada" in GovernancaEvolucaoNixal.ESTADOS
+          assert "rollback_registrado" in GovernancaEvolucaoNixal.ESTADOS
+          assert "experimento_falhou" in SolicitacaoEvolucaoNixal.ESTADOS
+          print("REGRAS_NIVEL9_OK")
+          PY
+      - name: Empacotar projeto completo
+        run: |
+          mkdir -p /tmp/nyxal-package
+          git archive --format=zip --output="/tmp/nyxal-package/Nyxal-N10-${GITHUB_SHA}.zip" "${GITHUB_SHA}"
+
+      - name: Publicar projeto completo
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyxal-projeto-nivel10
+          path: /tmp/nyxal-package/Nyxal-N10-*.zip
+          if-no-files-found: error
