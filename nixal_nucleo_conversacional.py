@@ -323,7 +323,7 @@ class NucleoConversacionalNixal:
             normalizado,
         )
         return re.sub(
-            r"\\s+",
+            r"\s+",
             " ",
             normalizado,
         ).strip()
