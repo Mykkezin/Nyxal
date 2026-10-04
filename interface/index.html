@@ -1267,7 +1267,28 @@
       await sendNyxalMessage(msg);
     }
 
-    async function sendNyxalMessage(msg) {
+    function limparSessaoConversacionalLocal() {
+      nyxalSessionId = null;
+      sessionStorage.removeItem("NYXAL_SESSION_ID");
+    }
+
+    function sessaoConversacionalRecuperavel(data) {
+      if (!data || typeof data !== 'object') {
+        return false;
+      }
+
+      return [
+        'sessao_nao_valida',
+        'sessao_inativa',
+        'sessao_nao_consultavel',
+        'estrutura_sessao_invalida'
+      ].includes(data.estado);
+    }
+
+    async function sendNyxalMessage(
+      msg,
+      permitirRecuperacaoSessao = true,
+    ) {
       if (!msg) return;
 
       playHudSound('send');
@@ -1295,37 +1316,74 @@
           )
         });
 
+        let data = null;
+
+        try {
+          data = await res.json();
+        } catch (_) {
+          data = null;
+        }
+
+        if (
+          !res.ok &&
+          res.status === 422 &&
+          permitirRecuperacaoSessao &&
+          sessaoConversacionalRecuperavel(data) &&
+          nyxalSessionId
+        ) {
+          console.warn(
+            '[Nyxal] Sessão conversacional perdida; criando uma nova sessão.'
+          );
+
+          limparSessaoConversacionalLocal();
+
+          setHologramProcessing(false);
+          setAiStatusText('RECUPERANDO SESSÃO...', 'text-amber-400');
+          showSubtitles(
+            'A sessão anterior foi encerrada. Retomando a conversa...'
+          );
+
+          await sendNyxalMessage(
+            msg,
+            false,
+          );
+          return;
+        }
+
         setHologramProcessing(false);
 
         if (res.ok) {
-          const data = await res.json();
-
-          if (data.sessao) {
+          if (data?.sessao) {
             nyxalSessionId = data.sessao;
-            sessionStorage.setItem("NYXAL_SESSION_ID", nyxalSessionId);
+            sessionStorage.setItem(
+              "NYXAL_SESSION_ID",
+              nyxalSessionId
+            );
           }
 
-          const reply = data.resposta ||
+          const reply = data?.resposta ||
             "A Nyxal não retornou uma resposta textual.";
-          const speechText = data.fala || reply;
+          const speechText = data?.fala || reply;
 
           showSubtitles(reply);
-          await speakGoddessNyxVoice(speechText, false);
+          await speakGoddessNyxVoice(
+            speechText,
+            false
+          );
         } else {
           let errorMessage =
             `A Nyxal não conseguiu concluir a ordem (HTTP ${res.status}).`;
 
-          try {
-            const errorData = await res.json();
-            if (errorData.motivo) {
-              errorMessage = errorData.motivo;
-            }
-          } catch (_) {
-            // Mantém a mensagem HTTP caso a API não retorne JSON.
+          if (data?.motivo) {
+            errorMessage = data.motivo;
+          } else if (data?.erro) {
+            errorMessage = data.erro;
           }
 
           showSubtitles(errorMessage);
-          await speakGoddessNyxVoice(errorMessage);
+          await speakGoddessNyxVoice(
+            errorMessage
+          );
         }
       } catch (err) {
         setHologramProcessing(false);
