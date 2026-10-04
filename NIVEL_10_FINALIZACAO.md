@@ -3,7 +3,7 @@
 ## Estado
 
 **Implementação:** concluída nesta etapa.  
-**Certificação final:** pendente de execução/status do CI.
+**Certificação final:** **CERTIFICADA — CI verde**.
 
 ## Componentes presentes
 
@@ -66,29 +66,34 @@ validacao_concluida
 Uma execução Nível 10 em estado `aprovado` somente produz evidência de validação.
 Qualquer integração em `stable` continua subordinada aos gates externos do Nível 9.
 
-## Gate restante
+## Certificação CI
 
-É necessária uma execução final do workflow de validação pelo GitHub Actions e
-registro do resultado como evidência de CI.
+Workflow: **Nyxal Nível 9/10 — validação determinística**  
+Run: **#45**  
+Run ID: `37195427849`  
+Commit validado: `4b1d782acbb2bca1d092d5f5913f3ecb3f79584e`  
+Conclusão: **SUCCESS**.
 
-Até essa evidência existir, o Nível 10 deve ser classificado como:
+O job `nivel9` concluiu com sucesso a compilação, a Suite Nível 9, a Suite Nível 10 e a sanidade das regras de segurança.
 
-**IMPLEMENTADO / AGUARDANDO CERTIFICAÇÃO CI**
+A execução anterior identificou uma falha isolada no teste `teste_nivel_10_executor.py`: `NameError` causado pela declaração de `CoordenadorBranchIncorreta` antes de `CoordenadorFalso`. A correção foi estrutural e, na execução seguinte, o workflow passou integralmente.
 
-e não como formalmente concluído.
+Classificação atual:
+
+**IMPLEMENTADO / CERTIFICADO POR CI**.
 
 ## Próxima transição
 
-Somente após CI verde:
+Com CI verde:
 
 ```
 Nível 10 implementado
         ↓
 regressão Nível 9 + Nível 10
         ↓
-checkpoint certificado
+checkpoint certificado  ← ATUAL
         ↓
-Nível 10 concluído
+revisão/autorização externa para integração
         ↓
-definição formal do Nível 11
+integrção conforme Nível 9
 ```
