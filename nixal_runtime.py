@@ -322,6 +322,7 @@ class NyxalRuntime:
 
         self._cpu_anterior: Any = None
         self._ultimo_ciclo: dict[str, Any] | None = None
+        self._ultima_hipotese_investigada: dict[str, Any] | None = None
 
     # ============================================================
     # SOLICITAÇÃO FORMAL DE EVOLUÇÃO
@@ -350,37 +351,13 @@ class NyxalRuntime:
                 repositorio=BASE_DIR,
             )
 
-        ciclo = self._ultimo_ciclo
-        if not isinstance(ciclo, dict):
-            return {
-                "sucesso": False,
-                "estado": "solicitacao_indisponivel",
-                "origem": self.FONTE,
-                "motivo": "Ainda não existe ciclo Runtime com hipótese para formalização.",
-                "autorizacao_explicita": False,
-                "integracao_executada": False,
-                "stable_modificada": False,
-            }
-
-        valor = ciclo.get("valor")
-        if not isinstance(valor, dict):
-            return {
-                "sucesso": False,
-                "estado": "solicitacao_indisponivel",
-                "origem": self.FONTE,
-                "motivo": "O último ciclo Runtime não possui valor estruturado.",
-                "autorizacao_explicita": False,
-                "integracao_executada": False,
-                "stable_modificada": False,
-            }
-
-        hipotese = valor.get("hipotese")
+        hipotese = self._ultima_hipotese_investigada
         if not isinstance(hipotese, dict):
             return {
                 "sucesso": False,
                 "estado": "solicitacao_indisponivel",
                 "origem": self.FONTE,
-                "motivo": "O último ciclo Runtime não possui hipótese integrada.",
+                "motivo": "Ainda não existe hipótese provisória capturada pela investigação.",
                 "autorizacao_explicita": False,
                 "integracao_executada": False,
                 "stable_modificada": False,
@@ -665,17 +642,30 @@ class NyxalRuntime:
                 prioridade.get("selecionada")
             )
 
-            etapas.append(
-                {
-                    "etapa": "investigacao",
-                    "sucesso": bool(
-                        investigacao_resultado.get("sucesso")
-                    ),
+            investigacao_resultado.get("sucesso")
+                ),
                     "resultado": deepcopy(
                         investigacao_resultado
                     ),
                 }
             )
+
+            valor_investigacao = investigacao_resultado.get("valor")
+            hipotese_investigada = (
+                valor_investigacao.get("hipotese")
+                if isinstance(valor_investigacao, dict)
+                else None
+            )
+
+            if (
+                investigacao_resultado.get("sucesso") is True
+                and isinstance(hipotese_investigada, dict)
+                and hipotese_investigada.get("estado_atual")
+                == "provisoria"
+            ):
+                self._ultima_hipotese_investigada = deepcopy(
+                    hipotese_investigada
+                )
 
             if not investigacao_resultado.get("sucesso"):
                 return self._encerrar_com_erro(
