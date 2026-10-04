@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Suite determinística consolidada para o Nível 9."""
+"""Suite determinística consolidada para o Nível 9 / M4."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ TESTES = [
     "teste_nivel_9_runtime_evolucao_remota.py",
     "teste_nivel_9_ciclo_formal_evolucao_integrado.py",
     "teste_integracao_controlada.py",
+    "teste_nivel_9_integracao_autorizada.py",
     "teste_nivel_9_integracao_governanca.py",
 ]
 

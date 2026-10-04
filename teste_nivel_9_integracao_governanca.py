@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from nixal_governanca_evolucao import GovernancaEvolucaoNixal
+from nixal_proposta_integracao import PropostaIntegracaoDesenvolvimentoNixal
 
 
 def git(raiz: Path, *args: str) -> str:
@@ -39,41 +40,40 @@ def preparar_repositorio(raiz: Path) -> Path:
 def preparar_candidato(raiz: Path) -> tuple[Path, Path]:
     candidato = raiz.parent / "candidate"
     candidato.mkdir()
+
+    codigo = candidato / "codigo.py"
+    codigo.write_text(
+        "def saudacao():\\n    return 'NYXAL'\\n",
+        encoding="utf-8",
+    )
+    import hashlib
+    fingerprint = hashlib.sha256(codigo.read_bytes()).hexdigest()
+
     (candidato / "candidato.json").write_text(
         json.dumps(
             {
+                "versao_registro": 1,
                 "candidato_id": "candidato-001",
                 "estado": "candidato",
                 "arquivo": "codigo.py",
                 "manifesto": "manifesto.json",
-                "fingerprint": "abc",
+                "fingerprint": fingerprint,
                 "avaliacao": {"aprovado": True},
             },
             ensure_ascii=False,
         ),
         encoding="utf-8",
     )
-    (candidato / "codigo.py").write_text(
-        "def saudacao():\n    return 'NYXAL'\n",
-        encoding="utf-8",
-    )
 
-    proposta = raiz.parent / "proposta.json"
-    proposta.write_text(
-        json.dumps(
-            {
-                "proposta_id": "integracao-candidato-001",
-                "estado": "aguardando_autorizacao",
-                "candidato_dir": str(candidato),
-                "autorizacao_explicita": False,
-                "integracao_executada": False,
-                "stable_modificada": False,
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+    propostas = PropostaIntegracaoDesenvolvimentoNixal(
+        repositorio=raiz,
+        propostas=raiz.parent / "propostas",
     )
-    return candidato, proposta
+    proposta = propostas.criar(
+        candidato_dir=candidato,
+        destino="main",
+    )
+    return candidato, Path(proposta["arquivo_proposta"])
 
 
 def executar() -> None:
@@ -153,11 +153,14 @@ def executar() -> None:
         assert preparada["governanca"]["integracao"]["commit_integracao"]
         assert preparada["integracao_executada"] is False
         assert preparada["stable_modificada"] is False
-        assert git(raiz, "branch", "--show-current") == (
-            "integracao/integracao-candidato-001"
-        )
+        assert git(raiz, "branch", "--show-current") == "main"
+        assert not (raiz / "codigo.py").exists()
 
-        merge_commit = git(raiz, "rev-parse", "HEAD")
+        merge_commit = git(
+            raiz,
+            "rev-parse",
+            "refs/heads/integracao/integracao-candidato-001",
+        )
 
         # O teste ainda não está em stable; registrar integração deve bloquear.
         try:

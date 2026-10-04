@@ -35,6 +35,9 @@ from typing import Any
 from nixal_integracao_controlada import (
     IntegracaoControladaDesenvolvimentoNixal,
 )
+from nixal_proposta_integracao import (
+    PropostaIntegracaoDesenvolvimentoNixal,
+)
 
 
 class GovernancaEvolucaoNixal:
@@ -74,8 +77,14 @@ class GovernancaEvolucaoNixal:
             or self.repositorio.parent / "Nyxal-evolution-governance"
         ).resolve()
         self.governanca.mkdir(parents=True, exist_ok=True)
+        self.propostas = self.repositorio.parent / "Nyxal-integration-proposals"
+        self.autorizacoes = self.repositorio.parent / "Nyxal-integration-authorizations"
+        self.propostas.mkdir(parents=True, exist_ok=True)
+        self.autorizacoes.mkdir(parents=True, exist_ok=True)
         self.integrador = integrador or IntegracaoControladaDesenvolvimentoNixal(
-            repositorio=self.repositorio
+            repositorio=self.repositorio,
+            propostas=self.propostas,
+            autorizacoes=self.autorizacoes,
         )
 
     @staticmethod
@@ -120,6 +129,12 @@ class GovernancaEvolucaoNixal:
 
     def _caminho(self, proposta_id: str) -> Path:
         return self.governanca / f"{proposta_id}.json"
+
+    def _caminho_autorizacao(self, proposta_id: str) -> Path:
+        return self.autorizacoes / f"{proposta_id}.json"
+
+    def _caminho_proposta_formal(self, proposta_id: str) -> Path:
+        return self.propostas / f"{proposta_id}.json"
 
     def _carregar(self, proposta_id: str) -> dict[str, Any]:
         caminho = self._caminho(proposta_id)
@@ -352,19 +367,67 @@ class GovernancaEvolucaoNixal:
             "motivo_autorizacao",
         )
 
+        try:
+            proposta_formal = json.loads(
+                proposta_path.read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError) as erro:
+            raise ValueError("proposta_invalida") from erro
+
+        if not isinstance(proposta_formal, dict):
+            raise ValueError("proposta_invalida")
+
+        fingerprint = self._texto(
+            proposta_formal.get("fingerprint"),
+            "fingerprint_da_proposta",
+        )
+        destino = self._texto(
+            proposta_formal.get("destino_sugerido"),
+            "destino_da_proposta",
+        )
+
+        caminho_formal = self._caminho_proposta_formal(proposta_id)
+        if caminho_formal.resolve() != proposta_path.resolve():
+            caminho_formal.write_text(
+                proposta_path.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
         agora = self._timestamp()
-        registro["autorizacao"] = {
-            "autorizacao_id": self._autorizacao_id(
-                proposta_id,
-                autorizador,
-                motivo,
-                agora,
+        autorizacao_id = self._autorizacao_id(
+            proposta_id,
+            autorizador,
+            motivo,
+            agora,
+        )
+        registro_autorizacao = {
+            "autorizacao_id": autorizacao_id,
+            "proposta_id": proposta_id,
+            "autorizador": autorizador,
+            "motivo": motivo,
+            "fingerprint": fingerprint,
+            "destino": destino,
+            "confirmacao_explicita": "AUTORIZAR_INTEGRACAO",
+            "origem": "governanca_externa",
+            "registrada_em": agora,
+        }
+        self._caminho_autorizacao(proposta_id).write_text(
+            json.dumps(
+                registro_autorizacao,
+                ensure_ascii=False,
+                indent=2,
             ),
+            encoding="utf-8",
+        )
+
+        registro["autorizacao"] = {
+            "autorizacao_id": autorizacao_id,
             "autorizacao_explicita": True,
             "autorizado_por": autorizador,
             "motivo": motivo,
             "autorizado_em": agora,
             "proposta_path": str(proposta_path),
+            "autorizacao_path": str(self._caminho_autorizacao(proposta_id)),
         }
         self._transicionar(
             registro,
@@ -424,9 +487,13 @@ class GovernancaEvolucaoNixal:
 
         baseline_commit = self._git("rev-parse", "main")
 
+        caminho_autorizacao = self._caminho_autorizacao(proposta_id)
+        if not caminho_autorizacao.is_file():
+            raise ValueError("autorizacao_nao_registrada")
+
         resultado = self.integrador.preparar(
-            proposta_path=proposta_path,
-            autorizacao_explicita=True,
+            proposta_id=proposta_id,
+            caminho_autorizacao=caminho_autorizacao,
             stable="main",
             branch_integracao=branch_integracao,
         )
@@ -441,7 +508,7 @@ class GovernancaEvolucaoNixal:
                 resultado["commit_integracao"],
                 "commit_integracao",
             ),
-            "arquivo_integrado": resultado["arquivo_integrado"],
+            "arquivo_integrado": proposta.get("arquivo"),
             "preparada_em": self._timestamp(),
         }
         registro["integracao_executada"] = False

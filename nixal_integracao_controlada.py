@@ -3,236 +3,354 @@
 """
 NYXAL — INTEGRAÇÃO CONTROLADA DE DESENVOLVIMENTO
 
-Promove um candidato aprovado para uma branch de integração
-criada a partir de uma branch stable (por padrão: main).
+Primeira etapa da barreira entre proposta e stable.
 
-Limites:
-- exige autorização explícita do chamador;
-- nunca escreve diretamente em stable;
+Fluxo:
+    proposta
+        ↓
+    autorização externa explícita
+        ↓
+    branch de integração
+        ↓
+    revisão/testes
+        ↓
+    promoção futura para stable
+
+Garantias desta camada:
+- não aceita um simples booleano interno como autorização;
+- autorização precisa vir de registro externo;
+- valida proposta, candidato e fingerprint;
+- trabalha a partir do tip atual de stable;
+- nunca modifica stable;
 - nunca usa force push;
-- nunca executa o código do candidato;
-- valida o candidato e o destino antes de escrever;
-- registra rastreabilidade da integração;
-- deixa a promoção para stable como etapa posterior.
+- nunca executa o código do candidato.
 """
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
-from datetime import datetime, timezone
+import tempfile
 from pathlib import Path
+from typing import Any
+
+from nixal_proposta_integracao import (
+    PropostaIntegracaoDesenvolvimentoNixal,
+)
 
 
 class IntegracaoControladaDesenvolvimentoNixal:
-    VERSAO = 1
+    VERSAO = 2
     BRANCH_STABLE_PADRAO = "main"
     PREFIXO_BRANCH = "integracao"
+
+    ARQUIVOS_PROTEGIDOS = {
+        "estado_corpo_nixal.json",
+        "estado_nixal.json",
+        "estado_nyxal_runtime.json",
+        "fila_tarefas_nixal.json",
+        "log_capacidades_nixal.json",
+        "log_nyxal_runtime.json",
+        "memoria_investigacao_nixal.json",
+        "backup_nixal_memoria_conhecimento_2026-10-04.py",
+        "backup_nixal_runtime_pre_nivel8.py",
+        "log_nyxal_runtime.json.tmp",
+    }
 
     def __init__(
         self,
         repositorio: str | Path | None = None,
+        propostas: str | Path | None = None,
+        autorizacoes: str | Path | None = None,
+        remote: str = "origin",
     ) -> None:
         self.repositorio = Path(
             repositorio or Path(__file__).resolve().parent
+        ).resolve()
+        self.remote = remote
+        self.propostas = PropostaIntegracaoDesenvolvimentoNixal(
+            repositorio=self.repositorio,
+            propostas=propostas,
+        )
+        self.autorizacoes = Path(
+            autorizacoes
+            or self.repositorio.parent
+            / "Nyxal-integration-authorizations"
+        ).resolve()
+        self.autorizacoes.mkdir(
+            parents=True,
+            exist_ok=True,
         )
 
-    def _git(self, *args: str) -> str:
+    @staticmethod
+    def _texto(valor: Any, nome: str) -> str:
+        if not isinstance(valor, str) or not valor.strip():
+            raise ValueError(f"{nome}_invalido")
+        return valor.strip()
+
+    @staticmethod
+    def _hash_arquivo(caminho: Path) -> str:
+        digest = hashlib.sha256()
+        with caminho.open("rb") as arquivo:
+            for bloco in iter(
+                lambda: arquivo.read(1024 * 1024),
+                b"",
+            ):
+                digest.update(bloco)
+        return digest.hexdigest()
+
+    @staticmethod
+    def _git(
+        repositorio: Path,
+        *args: str,
+        cwd: Path | None = None,
+    ) -> str:
         resultado = subprocess.run(
             ["git", *args],
-            cwd=self.repositorio,
+            cwd=cwd or repositorio,
             text=True,
             capture_output=True,
             check=False,
+            env={
+                **os.environ,
+                "GIT_TERMINAL_PROMPT": "0",
+            },
         )
-
         if resultado.returncode != 0:
             raise RuntimeError(
                 f"git {' '.join(args)} falhou: "
                 f"{resultado.stderr.strip()}"
             )
-
         return resultado.stdout.strip()
 
-    def _timestamp(self) -> str:
-        return datetime.now(timezone.utc).isoformat()
-
-    def _validar_nome_branch(self, nome: str) -> None:
-        if not nome or not re.fullmatch(
-            r"[A-Za-z0-9._/-]+",
-            nome,
+    @staticmethod
+    def _validar_nome_branch(nome: str) -> None:
+        if (
+            not isinstance(nome, str)
+            or not nome
+            or not re.fullmatch(
+                r"[A-Za-z0-9._/-]+",
+                nome,
+            )
+            or nome.startswith("/")
+            or nome.endswith("/")
+            or ".." in nome
+            or "@{" in nome
         ):
             raise ValueError("nome_de_branch_invalido")
 
-        if nome.startswith("/") or nome.endswith("/"):
-            raise ValueError("nome_de_branch_invalido")
-
-        if ".." in nome or "@{" in nome:
-            raise ValueError("nome_de_branch_invalido")
-
-    def _validar_proposta(
-        self,
-        proposta_path: Path,
-        autorizacao_explicita: bool,
-        stable: str,
-    ) -> dict:
-        if not autorizacao_explicita:
-            raise PermissionError(
-                "autorizacao_explicita_obrigatoria"
-            )
-
-        if stable != self.BRANCH_STABLE_PADRAO:
+    @classmethod
+    def _validar_arquivo_relativo(
+        cls,
+        nome: str,
+    ) -> Path:
+        if (
+            not isinstance(nome, str)
+            or not nome.strip()
+        ):
             raise ValueError(
-                "branch_stable_nao_permitida"
+                "arquivo_do_candidato_invalido"
             )
 
-        if not proposta_path.exists():
+        destino = Path(nome)
+
+        if (
+            destino.is_absolute()
+            or ".." in destino.parts
+            or destino.name in cls.ARQUIVOS_PROTEGIDOS
+        ):
+            raise ValueError(
+                "destino_do_candidato_invalido"
+            )
+
+        return destino
+
+    def _carregar_autorizacao(
+        self,
+        caminho: str | Path,
+    ) -> dict[str, Any]:
+        origem = Path(caminho).expanduser().resolve()
+
+        if not origem.is_file():
             raise FileNotFoundError(
-                "proposta_nao_encontrada"
+                "arquivo_autorizacao_nao_encontrado"
             )
 
         try:
-            proposta = json.loads(
-                proposta_path.read_text(
-                    encoding="utf-8"
-                )
+            dados = json.loads(
+                origem.read_text(encoding="utf-8")
             )
-        except (
-            OSError,
-            json.JSONDecodeError,
-        ) as erro:
+        except (OSError, json.JSONDecodeError) as erro:
             raise ValueError(
-                "proposta_invalida"
+                "arquivo_autorizacao_invalido"
             ) from erro
 
-        if proposta.get("estado") != "aguardando_autorizacao":
+        if not isinstance(dados, dict):
             raise ValueError(
-                "estado_da_proposta_invalido"
+                "arquivo_autorizacao_invalido"
             )
 
-        if proposta.get("autorizacao_explicita") is not False:
-            raise ValueError(
-                "estado_de_autorizacao_invalido"
-            )
+        dados["origem"] = f"arquivo:{origem}"
+        return dados
 
-        if proposta.get("integracao_executada") is True:
-            raise ValueError(
-                "integracao_ja_executada"
-            )
+    def consumir_autorizacao(
+        self,
+        proposta_id: str,
+        caminho_autorizacao: str | Path,
+    ) -> dict[str, Any]:
+        """
+        Consome um registro de autorização que veio de fora do ciclo.
 
-        if proposta.get("stable_modificada") is True:
-            raise ValueError(
-                "stable_ja_modificada"
-            )
+        Não existe método neste componente para gerar a autorização.
+        """
+        autorizacao = self._carregar_autorizacao(
+            caminho_autorizacao
+        )
 
+        return self.propostas.registrar_autorizacao(
+            proposta_id,
+            autorizacao,
+        )
+
+    def _carregar_candidato(
+        self,
+        proposta: dict[str, Any],
+    ) -> tuple[dict[str, Any], Path, Path]:
         candidato_dir = Path(
-            proposta.get("candidato_dir", "")
-        )
-
-        if not candidato_dir.exists():
-            raise FileNotFoundError(
-                "candidato_da_proposta_nao_encontrado"
+            self._texto(
+                proposta.get("candidato_dir"),
+                "candidato_dir",
             )
+        ).expanduser().resolve()
 
-        candidato_registro = (
-            candidato_dir / "candidato.json"
-        )
-
-        if not candidato_registro.exists():
+        registro_path = candidato_dir / "candidato.json"
+        if not registro_path.is_file():
             raise FileNotFoundError(
                 "registro_do_candidato_nao_encontrado"
             )
 
         try:
             candidato = json.loads(
-                candidato_registro.read_text(
-                    encoding="utf-8"
-                )
+                registro_path.read_text(encoding="utf-8")
             )
-        except (
-            OSError,
-            json.JSONDecodeError,
-        ) as erro:
+        except (OSError, json.JSONDecodeError) as erro:
             raise ValueError(
                 "registro_do_candidato_invalido"
             ) from erro
+
+        if not isinstance(candidato, dict):
+            raise ValueError(
+                "registro_do_candidato_invalido"
+            )
 
         if candidato.get("estado") != "candidato":
             raise ValueError(
                 "estado_do_candidato_invalido"
             )
 
-        if candidato.get("avaliacao", {}).get(
-            "aprovado"
-        ) is not True:
+        avaliacao = candidato.get("avaliacao")
+        if (
+            not isinstance(avaliacao, dict)
+            or avaliacao.get("aprovado") is not True
+        ):
             raise ValueError(
                 "candidato_sem_avaliacao_aprovada"
             )
 
-        arquivo = candidato.get("arquivo")
+        arquivo = self._texto(
+            proposta.get("arquivo"),
+            "arquivo_da_proposta",
+        )
+        candidato_arquivo = self._texto(
+            candidato.get("arquivo"),
+            "arquivo_do_candidato",
+        )
 
-        if not isinstance(arquivo, str) or not arquivo:
+        if arquivo != candidato_arquivo:
             raise ValueError(
-                "arquivo_do_candidato_invalido"
+                "arquivo_proposta_candidato_inconsistente"
             )
 
-        caminho_origem = candidato_dir / arquivo
+        destino = self._validar_arquivo_relativo(
+            arquivo
+        )
+        origem = candidato_dir / destino
 
-        if not caminho_origem.is_file():
+        if not origem.is_file():
             raise FileNotFoundError(
                 "arquivo_do_candidato_nao_encontrado"
             )
 
-        destino = Path(arquivo)
+        fingerprint_proposta = self._texto(
+            proposta.get("fingerprint"),
+            "fingerprint_da_proposta",
+        )
+        fingerprint_candidato = self._texto(
+            candidato.get("fingerprint"),
+            "fingerprint_do_candidato",
+        )
+        fingerprint_atual = self._hash_arquivo(origem)
 
-        if (
-            destino.is_absolute()
-            or ".." in destino.parts
-        ):
+        if fingerprint_proposta != fingerprint_candidato:
             raise ValueError(
-                "destino_do_candidato_invalido"
+                "fingerprint_proposta_candidato_inconsistente"
             )
 
-        return {
-            "proposta": proposta,
-            "candidato": candidato,
-            "candidato_dir": candidato_dir,
-            "origem": caminho_origem,
-            "destino": destino,
-        }
+        if fingerprint_atual != fingerprint_proposta:
+            raise ValueError(
+                "fingerprint_do_candidato_inconsistente"
+            )
+
+        return candidato, origem, destino
 
     def preparar(
         self,
         *,
-        proposta_path: str | Path,
-        autorizacao_explicita: bool = False,
+        proposta_id: str,
+        caminho_autorizacao: str | Path,
         stable: str = BRANCH_STABLE_PADRAO,
         branch_integracao: str | None = None,
-    ) -> dict:
-        proposta_path = Path(proposta_path)
+    ) -> dict[str, Any]:
+        """
+        Consome autorização e cria somente a branch de integração.
 
-        dados = self._validar_proposta(
-            proposta_path,
-            autorizacao_explicita,
-            stable,
+        Stable permanece inalterada nesta etapa.
+        """
+        stable = self._texto(stable, "stable")
+        self._validar_nome_branch(stable)
+
+        if stable != self.BRANCH_STABLE_PADRAO:
+            raise ValueError(
+                "branch_stable_nao_permitida"
+            )
+
+        autorizada = self.consumir_autorizacao(
+            proposta_id,
+            caminho_autorizacao,
         )
 
-        proposta = dados["proposta"]
-        candidato = dados["candidato"]
-        origem = dados["origem"]
-        destino = dados["destino"]
+        if autorizada.get("estado") != (
+            "autorizada_para_integracao"
+        ):
+            raise RuntimeError(
+                "autorizacao_nao_registrada"
+            )
 
-        proposta_id = proposta.get("proposta_id")
-
-        if not isinstance(proposta_id, str) or not proposta_id:
-            raise ValueError("proposta_id_invalido")
+        proposta = self.propostas.consultar(
+            proposta_id
+        )
+        candidato, origem, destino = self._carregar_candidato(
+            proposta
+        )
 
         branch = branch_integracao or (
             f"{self.PREFIXO_BRANCH}/{proposta_id}"
         )
-
         self._validar_nome_branch(branch)
 
         if branch == stable:
@@ -240,115 +358,140 @@ class IntegracaoControladaDesenvolvimentoNixal:
                 "branch_de_integracao_nao_pode_ser_stable"
             )
 
-        arvore = self._git(
-            "status",
-            "--porcelain",
-        )
-
-        if arvore:
-            raise RuntimeError(
-                "arvore_git_suja"
-            )
-
-        branch_atual = self._git(
-            "branch",
-            "--show-current",
-        )
-
-        if branch_atual != stable:
-            raise RuntimeError(
-                "branch_atual_nao_e_stable"
-            )
-
         existente = self._git(
+            self.repositorio,
             "branch",
             "--list",
             branch,
         )
-
         if existente:
             raise FileExistsError(
                 "branch_de_integracao_ja_existente"
             )
 
-        self._git(
-            "switch",
-            "-c",
-            branch,
-            stable,
-        )
-
-        destino_absoluto = (
-            self.repositorio / destino
-        )
-
-        destino_absoluto.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        shutil.copy2(
-            origem,
-            destino_absoluto,
-        )
-
-        self._git(
-            "add",
-            "--",
-            str(destino),
-        )
-
-        diff = self._git(
-            "diff",
-            "--cached",
-            "--name-only",
-        )
-
-        if diff.splitlines() != [str(destino)]:
-            self._git(
-                "reset",
-                "--",
-                str(destino),
-            )
-            self._git(
-                "switch",
-                stable,
-            )
-            raise RuntimeError(
-                "diff_de_integracao_inesperado"
-            )
-
-        mensagem = (
-            f"feat: integra candidato {proposta_id}"
-        )
-
-        self._git(
-            "commit",
-            "-m",
-            mensagem,
-        )
-        commit_sha = self._git(
+        base_sha = self._git(
+            self.repositorio,
             "rev-parse",
-            "HEAD",
+            f"refs/heads/{stable}",
+        )
+
+        with tempfile.TemporaryDirectory(
+            prefix="nyxal-integracao-"
+        ) as temporario:
+            worktree = Path(temporario)
+
+            self._git(
+                self.repositorio,
+                "worktree",
+                "add",
+                "-b",
+                branch,
+                str(worktree),
+                base_sha,
+            )
+
+            try:
+                destino_absoluto = worktree / destino
+                destino_absoluto.parent.mkdir(
+                    parents=True,
+                    exist_ok=True,
+                )
+                shutil.copy2(
+                    origem,
+                    destino_absoluto,
+                )
+
+                self._git(
+                    self.repositorio,
+                    "add",
+                    "--",
+                    str(destino),
+                    cwd=worktree,
+                )
+
+                diff = self._git(
+                    self.repositorio,
+                    "diff",
+                    "--cached",
+                    "--name-only",
+                    cwd=worktree,
+                ).splitlines()
+
+                if diff != [str(destino)]:
+                    raise RuntimeError(
+                        "diff_de_integracao_inesperado"
+                    )
+
+                self._git(
+                    self.repositorio,
+                    "commit",
+                    "-m",
+                    f"feat: integra candidato {proposta_id}",
+                    cwd=worktree,
+                )
+
+                commit_sha = self._git(
+                    self.repositorio,
+                    "rev-parse",
+                    "HEAD",
+                    cwd=worktree,
+                )
+            except Exception:
+                try:
+                    self._git(
+                        self.repositorio,
+                        "branch",
+                        "-D",
+                        branch,
+                    )
+                except Exception:
+                    pass
+                raise
+            finally:
+                self._git(
+                    self.repositorio,
+                    "worktree",
+                    "remove",
+                    "--force",
+                    str(worktree),
+                )
+
+        stable_depois = self._git(
+            self.repositorio,
+            "rev-parse",
+            f"refs/heads/{stable}",
+        )
+        if stable_depois != base_sha:
+            raise RuntimeError(
+                "stable_modificada_durante_preparacao"
+            )
+
+        preparado = self.propostas.registrar_preparacao(
+            proposta_id,
+            branch_integracao=branch,
+            commit_integracao=commit_sha,
         )
 
         return {
             "versao_integracao": self.VERSAO,
             "estado": "integracao_preparada",
-            "criada_em": self._timestamp(),
             "proposta_id": proposta_id,
-            "candidato_id": candidato.get(
-                "candidato_id"
-            ),
+            "candidato_id": candidato.get("candidato_id"),
             "stable": stable,
-            "branch_integracao": branch,
-            "arquivo_integrado": str(destino),
-            "commit_integracao": commit_sha,
+            "stable_base_sha": base_sha,
             "stable_modificada": False,
-            "push_executado": False,
-            "pr_criada": False,
-            "merge_executado": False,
+            "branch_integracao": branch,
+            "commit_integracao": commit_sha,
+            "autorizacao_explicita": True,
+            "autorizacao": copy.deepcopy(
+                preparado.get("autorizacao")
+            ),
         }
+
+
+__all__ = [
+    "IntegracaoControladaDesenvolvimentoNixal",
+]
 
 
 if __name__ == "__main__":
