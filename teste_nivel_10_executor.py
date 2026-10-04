@@ -46,6 +46,22 @@ class ObservadorFalso:
         }
 
 
+class CoordenadorBranchIncorreta(CoordenadorFalso):
+    def estado(self) -> dict:
+        return {
+            "branch_atual": "outra-branch",
+            "arvore_limpa": True,
+        }
+
+
+class CoordenadorArvoreSuja(CoordenadorFalso):
+    def estado(self) -> dict:
+        return {
+            "branch_atual": "desenvolvimento",
+            "arvore_limpa": False,
+        }
+
+
 class CoordenadorFalhaTecnica(CoordenadorFalso):
     def validar_python_alterado(self) -> dict:
         raise RuntimeError("falha_tecnica_teste")
@@ -178,6 +194,30 @@ def executar() -> None:
             ]["sucesso"]
             is False
         )
+
+        bloqueado_branch = ExecutorCicloLocalNivel10Nixal(
+            repositorio=raiz,
+            branch="desenvolvimento",
+            observador=ObservadorFalso(True),
+            ciclo=CicloLocalNivel10Nixal(
+                diretorio_registros=registros / "branch"
+            ),
+            coordenador=CoordenadorBranchIncorreta(),
+        ).executar()
+        assert bloqueado_branch["estado"] == "bloqueado"
+        assert bloqueado_branch["motivo"] == "branch_incorreta"
+
+        bloqueado_arvore = ExecutorCicloLocalNivel10Nixal(
+            repositorio=raiz,
+            branch="desenvolvimento",
+            observador=ObservadorFalso(True),
+            ciclo=CicloLocalNivel10Nixal(
+                diretorio_registros=registros / "arvore"
+            ),
+            coordenador=CoordenadorArvoreSuja(),
+        ).executar()
+        assert bloqueado_arvore["estado"] == "bloqueado"
+        assert bloqueado_arvore["motivo"] == "arvore_de_trabalho_suja"
 
         # Exceção técnica durante validação também encerra o ciclo como
         # rejeitado, preservando o diagnóstico.
