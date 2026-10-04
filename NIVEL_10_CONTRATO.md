@@ -310,3 +310,9 @@ observado. O método legado de sincronização remota continua separado e não �
 acionado automaticamente pelo ciclo Nível 10.
 
 A conclusão formal do Nível 10 exige regressão completa e evidência de CI verde.
+
+### Certificação desta etapa
+
+Os critérios foram satisfeitos e certificados pelo workflow **Nyxal Nível 9/10 — validação determinística**, Run #45 (`37195427849`), concluído como **SUCCESS** no commit `4b1d782acbb2bca1d092d5f5913f3ecb3f79584e`.
+
+A certificação confirma a implementação e a regressão desta etapa. Ela não autoriza merge, publicação, promoção para `stable`/`main` ou execução automática de candidatos.
