@@ -47,6 +47,7 @@ def main() -> int:
         )
 
         publicado = False
+        concluido = False
 
         try:
             publicado_resultado = (
@@ -145,9 +146,10 @@ def main() -> int:
             print("AUTORIZACAO_EXPLICITA=FALSE")
             print("PASSOU: True")
             print("=" * 60)
+            concluido = True
 
         finally:
-            if publicado:
+            if publicado and concluido:
                 try:
                     laboratorio.remover_branch_experimento(
                         branch
