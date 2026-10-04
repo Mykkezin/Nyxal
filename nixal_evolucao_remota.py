@@ -40,6 +40,7 @@ from typing import Any
 from nixal_evolucao_controlada import EvolucaoControladaNixal
 from nixal_laboratorio_remoto import LaboratorioRemotoNixal
 from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
+from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 
 
 class CicloEvolucaoRemotaNixal:
@@ -54,6 +55,7 @@ class CicloEvolucaoRemotaNixal:
         evolucao: EvolucaoControladaNixal | None = None,
         laboratorio: LaboratorioRemotoNixal | None = None,
         memoria_aprendizado: AprendizadoPersistenteNixal | None = None,
+        solicitacao_evolucao: SolicitacaoEvolucaoNixal | None = None,
         repositorio: str | Path | None = None,
     ) -> None:
         raiz = Path(
@@ -72,6 +74,17 @@ class CicloEvolucaoRemotaNixal:
                 raiz.parent / "memoria_aprendizado_evolucao_nixal.json"
             )
         )
+
+        if solicitacao_evolucao is not None and not isinstance(
+            solicitacao_evolucao,
+            SolicitacaoEvolucaoNixal,
+        ):
+            raise TypeError(
+                "solicitacao_evolucao deve ser uma instância de "
+                "SolicitacaoEvolucaoNixal"
+            )
+
+        self.solicitacao_evolucao = solicitacao_evolucao
 
     @staticmethod
     def _numero(valor: Any, nome: str) -> float:
@@ -522,6 +535,33 @@ class CicloEvolucaoRemotaNixal:
                 "stable_modificada": False,
             }
 
+        solicitacao_id = solicitacao.get("solicitacao_id")
+        if self.solicitacao_evolucao is not None:
+            if not isinstance(solicitacao_id, str) or not solicitacao_id.strip():
+                return {
+                    "sucesso": False,
+                    "estado": "solicitacao_invalida",
+                    "origem": self.FONTE,
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                }
+            try:
+                solicitacao = self.solicitacao_evolucao.consultar(
+                    solicitacao_id
+                )
+            except Exception as erro:
+                return {
+                    "sucesso": False,
+                    "estado": "solicitacao_nao_encontrada",
+                    "origem": self.FONTE,
+                    "solicitacao_id": solicitacao_id,
+                    "motivo": f"{type(erro).__name__}: {erro}",
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                }
+
         estado = solicitacao.get("estado")
         if estado != "pronta_para_experimento":
             return {
@@ -605,6 +645,24 @@ class CicloEvolucaoRemotaNixal:
                 "integracao_executada": False,
                 "stable_modificada": False,
             }
+
+        if self.solicitacao_evolucao is not None:
+            try:
+                solicitacao = self.solicitacao_evolucao.iniciar_experimento(
+                    solicitacao_id
+                )
+                estado = solicitacao.get("estado")
+            except Exception as erro:
+                return {
+                    "sucesso": False,
+                    "estado": "solicitacao_nao_iniciada",
+                    "origem": self.FONTE,
+                    "solicitacao_id": solicitacao_id,
+                    "motivo": f"{type(erro).__name__}: {erro}",
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                }
 
         artefato = solicitacao.get("artefato_origem")
         if not isinstance(artefato, str) or not artefato.strip():
