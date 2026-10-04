@@ -97,6 +97,8 @@ def executar() -> None:
                 "preparacao sem autorizacao foi permitida"
             )
 
+        proposta_original = proposta.read_bytes()
+
         autorizada = governanca.autorizar_proposta(
             proposta_path=proposta,
             autorizador="operador_humano",
@@ -131,9 +133,10 @@ def executar() -> None:
         else:
             raise AssertionError("resserialização não deveria recuperar a autorização")
 
-        # Recriar uma proposta equivalente para testar o caminho autorizado.
-        proposta.unlink()
-        proposta = preparar_candidato(raiz)[1]
+        # Para o caminho autorizado, restaurar byte a byte o conteúdo que foi
+        # originalmente autorizado e recriar apenas o registro de governança.
+        proposta.write_bytes(proposta_original)
+        (raiz.parent / "governanca" / "integracao-candidato-001.json").unlink()
         autorizada = governanca.autorizar_proposta(
             proposta_path=proposta,
             autorizador="operador_humano",
