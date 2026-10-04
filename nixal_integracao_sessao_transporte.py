@@ -279,6 +279,44 @@ class IntegracaoSessaoTransporteNixal:
             else "mensagem_nao_processada_com_sessao"
         )
 
+        resposta_integrada = (
+            resultado_transporte.get(
+                "resposta"
+            )
+            if isinstance(
+                resultado_transporte.get("resposta"),
+                dict,
+            )
+            else {}
+        )
+
+        valor_resposta = (
+            resposta_integrada.get(
+                "valor"
+            )
+            if isinstance(
+                resposta_integrada.get("valor"),
+                dict,
+            )
+            else {}
+        )
+
+        mensagem_armazenada = (
+            valor_resposta.get(
+                "mensagem_armazenada",
+                False,
+            )
+            is True
+        )
+
+        memoria_conversacional = (
+            valor_resposta.get(
+                "memoria_conversacional",
+                False,
+            )
+            is True
+        )
+
         return {
             "sucesso": sucesso_transporte,
             "estado": estado,
@@ -294,8 +332,8 @@ class IntegracaoSessaoTransporteNixal:
                 "transporte": deepcopy(
                     resultado_transporte
                 ),
-                "mensagem_armazenada": False,
-                "memoria_conversacional": False,
+                "mensagem_armazenada": mensagem_armazenada,
+                "memoria_conversacional": memoria_conversacional,
                 "conhecimento_permanente": False,
                 "arquitetura_modificada": False,
             },

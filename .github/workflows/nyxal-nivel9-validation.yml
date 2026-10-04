@@ -1,4 +1,5 @@
 name: Nyxal Nível 9/10 — validação determinística
+# 56.5.5: replay final do gate conversacional
 
 on:
   pull_request:
@@ -23,13 +24,25 @@ jobs:
 
       - name: Compilar módulos
         run: |
-          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py
+          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nyxal_web_api.py
 
       - name: Suite Nível 9
         run: python teste_nivel_9_suite_final.py
 
       - name: Suite Nível 10
         run: python teste_nivel_10_suite_final.py
+
+      - name: Suite Conversacional 56.5.5
+        run: python teste_contexto_conversacional_56_5_5.py
+
+      - name: Teste adaptador Qwen 56.5.5
+        run: python teste_dialogo_qwen_56_5_5.py
+
+      - name: Teste Núcleo Conversacional
+        run: python teste_nucleo_conversacional.py
+
+      - name: Smoke test API de chat sem voz
+        run: python teste_api_chat_sem_voz.py
 
       - name: Sanidade de regras de segurança
         run: |

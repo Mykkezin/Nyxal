@@ -25,6 +25,17 @@ determinísticos depois da construção do núcleo.
 
 from __future__ import annotations
 
+import sys
+import types
+
+# Este teste não consulta o Qwen real.
+# Os módulos estruturais importam Ollama, então usamos um dublê mínimo
+# para manter a suíte determinística e sem dependências externas.
+sys.modules.setdefault(
+    "ollama",
+    types.SimpleNamespace(),
+)
+
 from nixal_interface import InterfaceConversacionalNixal
 from nixal_agente_qwen import AgenteNixalQwen
 from nixal_composicao_56_3_9 import CompositorNixal
@@ -142,6 +153,16 @@ class AmbienteTeste:
             )
         )
 
+        self.nucleo.dialogo.responder = (
+            lambda _texto, historico=None: {
+                "sucesso": False,
+                "estado": "qwen_nao_respondeu",
+                "origem": "dialogo_qwen_nixal",
+                "resposta": None,
+                "erro": "teste determinístico",
+            }
+        )
+
         self.chamadas_agente = []
 
         self.agente.atender = (
@@ -233,6 +254,74 @@ def teste_construcao() -> None:
     )
 
 
+def teste_pergunta_contextual_prioriza_dialogo() -> None:
+
+    ambiente = AmbienteTeste()
+
+    historico = [
+        {
+            "papel": "user",
+            "texto": "Meu nome é Mykke e estou construindo o NyxOS.",
+        },
+        {
+            "papel": "assistant",
+            "texto": "Entendido. Você está construindo o NyxOS.",
+        },
+    ]
+
+    ambiente.nucleo._obter_historico = (
+        lambda _sessao: historico
+    )
+
+    ambiente.nucleo.dialogo.responder = (
+        lambda texto, historico=None: {
+            "sucesso": True,
+            "estado": "resposta_gerada",
+            "origem": "dialogo_qwen_nixal",
+            "resposta": "O sistema operacional que você está construindo é o NyxOS.",
+            "modelo": "fake",
+            "mensagens_consideradas": len(historico or []) + 1,
+            "permanente": False,
+            "versao_dialogo": "56.5.5",
+        }
+    )
+
+    pergunta = (
+        "Qual é o sistema operacional que estou construindo?"
+    )
+
+    verificar(
+        ambiente.nucleo._deve_priorizar_dialogo(
+            pergunta,
+            historico,
+        ),
+        "pergunta contextual deve priorizar o diálogo",
+    )
+
+    resposta = ambiente.nucleo.processar(
+        ambiente.interface.criar_entrada(
+            pergunta,
+            sessao="sessao-contexto",
+        )
+    )
+
+    verificar(
+        resposta["estado"] == "resposta_conversacional",
+        "pergunta contextual não deve executar capacidade",
+    )
+
+    verificar(
+        resposta["resposta"]
+        == "O sistema operacional que você está construindo é o NyxOS.",
+        "pergunta contextual deve ser respondida pelo diálogo",
+    )
+
+    verificar(
+        ambiente.chamadas_agente == [],
+        "pergunta contextual não deve chamar o agente de capacidades",
+    )
+
+
 def teste_entrada_direta() -> None:
 
     ambiente = AmbienteTeste()
@@ -256,8 +345,8 @@ def teste_entrada_direta() -> None:
 
     verificar(
         resposta["estado"]
-        == "resposta_pronta",
-        "estado da resposta deve ser resposta_pronta",
+        == "resposta_capacidade",
+        "capacidade direta deve produzir resposta_capacidade",
     )
 
     verificar(
@@ -295,6 +384,11 @@ def teste_fallback_dominio() -> None:
         "dominio_origem": (
             "sistema_computacional"
         ),
+        "origem": {
+            "melhor_score": 2,
+            "dominios": ["sistema_computacional"],
+            "evidencias": ["sistema", "maquina"],
+        },
         "capacidades_prioritarias": [
             "obter_hora"
         ],
@@ -340,6 +434,49 @@ def teste_fallback_dominio() -> None:
     )
 
 
+def teste_fallback_dominio_fraco_nao_forca_capacidade() -> None:
+
+    ambiente = AmbienteTeste()
+
+    ambiente.contexto_dominio = {
+        "dominio_origem": "sistema_computacional",
+        "origem": {
+            "melhor_score": 1,
+            "dominios": ["sistema_computacional"],
+            "evidencias": ["sistema"],
+        },
+        "capacidades_prioritarias": [
+            "obter_hora"
+        ],
+    }
+
+    entrada = (
+        ambiente.interface.criar_entrada(
+            "Qual é o sistema operacional que estou construindo?"
+        )
+    )
+
+    resposta = (
+        ambiente.nucleo.processar(
+            entrada
+        )
+    )
+
+    verificar(
+        resposta["estado"]
+        == "dialogo_indisponivel",
+        "evidência de domínio fraca não deve forçar uma capacidade",
+    )
+
+    verificar(
+        ambiente.chamadas_agente
+        == [
+            "Qual é o sistema operacional que estou construindo?"
+        ],
+        "fallback não deve substituir a necessidade original por um objetivo arbitrário",
+    )
+
+
 def teste_ambiguidade() -> None:
 
     ambiente = AmbienteTeste()
@@ -374,10 +511,10 @@ def teste_ambiguidade() -> None:
     verificar(
         resposta["resposta"]
         == (
-            "Não consegui atender essa solicitação "
-            "com as capacidades atuais."
+            "Não consegui responder agora. "
+            "O módulo conversacional não está disponível."
         ),
-        "caso ambíguo não deve escolher capacidade automaticamente",
+        "caso ambíguo deve cair no diálogo quando nenhuma capacidade é escolhida",
     )
 
     verificar(
@@ -418,10 +555,10 @@ def teste_externo() -> None:
     verificar(
         resposta["resposta"]
         == (
-            "Não consegui atender essa solicitação "
-            "com as capacidades atuais."
+            "Não consegui responder agora. "
+            "O módulo conversacional não está disponível."
         ),
-        "caso externo não deve inventar capacidade",
+        "caso externo deve cair no diálogo sem capacidade",
     )
 
     verificar(
@@ -605,10 +742,10 @@ def teste_capacidade_inexistente() -> None:
     verificar(
         resposta["resposta"]
         == (
-            "Não consegui atender essa solicitação "
-            "com as capacidades atuais."
+            "Não consegui responder agora. "
+            "O módulo conversacional não está disponível."
         ),
-        "capacidade inexistente não deve ser executada",
+        "capacidade inexistente deve cair no diálogo",
     )
 
     verificar(
@@ -621,8 +758,10 @@ def teste_capacidade_inexistente() -> None:
 def executar_testes() -> None:
 
     teste_construcao()
+    teste_pergunta_contextual_prioriza_dialogo()
     teste_entrada_direta()
     teste_fallback_dominio()
+    teste_fallback_dominio_fraco_nao_forca_capacidade()
     teste_ambiguidade()
     teste_externo()
     teste_formatacao_lista()

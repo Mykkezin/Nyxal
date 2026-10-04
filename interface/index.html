@@ -762,7 +762,7 @@
         <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px] text-slate-300 space-y-1">
           <div class="font-bold text-hud-cyan">ENDPOINTS CONECTADOS:</div>
           <div>• Operational Status: <code class="text-emerald-400">GET /api/public/status</code></div>
-          <div>• Chat / Executor: <code class="text-emerald-400">POST /api/chat</code> (Aguardando criação da rota na nyxal_web_api.py)</div>
+          <div>• Chat / Conversa: <code class="text-emerald-400">POST /api/chat</code> (sessão conversacional ativa)</div>
         </div>
 
         <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800">
@@ -832,6 +832,7 @@
     // ================= CONFIGURATION & GLOBAL STATE =================
     window.NYXAL_API_BASE = localStorage.getItem('NYXAL_API_BASE') || 'http://127.0.0.1:8010';
     let isNyxalOnline = false;
+    let nyxalSessionId = sessionStorage.getItem('NYXAL_SESSION_ID') || null;
 
     // ================= NYXAL HOLOGRAM PERSISTENCE =================
     const NYXAL_AVATAR_DB = 'nyxal-interface-storage';
@@ -1154,21 +1155,31 @@
 
       setHologramProcessing(true);
       setAiStatusText('PROCESSANDO...', 'text-amber-400');
-      showSubtitles(`Analisando ordem: "${msg}"...`);
+      showSubtitles(`Entendendo: "${msg}"...`);
 
       try {
         // Attempt POST to /api/chat
         const res = await fetch(`${window.NYXAL_API_BASE}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mensagem: msg })
+          body: JSON.stringify(
+            nyxalSessionId
+              ? { mensagem: msg, sessao: nyxalSessionId }
+              : { mensagem: msg }
+          )
         });
 
         setHologramProcessing(false);
 
         if (res.ok) {
           const data = await res.json();
-          const reply = data.resposta || "Ordem processada pelo ExecutorOrdensNixal.";
+
+          if (data.sessao) {
+            nyxalSessionId = data.sessao;
+            sessionStorage.setItem("NYXAL_SESSION_ID", nyxalSessionId);
+          }
+
+          const reply = data.resposta || "A Nyxal não retornou uma resposta textual.";
           const speechText = data.fala || reply;
           showSubtitles(reply);
           speakGoddessNyxVoice(speechText, false);
@@ -1190,7 +1201,7 @@
       } catch (err) {
         setHologramProcessing(false);
         console.warn('Chat API fetch error:', err);
-        speakGoddessNyxVoice(`Ordem registrada no frontend. Conectando ao backend assim que a rota estiver ativa.`);
+        speakGoddessNyxVoice("Não consegui conectar à Nyxal. Verifique se a API local está em execução.");
       }
     }
 
