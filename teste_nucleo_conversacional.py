@@ -340,6 +340,49 @@ def teste_fallback_dominio() -> None:
     )
 
 
+def teste_fallback_dominio_fraco_nao_forca_capacidade() -> None:
+
+    ambiente = AmbienteTeste()
+
+    ambiente.contexto_dominio = {
+        "dominio_origem": "sistema_computacional",
+        "origem": {
+            "melhor_score": 1,
+            "dominios": ["sistema_computacional"],
+            "evidencias": ["sistema"],
+        },
+        "capacidades_prioritarias": [
+            "obter_hora"
+        ],
+    }
+
+    entrada = (
+        ambiente.interface.criar_entrada(
+            "Qual é o sistema operacional que estou construindo?"
+        )
+    )
+
+    resposta = (
+        ambiente.nucleo.processar(
+            entrada
+        )
+    )
+
+    verificar(
+        resposta["estado"]
+        == "resposta_pronta",
+        "evidência de domínio fraca não deve forçar uma capacidade",
+    )
+
+    verificar(
+        ambiente.chamadas_agente
+        == [
+            "Qual é o sistema operacional que estou construindo?"
+        ],
+        "fallback não deve substituir a necessidade original por um objetivo arbitrário",
+    )
+
+
 def teste_ambiguidade() -> None:
 
     ambiente = AmbienteTeste()
@@ -623,6 +666,7 @@ def executar_testes() -> None:
     teste_construcao()
     teste_entrada_direta()
     teste_fallback_dominio()
+    teste_fallback_dominio_fraco_nao_forca_capacidade()
     teste_ambiguidade()
     teste_externo()
     teste_formatacao_lista()
