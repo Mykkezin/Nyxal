@@ -1,0 +1,1 @@
+print('NYXAL_REMOTE_LAB_E2E_OK')

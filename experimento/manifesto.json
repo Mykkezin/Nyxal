@@ -1,0 +1,7 @@
+{
+  "versao": 1,
+  "experimento_id": "e2e-20261004021941-420536",
+  "entrypoint": "experimento/main.py",
+  "timeout_seconds": 30,
+  "descricao": "Prova E2E do laboratorio remoto da Nyxal."
+}
