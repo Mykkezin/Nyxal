@@ -75,7 +75,6 @@ def main() -> int:
         )
         laboratorio = LaboratorioRemotoNixal(
             repositorio=raiz / "repo",
-            token="token-de-teste",
         )
         memoria = AprendizadoPersistenteNixal(
             raiz / "memoria_aprendizado.json"
