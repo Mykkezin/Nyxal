@@ -239,8 +239,10 @@ def main() -> None:
 
     sessao = primeira.get("sessao")
 
+    primeira_sucesso = primeira.get("sucesso") is True
+
     verificar(
-        primeira["sucesso"] is True,
+        primeira_sucesso,
         "primeira mensagem é processada",
         falhas,
         total,
@@ -252,6 +254,19 @@ def main() -> None:
         falhas,
         total,
     )
+
+    if not primeira_sucesso:
+        import json
+
+        print(
+            "DIAGNOSTICO_PRIMEIRA_MENSAGEM="
+            + json.dumps(
+                primeira,
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        raise SystemExit(1)
 
     resposta_1 = (
         primeira["valor"]["transporte"]["resposta"]["resposta"]
