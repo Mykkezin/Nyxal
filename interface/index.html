@@ -979,6 +979,7 @@
 
     // ================= GODDESS NYX SYNTHESIZED VOICE ENGINE =================
     let currentNyxalAudio = null;
+    let cancelCurrentNyxalSpeech = null;
 
     function speakBrowserFallback(text) {
       return new Promise((resolve) => {
@@ -1002,8 +1003,21 @@
         utterance.rate = 0.98;
         utterance.volume = 1.0;
 
+        let concluido = false;
         const finalizar = () => {
+          if (concluido) return;
+          concluido = true;
+          if (cancelCurrentNyxalSpeech === finalizar) {
+            cancelCurrentNyxalSpeech = null;
+          }
           resolve(true);
+        };
+
+        cancelCurrentNyxalSpeech = () => {
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+          }
+          finalizar();
         };
 
         utterance.onend = finalizar;
@@ -1056,8 +1070,23 @@
             if (currentNyxalAudio === audio) {
               currentNyxalAudio = null;
             }
+            if (cancelCurrentNyxalSpeech === cancelar) {
+              cancelCurrentNyxalSpeech = null;
+            }
             resolve();
           };
+
+          const cancelar = () => {
+            try {
+              audio.pause();
+              audio.currentTime = 0;
+            } catch (_) {
+              // A reprodução já pode ter sido finalizada.
+            }
+            finalizar();
+          };
+
+          cancelCurrentNyxalSpeech = cancelar;
 
           audio.onended = finalizar;
           audio.onerror = () => {
@@ -1066,6 +1095,9 @@
             URL.revokeObjectURL(url);
             if (currentNyxalAudio === audio) {
               currentNyxalAudio = null;
+            }
+            if (cancelCurrentNyxalSpeech === cancelar) {
+              cancelCurrentNyxalSpeech = null;
             }
             reject(new Error('Falha na reprodução do áudio TTS.'));
           };
@@ -1079,12 +1111,19 @@
               if (currentNyxalAudio === audio) {
                 currentNyxalAudio = null;
               }
+              if (cancelCurrentNyxalSpeech === cancelar) {
+                cancelCurrentNyxalSpeech = null;
+              }
             }
             reject(erro);
           }
         });
       } catch (err) {
-        console.warn('TTS local indisponível; usando voz do navegador:', err);
+        if (!voiceConversationActive) {
+          console.warn('TTS local indisponível; usando voz do navegador:', err);
+        } else {
+          console.warn('TTS local indisponível; usando voz do navegador:', err);
+        }
         await speakBrowserFallback(text);
       } finally {
         if (currentNyxalAudio === null) {
@@ -1723,7 +1762,9 @@
       voiceConversationBusy = false;
       stopVoiceVadLoop();
 
-      if (currentNyxalAudio) {
+      if (cancelCurrentNyxalSpeech) {
+        cancelCurrentNyxalSpeech();
+      } else if (currentNyxalAudio) {
         currentNyxalAudio.pause();
         currentNyxalAudio.currentTime = 0;
         currentNyxalAudio = null;
