@@ -210,6 +210,47 @@ def main() -> int:
         assert solicitacao_final["stable_modificada"] is False
         assert len(chamadas) == 1
 
+        criado_falha = solicitacoes.criar(
+            ciclo_hipotese=ciclo_hipotese,
+            objetivo="validar falha remota",
+            metrica="tempo_execucao_ms",
+            direcao_melhor="menor",
+            baseline=100.0,
+        )
+        pronto_falha = solicitacoes.anexar_artefato(
+            criado_falha["solicitacao_id"],
+            artefato,
+        )
+
+        def fake_executar_falha(
+            self: CicloEvolucaoRemotaNixal,
+            **kwargs: Any,
+        ) -> dict[str, Any]:
+            raise RuntimeError("falha remota simulada")
+
+        remoto.executar = MethodType(
+            fake_executar_falha,
+            remoto,
+        )
+
+        ponte_falha = runtime.executar_solicitacao_evolucao_remota(
+            pronto_falha["solicitacao_id"]
+        )
+
+        assert ponte_falha["sucesso"] is False
+        assert ponte_falha["estado"] == "evolucao_remota_falhou"
+        assert ponte_falha["persistencia_solicitacao"]["estado"] == (
+            "experimento_falhou"
+        )
+        falha_final = solicitacoes.consultar(
+            pronto_falha["solicitacao_id"]
+        )
+        assert falha_final["estado"] == "experimento_falhou"
+        assert falha_final["estado_anterior"] == (
+            "experimento_em_execucao"
+        )
+        assert falha_final["stable_modificada"] is False
+
     print("=" * 64)
     print("TESTE — SOLICITAÇÃO FORMAL → EVOLUÇÃO REMOTA")
     print("=" * 64)
