@@ -5,7 +5,7 @@ Requer:
     NYXAL_GITHUB_TOKEN
 
 O teste cria uma branch experimento/* temporária, dispara o workflow
-confiável no GitHub Actions, recupera o result.json pelos logs e remove
+confiável no GitHub Actions, recupera o result.json pelo artefato publicado (com fallback para logs) e remove
 a branch experimental ao final.
 """
 
@@ -139,6 +139,7 @@ def main() -> int:
             print("BRANCH_PUBLICADA=OK")
             print("WORKFLOW_DISPARADO=OK")
             print("RUNNER_REMOTO=OK")
+            print("ARTEFATO_RESULTADO=OK")
             print("RESULTADO_RECUPERADO=OK")
             print("SHA_VALIDADO=OK")
             print("EXPERIMENTO_SUCESSO=OK")
