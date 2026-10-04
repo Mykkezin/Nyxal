@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 import tempfile
 from pathlib import Path
 
@@ -61,7 +62,12 @@ def main() -> int:
 
         assert experimento["estado"] == "proposta_criada"
         assert experimento["comparacao"]["aprovado"] is True
-        assert experimento["comparacao"]["melhoria_absoluta"] == 0.15
+        assert math.isclose(
+            experimento["comparacao"]["melhoria_absoluta"],
+            0.15,
+            rel_tol=0.0,
+            abs_tol=1e-12,
+        )
 
         candidato = experimento["candidato"]
         assert candidato["estado"] == "candidato"
