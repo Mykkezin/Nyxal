@@ -714,6 +714,8 @@ class LaboratorioRemotoNixal:
     def baixar_logs_job(
         self,
         job_id: int,
+        max_tentativas: int = 5,
+        atraso_inicial: float = 3.0,
     ) -> str:
         if not isinstance(
             job_id,
@@ -723,12 +725,55 @@ class LaboratorioRemotoNixal:
                 "job_id_invalido"
             )
 
-        _, corpo = self._api_request(
-            "GET",
-            f"/actions/jobs/{job_id}/logs",
-        )
+        if (
+            not isinstance(max_tentativas, int)
+            or max_tentativas < 1
+        ):
+            raise ValueError(
+                "max_tentativas_invalido"
+            )
 
-        return corpo
+        if (
+            not isinstance(atraso_inicial, (int, float))
+            or atraso_inicial < 0
+        ):
+            raise ValueError(
+                "atraso_inicial_invalido"
+            )
+
+        for tentativa in range(max_tentativas):
+            try:
+                _, corpo = self._api_request(
+                    "GET",
+                    f"/actions/jobs/{job_id}/logs",
+                )
+                return corpo
+
+            except RuntimeError as erro:
+                mensagem = str(erro)
+
+                blob_nao_disponivel = (
+                    "github_api_http_404:" in mensagem
+                    and "BlobNotFound" in mensagem
+                )
+
+                if (
+                    not blob_nao_disponivel
+                    or tentativa >= max_tentativas - 1
+                ):
+                    raise
+
+                atraso = min(
+                    float(atraso_inicial) * (2 ** tentativa),
+                    30.0,
+                )
+
+                if atraso > 0:
+                    time.sleep(atraso)
+
+        raise RuntimeError(
+            "falha_inesperada_ao_baixar_logs"
+        )
 
     @staticmethod
     def extrair_resultado_dos_logs(
