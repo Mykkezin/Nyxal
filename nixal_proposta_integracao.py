@@ -5,12 +5,12 @@ NYXAL — PROPOSTA DE INTEGRAÇÃO CONTROLADA
 Mantém a proposta separada do candidato e da árvore Git.
 
 A proposta nasce aguardando autorização e só pode avançar por uma
-autorização externa e explícita. A mudança para stable é responsabilidade
-do integrador controlado, nunca da criação da proposta.
+autorização externa e explícita.
 
 Estados:
     aguardando_autorizacao
         -> autorizada_para_integracao
+        -> integracao_preparada
         -> integracao_em_execucao
         -> integrada | integracao_falhou
 """
@@ -31,6 +31,7 @@ class PropostaIntegracaoDesenvolvimentoNixal:
     ESTADOS = {
         "aguardando_autorizacao",
         "autorizada_para_integracao",
+        "integracao_preparada",
         "integracao_em_execucao",
         "integrada",
         "integracao_falhou",
@@ -38,7 +39,8 @@ class PropostaIntegracaoDesenvolvimentoNixal:
 
     TRANSICOES = {
         "aguardando_autorizacao": {"autorizada_para_integracao"},
-        "autorizada_para_integracao": {"integracao_em_execucao"},
+        "autorizada_para_integracao": {"integracao_preparada"},
+        "integracao_preparada": {"integracao_em_execucao"},
         "integracao_em_execucao": {"integrada", "integracao_falhou"},
         "integrada": set(),
         "integracao_falhou": set(),
@@ -52,15 +54,11 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         self.repositorio = Path(
             repositorio or Path(__file__).resolve().parent
         )
-
         base_externa = self.repositorio.parent
-
         self.propostas = Path(
             propostas
-            or base_externa
-            / "Nyxal-integration-proposals"
+            or base_externa / "Nyxal-integration-proposals"
         )
-
         self.propostas.mkdir(
             parents=True,
             exist_ok=True,
@@ -73,37 +71,25 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         return valor.strip()
 
     def _timestamp(self) -> str:
-        return datetime.now(
-            timezone.utc
-        ).isoformat()
+        return datetime.now(timezone.utc).isoformat()
 
     def _caminho(self, proposta_id: str) -> Path:
         return self.propostas / f"{self._texto(proposta_id, 'proposta_id')}.json"
 
     def _carregar(self, proposta_id: str) -> dict[str, Any]:
         caminho = self._caminho(proposta_id)
-
         if not caminho.is_file():
-            raise FileNotFoundError(
-                "proposta_nao_encontrada"
-            )
-
+            raise FileNotFoundError("proposta_nao_encontrada")
         try:
             dados = json.loads(
                 caminho.read_text(encoding="utf-8")
             )
         except (OSError, json.JSONDecodeError) as erro:
-            raise ValueError(
-                "proposta_invalida"
-            ) from erro
-
+            raise ValueError("proposta_invalida") from erro
         if not isinstance(dados, dict):
             raise ValueError("proposta_invalida")
-
-        estado = dados.get("estado")
-        if estado not in self.ESTADOS:
+        if dados.get("estado") not in self.ESTADOS:
             raise ValueError("estado_da_proposta_invalido")
-
         return dados
 
     def _salvar(self, proposta: dict[str, Any]) -> None:
@@ -112,9 +98,7 @@ class PropostaIntegracaoDesenvolvimentoNixal:
             "proposta_id",
         )
         caminho = self._caminho(proposta_id)
-        temporario = caminho.with_name(
-            caminho.name + ".tmp"
-        )
+        temporario = caminho.with_name(caminho.name + ".tmp")
         temporario.write_text(
             json.dumps(
                 proposta,
@@ -123,10 +107,7 @@ class PropostaIntegracaoDesenvolvimentoNixal:
             ),
             encoding="utf-8",
         )
-        os.replace(
-            temporario,
-            caminho,
-        )
+        os.replace(temporario, caminho)
 
     def _transicionar(
         self,
@@ -136,13 +117,10 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         evento: str,
     ) -> None:
         estado_atual = proposta.get("estado")
-
         if estado_atual not in self.ESTADOS:
             raise ValueError("estado_da_proposta_invalido")
-
         if novo_estado not in self.ESTADOS:
             raise ValueError("novo_estado_invalido")
-
         if novo_estado not in self.TRANSICOES.get(
             estado_atual,
             set(),
@@ -152,9 +130,8 @@ class PropostaIntegracaoDesenvolvimentoNixal:
                 f"{estado_atual}->{novo_estado}"
             )
 
-        evento = self._texto(evento, "evento")
         agora = self._timestamp()
-
+        evento = self._texto(evento, "evento")
         historico = proposta.setdefault(
             "historico_estados",
             [],
@@ -170,7 +147,6 @@ class PropostaIntegracaoDesenvolvimentoNixal:
                 "em": agora,
             }
         )
-
         proposta["estado_anterior"] = estado_atual
         proposta["estado"] = novo_estado
         proposta["estado_atualizado_em"] = agora
@@ -182,14 +158,10 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         destino: str = "main",
     ) -> dict[str, Any]:
         origem = Path(candidato_dir)
-
         if not origem.exists():
-            raise FileNotFoundError(
-                "candidato_nao_encontrado"
-            )
+            raise FileNotFoundError("candidato_nao_encontrado")
 
         registro_path = origem / "candidato.json"
-
         if not registro_path.exists():
             raise FileNotFoundError(
                 "registro_do_candidato_nao_encontrado"
@@ -197,9 +169,7 @@ class PropostaIntegracaoDesenvolvimentoNixal:
 
         try:
             registro = json.loads(
-                registro_path.read_text(
-                    encoding="utf-8"
-                )
+                registro_path.read_text(encoding="utf-8")
             )
         except (OSError, json.JSONDecodeError) as erro:
             raise ValueError(
@@ -207,14 +177,11 @@ class PropostaIntegracaoDesenvolvimentoNixal:
             ) from erro
 
         if registro.get("estado") != "candidato":
-            raise ValueError(
-                "estado_do_candidato_invalido"
-            )
+            raise ValueError("estado_do_candidato_invalido")
 
         avaliacao = registro.get("avaliacao", {})
         if not isinstance(avaliacao, dict):
             raise ValueError("avaliacao_do_candidato_invalida")
-
         if avaliacao.get("aprovado") is not True:
             raise ValueError(
                 "candidato_sem_avaliacao_aprovada"
@@ -229,12 +196,9 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         caminho = self._caminho(proposta_id)
 
         if caminho.exists():
-            raise FileExistsError(
-                "proposta_ja_existente"
-            )
+            raise FileExistsError("proposta_ja_existente")
 
         criada_em = self._timestamp()
-
         proposta = {
             "versao_proposta": self.VERSAO,
             "proposta_id": proposta_id,
@@ -254,25 +218,21 @@ class PropostaIntegracaoDesenvolvimentoNixal:
             "arquivo": registro.get("arquivo"),
             "manifesto": registro.get("manifesto"),
             "fingerprint": registro.get("fingerprint"),
-            "avaliacao": avaliacao,
+            "avaliacao": copy.deepcopy(avaliacao),
             "destino_sugerido": destino,
             "autorizacao_explicita": False,
             "integracao_executada": False,
             "stable_modificada": False,
         }
-
         self._salvar(proposta)
         proposta["arquivo_proposta"] = str(caminho)
-
         return copy.deepcopy(proposta)
 
     def consultar(
         self,
         proposta_id: str,
     ) -> dict[str, Any]:
-        return copy.deepcopy(
-            self._carregar(proposta_id)
-        )
+        return copy.deepcopy(self._carregar(proposta_id))
 
     def registrar_autorizacao(
         self,
@@ -280,12 +240,10 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         autorizacao: dict[str, Any],
     ) -> dict[str, Any]:
         proposta = self._carregar(proposta_id)
-
         if proposta.get("estado") != "aguardando_autorizacao":
             raise ValueError(
                 "proposta_nao_aguardando_autorizacao"
             )
-
         if not isinstance(autorizacao, dict):
             raise ValueError("autorizacao_invalida")
 
@@ -320,22 +278,18 @@ class PropostaIntegracaoDesenvolvimentoNixal:
 
         if proposta_autorizada != proposta_id:
             raise ValueError("proposta_autorizada_inconsistente")
-
         if fingerprint != proposta.get("fingerprint"):
             raise ValueError("fingerprint_autorizacao_inconsistente")
-
         if destino != proposta.get("destino_sugerido"):
             raise ValueError("destino_autorizacao_inconsistente")
-
         if confirmacao != "AUTORIZAR_INTEGRACAO":
             raise ValueError("confirmacao_explicita_invalida")
 
-        origem = autorizacao.get(
-            "origem",
-            "autorizacao_externa",
-        )
         origem = self._texto(
-            origem,
+            autorizacao.get(
+                "origem",
+                "autorizacao_externa",
+            ),
             "origem_autorizacao",
         )
 
@@ -367,30 +321,64 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         self._salvar(proposta)
         return copy.deepcopy(proposta)
 
+    def registrar_preparacao(
+        self,
+        proposta_id: str,
+        *,
+        branch_integracao: str,
+        commit_integracao: str,
+    ) -> dict[str, Any]:
+        proposta = self._carregar(proposta_id)
+        if proposta.get("estado") != "autorizada_para_integracao":
+            raise ValueError(
+                "proposta_nao_autorizada_para_preparacao"
+            )
+
+        branch_integracao = self._texto(
+            branch_integracao,
+            "branch_integracao",
+        )
+        commit_integracao = self._texto(
+            commit_integracao,
+            "commit_integracao",
+        )
+
+        self._transicionar(
+            proposta,
+            "integracao_preparada",
+            evento="branch_de_integracao_preparada",
+        )
+        proposta["branch_integracao"] = branch_integracao
+        proposta["commit_integracao"] = commit_integracao
+        proposta["integracao_executada"] = False
+        proposta["stable_modificada"] = False
+
+        self._salvar(proposta)
+        return copy.deepcopy(proposta)
+
     def iniciar_integracao(
         self,
         proposta_id: str,
     ) -> dict[str, Any]:
         proposta = self._carregar(proposta_id)
-
-        if proposta.get("estado") != "autorizada_para_integracao":
+        if proposta.get("estado") != "integracao_preparada":
             raise ValueError(
-                "proposta_nao_autorizada_para_integracao"
+                "integracao_nao_preparada"
             )
-
         if proposta.get("autorizacao_explicita") is not True:
             raise ValueError(
                 "autorizacao_explicita_ausente"
             )
-
-        autorizacao = proposta.get("autorizacao")
-        if not isinstance(autorizacao, dict):
+        if not isinstance(
+            proposta.get("autorizacao"),
+            dict,
+        ):
             raise ValueError("registro_de_autorizacao_ausente")
 
         self._transicionar(
             proposta,
             "integracao_em_execucao",
-            evento="integracao_iniciada",
+            evento="integracao_em_stable_iniciada",
         )
         proposta["integracao_executada"] = False
         proposta["stable_modificada"] = False
@@ -408,12 +396,8 @@ class PropostaIntegracaoDesenvolvimentoNixal:
         erro: str | None = None,
     ) -> dict[str, Any]:
         proposta = self._carregar(proposta_id)
-
         if proposta.get("estado") != "integracao_em_execucao":
-            raise ValueError(
-                "proposta_nao_em_integracao"
-            )
-
+            raise ValueError("proposta_nao_em_integracao")
         if not isinstance(sucesso, bool):
             raise ValueError("sucesso_invalido")
 
@@ -440,14 +424,13 @@ class PropostaIntegracaoDesenvolvimentoNixal:
                 else "integracao_falhou"
             ),
         )
-
         proposta["integracao_executada"] = sucesso
         proposta["stable_modificada"] = bool(
             stable_modificada
         )
 
         if commit_sha is not None:
-            proposta["commit_integracao"] = commit_sha
+            proposta["commit_integracao_final"] = commit_sha
 
         if erro is not None:
             proposta["erro_integracao"] = str(erro)
@@ -457,6 +440,4 @@ class PropostaIntegracaoDesenvolvimentoNixal:
 
 
 if __name__ == "__main__":
-    print(
-        "PropostaIntegracaoDesenvolvimentoNixal OK"
-    )
+    print("PropostaIntegracaoDesenvolvimentoNixal OK")
