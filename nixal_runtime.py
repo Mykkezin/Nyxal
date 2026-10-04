@@ -478,6 +478,92 @@ class NyxalRuntime:
             "stable_modificada": False,
         }
 
+
+    def executar_solicitacao_evolucao_remota(
+        self,
+        solicitacao_id: str,
+        *,
+        arquivo_destino: str = "experimento.py",
+        descricao: str = "",
+        timeout_seconds: int = 60,
+        timeout_resultado_segundos: int = 300,
+        intervalo_resultado_segundos: int = 5,
+    ) -> dict[str, Any]:
+        """
+        Delega explicitamente uma solicitação formal pronta ao ciclo
+        de evolução remota.
+
+        A solicitação precisa existir, estar pronta para experimento e
+        conter um artefato válido. O Runtime não executa localmente,
+        não concede autorização de integração e não modifica stable.
+        """
+        if self.solicitacao_evolucao is None:
+            self.solicitacao_evolucao = SolicitacaoEvolucaoNixal(
+                repositorio=BASE_DIR,
+            )
+
+        if self.evolucao_remota is None:
+            self.evolucao_remota = CicloEvolucaoRemotaNixal(
+                repositorio=BASE_DIR,
+                memoria_aprendizado=self.memoria_aprendizado,
+            )
+
+        try:
+            solicitacao = self.solicitacao_evolucao.consultar(
+                solicitacao_id
+            )
+        except Exception as erro:
+            return {
+                "sucesso": False,
+                "estado": "solicitacao_evolucao_indisponivel",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao_id,
+                "motivo": f"{type(erro).__name__}: {erro}",
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        try:
+            resultado = self.evolucao_remota.executar_solicitacao(
+                solicitacao,
+                arquivo_destino=arquivo_destino,
+                descricao=descricao,
+                timeout_seconds=timeout_seconds,
+                timeout_resultado_segundos=timeout_resultado_segundos,
+                intervalo_resultado_segundos=intervalo_resultado_segundos,
+            )
+        except Exception as erro:
+            return {
+                "sucesso": False,
+                "estado": "evolucao_remota_falhou",
+                "origem": self.FONTE,
+                "solicitacao_id": solicitacao_id,
+                "motivo": f"{type(erro).__name__}: {erro}",
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+            }
+
+        return {
+            "sucesso": bool(
+                isinstance(resultado, dict)
+                and resultado.get("sucesso") is True
+            ),
+            "estado": (
+                "solicitacao_evolucao_remota_executada"
+                if isinstance(resultado, dict)
+                and resultado.get("sucesso") is True
+                else "solicitacao_evolucao_remota_falhou"
+            ),
+            "origem": self.FONTE,
+            "solicitacao_id": solicitacao_id,
+            "valor": deepcopy(resultado),
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
+        }
+
     # ============================================================
     # CICLO
     # ============================================================
