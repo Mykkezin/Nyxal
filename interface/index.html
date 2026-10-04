@@ -950,6 +950,79 @@
       return audioCtx;
     }
 
+    function criarWavSilencioNyxal(duracaoMs = 120) {
+      const sampleRate = 8000;
+      const samples = Math.max(
+        1,
+        Math.round(sampleRate * duracaoMs / 1000)
+      );
+      const dataBytes = samples * 2;
+      const buffer = new ArrayBuffer(44 + dataBytes);
+      const view = new DataView(buffer);
+
+      const escreverTexto = (offset, texto) => {
+        for (let i = 0; i < texto.length; i += 1) {
+          view.setUint8(offset + i, texto.charCodeAt(i));
+        }
+      };
+
+      escreverTexto(0, 'RIFF');
+      view.setUint32(4, 36 + dataBytes, true);
+      escreverTexto(8, 'WAVE');
+      escreverTexto(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      escreverTexto(36, 'data');
+      view.setUint32(40, dataBytes, true);
+
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    function prepararSaidaAudioNoGestoDoUsuario() {
+      if (currentNyxalHtmlAudio) {
+        return currentNyxalHtmlAudio;
+      }
+
+      const audio = new Audio();
+      audio.preload = 'auto';
+      audio.autoplay = false;
+      audio.controls = false;
+      audio.playsInline = true;
+      audio.volume = 1.0;
+
+      const url = URL.createObjectURL(
+        criarWavSilencioNyxal()
+      );
+
+      audio.src = url;
+      currentNyxalHtmlAudio = audio;
+
+      // play() é chamado diretamente dentro do clique do usuário.
+      // Depois disso o mesmo elemento pode receber o TTS assíncrono.
+      const ativacao = audio.play();
+
+      if (ativacao && typeof ativacao.catch === 'function') {
+        ativacao
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+          })
+          .catch((erro) => {
+            console.warn(
+              'Ativação inicial do elemento de áudio falhou:',
+              erro
+            );
+          });
+      }
+
+      return audio;
+    }
+
     async function desbloquearAudioNyxal() {
       const contexto = getNyxalAudioContext();
 
@@ -1096,15 +1169,16 @@
 
       try {
         await new Promise((resolve, reject) => {
-          const audio = new Audio();
+          const audio = currentNyxalHtmlAudio || new Audio();
           let concluido = false;
 
           audio.preload = 'auto';
           audio.autoplay = false;
           audio.controls = false;
+          audio.playsInline = true;
           audio.volume = 1.0;
-          audio.src = objectUrl;
 
+          audio.src = objectUrl;
           currentNyxalHtmlAudio = audio;
 
           const finalizar = () => {
@@ -1143,9 +1217,6 @@
         );
       } finally {
         URL.revokeObjectURL(objectUrl);
-        if (currentNyxalHtmlAudio) {
-          currentNyxalHtmlAudio = null;
-        }
       }
 
       const arrayBuffer = await blob.arrayBuffer();
@@ -2040,7 +2111,6 @@
           currentNyxalHtmlAudio.pause();
           currentNyxalHtmlAudio.currentTime = 0;
         } catch (_) {}
-        currentNyxalHtmlAudio = null;
       } else if (currentNyxalAudio) {
         currentNyxalAudio.pause();
         currentNyxalAudio.currentTime = 0;
@@ -2152,6 +2222,8 @@
     }
 
     async function toggleVoiceInput() {
+      prepararSaidaAudioNoGestoDoUsuario();
+
       try {
         await desbloquearAudioNyxal();
       } catch (erro) {
