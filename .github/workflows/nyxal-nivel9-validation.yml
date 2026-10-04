@@ -50,6 +50,9 @@ jobs:
       - name: Teste Reflexão Diária 56.5.6
         run: python teste_reflexao_diaria_56_5_6.py
 
+      - name: Teste Habitat NyxOS M5.1
+        run: python teste_habitat_m5_1.py
+
       - name: Sanidade de regras de segurança
         run: |
           python - <<'PY'
