@@ -29,31 +29,26 @@ def main() -> int:
             solicitacao_evolucao=solicitacoes,
         )
 
-        runtime._ultimo_ciclo = {
-            "sucesso": True,
-            "estado": "ciclo_concluido",
-            "valor": {
-                "hipotese": {
-                    "hipotese": (
-                        "A nova estratégia pode reduzir a latência."
-                    ),
-                    "necessidade": "reduzir_latencia",
-                    "pergunta": (
-                        "Como reduzir a latência do componente?"
-                    ),
-                    "estado_atual": "provisoria",
-                    "tipo": "explicacao_candidata",
-                    "razao": "Hipótese derivada das evidências.",
-                    "evidencias_de_suporte": [
-                        {"id": "e1", "fonte": "benchmark"}
-                    ],
-                    "evidencias_contrarias_conhecidas": [],
-                    "contrarias_avaliadas": False,
-                    "confianca": "indeterminada",
-                    "confirmada": False,
-                    "testada": False,
-                }
-            },
+        runtime._ultimo_ciclo = None
+        runtime._ultima_hipotese_investigada = {
+            "hipotese": (
+                "A nova estratégia pode reduzir a latência."
+            ),
+            "necessidade": "reduzir_latencia",
+            "pergunta": (
+                "Como reduzir a latência do componente?"
+            ),
+            "estado_atual": "provisoria",
+            "tipo": "explicacao_candidata",
+            "razao": "Hipótese derivada das evidências.",
+            "evidencias_de_suporte": [
+                {"id": "e1", "fonte": "benchmark"}
+            ],
+            "evidencias_contrarias_conhecidas": [],
+            "contrarias_avaliadas": False,
+            "confianca": "indeterminada",
+            "confirmada": False,
+            "testada": False,
         }
 
         resultado = runtime.criar_solicitacao_evolucao(
