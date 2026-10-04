@@ -156,7 +156,11 @@ def executar() -> None:
         assert git(raiz, "branch", "--show-current") == "main"
         assert not (raiz / "codigo.py").exists()
 
-        merge_commit = git(raiz, "rev-parse", "HEAD")
+        merge_commit = git(
+            raiz,
+            "rev-parse",
+            "refs/heads/integracao/integracao-candidato-001",
+        )
 
         # O teste ainda não está em stable; registrar integração deve bloquear.
         try:
