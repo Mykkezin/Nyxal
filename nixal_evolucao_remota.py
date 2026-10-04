@@ -39,6 +39,7 @@ from typing import Any
 
 from nixal_evolucao_controlada import EvolucaoControladaNixal
 from nixal_laboratorio_remoto import LaboratorioRemotoNixal
+from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
 
 
 class CicloEvolucaoRemotaNixal:
@@ -52,6 +53,7 @@ class CicloEvolucaoRemotaNixal:
         *,
         evolucao: EvolucaoControladaNixal | None = None,
         laboratorio: LaboratorioRemotoNixal | None = None,
+        memoria_aprendizado: AprendizadoPersistenteNixal | None = None,
         repositorio: str | Path | None = None,
     ) -> None:
         raiz = Path(
@@ -63,6 +65,12 @@ class CicloEvolucaoRemotaNixal:
         )
         self.laboratorio = laboratorio or LaboratorioRemotoNixal(
             repositorio=raiz
+        )
+        self.memoria_aprendizado = (
+            memoria_aprendizado
+            or AprendizadoPersistenteNixal(
+                raiz.parent / "memoria_aprendizado_evolucao_nixal.json"
+            )
         )
 
     @staticmethod
@@ -376,6 +384,51 @@ class CicloEvolucaoRemotaNixal:
             experimento_id
         )
 
+        experiencia = {
+            "tipo": "evolucao_controlada_remota",
+            "experimento_id": experimento_id,
+            "metrica": metrica,
+            "baseline": baseline_numero,
+            "experimental": valor_experimental,
+            "melhoria_absoluta": comparacao.get("melhoria_absoluta"),
+            "melhoria_relativa": comparacao.get("melhoria_relativa"),
+            "aprovado": comparacao.get("aprovado") is True,
+            "experiment_sha": commit_sha,
+            "resultado_status": laboratorio_resultado.get("status"),
+        }
+
+        avaliacao = {
+            "avaliacao": (
+                "sucesso"
+                if comparacao.get("aprovado") is True
+                else "falha"
+            ),
+            "criterio": "experimental_melhor_que_baseline",
+            "metrica": metrica,
+        }
+
+        aprendizado = self.memoria_aprendizado.registrar(
+            ciclo_id=experimento_id,
+            experiencia=experiencia,
+            avaliacao=avaliacao,
+        )
+
+        if aprendizado.get("sucesso") is not True:
+            return {
+                "sucesso": False,
+                "estado": "aprendizado_falhou",
+                "origem": self.FONTE,
+                "experimento_id": experimento_id,
+                "comparacao": copy.deepcopy(comparacao),
+                "aprendizado": copy.deepcopy(aprendizado),
+                "candidato": None,
+                "proposta": None,
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+                "branch_removida": branch_removida,
+            }
+
         if comparacao.get("aprovado") is not True:
             return {
                 "sucesso": False,
@@ -390,6 +443,7 @@ class CicloEvolucaoRemotaNixal:
                 "comparacao": copy.deepcopy(
                     comparacao
                 ),
+                "aprendizado": copy.deepcopy(aprendizado),
                 "candidato": None,
                 "proposta": None,
                 "remocao_branch": resultado_remocao,
@@ -426,6 +480,9 @@ class CicloEvolucaoRemotaNixal:
                 resultado_remoto
             ),
             "comparacao": copy.deepcopy(comparacao),
+            "experiencia": copy.deepcopy(experiencia),
+            "avaliacao": copy.deepcopy(avaliacao),
+            "aprendizado": copy.deepcopy(aprendizado),
             "candidato": copy.deepcopy(candidato),
             "proposta": copy.deepcopy(proposta),
             "remocao_branch": resultado_remocao,
