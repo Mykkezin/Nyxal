@@ -35,6 +35,9 @@ jobs:
       - name: Suite Conversacional 56.5.5
         run: python teste_contexto_conversacional_56_5_5.py
 
+      - name: Smoke test API de chat sem voz
+        run: python teste_api_chat_sem_voz.py
+
       - name: Sanidade de regras de segurança
         run: |
           python - <<'PY'
