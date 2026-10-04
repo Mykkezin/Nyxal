@@ -80,6 +80,7 @@ from nixal_integracao_avaliacao_ciclo_hipotese import (
 from nixal_testador_arquitetural import TestadorArquiteturalNixal
 from nixal_consolidacao_conhecimento import ConsolidacaoConhecimentoNixal
 from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
+from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -87,6 +88,9 @@ ARQUIVO_ESTADO_RUNTIME = BASE_DIR / "estado_nyxal_runtime.json"
 ARQUIVO_LOG_RUNTIME = BASE_DIR / "log_nyxal_runtime.json"
 ARQUIVO_MEMORIA_INVESTIGACAO_RUNTIME = (
     BASE_DIR / "memoria_investigacao_nixal.json"
+)
+ARQUIVO_MEMORIA_APRENDIZADO_RUNTIME = (
+    BASE_DIR / "memoria_aprendizado_nixal.json"
 )
 
 
@@ -126,6 +130,8 @@ class NyxalRuntime:
         memoria_investigacao: MemoriaInvestigacaoNixal | None = None,
         arquivo_memoria_conhecimento: Path | None = None,
         memoria_conhecimento: MemoriaConhecimentoNixal | None = None,
+        arquivo_memoria_aprendizado: Path | None = None,
+        memoria_aprendizado: AprendizadoPersistenteNixal | None = None,
     ) -> None:
         if perceber_corpo is None:
             perceber_corpo = corpo_nixal.perceber_corpo
@@ -169,6 +175,15 @@ class NyxalRuntime:
                 "MemoriaConhecimentoNixal"
             )
 
+        if memoria_aprendizado is not None and not isinstance(
+            memoria_aprendizado,
+            AprendizadoPersistenteNixal,
+        ):
+            raise TypeError(
+                "memoria_aprendizado deve ser uma instância de "
+                "AprendizadoPersistenteNixal"
+            )
+
         self.perceber_corpo = perceber_corpo
         self.estado = (
             estado
@@ -210,6 +225,21 @@ class NyxalRuntime:
             if memoria_conhecimento is not None
             else MemoriaConhecimentoNixal(
                 self.arquivo_memoria_conhecimento
+            )
+        )
+
+        self.arquivo_memoria_aprendizado = (
+            Path(arquivo_memoria_aprendizado)
+            if arquivo_memoria_aprendizado is not None
+            else self.arquivo_estado.parent
+            / "memoria_aprendizado_nixal.json"
+        )
+
+        self.memoria_aprendizado = (
+            memoria_aprendizado
+            if memoria_aprendizado is not None
+            else AprendizadoPersistenteNixal(
+                self.arquivo_memoria_aprendizado
             )
         )
 
@@ -273,7 +303,20 @@ class NyxalRuntime:
         iniciado_em = self._agora_iso()
         etapas: list[dict[str, Any]] = []
 
-        self._registrar_etapa(etapas, "iniciado", {"ciclo_id": ciclo_id})
+        aprendizado_anterior = (
+            self.memoria_aprendizado.contexto_para_proximo_ciclo()
+        )
+
+        self._registrar_etapa(
+            etapas,
+            "iniciado",
+            {
+                "ciclo_id": ciclo_id,
+                "aprendizado_anterior_disponivel": bool(
+                    aprendizado_anterior.get("disponivel")
+                ),
+            },
+        )
 
         try:
             estado_corpo, cpu_atual = self.perceber_corpo(
@@ -406,9 +449,13 @@ class NyxalRuntime:
                     },
                 )
 
+            if aprendizado_anterior.get("disponivel") is True:
+                aprendizado_anterior["aplicado_no_ciclo_atual"] = True
+
             decisao = self._decidir(
                 estado_corpo=estado_corpo,
                 prioridades=prioridade,
+                aprendizado_anterior=aprendizado_anterior,
             )
             etapas.append(
                 {
@@ -531,6 +578,31 @@ class NyxalRuntime:
                 },
             )
 
+            aprendizado = self.memoria_aprendizado.registrar(
+                ciclo_id=ciclo_id,
+                experiencia=experiencia,
+                avaliacao=avaliacao,
+            )
+
+            if aprendizado.get("sucesso") is not True:
+                return self._encerrar_com_erro(
+                    ciclo_id,
+                    iniciado_em,
+                    etapas,
+                    aprendizado.get(
+                        "motivo",
+                        "O registro do aprendizado falhou.",
+                    ),
+                )
+
+            etapas.append(
+                {
+                    "etapa": "aprendizado",
+                    "sucesso": True,
+                    "resultado": deepcopy(aprendizado),
+                }
+            )
+
             concluido_em = self._agora_iso()
             ciclo = {
                 "sucesso": True,
@@ -548,6 +620,10 @@ class NyxalRuntime:
                     "resultado": deepcopy(resultado_observado),
                     "avaliacao": deepcopy(avaliacao),
                     "experiencia": deepcopy(experiencia),
+                    "aprendizado": deepcopy(aprendizado),
+                    "aprendizado_anterior": deepcopy(
+                        aprendizado_anterior
+                    ),
                     "investigacao": deepcopy(
                         investigacao_resultado
                     ),
@@ -1193,6 +1269,7 @@ class NyxalRuntime:
         self,
         estado_corpo: dict[str, Any],
         prioridades: dict[str, Any],
+        aprendizado_anterior: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not isinstance(estado_corpo, dict):
             return {
@@ -1200,6 +1277,18 @@ class NyxalRuntime:
                 "acao": None,
                 "motivo": "Estado corporal inválido.",
             }
+
+        contexto_aprendizado = (
+            deepcopy(aprendizado_anterior)
+            if isinstance(aprendizado_anterior, dict)
+            else {
+                "disponivel": False,
+                "fonte": "aprendizado_persistente_nixal",
+                "aplicado_no_ciclo_atual": False,
+                "conhecimento_permanente": False,
+                "arquitetura_modificada": False,
+            }
+        )
 
         return {
             "sucesso": True,
@@ -1212,6 +1301,7 @@ class NyxalRuntime:
             "necessidade_prioritaria": deepcopy(
                 prioridades.get("selecionada")
             ),
+            "aprendizado_considerado": contexto_aprendizado,
         }
 
     # ============================================================
