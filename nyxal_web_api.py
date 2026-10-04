@@ -31,9 +31,6 @@ INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
 )
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
-KOKORO_PIPELINE = KPipeline(
-    lang_code="p",
-)
 WHISPER_MODEL_NAME = os.environ.get(
     "NYXAL_WHISPER_MODEL",
     "tiny",
