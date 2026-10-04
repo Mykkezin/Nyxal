@@ -1579,6 +1579,8 @@
     let voiceSpeechStartedAt = 0;
     let voiceLastSpeechAt = 0;
     let voiceSilenceStartedAt = 0;
+    let voiceCaptureStartedAt = 0;
+    let voiceSpeechDetectedInCurrentRecording = false;
     let voiceNoiseFloor = 0.003;
     let voiceRmsAtual = 0;
     let voiceVozDetectada = false;
@@ -1632,6 +1634,8 @@
       voiceSpeechStartedAt = 0;
       voiceLastSpeechAt = 0;
       voiceSilenceStartedAt = 0;
+      voiceCaptureStartedAt = 0;
+      voiceSpeechDetectedInCurrentRecording = false;
       voiceRmsAtual = 0;
       voiceVozDetectada = false;
       voiceCalibracaoIniciadaAt = performance.now();
@@ -1675,7 +1679,7 @@
         ' • ' + (voiceVozDetectada ? 'FALA DETECTADA' : 'OUVINDO');
     }
 
-    function beginVoiceUtterance() {
+    function beginVoiceCapture() {
       if (
         !voiceConversationActive ||
         voiceConversationBusy ||
@@ -1694,6 +1698,8 @@
 
       const currentRecorder = voiceRecorder;
       const startedAt = performance.now();
+      voiceCaptureStartedAt = startedAt;
+      voiceSpeechDetectedInCurrentRecording = false;
 
       currentRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -1730,13 +1736,19 @@
           { type: actualType }
         );
 
+        const falaDetectada =
+          voiceSpeechDetectedInCurrentRecording;
+
         voiceChunks = [];
         voiceRecorder = null;
+        voiceCaptureStartedAt = 0;
+        voiceSpeechDetectedInCurrentRecording = false;
 
         if (
           voiceDiscardCurrentRecording ||
           !voiceConversationActive ||
-          !blob.size
+          !blob.size ||
+          !falaDetectada
         ) {
           voiceDiscardCurrentRecording = false;
           if (voiceConversationActive) {
@@ -1805,8 +1817,8 @@
       };
 
       currentRecorder.start(100);
-      voiceSpeechStartedAt = startedAt;
-      voiceLastSpeechAt = startedAt;
+      voiceSpeechStartedAt = 0;
+      voiceLastSpeechAt = 0;
       voiceSilenceStartedAt = 0;
 
       setGlobeVoiceState('listening');
@@ -1861,54 +1873,74 @@
         }
 
         const threshold = voiceActivityThreshold();
-        const vozAtiva = !calibrando && rms >= threshold;
-        voiceVozDetectada = vozAtiva;
-        updateVoiceDiagnostics();
 
+      // O gravador permanece ativo enquanto a conversa está ouvindo.
+      // O VAD só decide quando a fala terminou.
+      if (!voiceRecorder) {
+        beginVoiceCapture();
+      }
+
+      if (!voiceVozDetectada && (calibrando || rms < threshold)) {
+        voiceNoiseFloor =
+          voiceNoiseFloor * (1 - VOICE_NOISE_ALPHA) +
+          rms * VOICE_NOISE_ALPHA;
+      }
+
+      const vozAtiva = !calibrando && rms >= voiceActivityThreshold();
+      voiceVozDetectada = vozAtiva;
+      updateVoiceDiagnostics();
+
+      if (voiceRecorder) {
         if (vozAtiva) {
           if (!voiceSpeechStartedAt) {
             voiceSpeechStartedAt = now;
           }
 
+          voiceLastSpeechAt = now;
+          voiceSilenceStartedAt = 0;
+
           if (
             now - voiceSpeechStartedAt >=
             VOICE_VAD_START_MS
           ) {
-            beginVoiceUtterance();
+            voiceSpeechDetectedInCurrentRecording = true;
           }
-        } else {
-          voiceSpeechStartedAt = 0;
-          voiceVozDetectada = false;
+        } else if (voiceSpeechDetectedInCurrentRecording) {
+          if (!voiceSilenceStartedAt) {
+            voiceSilenceStartedAt = now;
+          }
         }
-      } else {
-        voiceVozDetectada = rms >= voiceActivityThreshold();
-        updateVoiceDiagnostics();
-        const utteranceAge =
-          now - voiceSpeechStartedAt;
 
-        if (rms >= threshold) {
-          voiceLastSpeechAt = now;
-          voiceSilenceStartedAt = 0;
-        } else if (!voiceSilenceStartedAt) {
-          voiceSilenceStartedAt = now;
-        }
+        const speechAge = voiceSpeechStartedAt
+          ? now - voiceSpeechStartedAt
+          : 0;
 
         const silenceAge = voiceSilenceStartedAt
           ? now - voiceSilenceStartedAt
           : 0;
 
+        const captureAge = voiceCaptureStartedAt
+          ? now - voiceCaptureStartedAt
+          : 0;
+
         const afterSpeechSilence =
+          voiceSpeechDetectedInCurrentRecording &&
           voiceLastSpeechAt &&
           now - voiceLastSpeechAt >=
           VOICE_VAD_SILENCE_MS;
 
+        const deveReiniciarSemFala =
+          !voiceSpeechDetectedInCurrentRecording &&
+          captureAge >= 15000;
+
         if (
-          utteranceAge >= VOICE_UTTERANCE_MAX_MS ||
+          speechAge >= VOICE_UTTERANCE_MAX_MS ||
           (
-            utteranceAge >= VOICE_VAD_MIN_UTTERANCE_MS &&
+            speechAge >= VOICE_VAD_MIN_UTTERANCE_MS &&
             afterSpeechSilence &&
             silenceAge >= VOICE_VAD_SILENCE_MS
-          )
+          ) ||
+          deveReiniciarSemFala
         ) {
           finishVoiceUtterance();
         }
@@ -2103,6 +2135,9 @@
         );
         showVoiceDiagnostics();
 
+        // Captura começa imediatamente; não dependemos de o VAD conseguir
+        // detectar o primeiro fonema para começar a gravar.
+        beginVoiceCapture();
         scheduleContinuousVoiceLoop();
       } catch (err) {
         console.warn('Permissão/áudio do microfone:', err);
