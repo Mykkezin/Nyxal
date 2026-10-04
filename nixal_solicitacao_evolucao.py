@@ -679,21 +679,24 @@ class SolicitacaoEvolucaoNixal:
                 "solicitacao_nao_em_execucao"
             )
 
-        valor = resultado.get("valor")
-        resultado_interno = (
-            valor
-            if isinstance(valor, dict)
-            else resultado
-        )
+        resultado_interno: dict[str, Any] = resultado
 
-        if not isinstance(resultado_interno, dict):
-            raise ValueError("resultado_experimento_invalido")
+        # O resultado pode atravessar camadas de Runtime e ponte, cada uma
+        # envolvendo a anterior em "valor". Desembrulha somente camadas
+        # estruturais conhecidas, preservando o registro externo completo.
+        for _ in range(4):
+            valor = resultado_interno.get("valor")
+            if not isinstance(valor, dict):
+                break
+            resultado_interno = valor
 
         estado_interno = resultado_interno.get("estado")
+        sucesso_interno = resultado_interno.get("sucesso") is True
         estado_externo = resultado.get("estado")
+        sucesso_externo = resultado.get("sucesso") is True
 
         if (
-            resultado.get("sucesso") is True
+            (sucesso_interno or sucesso_externo)
             and (
                 estado_interno == "proposta_criada"
                 or estado_externo == "solicitacao_executada"
