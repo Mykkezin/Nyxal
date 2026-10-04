@@ -18,6 +18,7 @@ from nixal_transporte_conversacional import (
 from nixal_integracao_sessao_transporte import (
     IntegracaoSessaoTransporteNixal,
 )
+from nixal_habitat import HabitatNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -29,6 +30,7 @@ NUCLEO_CONVERSACIONAL = NucleoConversacionalNixal()
 INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
     transporte=TransporteConversacionalNixal(),
 )
+HABITAT_NYXOS = HabitatNixOS()
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -914,6 +916,17 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         if self.path == "/api/public/status":
             estado = read_status()
 
+            try:
+                habitat = HABITAT_NYXOS.snapshot()
+            except Exception as erro:
+                habitat = {
+                    "sucesso": False,
+                    "estado": "habitat_indisponivel",
+                    "origem": HABITAT_NYXOS.FONTE,
+                    "versao": HABITAT_NYXOS.VERSAO,
+                    "motivo": str(erro),
+                }
+
             identidade = estado.get("identidade", {})
             presenca = estado.get("presenca", {})
             estado_operacional = estado.get("estado", {})
@@ -934,6 +947,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                         "modo": estado_operacional.get("modo"),
                         "status": estado_operacional.get("status"),
                     },
+                    "habitat": habitat,
                 },
             )
             return
