@@ -83,6 +83,14 @@ class GovernancaEvolucaoNixal:
         return datetime.now(timezone.utc).isoformat()
 
     @staticmethod
+    def _hash_arquivo(caminho: Path) -> str:
+        digest = hashlib.sha256()
+        with caminho.open("rb") as arquivo:
+            for bloco in iter(lambda: arquivo.read(1024 * 1024), b""):
+                digest.update(bloco)
+        return digest.hexdigest()
+
+    @staticmethod
     def _texto(valor: Any, nome: str) -> str:
         if not isinstance(valor, str) or not valor.strip():
             raise ValueError(f"{nome}_invalido")
