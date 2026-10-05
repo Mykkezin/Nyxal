@@ -118,7 +118,7 @@ def main() -> None:
     # A cadeia de auditoria deve permanecer íntegra.
     validacao = auditoria.validar()
     assert validacao["valido"] is True
-    assert validacao["registros"] == 5
+    assert validacao["registros"] == 6
 
     eventos = [
         json.loads(linha)["evento"]
@@ -128,6 +128,7 @@ def main() -> None:
         if linha.strip()
     ]
     assert eventos == [
+        "operacao_preparada",
         "operacao_preparada",
         "operacao_bloqueada",
         "atuacao_sandbox_executada",
