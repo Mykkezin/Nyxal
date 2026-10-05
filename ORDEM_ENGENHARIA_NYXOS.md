@@ -26,7 +26,7 @@ Estado: fechado operacionalmente.
 - AE2 permanece desabilitada.
 
 ### M5.10 — Gateway de atuação do host
-Estado: em implementação e validação.
+Estado: fechado.
 
 - criar uma fronteira única para ações sobre o host;
 - iniciar com allowlist vazio até M5.11 registrar as primeiras ações concretas;
@@ -38,7 +38,7 @@ Estado: em implementação e validação.
 - política separada da decisão semântica.
 
 ### M5.11 — Controle de processos e aplicativos
-Próximo após validação do M5.10.
+Estado: em implementação e validação.
 - listar processos como já observado pelo habitat;
 - controlar apenas operações explicitamente registradas;
 - iniciar/encerrar processos por capacidade;
@@ -48,6 +48,7 @@ Próximo após validação do M5.10.
 - sem transformar texto do Qwen em comando shell.
 
 ### M5.12 — Corpo térmico e ventilação
+Próximo após validação do M5.11.
 - consolidar sensores térmicos reais;
 - detectar tendência e estresse térmico;
 - definir estados corporais térmicos;
