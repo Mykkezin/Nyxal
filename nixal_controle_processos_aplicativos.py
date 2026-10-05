@@ -10,7 +10,7 @@ Regras:
 - lançamento usa lista de argumentos e shell desabilitado;
 - encerramento só atinge processos do usuário atual;
 - Nyxal não pode encerrar o próprio processo;
-- encerramento usa SIGTERM, nunca SIGKILL;
+- encerramento usa somente SIGTERM;
 - toda atuação exige autorização explícita no gateway;
 - dry-run e observabilidade são fornecidos pelo gateway.
 """
