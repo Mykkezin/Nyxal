@@ -2,8 +2,9 @@
 """
 NYXOS — LAUNCHER DO CICLO OPERACIONAL RESIDENTE M5.7
 
-Uso explícito pelo operador local. Este script não inicia
-auto-evolution e não concede autorização de integração.
+Uso explícito pelo operador local. A descoberta AE1 permanece separada
+da execução experimental AE2, que só é ativada com flag explícita.
+Nenhuma camada concede autorização de integração.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from pathlib import Path
 from nixal_runtime import NyxalRuntime
 from nixal_ciclo_residente import CicloResidenteNixOS
 from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
+from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -40,14 +42,28 @@ def main() -> int:
         action="store_true",
         help="Não interrompe a residência quando um ciclo falhar.",
     )
+    parser.add_argument(
+        "--habilitar-auto-experimento",
+        action="store_true",
+        help=(
+            "Ativa AE2 para processar automaticamente, no máximo uma por ciclo, "
+            "solicitação formal já pronta para experimento remoto."
+        ),
+    )
     args = parser.parse_args()
 
     runtime = NyxalRuntime()
     auto_evolucao = AutoEvolucaoGovernadaNixOS(BASE_DIR)
+    auto_experimento = AutoExperimentoIsoladoAE2(
+        runtime,
+        runtime.solicitacao_evolucao,
+        habilitada=args.habilitar_auto_experimento,
+    )
     residente = CicloResidenteNixOS(
         runtime,
         runtime.persistencia_operacional,
         auto_evolucao,
+        auto_experimento,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
@@ -65,10 +81,18 @@ def main() -> int:
     print(f"CICLOS TOTAIS: {contexto['ciclos_executados']}")
     print(f"ESTADO: {contexto['estado_residente']}")
     print(
-        "AUTO-EVOLUTION: "
+        "AE1 — DESCOBERTA: "
         + (
             "HABILITADA"
             if contexto["auto_evolution_habilitada"]
+            else "DESABILITADA"
+        )
+    )
+    print(
+        "AE2 — EXECUÇÃO EXPERIMENTAL: "
+        + (
+            "HABILITADA"
+            if contexto["auto_experimento_ae2_habilitado"]
             else "DESABILITADA"
         )
     )
