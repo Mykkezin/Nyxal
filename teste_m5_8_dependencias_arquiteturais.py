@@ -29,6 +29,31 @@ def main() -> None:
     assert isinstance(relacoes, list) and relacoes
 
     pares = set()
+    arquivos_componentes = {
+        item["id"]: item.get("arquivo_principal")
+        for item in planta.get("componentes", [])
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+
+    evidencias_diretas = {
+        ("agente_qwen", "capacidades"): (
+            "nixal_agente_qwen.py",
+            "from nixal_capacidades import",
+        ),
+        ("composicao", "agente_qwen"): (
+            "nixal_composicao.py",
+            "from nixal_agente_qwen import",
+        ),
+        ("executor_contexto", "operacoes_contexto"): (
+            "executor_contexto_nixal.py",
+            "from nixal_operacoes_contexto import",
+        ),
+        ("interpretacao_qwen", "gerenciador_cristal"): (
+            "experiencia_qwen.py",
+            "from gerenciador_cristal import",
+        ),
+    }
+
     for relacao in relacoes:
         assert isinstance(relacao, dict)
         origem = relacao.get("origem")
@@ -41,6 +66,12 @@ def main() -> None:
         par = (origem, destino)
         assert par not in pares
         pares.add(par)
+
+        arquivo_esperado, importacao_esperada = evidencias_diretas[par]
+        assert arquivos_componentes.get(origem) == arquivo_esperado
+
+        codigo = (BASE_DIR / arquivo_esperado).read_text(encoding="utf-8")
+        assert importacao_esperada in codigo
 
     invariantes = proposta.get("invariantes", {})
     for chave in (
