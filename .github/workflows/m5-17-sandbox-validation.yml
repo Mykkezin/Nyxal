@@ -1,0 +1,23 @@
+name: M5.17 Sandbox Físico Reversível
+
+on:
+  push:
+    branches:
+      - feat/m5-17-sandbox-fisico-reversivel
+  pull_request:
+    branches:
+      - main
+      - feat/m5-17-sandbox-fisico-reversivel
+
+jobs:
+  validate-m5-17:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compilar M5.17
+        run: python -m py_compile nixal_adaptador_sandbox_fisico.py teste_m5_17_sandbox_fisico_reversivel.py nixal_gateway_atuacao.py nixal_plano_central_controle.py
+      - name: Executar teste M5.17
+        run: python teste_m5_17_sandbox_fisico_reversivel.py
