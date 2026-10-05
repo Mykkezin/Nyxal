@@ -41,8 +41,8 @@ def _imports_diretos_por_componentes(planta: dict) -> tuple[set[tuple[str, str]]
 
             modulo = Path(arquivo_destino).stem
             padroes = (
-                re.compile(rf"^\\s*from\\s+{re.escape(modulo)}\\s+import\\b"),
-                re.compile(rf"^\\s*import\\s+{re.escape(modulo)}(?:\\s|$)"),
+                re.compile(rf"^\s*from\s+{re.escape(modulo)}\s+import\b"),
+                re.compile(rf"^\s*import\s+{re.escape(modulo)}(?:\s|$)"),
             )
 
             for numero, linha in enumerate(linhas, start=1):
