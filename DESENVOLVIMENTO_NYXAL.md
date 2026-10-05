@@ -58,6 +58,7 @@ Estado atual:
 - AE2 — experimento isolado automático sob política: implementado e validado pelo CI.
 - AE3 — comparação e aprendizagem automática: implementada e validada pelo CI.
 - AE4 — ciclo residente de evolução: implementado e validado pelo CI.
+- AE5 — descoberta contínua com governança: implementada e validada pelo CI.
 
 ## Próximo objetivo
 
@@ -88,6 +89,10 @@ AE4 está implementado para orquestrar AE1→AE2→AE3 em uma única passagem re
 resumo auditável por ciclo e preservar a ausência de causalidade implícita entre oportunidade e
 solicitação quando o vínculo não estiver explicitamente persistido.
 
-O próximo estágio é AE5 — descoberta contínua com governança, mantendo autorização explícita,
-isolamento de candidatos e reversibilidade como barreiras invariantes.
+AE5 está implementada para acumular sinais repetidos da AE1/AE4, agrupar linhas de evidência,
+classificar maturidade e solicitar formalização externa sem inventar objetivo, métrica, baseline
+ou artefato.
+
+O próximo passo é a revisão de evidências da AE5 antes de definir qualquer AE6, mantendo autorização
+explícita, isolamento de candidatos e reversibilidade como barreiras invariantes.
 
