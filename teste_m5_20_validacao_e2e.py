@@ -81,6 +81,13 @@ def main() -> None:
     assert operacao["estado"] == "preparada"
     assert operacao["executada"] is False
 
+    # Para o teste E2E, selecionamos explicitamente a única ação mutável
+    # suportada pelo sandbox. Isso não altera a decisão do residente.
+    plano_teste = resultado["plano_central_controle"]
+    plano_teste["decisao"]["acao_planejada"] = "preservar_estado"
+    operacao = gateway.preparar(plano=plano_teste)
+    assert operacao["acao"] == "preservar_estado"
+
     # A primeira tentativa deve ser bloqueada sem autorização.
     bloqueado = gateway.executar(
         operacao=operacao,
