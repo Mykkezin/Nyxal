@@ -25,6 +25,7 @@ from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
+from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
 
 
 class CicloResidenteNixOS:
@@ -42,6 +43,7 @@ class CicloResidenteNixOS:
         auto_avaliacao: AutoAvaliacaoAE3 | None = None,
         ciclo_evolucao_ae4: CicloEvolucaoResidenteAE4 | None = None,
         descoberta_continua_ae5: DescobertaContinuaGovernadaAE5 | None = None,
+        fisiologia_operacional: FisiologiaOperacionalNixOS | None = None,
         *,
         intervalo_segundos: float = 5.0,
         parar_em_erro: bool = True,
@@ -61,6 +63,7 @@ class CicloResidenteNixOS:
         self.auto_avaliacao = auto_avaliacao
         self.ciclo_evolucao_ae4 = ciclo_evolucao_ae4
         self.descoberta_continua_ae5 = descoberta_continua_ae5
+        self.fisiologia_operacional = fisiologia_operacional
         self.intervalo_segundos = float(intervalo_segundos)
         self.parar_em_erro = bool(parar_em_erro)
 
@@ -110,6 +113,9 @@ class CicloResidenteNixOS:
             "descoberta_continua_ae5_habilitada": bool(
                 self.descoberta_continua_ae5 is not None
                 and self.descoberta_continua_ae5.habilitada
+            ),
+            "fisiologia_operacional_habilitada": (
+                self.fisiologia_operacional is not None
             ),
             "autorizacao_explicita": False,
             "integracao_executada": False,
