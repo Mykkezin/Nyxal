@@ -112,3 +112,6 @@ jobs:
 
       - name: Teste AE3 no Ciclo Residente
         run: python teste_ae3_ciclo_residente.py
+
+      - name: Teste Ciclo de Evolução AE4
+        run: python teste_ciclo_evolucao_ae4.py
