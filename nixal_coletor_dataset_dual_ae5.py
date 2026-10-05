@@ -83,6 +83,18 @@ class ColetorDatasetDualAE5:
         valor = re.sub(r"\s+", " ", valor.strip())
         return valor or None
 
+    @classmethod
+    def _sem_volatilidade(cls, valor: Any) -> Any:
+        if isinstance(valor, dict):
+            return {
+                chave: cls._sem_volatilidade(item)
+                for chave, item in valor.items()
+                if chave not in {"ciclo_id", "delta_id", "timestamp", "observado_em", "coletado_em"}
+            }
+        if isinstance(valor, list):
+            return [cls._sem_volatilidade(item) for item in valor]
+        return copy.deepcopy(valor)
+
     @staticmethod
     def _json(valor: Any) -> str:
         return json.dumps(
@@ -612,12 +624,12 @@ class ColetorDatasetDualAE5:
                     },
                     **self._invariantes(),
                 },
-                fingerprint_payload={
+                fingerprint_payload=cls._sem_volatilidade({
                     "schema": "nyxal-qwen-transition-1",
                     "prompt": transicao_qwen["prompt"],
                     "completion": transicao_qwen["completion"],
                     "causalidade_comprovada": False,
-                },
+                }),
                 agora=agora,
                 indice=indice,
             )
@@ -649,14 +661,14 @@ class ColetorDatasetDualAE5:
                     },
                     **self._invariantes(),
                 },
-                fingerprint_payload={
+                fingerprint_payload=cls._sem_volatilidade({
                     "schema": "nyxal-kernel-transition-1",
                     "input": transicao_kernel["input"],
                     "output_observado": transicao_kernel["output_observado"],
                     "acao_executada_observada": transicao_kernel[
                         "acao_executada_observada"
                     ],
-                },
+                }),
                 agora=agora,
                 indice=indice,
             )
