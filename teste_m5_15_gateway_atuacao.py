@@ -6,6 +6,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
+from nixal_ciclo_residente import CicloResidenteNixOS
 from nixal_gateway_atuacao import GatewayAtuacaoNixOS
 from nixal_plano_central_controle import PlanoCentralControleNixOS
 
