@@ -126,6 +126,44 @@ def main() -> None:
         )
     assert fisio_reiniciada.contexto()["historico_ciclos"] == 20
 
+    # Integração com o ciclo residente: fisiologia é anexada ao ciclo
+    # sem substituir o resultado operacional nem conceder autoridade.
+    from nixal_ciclo_residente import CicloResidenteNixOS
+
+    class RuntimeFalso:
+        def __init__(self) -> None:
+            self.ciclo = 0
+
+        def executar_ciclo(self) -> dict:
+            self.ciclo += 1
+            return {
+                "sucesso": True,
+                "estado": "ciclo_concluido",
+                "valor": {
+                    "etapas": [
+                        {
+                            "etapa": "percepcao",
+                            "estado": corpo(72.0),
+                        }
+                    ]
+                },
+            }
+
+    runtime = RuntimeFalso()
+    fisio_residente = FisiologiaOperacionalNixOS(
+        intervalo_esperado_segundos=5.0,
+        arquivo=pasta / "fisiologia_residente.json",
+    )
+    residente = CicloResidenteNixOS(
+        runtime,
+        fisiologia_operacional=fisio_residente,
+        intervalo_segundos=0,
+    )
+    ciclos = residente.executar(max_ciclos=2)
+    assert len(ciclos) == 2
+    assert all("fisiologia" in item for item in ciclos)
+    assert ciclos[-1]["fisiologia"]["estado_fisiologico"] == "estresse_termico"
+    assert residente.contexto()["fisiologia_operacional_habilitada"] is True
     # Invariantes permanecem fora de atuação/evolução.
     contexto = fisio_reiniciada.contexto()
     assert contexto["autorizacao_explicita"] is False
