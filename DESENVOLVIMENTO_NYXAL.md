@@ -100,6 +100,18 @@ Este gate separa validação estrutural de evidência empírica. A existência d
 - ocorrência real de uma hipótese que alcance os critérios de maturidade sem ser produzida artificialmente pelo teste;
 - existência de uma solicitação N9 correspondente surgida de um fluxo operacional real.
 
+### Ferramenta de auditoria
+
+O arquivo `auditar_evidencias_ae5.py` foi adicionado como auditor somente leitura do gate. Ele inspeciona as auditorias AE4 e as oportunidades persistidas no ambiente operacional externo ao repositório, agrupa por limitação + hipótese e calcula a janela de evidência sem criar, reconciliar ou alterar registros.
+
+Execução local:
+
+```bash
+python3 auditar_evidencias_ae5.py
+```
+
+Código de saída `0`: há evidência operacional encontrada. Código de saída `2`: nenhuma evidência operacional encontrada. Nenhum dos dois estados concede autorização ou altera `main`.
+
 ### Critério de saída
 
 O gate permanece **ABERTO** até que exista evidência observada em execução real ou em um conjunto de ciclos operacionais explicitamente identificados como observação, sem fabricar sinais para satisfazer os critérios.
