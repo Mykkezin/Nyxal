@@ -33,7 +33,7 @@ class DescobertaContinuaGovernadaAE5:
     """Acumula evidência de oportunidades sem ampliar autoridade de evolução."""
 
     FONTE = "descoberta_continua_governada_ae5"
-    VERSAO = "AE5.0.0"
+    VERSAO = "AE5.1.0"
     MAX_LINHAS = 200
     MAX_CICLOS_POR_LINHA = 20
     MIN_OBSERVACOES_PADRAO = 3
@@ -58,9 +58,11 @@ class DescobertaContinuaGovernadaAE5:
             raise ValueError("min_sucessos_invalido")
 
         self.repositorio = Path(repositorio).resolve()
-        self.diretorio_linhas = (
-            self.repositorio.parent / "Nyxal-evolution-discovery"
-        ).resolve()
+        externo = self.repositorio.parent
+        self.diretorio_linhas = (externo / "Nyxal-evolution-discovery").resolve()
+        self.diretorio_ae4 = (externo / "Nyxal-evolution-ae4").resolve()
+        self.diretorio_oportunidades = (externo / "Nyxal-evolution-opportunities").resolve()
+        self.diretorio_solicitacoes = (externo / "Nyxal-evolution-requests").resolve()
         self.diretorio_linhas.mkdir(parents=True, exist_ok=True)
         self.min_observacoes = min_observacoes
         self.min_sucessos = min_sucessos
@@ -157,6 +159,154 @@ class DescobertaContinuaGovernadaAE5:
             "ciclo_sucesso": bool(ciclo_sucesso),
         }
 
+    def _normalizar_linha(self, linha: dict[str, Any]) -> dict[str, Any]:
+        linha.setdefault("versao", self.VERSAO)
+        linha.setdefault("evidencias_observadas", [])
+        linha.setdefault("solicitacoes_observadas", [])
+        linha.setdefault("formalizacao", {
+            "estado": "nao_iniciada",
+            "objetivo": None,
+            "metrica": None,
+            "direcao_melhor": None,
+            "baseline": None,
+            "artefato_origem": None,
+            "solicitacao_id": None,
+            "observacao": None,
+        })
+        linha.setdefault("min_observacoes", self.min_observacoes)
+        linha.setdefault("min_sucessos", self.min_sucessos)
+        if not isinstance(linha["evidencias_observadas"], list):
+            linha["evidencias_observadas"] = []
+        if not isinstance(linha["solicitacoes_observadas"], list):
+            linha["solicitacoes_observadas"] = []
+        if not isinstance(linha["formalizacao"], dict):
+            linha["formalizacao"] = {"estado": "nao_iniciada"}
+        return linha
+
+    def _recalcular_janela(self, linha: dict[str, Any]) -> None:
+        evidencias = linha.get("evidencias_observadas", [])
+        if not isinstance(evidencias, list):
+            evidencias = []
+        evidencias = evidencias[-self.MAX_CICLOS_POR_LINHA:]
+        linha["evidencias_observadas"] = evidencias
+        linha["ciclos_observados"] = [
+            e["ciclo_id"] for e in evidencias
+            if isinstance(e, dict) and isinstance(e.get("ciclo_id"), str)
+        ]
+        linha["oportunidades_observadas"] = list(dict.fromkeys(
+            e["oportunidade_id"] for e in evidencias
+            if isinstance(e, dict) and e.get("oportunidade_id")
+        ))[-self.MAX_CICLOS_POR_LINHA:]
+        linha["observacoes"] = len(evidencias)
+        linha["observacoes_sucesso"] = sum(
+            1 for e in evidencias
+            if isinstance(e, dict) and e.get("ciclo_sucesso") is True
+        )
+
+    def _reconciliar_solicitacao(self, linha: dict[str, Any]) -> None:
+        if not self.diretorio_solicitacoes.is_dir():
+            return
+        hipotese = self._normalizar(linha.get("hipotese", ""))
+        for caminho in self.diretorio_solicitacoes.glob("solicitacao-*.json"):
+            registro = self._carregar(caminho)
+            if not isinstance(registro, dict):
+                continue
+            solicitacao_id = self._texto(registro.get("solicitacao_id"))
+            h = registro.get("hipotese")
+            htexto = h.get("hipotese") if isinstance(h, dict) else h
+            if not solicitacao_id or self._normalizar(htexto or "") != hipotese:
+                continue
+            if solicitacao_id not in linha["solicitacoes_observadas"]:
+                linha["solicitacoes_observadas"].append(solicitacao_id)
+            formal = linha["formalizacao"]
+            formal.update({
+                "estado": "solicitacao_existente",
+                "solicitacao_id": solicitacao_id,
+                "objetivo": registro.get("objetivo"),
+                "metrica": registro.get("metrica"),
+                "direcao_melhor": registro.get("direcao_melhor"),
+                "baseline": registro.get("baseline"),
+                "artefato_origem": registro.get("artefato_origem"),
+                "observacao": registro.get("observacao"),
+            })
+            break
+
+    def _resultado_ae4_da_auditoria(self, auditoria: dict[str, Any]) -> dict[str, Any] | None:
+        etapas = auditoria.get("etapas")
+        if not isinstance(etapas, list):
+            return None
+        ae1 = next(
+            (e for e in etapas if isinstance(e, dict) and e.get("etapa") == "AE1"),
+            None,
+        )
+        if not isinstance(ae1, dict):
+            return None
+        oportunidade_id = self._texto(ae1.get("oportunidade_id"))
+        if not oportunidade_id or not self.diretorio_oportunidades.is_dir():
+            return None
+        oportunidade = self._carregar(
+            self.diretorio_oportunidades / f"{oportunidade_id}.json"
+        )
+        if not isinstance(oportunidade, dict):
+            return None
+        return {
+            "sucesso": auditoria.get("estado") != "ae4_ae1_falhou",
+            "estado": auditoria.get("estado"),
+            "ciclo_id": auditoria.get("ciclo_id"),
+            "ae1": {
+                "sucesso": ae1.get("sucesso"),
+                "estado": ae1.get("estado"),
+                "valor": oportunidade,
+            },
+        }
+
+    def reconciliar_historico(self, limite: int | None = None) -> dict[str, Any]:
+        if not self.habilitada:
+            return {"sucesso": True, "estado": "ae5_desabilitada", "auditorias_processadas": 0, "novos_sinais": 0}
+        if not self.diretorio_ae4.is_dir():
+            return {"sucesso": True, "estado": "sem_auditorias_ae4", "auditorias_processadas": 0, "novos_sinais": 0}
+        arquivos = sorted(
+            self.diretorio_ae4.glob("ae4-ciclo-*.json"),
+            key=lambda p: p.stat().st_mtime,
+        )
+        if limite is not None:
+            if not isinstance(limite, int) or limite < 1:
+                raise ValueError("limite_invalido")
+            arquivos = arquivos[-limite:]
+        processadas = novos = 0
+        for caminho in arquivos:
+            auditoria = self._carregar(caminho)
+            if not isinstance(auditoria, dict):
+                continue
+            resultado = self._resultado_ae4_da_auditoria(auditoria)
+            if resultado is None:
+                continue
+            sinal = self._extrair_sinal(resultado)
+            if sinal is None:
+                continue
+            linha = self._carregar(self._arquivo(self._linha_id(sinal["limitacao"], sinal["hipotese"])))
+            antes = len(linha.get("ciclos_observados", [])) if linha else 0
+            self.processar(resultado)
+            depois = self._carregar(self._arquivo(self._linha_id(sinal["limitacao"], sinal["hipotese"])))
+            depois_n = len(depois.get("ciclos_observados", [])) if depois else 0
+            processadas += 1
+            if depois_n > antes:
+                novos += 1
+        return {
+            "sucesso": True,
+            "estado": "historico_ae4_reconciliado",
+            "origem": self.FONTE,
+            "versao": self.VERSAO,
+            "auditorias_processadas": processadas,
+            "novos_sinais": novos,
+            "linhas_maduras": len(self.listar(maduras=True, limite=self.MAX_LINHAS)),
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
+            "arquitetura_modificada": False,
+            "conhecimento_permanente": False,
+        }
+
     def _salvar(self, linha: dict[str, Any]) -> None:
         linha_id = linha.get("linha_id")
         if not isinstance(linha_id, str) or not linha_id:
@@ -232,6 +382,18 @@ class DescobertaContinuaGovernadaAE5:
                 "ultimo_ciclo": sinal["ciclo_id"],
                 "ciclos_observados": [],
                 "oportunidades_observadas": [],
+                "evidencias_observadas": [],
+                "solicitacoes_observadas": [],
+                "formalizacao": {
+                    "estado": "nao_iniciada",
+                    "objetivo": None,
+                    "metrica": None,
+                    "direcao_melhor": None,
+                    "baseline": None,
+                    "artefato_origem": None,
+                    "solicitacao_id": None,
+                    "observacao": None,
+                },
                 "min_observacoes": self.min_observacoes,
                 "min_sucessos": self.min_sucessos,
                 "autorizacao_explicita": False,
@@ -241,15 +403,16 @@ class DescobertaContinuaGovernadaAE5:
                 "conhecimento_permanente": False,
             }
 
-        if sinal["ciclo_id"] not in linha["ciclos_observados"]:
-            linha["observacoes"] += 1
-            if sinal["ciclo_sucesso"]:
-                linha["observacoes_sucesso"] += 1
-
-            linha["ciclos_observados"].append(sinal["ciclo_id"])
-            linha["ciclos_observados"] = linha["ciclos_observados"][
-                -self.MAX_CICLOS_POR_LINHA :
-            ]
+        linha = self._normalizar_linha(linha)
+        ja_observado = sinal["ciclo_id"] in linha["ciclos_observados"]
+        if not ja_observado:
+            linha["evidencias_observadas"].append({
+                "ciclo_id": sinal["ciclo_id"],
+                "oportunidade_id": sinal["oportunidade_id"],
+                "ciclo_sucesso": sinal["ciclo_sucesso"],
+                "observado_em": self._agora(),
+            })
+            self._recalcular_janela(linha)
 
         oportunidade_id = sinal.get("oportunidade_id")
         if (
@@ -261,6 +424,7 @@ class DescobertaContinuaGovernadaAE5:
                 "oportunidades_observadas"
             ][-self.MAX_CICLOS_POR_LINHA :]
 
+        self._reconciliar_solicitacao(linha)
         linha["ultimo_ciclo"] = sinal["ciclo_id"]
         linha["atualizada_em"] = self._agora()
 
@@ -280,13 +444,8 @@ class DescobertaContinuaGovernadaAE5:
             if madura
             else "continuar_observando"
         )
-        linha["campos_formais"] = {
-            "objetivo": None,
-            "metrica": None,
-            "direcao_melhor": None,
-            "baseline": None,
-            "artefato_origem": None,
-        }
+        if madura and linha["formalizacao"].get("estado") == "nao_iniciada":
+            linha["formalizacao"]["estado"] = "preparada"
 
         self._salvar(linha)
 
@@ -305,7 +464,9 @@ class DescobertaContinuaGovernadaAE5:
             "observacoes": linha["observacoes"],
             "observacoes_sucesso": linha["observacoes_sucesso"],
             "proxima_etapa": linha["proxima_etapa"],
-            "campos_formais": copy.deepcopy(linha["campos_formais"]),
+            "formalizacao": copy.deepcopy(linha["formalizacao"]),
+            "solicitacoes_observadas": copy.deepcopy(linha["solicitacoes_observadas"]),
+            "deduplicada": ja_observado,
             "autorizacao_explicita": False,
             "integracao_executada": False,
             "stable_modificada": False,
