@@ -7,11 +7,12 @@ from nixal_fechamento_llc import FechamentoLLC
 def main():
     metrica={"nome":"cpu_uso","caminho":"recursos.cpu.uso_percentual","unidade":"%","fonte":"habitat_nyxos","direcao_melhor":"menor"}
     reps=[
-        {"replicacao_id":"r1","acao":"registrar_estado_corpo","metrica":metrica,"proveniencia_evidencia_valida":True,"efeito_medio_contrafactual":-3.0},
-        {"replicacao_id":"r2","acao":"registrar_estado_corpo","metrica":metrica,"proveniencia_evidencia_valida":True,"efeito_medio_contrafactual":-2.0},
+        {"replicacao_id":"r1","execucao_id":"exec-1","serie_id":"serie-1","acao":"registrar_estado_corpo","metrica":metrica,"proveniencia_evidencia_valida":True,"efeito_medio_contrafactual":-3.0},
+        {"replicacao_id":"r2","execucao_id":"exec-2","serie_id":"serie-2","acao":"registrar_estado_corpo","metrica":metrica,"proveniencia_evidencia_valida":True,"efeito_medio_contrafactual":-2.0},
     ]
     r7=ReplicacaoLLC.avaliar(evidencias=reps,metrica=metrica,acao_esperada="registrar_estado_corpo")
-    assert r7["replicacao_independente_comprovada"] is True
+    assert r7["replicacao_distinta_validada"] is True
+    assert r7["independencia_real_comprovada"] is False
 
     escopo={"habitat":"habitat_nyxos","metrica":"recursos.cpu.uso_percentual","acao":"registrar_estado_corpo","universal":False}
     r8=EscopoLLC.validar(evidencia=r7,escopo_observado=escopo,escopo_declarado=escopo)
@@ -21,16 +22,13 @@ def main():
     assert r9["aprendizado_auditavel"] is True
     assert r9["aprendizado_id"]
 
-    r10=FechamentoLLC.validar(
-        decisao_inicial={"acao":"observar_sem_atuar"},
-        decisao_reutilizada={"acao":"registrar_estado_corpo"},
-        aprendizado=r9,
-        evidencia_final=r8,
-    )
+    r10=FechamentoLLC.validar(decisao_inicial={"acao":"observar_sem_atuar"},decisao_reutilizada={"acao":"registrar_estado_corpo"},aprendizado=r9,evidencia_final=r8)
     assert r10["ciclo_fechado"] is True
 
     # gates negativos
-    assert ReplicacaoLLC.avaliar(evidencias=reps[:1],metrica=metrica,acao_esperada="registrar_estado_corpo")["replicacao_independente_comprovada"] is False
+    assert ReplicacaoLLC.avaliar(evidencias=reps[:1],metrica=metrica,acao_esperada="registrar_estado_corpo")["replicacao_distinta_validada"] is False
+    duplicado=[{**reps[1],"execucao_id":"exec-1"}]
+    assert ReplicacaoLLC.avaliar(evidencias=reps[:1]+duplicado,metrica=metrica,acao_esperada="registrar_estado_corpo")["replicacao_distinta_validada"] is False
     universal=EscopoLLC.validar(evidencia=r7,escopo_observado=escopo,escopo_declarado={**escopo,"universal":True})
     assert universal["escopo_validado"] is False
     assert AprendizadoLLC.cristalizar(evidencia=universal,escopo=escopo,regra="x")["aprendizado_auditavel"] is False
