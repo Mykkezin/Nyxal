@@ -22,6 +22,7 @@ from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
+from nixal_presenca_maquina import PresencaMaquinaNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -84,6 +85,9 @@ def main() -> int:
         arquivo=BASE_DIR / "fisiologia_operacional_nyxos.json",
         delta_nyxos=runtime.delta_nyxos,
     )
+    presenca_maquina = PresencaMaquinaNixOS(
+        arquivo=BASE_DIR / "presenca_maquina_nyxos.json",
+    )
     residente = CicloResidenteNixOS(
         runtime,
         runtime.persistencia_operacional,
@@ -93,6 +97,7 @@ def main() -> int:
         ciclo_evolucao_ae4,
         descoberta_continua_ae5,
         fisiologia_operacional,
+        presenca_maquina,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
