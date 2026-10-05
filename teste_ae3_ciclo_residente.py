@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 from nixal_ciclo_residente import CicloResidenteNixOS
 
 
@@ -69,10 +70,7 @@ def main() -> int:
         PersistenciaFalsa(),
         None,
         AE2Falso(),
-        None if False else __import__(
-            "nixal_auto_avaliacao_ae3",
-            fromlist=["AutoAvaliacaoAE3"],
-        ).AutoAvaliacaoAE3(),
+        AutoAvaliacaoAE3(),
         intervalo_segundos=0,
     )
 
