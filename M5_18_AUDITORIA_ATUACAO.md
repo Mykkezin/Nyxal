@@ -46,3 +46,6 @@ M5.18 não amplia as ações físicas disponíveis.
 
 Usar a auditoria para avaliar a estabilidade da cadeia física antes de
 considerar qualquer nova ação mutável.
+
+
+CI: validação atualizada após correção da contagem de eventos.
