@@ -1,5 +1,7 @@
 # LLC — Learning Loop Causal
 
+## Estado atual: LLC.2 validado
+
 ## Objetivo
 
 O LLC e a proxima camada do Nyxal depois do fechamento do M5. Seu primeiro objetivo e provar uma propriedade especifica:
@@ -106,22 +108,52 @@ treinamento_automatico = false
 implantacao_automatica = false
 causalidade_ambiental_comprovada = false
 
-## Proximo refinamento
+## LLC.2 — Feedback operacional e fechamento da transicao
 
-Depois de provar influencia decisoria, o LLC precisara provar o elo completo:
+A segunda etapa fecha o encadeamento dentro do ciclo:
 
 aprendizado anterior
 -> decisao influenciada
 -> acao
 -> resultado observado
--> ganho/perda
+-> ganho/perda operacional
 -> novo aprendizado
 
-A primeira versao nao fecha esse elo ambiental completo; ela fecha apenas a prova de influencia da memoria estruturada na selecao.
+O ganho/perda desta etapa e deliberadamente operacional:
+- sucesso conjunto da acao e do resultado observado: +1.0;
+- observacao sem atuacao: 0.0;
+- falha da acao ou do resultado: -1.0.
+
+Esse valor representa a consequencia observada da operacao registrada. Ele nao representa
+melhoria ambiental, retorno economico ou causalidade sobre o mundo.
+
+Depois que o aprendizado persistente e registrado, o LLC fecha uma transicao auditavel com:
+- aprendizado_anterior_id;
+- decisao e influencia_decisoria_comprovada;
+- acao;
+- resultado;
+- feedback_operacional;
+- avaliacao;
+- aprendizado_novo_id.
+
+Assim, o elo estrutural do LLC esta fechado para a camada operacional. A prova de
+causalidade ambiental permanece pendente de uma etapa posterior com metricas externas
+e contrafactuais apropriados.
+
+## Validacao LLC.2
+
+O pipeline dedicado confirmou:
+- compilacao do LLC e dependencias: PASSOU;
+- teste de influencia decisoria: PASSOU;
+- teste de ganho/perda operacional: PASSOU;
+- teste de fechamento com aprendizado anterior e novo aprendizado: PASSOU;
+- invariantes de governanca: PASSOU.
 
 ## Estado
 
-LLC.1.0.0 — implementacao inicial em branch separada do checkpoint M5.
+LLC.2.0.0 — implementacao e validacao da influencia decisoria + feedback operacional
+em branch separada do checkpoint M5.
+
 
 M5 permanece congelado no branch feat/m5-habitat-nyxos.
 
