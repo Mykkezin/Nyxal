@@ -58,7 +58,10 @@ def main() -> int:
     args = parser.parse_args()
 
     solicitacao_evolucao = SolicitacaoEvolucaoNixal(repositorio=BASE_DIR)
-    runtime = NyxalRuntime(solicitacao_evolucao=solicitacao_evolucao)
+    runtime = NyxalRuntime(
+        solicitacao_evolucao=solicitacao_evolucao,
+        modo_residente=True,
+    )
     auto_evolucao = AutoEvolucaoGovernadaNixOS(BASE_DIR)
     auto_experimento = AutoExperimentoIsoladoAE2(
         runtime,
