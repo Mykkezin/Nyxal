@@ -104,6 +104,26 @@ class AutoEvolucaoGovernadaNixOS:
 
         return dados if isinstance(dados, dict) else None
 
+    def _salvar_oportunidade(
+        self,
+        oportunidade: dict[str, Any],
+    ) -> None:
+        oportunidade_id = oportunidade.get("oportunidade_id")
+        if not isinstance(oportunidade_id, str) or not oportunidade_id:
+            raise ValueError("oportunidade_id_invalido")
+
+        caminho = self._arquivo(oportunidade_id)
+        temporario = caminho.with_name(caminho.name + ".tmp")
+        temporario.write_text(
+            json.dumps(
+                oportunidade,
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        os.replace(temporario, caminho)
+
     def avaliar_ciclo(
         self,
         ciclo: dict[str, Any],
@@ -216,14 +236,7 @@ class AutoEvolucaoGovernadaNixOS:
             "arquitetura_modificada": False,
         }
 
-        caminho.write_text(
-            json.dumps(
-                oportunidade,
-                ensure_ascii=False,
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
+        self._salvar_oportunidade(oportunidade)
 
         arquivos = sorted(
             self.diretorio_oportunidades.glob("oportunidade-*.json")
