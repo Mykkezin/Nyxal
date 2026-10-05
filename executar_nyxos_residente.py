@@ -23,6 +23,7 @@ from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
+from nixal_gateway_atuacao import GatewayAtuacaoNixOS
 from nixal_plano_central_controle import PlanoCentralControleNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 
@@ -103,6 +104,10 @@ def main() -> int:
     plano_central_controle = PlanoCentralControleNixOS(
         arquivo=BASE_DIR / "plano_central_controle_nyxos.json",
     )
+    gateway_atuacao = GatewayAtuacaoNixOS(
+        arquivo=BASE_DIR / "gateway_atuacao_nyxos.json",
+        execucao_fisica_habilitada=False,
+    )
     residente = CicloResidenteNixOS(
         runtime,
         runtime.persistencia_operacional,
@@ -114,6 +119,7 @@ def main() -> int:
         fisiologia_operacional,
         presenca_maquina,
         plano_central_controle,
+        gateway_atuacao,
         coletor_dataset_dual_ae5=coletor_dataset_dual_ae5,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
@@ -151,6 +157,8 @@ def main() -> int:
     print("AE4 — CICLO DE EVOLUÇÃO: " + ("HABILITADO" if contexto["ciclo_evolucao_ae4_habilitado"] else "DESABILITADO"))
     print("AE5 — DESCOBERTA CONTÍNUA: " + ("HABILITADA" if contexto["descoberta_continua_ae5_habilitada"] else "DESABILITADA"))
     print("AE5 — DATASETS DUAIS: " + ("HABILITADOS" if contexto["coleta_dataset_dual_ae5_habilitada"] else "DESABILITADOS"))
+    print("M5.15 — GATEWAY DE ATUAÇÃO: " + ("HABILITADO" if contexto["gateway_atuacao_habilitado"] else "DESABILITADO"))
+    print("M5.15 — EXECUÇÃO FÍSICA: " + ("HABILITADA" if contexto["execucao_fisica_habilitada"] else "DESABILITADA"))
     print("=" * 64)
 
     return 0 if all(
