@@ -140,6 +140,8 @@ class NyxalRuntime:
         solicitacao_evolucao: SolicitacaoEvolucaoNixal | None = None,
         persistencia_operacional: PersistenciaOperacionalNixOS | None = None,
         delta_nyxos: RegistroDeltaNixOS | None = None,
+        *,
+        modo_residente: bool = False,
     ) -> None:
         if perceber_corpo is None:
             perceber_corpo = corpo_nixal.perceber_corpo
@@ -222,7 +224,13 @@ class NyxalRuntime:
             else NecessidadesInternasNixal()
         )
         self.arquivo_estado = Path(arquivo_estado)
+        self.modo_residente = bool(modo_residente)
         self.arquivo_log = Path(arquivo_log)
+        if (
+            self.modo_residente
+            and self.arquivo_log == ARQUIVO_LOG_RUNTIME
+        ):
+            self.arquivo_log = BASE_DIR / "log_nyxal_residente.json"
 
         self.arquivo_memoria_investigacao = (
             Path(arquivo_memoria_investigacao)
@@ -777,9 +785,26 @@ class NyxalRuntime:
                 {"quantidade": len(lista_necessidades)},
             )
 
-            investigacao_resultado = self._executar_investigacao(
-                prioridade.get("selecionada")
-            )
+            if self.modo_residente:
+                investigacao_resultado = {
+                    "sucesso": True,
+                    "estado": "investigacao_profunda_adiada_no_perfil_residente",
+                    "origem": self.FONTE,
+                    "valor": {
+                        "executada": False,
+                        "motivo": (
+                            "A investigação profunda não é executada "
+                            "em cada ciclo residente de alta frequência."
+                        ),
+                        "proxima_acao": "investigacao_sob_demanda",
+                        "conhecimento_permanente": False,
+                        "arquitetura_modificada": False,
+                    },
+                }
+            else:
+                investigacao_resultado = self._executar_investigacao(
+                    prioridade.get("selecionada")
+                )
 
             etapas.append(
                 {
