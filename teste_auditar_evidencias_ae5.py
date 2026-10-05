@@ -26,6 +26,12 @@ def main() -> None:
         assert resultado_vazio["evidencia_operacional_encontrada"] is False
         assert resultado_vazio["somente_leitura"] is True
 
+        # A API também aceita o caminho de um arquivo dentro do repositório,
+        # como ocorre no valor padrão do CLI.
+        resultado_vazio_arquivo = auditar(repo / "auditar_evidencias_ae5.py")
+        assert resultado_vazio_arquivo["evidencia_operacional_encontrada"] is False
+        assert resultado_vazio_arquivo["somente_leitura"] is True
+
         # Cobre o contrato da AE4 que também persiste o vínculo
         # oportunidade em "vinculos", mesmo quando o resumo AE1 não
         # expõe o identificador diretamente.
