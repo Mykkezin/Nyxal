@@ -124,6 +124,53 @@ def main() -> int:
         assert acao["acao"] == "observar_sem_atuar"
         assert acao["executada"] is False
 
+    feedback = llc.avaliar_resultado(
+        decisao=falha,
+        acao_resultado={
+            "sucesso": True,
+            "acao": "observar_sem_atuar",
+            "executada": False,
+        },
+        resultado_observado={
+            "sucesso": True,
+            "estado": "resultado_observado",
+        },
+    )
+    assert feedback["ganho_perda_operacional"] == 0.0
+    assert feedback["classificacao"] == "neutro_operacional"
+    assert feedback["causalidade_ambiental_comprovada"] is False
+
+    transicao = llc.fechar_transicao(
+        aprendizado_anterior=aprendizado(
+            "registrar_estado_corpo",
+            "falha",
+        ),
+        decisao=falha,
+        acao_resultado={
+            "sucesso": True,
+            "acao": "observar_sem_atuar",
+            "executada": False,
+        },
+        resultado_observado={
+            "sucesso": True,
+            "estado": "resultado_observado",
+        },
+        avaliacao={
+            "avaliacao": "sucesso",
+            "llc2": feedback,
+        },
+        aprendizado_novo={
+            "sucesso": True,
+            "valor": {
+                "id": "aprendizado-novo",
+            },
+        },
+    )
+    assert transicao["ciclo_fechado"] is True
+    assert transicao["aprendizado_anterior_id"] == "aprendizado-teste"
+    assert transicao["aprendizado_novo_id"] == "aprendizado-novo"
+    assert transicao["feedback_operacional"]["ganho_perda_operacional"] == 0.0
+
     contexto = llc.contexto()
     assert contexto["influencia_decisoria"] is True
     assert contexto["causalidade_ambiental"] is False
