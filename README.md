@@ -10,34 +10,6 @@ The project currently runs as a Linux-first software habitat and is gradually ev
 
 ---
 
-## What is Nyxal?
-
-Nyxal is the AI.
-
-**NyxOS** is the system/habitat that gives the AI a persistent operational environment.
-
-**Delta (Δ)** is the project language for controlled change, evolution, evidence, and versioned transitions.
-
-The long-term architectural direction is:
-
-```
-HARDWARE
-   ↓
-LINUX
-   ↓
-NYXOS
-   ↓
-Runtime / Corpo / Memória / Conhecimento
-/ Ferramentas / Projetos / Processos / Experimentos
-/ Interface / Delta
-   ↓
-NYXAL
-```
-
-The first NyxOS version does **not** require a custom kernel. The immediate goal is to build a reliable habitat over Linux before moving closer to native operating-system territory.
-
----
-
 ## Current state
 
 ### Stable foundations
@@ -49,31 +21,46 @@ The first NyxOS version does **not** require a custom kernel. The immediate goal
 
 ### NyxOS Habitat
 
-- **M5.1** — real host observability
-- **M5.2** — process entities
-- **M5.3** — operational persistence
-- **M5.4** — Delta events
-- **M5.5** — state-driven interface
-- **M5.6** — habitat resources
-- **M5.7** — resident operational cycle
+- **M5.1 → M5.15** — habitat, persistence, Delta, control, thermal/physiology and machine presence
 
 ### Governed auto-evolution
 
-- **AE1** — discovery and opportunity registration
-- **AE2** — isolated experiment under policy
-- **AE3** — comparison and learning interpretation
-- **AE4** — resident evolution-cycle orchestration
-- **AE5** — continuous discovery with governed evidence accumulation
+- **AE1** — discovery
+- **AE2** — isolated experiment
+- **AE3** — comparison and learning
+- **AE4** — resident orchestration
+- **AE5** — continuous economic/evidence discovery
 
-The current development line is validating AE5 evidence before defining the next evolution stage.
+### Learning Loop Causal
+
+- **LLC.1** — deterministic influence of prior learning on decision
+- **LLC.2** — operational feedback and transition closure
+- **LLC.3** — controlled causal-evidence protocol with external metric, control group, counterfactual contrast and repeated observations
+
+LLC.3 does not infer causality from simple pre/post measurements and does not authorize architectural changes.
+
+---
+
+## Architecture
+
+```
+HARDWARE
+   ↓
+LINUX
+   ↓
+NYXOS
+   ↓
+Runtime / Corpo / Memória / Conhecimento / Ferramentas
+/ Processos / Experimentos / Interface / Delta
+   ↓
+NYXAL
+```
+
+The current NyxOS line remains a Linux-first habitat. A custom kernel is a later direction, not a shortcut around the current architecture and governance work.
 
 ---
 
 ## Evolution pipeline
-
-Nyxal does not jump directly from an idea to a stable system change.
-
-The intended path is:
 
 ```
 limitation
@@ -94,22 +81,16 @@ comparison
    ↓
 learning
    ↓
-candidate
-   ↓
-proposal
+candidate / proposal
    ↓
 explicit authorization
    ↓
 prepared integration
    ↓
-external review / merge
+review / merge
    ↓
-stable registration
-   ↓
-rollback registrable
+stable
 ```
-
-This separation is intentional.
 
 **Discovery is not authorization.**
 
@@ -119,212 +100,29 @@ This separation is intentional.
 
 ---
 
-## Architecture
+## Development line
 
-Nyxal is being built as a set of explicit layers rather than one giant autonomous process.
+**M5 checkpoint:** validated at `3f9d6a572accce504de5f482a849e8b0707f289b`.
 
-```
-                    ┌─────────────────────┐
-                    │       NYXAL         │
-                    │ conversation / AI   │
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │       NYXOS         │
-                    │ habitat / runtime   │
-                    └──────────┬──────────┘
-                               │
-        ┌──────────────────────┼──────────────────────┐
-        │                      │                      │
-        ▼                      ▼                      ▼
-   Observation             Persistence             Delta
-        │                      │                      │
-        └──────────────────────┼──────────────────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │ Resident Cycle      │
-                    └──────────┬──────────┘
-                               │
-             ┌─────────────────┼─────────────────┐
-             ▼                 ▼                 ▼
-           AE1               AE2               AE3
-        discovery         experiment       comparison /
-                                             learning
-             └─────────────────┼─────────────────┘
-                               ▼
-                              AE4
-                    resident orchestration
-                               │
-                               ▼
-                              AE5
-                    continuous evidence
-                               │
-                               ▼
-                       Governance / N9
-                               │
-                               ▼
-                     explicit authorization
-                               │
-                               ▼
-                           stable
-```
+**LLC branch:** `feat/llc-learning-loop`.
+
+**LLC.1:** decision influence validated by comparing the choice without learning against the choice with structured learning.
+
+**LLC.2:** operational feedback validated by linking decision -> action -> result -> gain/loss -> new learning.
+
+**LLC.3:** controlled causal-evidence protocol validated. It requires a declared external metric, a valid control, a counterfactual contrast and at least three repeated contrasts before marking controlled causal evidence.
+
+**Stable:** `main`. No integration into `main` is authorized.
 
 ---
-
-## Design principles
-
-### Governed autonomy
-
-Nyxal can observe, evaluate, experiment, learn, and prepare proposals.
-
-It does **not** receive implicit permission to alter stable architecture.
-
-### Reversibility
-
-Important transitions should be inspectable, versioned, and recoverable.
-
-### Isolation
-
-Experimental work stays outside stable until it passes the required gates.
-
-### Explicit authority
-
-Authorization remains a separate state from discovery, experimentation, comparison, and learning.
-
-### Small reversible changes
-
-The development protocol favors focused changes with tests and Git checkpoints rather than uncontrolled self-modification.
-
----
-
-## NyxOS direction
-
-The project is deliberately following a staged path:
-
-```
-Linux-first habitat
-      ↓
-operational persistence
-      ↓
-resident processes
-      ↓
-governed evolution
-      ↓
-deeper NyxOS system layer
-      ↓
-Nyx Runtime
-      ↓
-future native-system experiments
-```
-
-The custom kernel direction is a **later** milestone, not a shortcut around the current habitat and governance work.
-
----
-
-## Repository structure
-
-Some of the most important pieces currently include:
-
-```
-nixal_runtime.py
-nixal_ciclo_residente.py
-nixal_auto_evolucao.py
-nixal_auto_experimento_ae2.py
-nixal_auto_avaliacao_ae3.py
-nixal_ciclo_evolucao_ae4.py
-
-nixal_habitat.py
-nixal_processos_habitat.py
-nixal_persistencia_operacional.py
-nixal_delta.py
-nixal_recursos_habitat.py
-
-nixal_evolucao_controlada.py
-nixal_evolucao_remota.py
-nixal_solicitacao_evolucao.py
-nixal_governanca_evolucao.py
-nixal_laboratorio_remoto.py
-
-interface/
-experimentos/
-.github/workflows/
-```
-
----
-
-## Development protocol
-
-Nyxal follows a supervised, versioned workflow:
-
-```
-plan
- ↓
-record
- ↓
-apply
- ↓
-test
- ↓
-checkpoint
- ↓
-sync
- ↓
-review
- ↓
-stable integration
-```
-
-The stable branch is kept separate from active experimental development.
-
----
-
-## Current development line
-
-**M5 checkpoint:** fechado e validado no commit `3f9d6a572accce504de5f482a849e8b0707f289b`.
-
-**LLC:** iniciado em branch separada `feat/llc-learning-loop`.
-
-**LLC.1:** influencia decisoria deterministica validada — compara a decisão contrafactual sem aprendizado com a decisão usando aprendizado estruturado e registra quando a escolha muda.
-
-**LLC.2:** próximo refinamento supervisionado — ligar decisão influenciada -> ação -> resultado -> ganho/perda -> novo aprendizado.
-
-**Stable branch:** `main`
-
-**Current integration state:** desenvolvimento em branch separada; nenhuma integração em `main` autorizada.
 
 ## Vision
 
 Nyxal is not being built as a chatbot with a few extra tools.
 
-The goal is a **living software system** with:
-
-- an operational habitat;
-- persistent state;
-- conversation and voice;
-- observable processes and resources;
-- explicit change semantics through Delta;
-- controlled experimentation;
-- reusable learning;
-- governed evolution;
-- and, much later, a native-system direction.
-
-The core idea is simple:
+The goal is a **living software system** with an operational habitat, persistent state, observable processes and resources, controlled experimentation, reusable learning and governed evolution.
 
 > **More autonomy, without less accountability.**
-
----
-
-## Project identity
-
-**Nyxal** — the intelligence.
-
-**NyxOS** — the habitat.
-
-**Delta (Δ)** — controlled change.
-
-**N9** — governance and evolution gates.
-
-**AE1 → AE5** — the current governed auto-evolution pipeline.
 
 ---
 
@@ -332,5 +130,4 @@ The core idea is simple:
 
 This is an active experimental engineering project.
 
-The repository's development line intentionally contains work that is not yet promoted to `main`.
-
+The development line intentionally contains work that is not yet promoted to `main`.
