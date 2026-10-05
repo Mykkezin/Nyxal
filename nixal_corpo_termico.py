@@ -12,7 +12,7 @@ import corpo_nixal
 
 
 BASE_DIR = Path(__file__).resolve().parent
-HISTERese_C = 3.0
+HISTERESE_C = 3.0
 LIMIAR_QUENTE_C = 65.0
 LIMIAR_MUITO_QUENTE_C = 80.0
 
@@ -69,9 +69,9 @@ def classificar_estado_histerese(
     valor = float(temperatura_c)
     anterior = estado_anterior
 
-    if anterior == "muito_quente" and valor >= LIMIAR_MUITO_QUENTE_C - HISTERese_C:
+    if anterior == "muito_quente" and valor >= LIMIAR_MUITO_QUENTE_C - HISTERESE_C:
         return "muito_quente"
-    if anterior == "quente" and valor >= LIMIAR_QUENTE_C - HISTERese_C:
+    if anterior == "quente" and valor >= LIMIAR_QUENTE_C - HISTERESE_C:
         return "quente"
 
     if valor >= LIMIAR_MUITO_QUENTE_C:
