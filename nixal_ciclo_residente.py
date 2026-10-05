@@ -330,8 +330,15 @@ class CicloResidenteNixOS:
                         auto_avaliacao_resultado
                     )
 
-            self._ultimo_resultado = copy.deepcopy(resultado)
-            resultados.append(copy.deepcopy(resultado))
+            # O modo residente contínuo não pode acumular resultados em RAM.
+            # O executor nunca retorna enquanto max_ciclos=None; manter somente
+            # o último ciclo preserva observabilidade sem crescimento ilimitado.
+            self._ultimo_resultado = resultado
+
+            if max_ciclos is None:
+                resultados.clear()
+
+            resultados.append(self._ultimo_resultado)
 
             self._persistir_estado(
                 resultado.get("estado", "ciclo_processado"),
