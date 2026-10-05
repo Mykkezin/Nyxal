@@ -67,6 +67,18 @@ def main() -> None:
 
     testar_historico_residente_limitado()
 
+    launcher = (BASE_DIR / "executar_nyxos_residente.py").read_text(
+        encoding="utf-8"
+    )
+    assert "modo_residente=True" in launcher
+
+    runtime = (BASE_DIR / "nixal_runtime.py").read_text(
+        encoding="utf-8"
+    )
+    assert "modo_residente: bool = False" in runtime
+    assert "investigacao_profunda_adiada_no_perfil_residente" in runtime
+    assert "log_nyxal_residente.json" in runtime
+
     print("TESTE_M5_9_RESIDENCIA_LINUX_OK")
     print("TESTE_MEMORIA_RESIDENTE_LIMITADA_OK")
     print("PYTHON: .venv/bin/python")
