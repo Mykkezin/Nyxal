@@ -425,6 +425,12 @@
               </div>
             </div>
           </div>
+          <div class="mt-2 pt-2 border-t border-slate-800">
+            <div class="flex items-center justify-between text-[9px] font-rajdhani text-slate-500 uppercase">
+              <span>RECURSOS DO HABITAT</span>
+              <span id="recursosHabitat" class="text-hud-cyan font-mono">--</span>
+            </div>
+          </div>
         </div>
         <div class="w-full bg-slate-950/80 rounded-lg p-2 border border-slate-800 mt-2">
           <div class="flex justify-between items-center mb-1">
@@ -1610,6 +1616,23 @@
                     + '</div>';
                 })
                 .join('');
+            }
+          }
+
+          const recursosHabitat = data.recursos_habitat || {};
+          const quantidadesRecursos = recursosHabitat.quantidades || {};
+          const recursosHabitatText =
+            document.getElementById('recursosHabitat');
+
+          if (recursosHabitatText) {
+            if (recursosHabitat.sucesso === true) {
+              recursosHabitatText.innerText =
+                String(quantidadesRecursos.ferramentas || 0)
+                + ' FERRAMENTAS • '
+                + String(quantidadesRecursos.modulos || 0)
+                + ' MÓDULOS';
+            } else {
+              recursosHabitatText.innerText = 'INDISPONÍVEL';
             }
           }
 
