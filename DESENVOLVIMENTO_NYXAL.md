@@ -56,6 +56,7 @@ Estado atual:
 - M5.7 — ciclo operacional residente: implementado e validado pelo CI.
 - AE1 — descoberta de auto-evolução governada: implementada e validada pelo CI.
 - AE2 — experimento isolado automático sob política: implementado e validado pelo CI.
+- AE3 — comparação e aprendizagem automática: implementada e validada pelo CI.
 
 ## Próximo objetivo
 
@@ -79,6 +80,9 @@ M5.7 conclui o Habitat NyxOS desta fase. AE1 e AE2 já estão integradas no bran
 AE1 descobre e registra oportunidades; AE2, quando explicitamente habilitada, processa no máximo uma
 solicitação formal pronta por ciclo através do caminho remoto N9.
 
-O próximo estágio é AE3 — comparação e aprendizagem automática, mantendo autorização explícita,
-isolamento de candidatos e reversibilidade como barreiras invariantes.
+AE3 está implementada para interpretar resultados do AE2/N9, validar comparação e aprendizado
+e classificar a evidência sem conceder autorização.
+
+O próximo estágio é AE4 — ciclo residente de evolução, mantendo autorização explícita, isolamento
+de candidatos e reversibilidade como barreiras invariantes.
 
