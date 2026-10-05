@@ -176,6 +176,23 @@ O critério de M5.8, portanto, está satisfeito neste checkpoint **dentro do esc
 
 A proposta permanece não autoritativa. `planta_nixal/planta.json`, Runtime, ciclo residente e `main` não foram alterados por este marco. Nenhuma promoção de arquitetura ou integração foi executada.
 
+## Ordem atual de engenharia
+
+O fechamento do M5.8 mantém o mapa arquitetural não autoritativo. O próximo marco iniciado é o M5.9 de residência Linux.
+
+Sequência supervisionada:
+
+1. M5.8 — dependências arquiteturais observadas;
+2. M5.9 — residência Linux via systemd;
+3. M5.10 — gateway de atuação do host;
+4. M5.11 — controle de processos e aplicativos;
+5. M5.12 — corpo térmico e ventilação;
+6. M5.13 — fisiologia operacional, heartbeat e febre como estados derivados;
+7. M5.14 — plano central de controle;
+8. M5.15 — presença de máquina.
+
+AE1→AE5 permanece em paralelo como camada de evolução governada. Nenhuma AE6 é criada automaticamente.
+
 ## Próximo objetivo
 
 Avançar o M5/Habitat sem criar um kernel próprio.
