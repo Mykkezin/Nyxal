@@ -227,12 +227,35 @@ class AprendizadoPersistenteNixal:
         conhecimento = ultimo.get("conhecimento", {})
         cristal = ultimo.get("cristal", {})
 
+        experiencia_anterior = ultimo.get("experiencia")
+        avaliacao_anterior = ultimo.get("avaliacao")
+
         return {
             "disponivel": True,
             "aprendizado_id": ultimo.get("id"),
             "ciclo_origem": ultimo.get("ciclo_origem"),
             "conhecimento": copy.deepcopy(conhecimento),
             "cristal": copy.deepcopy(cristal),
+            "experiencia_anterior": (
+                copy.deepcopy(experiencia_anterior)
+                if isinstance(experiencia_anterior, dict)
+                else {}
+            ),
+            "avaliacao_anterior": (
+                copy.deepcopy(avaliacao_anterior)
+                if isinstance(avaliacao_anterior, dict)
+                else {}
+            ),
+            "acao_anterior": (
+                experiencia_anterior.get("acao")
+                if isinstance(experiencia_anterior, dict)
+                else None
+            ),
+            "resultado_anterior": (
+                experiencia_anterior.get("resultado")
+                if isinstance(experiencia_anterior, dict)
+                else None
+            ),
             "aplicado_no_ciclo_atual": False,
             "conhecimento_permanente": False,
             "arquitetura_modificada": False,

@@ -85,6 +85,7 @@ from nixal_evolucao_remota import CicloEvolucaoRemotaNixal
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
+from nixal_learning_loop_causal import LearningLoopCausalNixal
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -121,6 +122,7 @@ class NyxalRuntime:
 
     ACOES_AUTORIZADAS = {
         "registrar_estado_corpo",
+        "observar_sem_atuar",
     }
 
     def __init__(
@@ -142,6 +144,7 @@ class NyxalRuntime:
         delta_nyxos: RegistroDeltaNixOS | None = None,
         *,
         modo_residente: bool = False,
+        learning_loop_causal: LearningLoopCausalNixal | None = None,
     ) -> None:
         if perceber_corpo is None:
             perceber_corpo = corpo_nixal.perceber_corpo
@@ -210,6 +213,15 @@ class NyxalRuntime:
             raise TypeError(
                 "solicitacao_evolucao deve ser uma instância de "
                 "SolicitacaoEvolucaoNixal"
+            )
+
+        if learning_loop_causal is not None and not isinstance(
+            learning_loop_causal,
+            LearningLoopCausalNixal,
+        ):
+            raise TypeError(
+                "learning_loop_causal deve ser uma instância de "
+                "LearningLoopCausalNixal"
             )
 
         self.perceber_corpo = perceber_corpo
@@ -297,6 +309,8 @@ class NyxalRuntime:
                 self.arquivo_estado.parent / "eventos_delta_nyxos.json"
             )
         )
+
+        self.learning_loop_causal = learning_loop_causal
 
         self.formulacao_investigacao = (
             FormulacaoInvestigacaoNixal(
@@ -1782,6 +1796,13 @@ class NyxalRuntime:
             }
         )
 
+        if self.learning_loop_causal is not None:
+            return self.learning_loop_causal.selecionar(
+                estado_corpo=estado_corpo,
+                prioridades=prioridades,
+                aprendizado_anterior=aprendizado_anterior,
+            )
+
         return {
             "sucesso": True,
             "tipo": "acao_controlada",
@@ -1824,6 +1845,20 @@ class NyxalRuntime:
                 "estado": "estado_corpo_persistido",
                 "acao": acao,
                 "arquivo": str(caminho),
+                "conhecimento_permanente": False,
+                "arquitetura_modificada": False,
+            }
+
+        if acao == "observar_sem_atuar":
+            return {
+                "sucesso": True,
+                "estado": "observacao_sem_atuacao",
+                "acao": acao,
+                "executada": False,
+                "motivo": (
+                    "A politica LLC selecionou observacao sem atuacao "
+                    "com base em evidencia de aprendizado."
+                ),
                 "conhecimento_permanente": False,
                 "arquitetura_modificada": False,
             }
