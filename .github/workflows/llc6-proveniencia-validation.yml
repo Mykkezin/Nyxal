@@ -1,0 +1,35 @@
+name: Nyxal LLC.6 — proveniencia da evidencia
+
+on:
+  push:
+    branches:
+      - feat/llc-evidence-provenance
+  pull_request:
+    branches:
+      - feat/llc-learning-loop
+      - main
+
+jobs:
+  llc6:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compilar LLC.4, LLC.5 e LLC.6
+        run: |
+          python -m py_compile nixal_evidencia_ambiental_llc.py
+          python -m py_compile nixal_evidencia_longitudinal_llc.py
+          python -m py_compile nixal_proveniencia_evidencia_llc.py
+          python -m py_compile teste_llc4_evidencia_ambiental.py
+          python -m py_compile teste_llc5_evidencia_longitudinal.py
+          python -m py_compile teste_llc6_proveniencia_evidencia.py
+      - name: Testar LLC.4
+        run: python teste_llc4_evidencia_ambiental.py
+      - name: Testar LLC.5
+        run: python teste_llc5_evidencia_longitudinal.py
+      - name: Testar LLC.6
+        run: python teste_llc6_proveniencia_evidencia.py
