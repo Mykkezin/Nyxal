@@ -46,10 +46,10 @@ class CicloResidenteNixOS:
         auto_avaliacao: AutoAvaliacaoAE3 | None = None,
         ciclo_evolucao_ae4: CicloEvolucaoResidenteAE4 | None = None,
         descoberta_continua_ae5: DescobertaContinuaGovernadaAE5 | None = None,
-        coletor_dataset_dual_ae5: ColetorDatasetDualAE5 | None = None,
         fisiologia_operacional: FisiologiaOperacionalNixOS | None = None,
         presenca_maquina: PresencaMaquinaNixOS | None = None,
         *,
+        coletor_dataset_dual_ae5: ColetorDatasetDualAE5 | None = None,
         intervalo_segundos: float = 5.0,
         parar_em_erro: bool = True,
     ) -> None:
