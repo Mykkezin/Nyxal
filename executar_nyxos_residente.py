@@ -4,7 +4,8 @@ NYXOS — LAUNCHER DO CICLO OPERACIONAL RESIDENTE M5.7
 
 Uso explícito pelo operador local. A descoberta AE1 permanece separada
 da execução experimental AE2, que só é ativada com flag explícita.
-Nenhuma camada concede autorização de integração.
+AE4 orquestra AE1→AE2→AE3 sem conceder autorização de integração.
+Nenhuma camada concede autoridade de integração.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from nixal_ciclo_residente import CicloResidenteNixOS
 from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
 from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
+from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -61,12 +63,19 @@ def main() -> int:
         habilitada=args.habilitar_auto_experimento,
     )
     auto_avaliacao = AutoAvaliacaoAE3()
+    ciclo_evolucao_ae4 = CicloEvolucaoResidenteAE4(
+        auto_evolucao,
+        auto_experimento,
+        auto_avaliacao,
+        repositorio=BASE_DIR,
+    )
     residente = CicloResidenteNixOS(
         runtime,
         runtime.persistencia_operacional,
         auto_evolucao,
         auto_experimento,
         auto_avaliacao,
+        ciclo_evolucao_ae4,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
@@ -100,6 +109,7 @@ def main() -> int:
         )
     )
     print("AE3 — AVALIAÇÃO: HABILITADA")
+    print("AE4 — CICLO DE EVOLUÇÃO: " + ("HABILITADO" if contexto["ciclo_evolucao_ae4_habilitado"] else "DESABILITADO"))
     print("=" * 64)
 
     return 0 if all(
