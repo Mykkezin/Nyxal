@@ -10,6 +10,8 @@ import ast
 from pathlib import Path
 
 from nixal_ciclo_residente import CicloResidenteNixOS
+from nixal_ciclo_vida_hipotese import CicloVidaHipoteseNixal
+from nixal_runtime import NyxalRuntime
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -89,6 +91,18 @@ def main() -> None:
         "NyxalRuntime" in texto_launcher
         and "CicloResidenteNixOS" in texto_launcher,
         "launcher conecta o Runtime ao ciclo residente",
+    )
+
+    ciclo_hipotese = CicloVidaHipoteseNixal().iniciar({
+        "hipotese": "Hipótese de regressão do ciclo residente.",
+        "estado": "provisoria",
+    })["valor"]
+    runtime_regressao = object.__new__(NyxalRuntime)
+    capturada = runtime_regressao._capturar_hipotese_provisoria(ciclo_hipotese)
+    verificar(
+        capturada.get("estado_atual") == "provisoria"
+        and capturada.get("conhecimento_permanente") is False,
+        "Runtime aceita ciclo provisório produzido pelo contrato real da hipótese",
     )
 
     verificar(
