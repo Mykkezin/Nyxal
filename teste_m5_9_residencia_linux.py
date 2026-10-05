@@ -32,11 +32,17 @@ def main() -> None:
         assert "NoNewPrivileges=true" in unidade
         assert "PrivateTmp=true" in unidade
         assert "UMask=0077" in unidade
+        assert "%h/Nyxal/.venv/bin/python" in unidade
+        assert "/usr/bin/python3" not in unidade
         assert "--habilitar-auto-experimento" not in unidade
 
-    assert "ExecStart=/usr/bin/python3 %h/Nyxal/nyxal_web_api.py" in api
     assert (
-        "ExecStart=/usr/bin/python3 %h/Nyxal/executar_nyxos_residente.py --intervalo 5"
+        "ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/nyxal_web_api.py"
+        in api
+    )
+    assert (
+        "ExecStart=%h/Nyxal/.venv/bin/python "
+        "%h/Nyxal/executar_nyxos_residente.py --intervalo 5"
         in residente
     )
 
@@ -45,6 +51,9 @@ def main() -> None:
 
     assert "systemctl --user daemon-reload" in instalador
     assert "systemctl --user enable --now nyxos.target" in instalador
+    assert 'PYTHON_BIN="${NYXAL_DIR}/.venv/bin/python"' in instalador
+    assert '[[ ! -x "${PYTHON_BIN}" ]]' in instalador
+    assert 'import nyxal_web_api; import executar_nyxos_residente' in instalador
     assert "loginctl enable-linger ${USER}" in instalador
     assert "LINGER_STATUS" in instalador
     assert "sudo " not in instalador
@@ -57,6 +66,7 @@ def main() -> None:
     assert "main" not in desinstalador.lower()
 
     print("TESTE_M5_9_RESIDENCIA_LINUX_OK")
+    print("PYTHON: .venv/bin/python")
     print("SERVICOS: 2")
     print("TARGET: nyxos.target")
     print("AE2_AUTOMATICA: DESABILITADA")
