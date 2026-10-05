@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/Nyxal
-ExecStart=/usr/bin/python3 %h/Nyxal/nyxal_web_api.py
+ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/nyxal_web_api.py
 EnvironmentFile=-%h/.config/nyxal/nyxal.env
 Restart=on-failure
 RestartSec=3
