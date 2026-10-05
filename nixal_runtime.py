@@ -1071,17 +1071,18 @@ class NyxalRuntime:
             )
 
             try:
+                ultimo_ciclo_anterior = persistencia_anterior.get(
+                    "ultimo_ciclo"
+                )
+                estado_anterior_delta = (
+                    ultimo_ciclo_anterior.get("estado")
+                    if isinstance(ultimo_ciclo_anterior, dict)
+                    else "inicial"
+                ) or "inicial"
+
                 delta_evento = self.delta_nyxos.criar_evento(
                     tipo="ciclo",
-                    estado_anterior=(
-                        persistencia_anterior.get("ultimo_ciclo", {})
-                        .get("estado")
-                        if isinstance(
-                            persistencia_anterior.get("ultimo_ciclo"),
-                            dict,
-                        )
-                        else "inicial"
-                    ) or "inicial",
+                    estado_anterior=estado_anterior_delta,
                     estado_novo=ciclo.get("estado"),
                     causa="ciclo_runtime_concluido",
                     evidencias=[
