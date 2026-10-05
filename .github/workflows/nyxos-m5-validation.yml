@@ -38,3 +38,5 @@ jobs:
         run: python teste_delta_m5_4.py
       - name: Testar Interface M5.5
         run: python teste_interface_m5_5.py
+      - name: Testar Recursos do Habitat M5.6
+        run: python teste_recursos_habitat_m5_6.py
