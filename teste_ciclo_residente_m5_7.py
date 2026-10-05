@@ -191,6 +191,65 @@ def main() -> None:
         "persistência recebe estados da residência",
     )
 
+    runtime_ae5 = RuntimeFalso()
+    persistencia_ae5 = PersistenciaFalsa()
+
+    class EvolucaoFalsa:
+        habilitada = True
+        FONTE = "ae4_falsa"
+
+        def processar_ciclo(self, ciclo: dict) -> dict:
+            return {
+                "sucesso": True,
+                "estado": "ae4_ciclo_observado",
+                "ciclo_id": ciclo["ciclo_id"],
+                "ae1": {"valor": {
+                    "oportunidade_id": "op-falsa",
+                    "limitacao": "limitação de teste",
+                    "hipotese": "hipótese de teste",
+                }},
+            }
+
+    class DescobertaFalsa:
+        habilitada = True
+        FONTE = "ae5_falsa"
+
+        def __init__(self):
+            self.argumento = None
+
+        def processar(self, resultado: dict) -> dict:
+            self.argumento = resultado
+            return {
+                "sucesso": True,
+                "estado": "sinal_em_observacao",
+                "autorizacao_explicita": False,
+                "integracao_executada": False,
+                "stable_modificada": False,
+                "arquitetura_modificada": False,
+                "conhecimento_permanente": False,
+            }
+
+    ae4_falsa = EvolucaoFalsa()
+    ae5_falsa = DescobertaFalsa()
+    residente_ae5 = CicloResidenteNixOS(
+        runtime_ae5,
+        persistencia_ae5,
+        ciclo_evolucao_ae4=ae4_falsa,
+        descoberta_continua_ae5=ae5_falsa,
+        intervalo_segundos=0,
+    )
+    resultados_ae5 = residente_ae5.executar(max_ciclos=1)
+
+    verificar(
+        len(resultados_ae5) == 1
+        and ae5_falsa.argumento.get("estado") == "ae4_ciclo_observado",
+        "AE5 recebe o resultado produzido pela AE4 no ciclo residente",
+    )
+    verificar(
+        resultados_ae5[0].get("auto_descoberta_ae5", {}).get("sucesso") is True,
+        "resultado AE5 é exposto no resultado do ciclo",
+    )
+
     print()
     print("=" * 64)
     print("TESTE — CICLO OPERACIONAL RESIDENTE NYXOS M5.7")
