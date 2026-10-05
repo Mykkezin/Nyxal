@@ -38,7 +38,7 @@ Estado: fechado.
 - política separada da decisão semântica.
 
 ### M5.11 — Controle de processos e aplicativos
-Estado: em implementação e validação.
+Estado: fechado.
 - listar processos como já observado pelo habitat;
 - controlar apenas operações explicitamente registradas;
 - iniciar/encerrar processos por capacidade;
@@ -48,7 +48,7 @@ Estado: em implementação e validação.
 - sem transformar texto do Qwen em comando shell.
 
 ### M5.12 — Corpo térmico e ventilação
-Próximo após validação do M5.11.
+Estado: em implementação e validação.
 - consolidar sensores térmicos reais;
 - detectar tendência e estresse térmico;
 - definir estados corporais térmicos;
