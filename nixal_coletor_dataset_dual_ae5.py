@@ -661,7 +661,7 @@ class ColetorDatasetDualAE5:
                     },
                     **self._invariantes(),
                 },
-                fingerprint_payload=cls._sem_volatilidade({
+                fingerprint_payload=self._sem_volatilidade({
                     "schema": "nyxal-kernel-transition-1",
                     "input": transicao_kernel["input"],
                     "output_observado": transicao_kernel["output_observado"],
