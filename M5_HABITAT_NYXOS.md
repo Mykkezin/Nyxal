@@ -104,6 +104,24 @@ A gravação usa substituição atômica. O histórico é limitado a 50 registro
 
 Persistência operacional não significa conhecimento permanente. Conversação, conhecimento candidato, aprendizado, governança de evolução e arquitetura continuam em suas respectivas camadas.
 
+### M5.4 — Eventos Delta de primeira classe
+
+O quarto marco transforma mudanças observáveis em registros Delta persistentes.
+
+```
+ESTADO A
+   ↓
+  Δ
+   ↓
+ESTADO B
+```
+
+O registro contém identidade determinística, tipo, estados anterior/novo, causa, evidências, ciclo e resultado. A trilha é limitada a 200 eventos e usa escrita atômica.
+
+O Runtime registra automaticamente o Delta da conclusão de cada ciclo. A API pública expõe o contexto do último Delta sem transformar a consulta da interface em uma ação de mutação.
+
+Os eventos Delta permanecem descritivos: registrar uma mudança não autoriza integração, não executa código e não modifica a arquitetura.
+
 ### Invariantes
 
 - nenhuma alteração de hardware;
