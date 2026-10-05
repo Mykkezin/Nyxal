@@ -1,0 +1,46 @@
+name: Nyxal LLC — validação completa
+
+on:
+  push:
+    branches:
+      - feat/llc-complete-validation
+  pull_request:
+    branches:
+      - main
+      - feat/llc-learning-loop
+
+jobs:
+  llc-completo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compilar cadeia LLC
+        run: |
+          python -m py_compile nixal_learning_loop_causal.py
+          python -m py_compile nixal_evidencia_ambiental_llc.py
+          python -m py_compile nixal_evidencia_longitudinal_llc.py
+          python -m py_compile nixal_proveniencia_evidencia_llc.py
+          python -m py_compile nixal_replicacao_llc.py
+          python -m py_compile nixal_escopo_llc.py
+          python -m py_compile nixal_aprendizado_llc.py
+          python -m py_compile nixal_fechamento_llc.py
+          python -m py_compile teste_llc_learning_loop.py
+          python -m py_compile teste_llc4_evidencia_ambiental.py
+          python -m py_compile teste_llc5_evidencia_longitudinal.py
+          python -m py_compile teste_llc6_proveniencia_evidencia.py
+          python -m py_compile teste_llc_completo.py
+      - name: Testar LLC.1–LLC.3
+        run: python teste_llc_learning_loop.py
+      - name: Testar LLC.4
+        run: python teste_llc4_evidencia_ambiental.py
+      - name: Testar LLC.5
+        run: python teste_llc5_evidencia_longitudinal.py
+      - name: Testar LLC.6
+        run: python teste_llc6_proveniencia_evidencia.py
+      - name: Testar LLC.7–LLC.10
+        run: python teste_llc_completo.py
