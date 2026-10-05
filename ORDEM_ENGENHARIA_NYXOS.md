@@ -57,7 +57,7 @@ Estado: fechado.
 - começar com modo supervisionado antes de qualquer controle automático contínuo.
 
 ### M5.13 — Fisiologia operacional
-Estado: em implementação e validação.
+Estado: fechado.
 - heartbeat formal do NyxOS;
 - latência e regularidade dos ciclos;
 - estado de presença;
@@ -66,6 +66,7 @@ Estado: em implementação e validação.
 - persistência e Delta dos estados.
 
 ### M5.14 — Plano central de controle
+Estado: em implementação e validação.
 - unificar observação, decisão e atuação;
 - expor uma superfície principal de comandos;
 - preservar a separação entre intenção, capacidade e executor;
