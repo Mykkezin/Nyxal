@@ -9,6 +9,12 @@ from pathlib import Path
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 
 
+def _nova_ae5(temporario: str) -> DescobertaContinuaGovernadaAE5:
+    return DescobertaContinuaGovernadaAE5(
+        repositorio=Path(temporario) / "repo"
+    )
+
+
 def _resultado(ciclo_id: str, sucesso: bool = True, oportunidade_id: str | None = None) -> dict:
     return {
         "sucesso": sucesso,
@@ -34,7 +40,7 @@ def _resultado(ciclo_id: str, sucesso: bool = True, oportunidade_id: str | None 
 
 def testar_maturidade_progressiva() -> None:
     with tempfile.TemporaryDirectory() as temporario:
-        ae5 = DescobertaContinuaGovernadaAE5(repositorio=Path(temporario))
+        ae5 = _nova_ae5(temporario)
 
         primeiro = ae5.processar(_resultado("ciclo-1"))
         segundo = ae5.processar(_resultado("ciclo-2"))
