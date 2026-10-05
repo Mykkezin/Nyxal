@@ -25,6 +25,8 @@ from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
 from nixal_gateway_atuacao import GatewayAtuacaoNixOS
 from nixal_adaptador_host_controlado import AdaptadorHostControladoNixOS
+from nixal_adaptador_sandbox_fisico import AdaptadorSandboxFisicoNixOS
+from nixal_auditoria_atuacao import AuditoriaAtuacaoNixOS
 from nixal_plano_central_controle import PlanoCentralControleNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 
@@ -105,12 +107,18 @@ def main() -> int:
     plano_central_controle = PlanoCentralControleNixOS(
         arquivo=BASE_DIR / "plano_central_controle_nyxos.json",
     )
-    adaptador_host_controlado = AdaptadorHostControladoNixOS(
-        arquivo=BASE_DIR / "adaptador_host_controlado_nyxos.json",
+    auditoria_atuacao = AuditoriaAtuacaoNixOS(
+        arquivo=BASE_DIR / "auditoria_atuacao_nyxos.jsonl",
+    )
+    sandbox_fisico = AdaptadorSandboxFisicoNixOS(
+        diretorio_sandbox=BASE_DIR / "sandbox_nyxos",
+        habilitada=False,
+        auditoria=auditoria_atuacao,
     )
     gateway_atuacao = GatewayAtuacaoNixOS(
         arquivo=BASE_DIR / "gateway_atuacao_nyxos.json",
-        executor=adaptador_host_controlado,
+        executor=sandbox_fisico,
+        auditoria=auditoria_atuacao,
         execucao_fisica_habilitada=False,
     )
     residente = CicloResidenteNixOS(
@@ -165,6 +173,8 @@ def main() -> int:
     print("M5.15 — GATEWAY DE ATUAÇÃO: " + ("HABILITADO" if contexto["gateway_atuacao_habilitado"] else "DESABILITADO"))
     print("M5.15 — EXECUÇÃO FÍSICA: " + ("HABILITADA" if contexto["execucao_fisica_habilitada"] else "DESABILITADA"))
     print("M5.16 — ADAPTADOR HOST: CONTROLADO / SOMENTE LEITURA")
+    print("M5.17 — SANDBOX FÍSICO: DISPONÍVEL / DESABILITADO")
+    print("M5.18 — AUDITORIA DE ATUAÇÃO: HABILITADA")
     print("=" * 64)
 
     return 0 if all(
