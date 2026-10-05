@@ -46,7 +46,7 @@ def main() -> None:
     assert "systemctl --user daemon-reload" in instalador
     assert "systemctl --user enable --now nyxos.target" in instalador
     assert "loginctl enable-linger ${USER}" in instalador
-assert "LINGER_STATUS" in instalador
+    assert "LINGER_STATUS" in instalador
     assert "sudo " not in instalador
     assert "/etc/systemd" not in instalador
     assert "senha" not in instalador.lower()
