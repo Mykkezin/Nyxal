@@ -5,10 +5,23 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NYXAL_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 USER_SYSTEMD_DIR="${HOME}/.config/systemd/user"
 CONFIG_DIR="${HOME}/.config/nyxal"
+PYTHON_BIN="${NYXAL_DIR}/.venv/bin/python"
 
 if [[ "${NYXAL_DIR}" != "${HOME}/Nyxal" ]]; then
     echo "ERRO: esta instalação espera o repositório em ${HOME}/Nyxal."
     echo "Diretório detectado: ${NYXAL_DIR}"
+    exit 1
+fi
+
+if [[ ! -x "${PYTHON_BIN}" ]]; then
+    echo "ERRO: ambiente Python do Nyxal não encontrado em ${PYTHON_BIN}."
+    echo "Crie/ative o ambiente .venv e instale as dependências antes da residência."
+    exit 1
+fi
+
+if ! "${PYTHON_BIN}" -c "import nyxal_web_api; import executar_nyxos_residente" >/dev/null 2>&1; then
+    echo "ERRO: o ambiente .venv não consegue importar a pilha residente do NyxOS."
+    echo "Verifique as dependências Python do projeto antes de instalar os serviços."
     exit 1
 fi
 
@@ -30,6 +43,7 @@ fi
 echo "Serviços NyxOS instalados e iniciados."
 echo "Lingering da conta: ${LINGER_STATUS}"
 echo
+echo "Interpretador residente: ${PYTHON_BIN}"
 echo "Para acompanhar:"
 echo "  systemctl --user status nyxos.target"
 echo "  journalctl --user -u nyxal-api.service -u nyxos-residente.service -f"
