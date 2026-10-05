@@ -98,3 +98,5 @@ jobs:
           name: nyxal-projeto-nivel10
           path: /tmp/nyxal-package/Nyxal-N10-*.zip
           if-no-files-found: error
+      - name: Teste Auto-Evolution AE1
+        run: python teste_auto_evolucao_ae1.py
