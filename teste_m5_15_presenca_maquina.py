@@ -93,6 +93,59 @@ def main() -> None:
         == "retomada_apos_reinicio"
     )
 
+    # Integração com o ciclo residente existente.
+    from nixal_ciclo_residente import CicloResidenteNixOS
+
+    class RuntimeFalso:
+        def executar_ciclo(self) -> dict:
+            return {
+                "sucesso": True,
+                "estado": "ciclo_concluido",
+                "valor": {
+                    "etapas": [
+                        {
+                            "etapa": "percepcao",
+                            "estado": {
+                                "corpo": {
+                                    "temperaturas_gerais": [],
+                                    "gpu": [],
+                                }
+                            },
+                        }
+                    ]
+                },
+            }
+
+    integracao = PresencaMaquinaNixOS(
+        arquivo=pasta / "presenca_residente.json",
+        diretorio_systemd=systemd,
+    )
+    residente = CicloResidenteNixOS(
+        RuntimeFalso(),
+        presenca_maquina=integracao,
+        intervalo_segundos=0,
+    )
+    ciclos = residente.executar(max_ciclos=1)
+    assert len(ciclos) == 1
+    assert "presenca_maquina" in ciclos[0]
+    assert (
+        ciclos[0]["presenca_maquina"]["estado_presenca"]
+        == "heartbeat"
+    )
+    assert integracao.contexto()["estado_presenca"] == "encerrado"
+
+    # O launcher e a API conhecem a nova superfície de presença.
+    launcher = Path(
+        "executar_nyxos_residente.py"
+    ).read_text(encoding="utf-8")
+    assert "PresencaMaquinaNixOS" in launcher
+
+    api = Path(
+        "nyxal_web_api.py"
+    ).read_text(encoding="utf-8")
+    assert "PRESENCA_MAQUINA" in api
+    assert '"presenca_maquina"' in api
+
     # O estado persistido é um objeto único, sem histórico ilimitado.
     dados = json.loads(
         arquivo.read_text(encoding="utf-8")
