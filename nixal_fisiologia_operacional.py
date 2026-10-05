@@ -54,6 +54,7 @@ class FisiologiaOperacionalNixOS:
         self._estado_fisiologico = "inicializando"
         self._amostras_muito_quente = 0
         self._amostras_recuperacao = 0
+        self._reconstruir_estado_persistido()
 
     def _carregar_historico(self) -> list[dict[str, Any]]:
         if not self.arquivo.is_file():
@@ -111,6 +112,44 @@ class FisiologiaOperacionalNixOS:
             temporario,
             self.arquivo,
         )
+
+    def _reconstruir_estado_persistido(
+        self,
+    ) -> None:
+        if not self._historico:
+            return
+
+        estados = [
+            item.get("termico", {}).get("estado_termico")
+            for item in self._historico
+            if isinstance(item, dict)
+        ]
+
+        consecutivas_muito_quente = 0
+        for estado in reversed(estados):
+            if estado == "muito_quente":
+                consecutivas_muito_quente += 1
+            else:
+                break
+
+        if consecutivas_muito_quente >= AMOSTRAS_FEBRE:
+            self._estado_fisiologico = "febre"
+            self._amostras_muito_quente = consecutivas_muito_quente
+            return
+
+        ultimo_estado = estados[-1] if estados else None
+        if ultimo_estado in {"quente", "muito_quente"}:
+            self._estado_fisiologico = "estresse_termico"
+            self._amostras_muito_quente = consecutivas_muito_quente
+        elif ultimo_estado in {"normal", "fria"}:
+            ultimo_fisiologico = self._historico[-1].get(
+                "estado_fisiologico"
+            )
+            if ultimo_fisiologico == "febre":
+                self._estado_fisiologico = "recuperacao"
+                self._amostras_recuperacao = 1
+            else:
+                self._estado_fisiologico = "normal"
 
     def _heartbeat(
         self,
