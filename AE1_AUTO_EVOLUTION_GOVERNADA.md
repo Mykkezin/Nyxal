@@ -63,11 +63,14 @@ no máximo um experimento formal já pronto por ciclo residente, reutilizando o 
 A execução AE2 permanece desabilitada por padrão no launcher e não concede autoridade de integração.
 AE3 pode interpretar automaticamente resultados produzidos por AE2, reutilizando o aprendizado
 persistente existente sem criar uma segunda memória.
+AE4 agora orquestra AE1→AE2→AE3 em uma passagem residente e registra um resumo auditável,
+sem presumir vínculo causal entre oportunidade AE1 e solicitação AE2 quando esse vínculo não estiver
+explicitamente persistido.
 
 ## Etapas seguintes
 
-- AE3: comparar e aprender automaticamente como camada explícita;
-- AE4: ciclo residente de evolução;
+- AE3: comparar e aprender automaticamente como camada explícita — implementado;
+- AE4: ciclo residente de evolução — implementado;
 - AE5: descoberta contínua com governança.
 
 A autorização explícita para integração continua sendo a barreira entre uma evolução candidata e uma alteração estável.
