@@ -16,6 +16,7 @@ from nixal_runtime import NyxalRuntime
 from nixal_ciclo_residente import CicloResidenteNixOS
 from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
 from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
+from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -59,11 +60,13 @@ def main() -> int:
         runtime.solicitacao_evolucao,
         habilitada=args.habilitar_auto_experimento,
     )
+    auto_avaliacao = AutoAvaliacaoAE3()
     residente = CicloResidenteNixOS(
         runtime,
         runtime.persistencia_operacional,
         auto_evolucao,
         auto_experimento,
+        auto_avaliacao,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
@@ -96,6 +99,7 @@ def main() -> int:
             else "DESABILITADA"
         )
     )
+    print("AE3 — AVALIAÇÃO: HABILITADA")
     print("=" * 64)
 
     return 0 if all(
