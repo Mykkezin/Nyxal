@@ -282,11 +282,11 @@ The stable branch is kept separate from active experimental development.
 
 **Branch:** `feat/m5-habitat-nyxos`
 
-**Current milestone:** M5.11 — Process and application control
+**Current milestone:** M5.12 — Thermal body and ventilation
 
-**Validated before M5.11:** M5.8 dependency map, M5.9 Linux residence, M5.10 host action gateway, AE5 evidence checkpoint
+**Validated before M5.12:** M5.8 dependency map, M5.9 Linux residence, M5.10 host action gateway, M5.11 process/application control, AE5 evidence checkpoint
 
-**Next:** validate controlled process/application actions, then build the thermal body and ventilation layer in M5.12
+**Next:** validate the thermal body and supervised ventilation layer, then build operational physiology in M5.13
 
 **Stable branch:** `main`
 
