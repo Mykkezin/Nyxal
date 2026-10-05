@@ -24,7 +24,7 @@ def testar_audio_reproducao_explicita() -> None:
     def executor(args, **kwargs):
         chamadas.append(args)
         if args[:2] == ["pactl", "list"]:
-            if args[2] == "sinks":
+            if args[3] == "sinks":
                 saida = "1 bluez_output.SOM PipeWire s16le 2ch 48000Hz RUNNING\n"
             else:
                 saida = "2 bluez_input.SOM PipeWire s16le 1ch 16000Hz RUNNING\n"
