@@ -46,16 +46,17 @@ def main() -> None:
         verificar(False, f"nixal_recursos_habitat.py possui sintaxe válida: {erro}")
 
     verificar(
-        "RecursosHabitatNixOS" in texto_api
-        and '"recursos"' in texto_api,
-        "API integra recursos do habitat",
+        "RECURSOS_HABITAT" in texto_api
+        and '"recursos_habitat"' in texto_api,
+        "API integra e expõe recursos do habitat",
     )
 
     verificar(
-        "recursosHabitat" in texto_interface
-        and "ferramentas" in texto_interface
-        and "modulos" in texto_interface,
-        "interface consome recursos observáveis",
+        "recursos_habitat" in texto_api
+        and "recursosHabitat" in texto_interface
+        and "quantidadesRecursos.ferramentas" in texto_interface
+        and "quantidadesRecursos.modulos" in texto_interface,
+        "interface consome o resumo dos recursos observáveis",
     )
 
     verificar(
