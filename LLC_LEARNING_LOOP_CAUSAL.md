@@ -1,85 +1,85 @@
 # LLC — Learning Loop Causal
 
-## Estado atual: LLC.3 validado
+## Estado atual: LLC.4 iniciado
 
-O LLC possui tres camadas distintas:
+O LLC possui quatro etapas:
 
 1. **LLC.1 — influencia decisoria**
 2. **LLC.2 — feedback operacional**
-3. **LLC.3 — evidencia causal por contraste controlado**
+3. **LLC.3 — protocolo de evidencia causal controlada**
+4. **LLC.4 — evidencia ambiental real/observacional**
 
-## LLC.3
+## LLC.4
 
-O protocolo adiciona uma camada para consequencias externas sem usar sucesso operacional como substituto de causalidade.
+A quarta etapa aproxima o Learning Loop do habitat real sem pular a etapa experimental.
 
-Fluxo:
+O novo componente `EvidenciaAmbientalLLC` usa o `HabitatNixOS` existente em modo somente leitura e pode:
 
-```
-aprendizado -> decisao -> acao -> resultado
-                    -> feedback operacional
-                    -> novo aprendizado
-                    -> metrica externa
-                    -> controle
-                    -> contrafactual
-                    -> repeticoes
-                    -> evidencia causal controlada
-```
+- capturar um snapshot real do host;
+- identificar o snapshot por hash deterministico;
+- observar metricas numericas declaradas;
+- comparar antes/depois;
+- registrar fonte, unidade, direcao de melhoria e ids dos snapshots.
 
-A metrica exige nome, unidade, fonte, direcao de melhoria, tolerancia e desenho experimental suportado.
+Metricas atualmente declaradas incluem CPU, memoria, armazenamento, processos, uptime e leituras numericas de GPU quando disponiveis.
 
-Cada observacao precisa fornecer:
+## Regra central
 
-- `contrafactual_validado = true`;
-- `controle_valido = true`;
-- nenhum confundidor declarado;
-- valor antes/depois da intervencao;
-- valor antes/depois do controle.
-
-O efeito e calculado como:
+LLC.4 produz:
 
 ```
-efeito = (intervencao_depois - intervencao_antes)
-       - (controle_depois - controle_antes)
+evidencia_ambiental_observacional = true
 ```
 
-O gate exige pelo menos tres contrastes validos e melhoria consistente na direcao declarada.
-
-## Limite
-
-A marca `causalidade_ambiental_comprovada` significa evidencia valida **dentro do protocolo controlado fornecido**. Nao e uma prova universal nem autoriza inferencia causal fora do desenho experimental.
-
-O teste LLC.3 usa dados sinteticos para validar a estrutura e os gates. O Runtime nao coleta automaticamente uma metrica causal nem escolhe um grupo de controle.
-
-## Governanca
-
-LLC.3 nao:
-
-- treina modelo;
-- implanta modelo;
-- modifica arquitetura;
-- integra em `main`;
-- cria memoria nova;
-- executa boot adicional;
-- cria AE6;
-- autoriza alteracoes estaveis.
-
-Invariantes:
+Mas mantém:
 
 ```
-autorizacao_explicita = false
-integracao_executada = false
-stable_modificada = false
-arquitetura_modificada = false
-conhecimento_permanente = false
-execucao_local = false
-treinamento_automatico = false
-implantacao_automatica = false
+causalidade_ambiental_comprovada = false
 ```
+
+Uma mudanca real observada no host nao e automaticamente atribuida a acao do LLC.
+
+O resultado:
+
+```
+acao -> mudanca observada
+```
+
+continua sendo observacional.
+
+Para atribuir efeito causal ainda e necessario passar pelo protocolo controlado do LLC.3 com desenho experimental, controle, contrafactual e repeticoes adequadas.
+
+## Integracao
+
+LLC.4 nao altera o Runtime residente para coletar metricas automaticamente em todos os ciclos.
+
+A captura pode ser chamada explicitamente por uma camada superior que conheca o desenho da medicao.
+
+Nao existe:
+
+- treinamento automatico;
+- deployment;
+- autoalteracao;
+- nova memoria;
+- boot adicional;
+- autorizacao implicita;
+- integracao em `main`.
 
 ## Validacao
 
-O teste dedicado verifica LLC.1, LLC.2 e LLC.3, incluindo rejeicao por repeticoes insuficientes e preservacao das invariantes.
+O teste dedicado verifica:
 
-M5 permanece congelado em `feat/m5-habitat-nyxos`.
+- captura sintetica estruturada;
+- captura real do HabitatNixOS em somente leitura;
+- observacao de metrica declarada;
+- comparacao antes/depois;
+- rejeicao de metrica nao declarada;
+- invariantes de governanca.
 
-`feat/llc-learning-loop` continua separada de `main`.
+## Estado
+
+`LLC.4.0.0` — interface de evidencia ambiental real/observacional implementada e validada.
+
+M5 permanece congelado.
+
+A branch `feat/llc-learning-loop` continua separada de `main`.

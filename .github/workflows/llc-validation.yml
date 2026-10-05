@@ -21,8 +21,12 @@ jobs:
       - name: Compilar LLC e dependencias
         run: |
           python -m py_compile nixal_learning_loop_causal.py
+          python -m py_compile nixal_evidencia_ambiental_llc.py
           python -m py_compile nixal_aprendizado_persistente.py
           python -m py_compile nixal_runtime.py
           python -m py_compile teste_llc_learning_loop.py
+          python -m py_compile teste_llc4_evidencia_ambiental.py
       - name: Testar LLC
         run: python teste_llc_learning_loop.py
+      - name: Testar LLC.4
+        run: python teste_llc4_evidencia_ambiental.py
