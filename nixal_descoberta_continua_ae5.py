@@ -285,12 +285,12 @@ class DescobertaContinuaGovernadaAE5:
             if sinal is None:
                 continue
             linha = self._carregar(self._arquivo(self._linha_id(sinal["limitacao"], sinal["hipotese"])))
-            antes = len(linha.get("ciclos_observados", [])) if linha else 0
-            self.processar(resultado)
+            antes = set(linha.get("ciclos_observados", [])) if linha else set()
+            processado = self.processar(resultado)
             depois = self._carregar(self._arquivo(self._linha_id(sinal["limitacao"], sinal["hipotese"])))
-            depois_n = len(depois.get("ciclos_observados", [])) if depois else 0
+            depois_ciclos = set(depois.get("ciclos_observados", [])) if depois else set()
             processadas += 1
-            if depois_n > antes:
+            if processado.get("observada") is True and depois_ciclos != antes:
                 novos += 1
         return {
             "sucesso": True,
