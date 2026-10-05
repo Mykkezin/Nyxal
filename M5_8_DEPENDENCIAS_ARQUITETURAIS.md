@@ -33,6 +33,7 @@ Também não incorpora automaticamente módulos posteriores do Habitat NyxOS à 
 
 - `m5_8_dependencias_arquiteturais_proposta.json` — mapa estruturado, não autoritativo.
 - `teste_m5_8_dependencias_arquiteturais.py` — validação estrutural da proposta.
+- `teste_m5_8_cobertura_importacoes.py` — reconciliação automática entre os imports diretos encontrados nos componentes Python da planta e as relações declaradas na proposta.
 
 ## Invariantes
 
