@@ -48,11 +48,7 @@ cd ~/Nyxal
 bash deploy/systemd/instalar_nyxos_servicos.sh
 ```
 
-Para iniciar imediatamente:
-
-```bash
-systemctl --user start nyxos.target
-```
+O instalador habilita e inicia o target imediatamente.
 
 Para verificar:
 
@@ -62,7 +58,7 @@ systemctl --user status nyxal-api.service
 systemctl --user status nyxos-residente.service
 ```
 
-Para a residência sobreviver ao logout e poder iniciar sem uma sessão gráfica, o instalador também apresenta o comando de loginctl enable-linger.
+O instalador também tenta habilitar o lingering da conta. Se a política do sistema impedir essa operação, ele informa o comando para execução manual.
 
 ## Configuração
 
