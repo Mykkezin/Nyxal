@@ -37,6 +37,7 @@ The project currently runs as a Linux-first software habitat and is gradually ev
 - **LLC.2** — operational feedback and transition closure
 - **LLC.3** — controlled causal-evidence protocol with external metric, control group, counterfactual contrast and repeated observations
 - **LLC.4** — real habitat environmental observation and before/after evidence, kept observational until an explicit controlled causal design is supplied
+- **LLC.5** — longitudinal controlled evidence linking repeated real-habitat observations to explicit LLC transitions
 
 LLC.3/LLC.4 do not infer causality from simple pre/post measurements and do not authorize architectural changes.
 
@@ -114,6 +115,8 @@ stable
 **LLC.3:** controlled causal-evidence protocol validated. It requires a declared external metric, a valid control, a counterfactual contrast and at least three repeated contrasts before marking controlled causal evidence.
 
 **LLC.4:** real environmental observation validated. The habitat can be sampled in read-only mode, declared metrics can be compared before/after, and the result remains observational until controlled causal evidence exists.
+
+**LLC.5:** longitudinal controlled evidence validates repeated real-habitat observations tied to explicit LLC transitions, requiring the same declared metric and action, valid control contrasts, temporal order and consistent direction across at least three distinct cycles.
 
 **Stable:** `main`. No integration into `main` is authorized.
 
