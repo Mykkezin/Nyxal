@@ -36,8 +36,9 @@ The project currently runs as a Linux-first software habitat and is gradually ev
 - **LLC.1** — deterministic influence of prior learning on decision
 - **LLC.2** — operational feedback and transition closure
 - **LLC.3** — controlled causal-evidence protocol with external metric, control group, counterfactual contrast and repeated observations
+- **LLC.4** — real habitat environmental observation and before/after evidence, kept observational until an explicit controlled causal design is supplied
 
-LLC.3 does not infer causality from simple pre/post measurements and does not authorize architectural changes.
+LLC.3/LLC.4 do not infer causality from simple pre/post measurements and do not authorize architectural changes.
 
 ---
 
@@ -111,6 +112,8 @@ stable
 **LLC.2:** operational feedback validated by linking decision -> action -> result -> gain/loss -> new learning.
 
 **LLC.3:** controlled causal-evidence protocol validated. It requires a declared external metric, a valid control, a counterfactual contrast and at least three repeated contrasts before marking controlled causal evidence.
+
+**LLC.4:** real environmental observation validated. The habitat can be sampled in read-only mode, declared metrics can be compared before/after, and the result remains observational until controlled causal evidence exists.
 
 **Stable:** `main`. No integration into `main` is authorized.
 
