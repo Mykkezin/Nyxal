@@ -26,6 +26,35 @@ def main() -> None:
         assert resultado_vazio["evidencia_operacional_encontrada"] is False
         assert resultado_vazio["somente_leitura"] is True
 
+        # Cobre o contrato da AE4 que também persiste o vínculo
+        # oportunidade em "vinculos", mesmo quando o resumo AE1 não
+        # expõe o identificador diretamente.
+        oportunidade_id_vinculo = "op-vinculo"
+        escrever(
+            oportunidades / f"{oportunidade_id_vinculo}.json",
+            {
+                "oportunidade_id": oportunidade_id_vinculo,
+                "limitacao": "lacuna persistente",
+                "hipotese": "registrar dependencias declaradas",
+            },
+        )
+        escrever(
+            ae4 / "ae4-ciclo-vinculo.json",
+            {
+                "ciclo_id": "real-vinculo",
+                "estado": "ae4_ciclo_observado",
+                "vinculos": {
+                    "oportunidade_id": oportunidade_id_vinculo,
+                },
+                "etapas": [
+                    {
+                        "etapa": "AE1",
+                        "sucesso": True,
+                    }
+                ],
+            },
+        )
+
         for i in range(1, 4):
             oportunidade_id = f"op-real-{i}"
             escrever(
@@ -53,8 +82,8 @@ def main() -> None:
 
         resultado = auditar(repo)
         assert resultado["evidencia_operacional_encontrada"] is True
-        assert resultado["auditorias_ae4_validas"] == 3
-        assert resultado["ciclos_distintos"] == 3
+        assert resultado["auditorias_ae4_validas"] == 4
+        assert resultado["ciclos_distintos"] == 4
         assert resultado["linhas_maduras"] == 1
         assert resultado["somente_leitura"] is True
         for chave in (
