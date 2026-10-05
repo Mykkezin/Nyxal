@@ -131,12 +131,13 @@ class CicloResidenteNixOS:
         self._iniciado_em = self._agora()
         self._encerrado_em = None
         resultados: list[dict[str, Any]] = []
+        ciclos_nesta_execucao = 0
 
         self._persistir_estado("residente_iniciado")
 
         while (
             max_ciclos is None
-            or self._quantidade_ciclos < max_ciclos
+            or ciclos_nesta_execucao < max_ciclos
         ):
             if self._parar.is_set():
                 self._estado = "interrompido"
@@ -167,6 +168,7 @@ class CicloResidenteNixOS:
                 }
             )
 
+            ciclos_nesta_execucao += 1
             self._quantidade_ciclos += 1
             self._ultimo_resultado = copy.deepcopy(resultado)
             resultados.append(copy.deepcopy(resultado))
@@ -185,7 +187,7 @@ class CicloResidenteNixOS:
 
             if (
                 max_ciclos is not None
-                and self._quantidade_ciclos >= max_ciclos
+                and ciclos_nesta_execucao >= max_ciclos
             ):
                 self._estado = "concluido"
                 break
