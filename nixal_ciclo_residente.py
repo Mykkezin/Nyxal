@@ -20,6 +20,8 @@ import threading
 import time
 from typing import Any
 
+from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
+
 
 class CicloResidenteNixOS:
     """Orquestra a residência controlada do ciclo operacional."""
@@ -31,6 +33,7 @@ class CicloResidenteNixOS:
         self,
         runtime: Any,
         persistencia: Any | None = None,
+        auto_evolucao: AutoEvolucaoGovernadaNixOS | None = None,
         *,
         intervalo_segundos: float = 5.0,
         parar_em_erro: bool = True,
@@ -45,6 +48,7 @@ class CicloResidenteNixOS:
 
         self.runtime = runtime
         self.persistencia = persistencia
+        self.auto_evolucao = auto_evolucao
         self.intervalo_segundos = float(intervalo_segundos)
         self.parar_em_erro = bool(parar_em_erro)
 
@@ -77,7 +81,8 @@ class CicloResidenteNixOS:
             ),
             "intervalo_segundos": self.intervalo_segundos,
             "parar_em_erro": self.parar_em_erro,
-            "auto_evolution_habilitada": False,
+            "auto_evolution_habilitada": self.auto_evolucao is not None,
+            "auto_evolution_execucao_automatica": False,
             "autorizacao_explicita": False,
             "integracao_executada": False,
             "arquitetura_modificada": False,
@@ -170,6 +175,29 @@ class CicloResidenteNixOS:
 
             ciclos_nesta_execucao += 1
             self._quantidade_ciclos += 1
+            auto_evolucao_resultado = None
+            if self.auto_evolucao is not None:
+                try:
+                    auto_evolucao_resultado = (
+                        self.auto_evolucao.avaliar_ciclo(resultado)
+                    )
+                except Exception as erro:
+                    auto_evolucao_resultado = {
+                        "sucesso": False,
+                        "estado": "auto_evolucao_ae1_falhou",
+                        "origem": self.auto_evolucao.FONTE,
+                        "motivo": (
+                            f"{type(erro).__name__}: {erro}"
+                        ),
+                        "autorizacao_explicita": False,
+                        "integracao_executada": False,
+                        "arquitetura_modificada": False,
+                    }
+
+                resultado["auto_evolucao_ae1"] = copy.deepcopy(
+                    auto_evolucao_resultado
+                )
+
             self._ultimo_resultado = copy.deepcopy(resultado)
             resultados.append(copy.deepcopy(resultado))
 
