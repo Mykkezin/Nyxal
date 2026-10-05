@@ -16,6 +16,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from nixal_auditoria_atuacao import AuditoriaAtuacaoNixOS
+
 
 class AdaptadorSandboxFisicoNixOS:
     FONTE = "adaptador_sandbox_fisico_nyxos"
@@ -38,11 +40,13 @@ class AdaptadorSandboxFisicoNixOS:
         *,
         diretorio_sandbox: str | Path,
         habilitada: bool = False,
+        auditoria: AuditoriaAtuacaoNixOS | None = None,
     ) -> None:
         self.diretorio_sandbox = Path(diretorio_sandbox).resolve()
         self.habilitada = bool(habilitada)
         self.diretorio_sandbox.mkdir(parents=True, exist_ok=True)
         self._ultimo_resultado: dict[str, Any] | None = None
+        self.auditoria = auditoria
 
     def executar(self, acao: str) -> dict[str, Any]:
         if acao not in (
@@ -140,7 +144,7 @@ class AdaptadorSandboxFisicoNixOS:
                 }
 
             alvo_resolvido.unlink()
-            return {
+            resultado = {
                 "sucesso": True,
                 "estado": "rollback_executado",
                 "rollback_executado": True,
@@ -148,6 +152,8 @@ class AdaptadorSandboxFisicoNixOS:
                 "atuacao_fisica": True,
                 "mutacao_host": True,
             }
+            self._auditar("rollback_executado", resultado)
+            return resultado
 
         return {
             "sucesso": False,
@@ -182,6 +188,7 @@ class AdaptadorSandboxFisicoNixOS:
             },
         }
         self._ultimo_resultado = copy.deepcopy(saida)
+        self._auditar("atuacao_sandbox_executada", saida)
         return copy.deepcopy(saida)
 
     def _bloquear(self, acao: str, motivo: str) -> dict[str, Any]:
@@ -203,7 +210,12 @@ class AdaptadorSandboxFisicoNixOS:
             },
         }
         self._ultimo_resultado = copy.deepcopy(saida)
+        self._auditar("atuacao_sandbox_bloqueada", saida)
         return copy.deepcopy(saida)
+
+    def _auditar(self, evento: str, dados: dict[str, Any]) -> None:
+        if self.auditoria is not None:
+            self.auditoria.registrar(evento=evento, dados=dados)
 
     def _dentro_do_sandbox(self, alvo: Path) -> bool:
         try:
