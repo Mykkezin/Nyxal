@@ -63,10 +63,9 @@ The first NyxOS version does **not** require a custom kernel. The immediate goal
 - **AE2** — isolated experiment under policy
 - **AE3** — comparison and learning interpretation
 - **AE4** — resident evolution-cycle orchestration
+- **AE5** — continuous discovery with governed evidence accumulation
 
-The current development line is preparing the next stage:
-
-**AE5 — continuous discovery with governance**
+The current development line is validating AE5 evidence before defining the next evolution stage.
 
 ---
 
@@ -155,6 +154,10 @@ Nyxal is being built as a set of explicit layers rather than one giant autonomou
                                ▼
                               AE4
                     resident orchestration
+                               │
+                               ▼
+                              AE5
+                    continuous evidence
                                │
                                ▼
                        Governance / N9
@@ -279,9 +282,9 @@ The stable branch is kept separate from active experimental development.
 
 **Branch:** `feat/m5-habitat-nyxos`
 
-**Current milestone:** AE4 complete
+**Current milestone:** AE5 implementation complete
 
-**Next milestone:** AE5
+**Next milestone:** evidence review before defining AE6
 
 **Stable branch:** `main`
 
@@ -321,7 +324,7 @@ The core idea is simple:
 
 **N9** — governance and evolution gates.
 
-**AE1 → AE4** — the current governed auto-evolution pipeline.
+**AE1 → AE5** — the current governed auto-evolution pipeline.
 
 ---
 
