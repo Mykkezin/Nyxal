@@ -131,6 +131,28 @@ class CicloResidenteNixOS:
             "versao": self.VERSAO,
         }
 
+    @staticmethod
+    def _extrair_estado_corpo(
+        resultado: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        valor = resultado.get("valor")
+        if not isinstance(valor, dict):
+            return None
+
+        etapas = valor.get("etapas")
+        if not isinstance(etapas, list):
+            return None
+
+        for etapa in etapas:
+            if not isinstance(etapa, dict):
+                continue
+            if etapa.get("etapa") != "percepcao":
+                continue
+            estado = etapa.get("estado")
+            if isinstance(estado, dict):
+                return estado
+
+        return None
     def _persistir_estado(
         self,
         estado: str,
@@ -209,6 +231,24 @@ class CicloResidenteNixOS:
 
             ciclos_nesta_execucao += 1
             self._quantidade_ciclos += 1
+            if self.fisiologia_operacional is not None:
+                try:
+                    fisiologia = self.fisiologia_operacional.registrar_ciclo(
+                        estado_corpo=self._extrair_estado_corpo(resultado),
+                        sucesso=resultado.get("sucesso") is True,
+                    )
+                except Exception as erro:
+                    fisiologia = {
+                        "sucesso": False,
+                        "estado": "fisiologia_falhou",
+                        "origem": self.fisiologia_operacional.FONTE,
+                        "motivo": f"{type(erro).__name__}: {erro}",
+                        "autorizacao_explicita": False,
+                        "integracao_executada": False,
+                        "arquitetura_modificada": False,
+                        "conhecimento_permanente": False,
+                    }
+                resultado["fisiologia"] = copy.deepcopy(fisiologia)
             if self.ciclo_evolucao_ae4 is not None:
                 try:
                     auto_evolucao_ae4_resultado = (
