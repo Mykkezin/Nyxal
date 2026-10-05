@@ -54,11 +54,13 @@ M5.10 inicia com **zero ações concretas por padrão**.
 Antes de chamar qualquer executor, o gateway verifica:
 
 1. a entrada é um objeto estruturado;
-2. a ação existe no allowlist;
-3. não existem argumentos desconhecidos;
-4. argumentos obrigatórios existem;
-5. tipos e valores declarados são válidos;
-6. autorização de atuação, quando exigida, está presente.
+2. strings de argumentos são limitadas a 256 caracteres;
+3. metadados ficam restritos a campos curtos e conhecidos;
+4. a ação existe no allowlist;
+5. não existem argumentos desconhecidos;
+6. argumentos obrigatórios existem;
+7. tipos e valores declarados são válidos;
+8. autorização de atuação, quando exigida, está presente.
 
 Uma falha de qualquer uma dessas verificações impede a chamada do executor.
 
