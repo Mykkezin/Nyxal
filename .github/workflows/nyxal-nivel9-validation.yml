@@ -68,6 +68,9 @@ jobs:
       - name: Teste Interface M5.5
         run: python teste_interface_m5_5.py
 
+      - name: Teste Recursos do Habitat M5.6
+        run: python teste_recursos_habitat_m5_6.py
+
       - name: Sanidade de regras de segurança
         run: |
           python - <<'PY'
