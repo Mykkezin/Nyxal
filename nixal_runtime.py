@@ -83,6 +83,9 @@ from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
 from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
 from nixal_evolucao_remota import CicloEvolucaoRemotaNixal
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
+from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
+from nixal_delta import RegistroDeltaNixOS
+from nixal_learning_loop_causal import LearningLoopCausalNixal
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -119,6 +122,7 @@ class NyxalRuntime:
 
     ACOES_AUTORIZADAS = {
         "registrar_estado_corpo",
+        "observar_sem_atuar",
     }
 
     def __init__(
@@ -136,6 +140,11 @@ class NyxalRuntime:
         memoria_aprendizado: AprendizadoPersistenteNixal | None = None,
         evolucao_remota: CicloEvolucaoRemotaNixal | None = None,
         solicitacao_evolucao: SolicitacaoEvolucaoNixal | None = None,
+        persistencia_operacional: PersistenciaOperacionalNixOS | None = None,
+        delta_nyxos: RegistroDeltaNixOS | None = None,
+        *,
+        modo_residente: bool = False,
+        learning_loop_causal: LearningLoopCausalNixal | None = None,
     ) -> None:
         if perceber_corpo is None:
             perceber_corpo = corpo_nixal.perceber_corpo
@@ -206,6 +215,15 @@ class NyxalRuntime:
                 "SolicitacaoEvolucaoNixal"
             )
 
+        if learning_loop_causal is not None and not isinstance(
+            learning_loop_causal,
+            LearningLoopCausalNixal,
+        ):
+            raise TypeError(
+                "learning_loop_causal deve ser uma instância de "
+                "LearningLoopCausalNixal"
+            )
+
         self.perceber_corpo = perceber_corpo
         self.estado = (
             estado
@@ -218,7 +236,13 @@ class NyxalRuntime:
             else NecessidadesInternasNixal()
         )
         self.arquivo_estado = Path(arquivo_estado)
+        self.modo_residente = bool(modo_residente)
         self.arquivo_log = Path(arquivo_log)
+        if (
+            self.modo_residente
+            and self.arquivo_log == ARQUIVO_LOG_RUNTIME
+        ):
+            self.arquivo_log = BASE_DIR / "log_nyxal_residente.json"
 
         self.arquivo_memoria_investigacao = (
             Path(arquivo_memoria_investigacao)
@@ -271,6 +295,22 @@ class NyxalRuntime:
         self.evolucao_remota = evolucao_remota
 
         self.solicitacao_evolucao = solicitacao_evolucao
+        self.persistencia_operacional = (
+            persistencia_operacional
+            if persistencia_operacional is not None
+            else PersistenciaOperacionalNixOS(
+                self.arquivo_estado.parent / "estado_nyxos_operacional.json"
+            )
+        )
+        self.delta_nyxos = (
+            delta_nyxos
+            if delta_nyxos is not None
+            else RegistroDeltaNixOS(
+                self.arquivo_estado.parent / "eventos_delta_nyxos.json"
+            )
+        )
+
+        self.learning_loop_causal = learning_loop_causal
 
         self.formulacao_investigacao = (
             FormulacaoInvestigacaoNixal(
@@ -342,12 +382,12 @@ class NyxalRuntime:
         if ciclo.get("estado_atual") != "provisoria":
             raise ValueError("hipotese_investigada_nao_provisoria")
 
-        if ciclo.get("confirmada") is not False:
+        if ciclo.get("confirmada", False) is not False:
             raise ValueError(
                 "hipotese_investigada_nao_pode_estar_confirmada"
             )
 
-        if ciclo.get("testada") is not False:
+        if ciclo.get("testada", False) is not False:
             raise ValueError(
                 "hipotese_investigada_nao_pode_estar_testada"
             )
@@ -662,6 +702,7 @@ class NyxalRuntime:
         aprendizado_anterior = (
             self.memoria_aprendizado.contexto_para_proximo_ciclo()
         )
+        persistencia_anterior = self.persistencia_operacional.contexto()
 
         self._registrar_etapa(
             etapas,
@@ -671,6 +712,17 @@ class NyxalRuntime:
                 "aprendizado_anterior_disponivel": bool(
                     aprendizado_anterior.get("disponivel")
                 ),
+                "persistencia_operacional_disponivel": bool(
+                    persistencia_anterior.get("sucesso")
+                ),
+                "ultimo_ciclo_persistido": (
+                    persistencia_anterior.get("ultimo_ciclo") or {}
+                ).get("ciclo_id")
+                if isinstance(
+                    persistencia_anterior.get("ultimo_ciclo"),
+                    dict,
+                )
+                else None,
             },
         )
 
@@ -747,9 +799,26 @@ class NyxalRuntime:
                 {"quantidade": len(lista_necessidades)},
             )
 
-            investigacao_resultado = self._executar_investigacao(
-                prioridade.get("selecionada")
-            )
+            if self.modo_residente:
+                investigacao_resultado = {
+                    "sucesso": True,
+                    "estado": "investigacao_profunda_adiada_no_perfil_residente",
+                    "origem": self.FONTE,
+                    "valor": {
+                        "executada": False,
+                        "motivo": (
+                            "A investigação profunda não é executada "
+                            "em cada ciclo residente de alta frequência."
+                        ),
+                        "proxima_acao": "investigacao_sob_demanda",
+                        "conhecimento_permanente": False,
+                        "arquitetura_modificada": False,
+                    },
+                }
+            else:
+                investigacao_resultado = self._executar_investigacao(
+                    prioridade.get("selecionada")
+                )
 
             etapas.append(
                 {
@@ -871,6 +940,7 @@ class NyxalRuntime:
             avaliacao = self._avaliar_resultado(
                 acao_resultado=acao_resultado,
                 resultado_observado=resultado_observado,
+                decisao=decisao,
             )
             etapas.append(
                 {
@@ -959,6 +1029,24 @@ class NyxalRuntime:
                 }
             )
 
+            transicao_llc2 = None
+            if self.learning_loop_causal is not None:
+                transicao_llc2 = self.learning_loop_causal.fechar_transicao(
+                    aprendizado_anterior=aprendizado_anterior,
+                    decisao=decisao,
+                    acao_resultado=acao_resultado,
+                    resultado_observado=resultado_observado,
+                    avaliacao=avaliacao,
+                    aprendizado_novo=aprendizado,
+                )
+                etapas.append(
+                    {
+                        "etapa": "llc2",
+                        "sucesso": bool(transicao_llc2.get("ciclo_fechado")),
+                        "resultado": deepcopy(transicao_llc2),
+                    }
+                )
+
             concluido_em = self._agora_iso()
             ciclo = {
                 "sucesso": True,
@@ -977,6 +1065,7 @@ class NyxalRuntime:
                     "avaliacao": deepcopy(avaliacao),
                     "experiencia": deepcopy(experiencia),
                     "aprendizado": deepcopy(aprendizado),
+                    "llc2": deepcopy(transicao_llc2),
                     "aprendizado_anterior": deepcopy(
                         aprendizado_anterior
                     ),
@@ -1005,6 +1094,83 @@ class NyxalRuntime:
 
             self._persistir_estado(ciclo)
             self._registrar_log(ciclo)
+
+            try:
+                persistencia_operacional = self.persistencia_operacional.registrar(
+                    ciclo=ciclo,
+                    habitat={
+                        "estado": "habitat_observado",
+                        "origem": "nyxal_runtime",
+                        "versao": self.VERSAO,
+                        "host": {
+                            "modo": "somente_leitura",
+                        },
+                        "recursos": estado_corpo.get("corpo", {}),
+                        "timestamp": estado_corpo.get("percepcao", {}).get(
+                            "timestamp"
+                        ),
+                    },
+                    estado=ciclo.get("estado"),
+                )
+            except Exception as erro_persistencia:
+                persistencia_operacional = {
+                    "sucesso": False,
+                    "estado": "persistencia_operacional_falhou",
+                    "origem": "nyxal_runtime",
+                    "motivo": (
+                        f"{type(erro_persistencia).__name__}: "
+                        f"{erro_persistencia}"
+                    ),
+                    "conhecimento_permanente": False,
+                    "arquitetura_modificada": False,
+                }
+
+            ciclo["valor"]["persistencia_operacional"] = deepcopy(
+                persistencia_operacional
+            )
+
+            try:
+                ultimo_ciclo_anterior = persistencia_anterior.get(
+                    "ultimo_ciclo"
+                )
+                estado_anterior_delta = (
+                    ultimo_ciclo_anterior.get("estado")
+                    if isinstance(ultimo_ciclo_anterior, dict)
+                    else "inicial"
+                ) or "inicial"
+
+                delta_evento = self.delta_nyxos.criar_evento(
+                    tipo="ciclo",
+                    estado_anterior=estado_anterior_delta,
+                    estado_novo=ciclo.get("estado"),
+                    causa="ciclo_runtime_concluido",
+                    evidencias=[
+                        {
+                            "ciclo_id": ciclo.get("ciclo_id"),
+                            "persistencia_operacional": (
+                                persistencia_operacional.get("estado")
+                            ),
+                        }
+                    ],
+                    ciclo=ciclo.get("ciclo_id"),
+                    resultado={
+                        "sucesso": ciclo.get("sucesso"),
+                        "avaliacao": avaliacao.get("avaliacao"),
+                    },
+                )
+                registro_delta = self.delta_nyxos.registrar(delta_evento)
+            except Exception as erro_delta:
+                registro_delta = {
+                    "sucesso": False,
+                    "estado": "delta_registro_falhou",
+                    "origem": self.FONTE,
+                    "motivo": f"{type(erro_delta).__name__}: {erro_delta}",
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "arquitetura_modificada": False,
+                }
+
+            ciclo["valor"]["delta"] = deepcopy(registro_delta)
             self._ultimo_ciclo = deepcopy(ciclo)
             return deepcopy(ciclo)
 
@@ -1650,6 +1816,13 @@ class NyxalRuntime:
             }
         )
 
+        if self.learning_loop_causal is not None:
+            return self.learning_loop_causal.selecionar(
+                estado_corpo=estado_corpo,
+                prioridades=prioridades,
+                aprendizado_anterior=aprendizado_anterior,
+            )
+
         return {
             "sucesso": True,
             "tipo": "acao_controlada",
@@ -1696,6 +1869,20 @@ class NyxalRuntime:
                 "arquitetura_modificada": False,
             }
 
+        if acao == "observar_sem_atuar":
+            return {
+                "sucesso": True,
+                "estado": "observacao_sem_atuacao",
+                "acao": acao,
+                "executada": False,
+                "motivo": (
+                    "A politica LLC selecionou observacao sem atuacao "
+                    "com base em evidencia de aprendizado."
+                ),
+                "conhecimento_permanente": False,
+                "arquitetura_modificada": False,
+            }
+
         return {
             "sucesso": False,
             "estado": "acao_desconhecida",
@@ -1732,10 +1919,11 @@ class NyxalRuntime:
     # AVALIAÇÃO / EXPERIÊNCIA
     # ============================================================
 
-    @staticmethod
     def _avaliar_resultado(
+        self,
         acao_resultado: dict[str, Any],
         resultado_observado: dict[str, Any],
+        decisao: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not isinstance(acao_resultado, dict):
             return {
@@ -1756,6 +1944,14 @@ class NyxalRuntime:
         acao_sucesso = bool(acao_resultado.get("sucesso"))
         observacao_sucesso = bool(resultado_observado.get("sucesso"))
 
+        feedback_llc2 = None
+        if self.learning_loop_causal is not None and isinstance(decisao, dict):
+            feedback_llc2 = self.learning_loop_causal.avaliar_resultado(
+                decisao=decisao,
+                acao_resultado=acao_resultado,
+                resultado_observado=resultado_observado,
+            )
+
         if not acao_sucesso or not observacao_sucesso:
             return {
                 "sucesso": True,
@@ -1765,6 +1961,9 @@ class NyxalRuntime:
                     "A ação executada ou a observação do resultado "
                     "não foi considerada bem-sucedida."
                 ),
+                "llc2": deepcopy(feedback_llc2)
+                if feedback_llc2 is not None
+                else None,
             }
 
         return {
@@ -1776,6 +1975,9 @@ class NyxalRuntime:
                 "A ação autorizada foi executada com sucesso e "
                 "o resultado foi observado corretamente."
             ),
+            "llc2": deepcopy(feedback_llc2)
+            if feedback_llc2 is not None
+            else None,
         }
 
     @staticmethod

@@ -1,0 +1,18 @@
+[Unit]
+Description=Nyxal API — servidor residente
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Nyxal
+ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/nyxal_web_api.py
+EnvironmentFile=-%h/.config/nyxal/nyxal.env
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=nyxos.target

@@ -18,6 +18,13 @@ from nixal_transporte_conversacional import (
 from nixal_integracao_sessao_transporte import (
     IntegracaoSessaoTransporteNixal,
 )
+from nixal_habitat import HabitatNixOS
+from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
+from nixal_delta import RegistroDeltaNixOS
+from nixal_recursos_habitat import RecursosHabitatNixOS
+from nixal_presenca_maquina import PresencaMaquinaNixOS
+from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
+from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -28,6 +35,25 @@ CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
 NUCLEO_CONVERSACIONAL = NucleoConversacionalNixal()
 INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
     transporte=TransporteConversacionalNixal(),
+)
+HABITAT_NYXOS = HabitatNixOS()
+PERSISTENCIA_OPERACIONAL = PersistenciaOperacionalNixOS(
+    BASE_DIR / "estado_nyxos_operacional.json"
+)
+DELTA_NYXOS = RegistroDeltaNixOS(
+    BASE_DIR / "eventos_delta_nyxos.json"
+)
+RECURSOS_HABITAT = RecursosHabitatNixOS(BASE_DIR)
+PRESENCA_MAQUINA = PresencaMaquinaNixOS(
+    arquivo=BASE_DIR / "presenca_maquina_nyxos.json"
+)
+DESCOBERTA_CONTINUA_AE5 = DescobertaContinuaGovernadaAE5(
+    repositorio=BASE_DIR,
+    habilitada=False,
+)
+COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
+    repositorio=BASE_DIR,
+    habilitada=False,
 )
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
@@ -914,9 +940,53 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         if self.path == "/api/public/status":
             estado = read_status()
 
+            try:
+                habitat = HABITAT_NYXOS.snapshot()
+            except Exception as erro:
+                habitat = {
+                    "sucesso": False,
+                    "estado": "habitat_indisponivel",
+                    "origem": HABITAT_NYXOS.FONTE,
+                    "versao": HABITAT_NYXOS.VERSAO,
+                    "motivo": str(erro),
+                }
+
             identidade = estado.get("identidade", {})
             presenca = estado.get("presenca", {})
             estado_operacional = estado.get("estado", {})
+
+            try:
+                persistencia_operacional = PERSISTENCIA_OPERACIONAL.contexto()
+            except Exception as erro:
+                persistencia_operacional = {
+                    "sucesso": False,
+                    "estado": "persistencia_operacional_indisponivel",
+                    "origem": PERSISTENCIA_OPERACIONAL.FONTE,
+                    "versao": PERSISTENCIA_OPERACIONAL.VERSAO,
+                    "motivo": str(erro),
+                }
+
+            try:
+                delta = DELTA_NYXOS.contexto()
+            except Exception as erro:
+                delta = {
+                    "sucesso": False,
+                    "estado": "delta_indisponivel",
+                    "origem": DELTA_NYXOS.FONTE,
+                    "versao": DELTA_NYXOS.VERSAO,
+                    "motivo": str(erro),
+                }
+
+            try:
+                recursos_habitat = RECURSOS_HABITAT.snapshot()
+            except Exception as erro:
+                recursos_habitat = {
+                    "sucesso": False,
+                    "estado": "recursos_habitat_indisponiveis",
+                    "origem": RECURSOS_HABITAT.FONTE,
+                    "versao": RECURSOS_HABITAT.VERSAO,
+                    "motivo": str(erro),
+                }
 
             self._send_json(
                 200,
@@ -930,12 +1000,81 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                         "ultimo_ciclo": presenca.get("ultimo_ciclo"),
                         "ciclos": presenca.get("ciclos"),
                     },
+                    "presenca_maquina": PRESENCA_MAQUINA.contexto(),
                     "estado": {
                         "modo": estado_operacional.get("modo"),
                         "status": estado_operacional.get("status"),
                     },
+                    "habitat": habitat,
+                    "persistencia_operacional": persistencia_operacional,
+                    "delta": delta,
+                    "recursos_habitat": recursos_habitat,
+                    "descoberta_continua_ae5": {
+                        "versao": DESCOBERTA_CONTINUA_AE5.VERSAO,
+                        "habilitada": False,
+                        "linhas_economicas_ativas": DESCOBERTA_CONTINUA_AE5.contexto().get(
+                            "linhas_economicas_ativas",
+                            0,
+                        ),
+                        "linhas_maduras": DESCOBERTA_CONTINUA_AE5.contexto().get(
+                            "linhas_maduras",
+                            0,
+                        ),
+                    },
+                    "datasets_ae5": {
+                        "versao": COLETOR_DATASET_DUAL_AE5.VERSAO,
+                        "qwen_registros": COLETOR_DATASET_DUAL_AE5.contexto()["datasets"]["qwen"]["registros"],
+                        "kernel_registros": COLETOR_DATASET_DUAL_AE5.contexto()["datasets"]["kernel"]["registros"],
+                        "treinamento_automatico": False,
+                    },
                 },
             )
+            return
+
+        if self.path == "/api/ae5/valor":
+            if not self._authorized():
+                return
+            try:
+                contexto_ae5 = DESCOBERTA_CONTINUA_AE5.contexto()
+            except Exception as erro:
+                contexto_ae5 = {
+                    "sucesso": False,
+                    "estado": "ae5_indisponivel",
+                    "origem": DESCOBERTA_CONTINUA_AE5.FONTE,
+                    "versao": DESCOBERTA_CONTINUA_AE5.VERSAO,
+                    "motivo": str(erro),
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                    "arquitetura_modificada": False,
+                    "conhecimento_permanente": False,
+                }
+            self._send_json(200, contexto_ae5)
+            return
+
+        if self.path == "/api/ae5/datasets":
+            if not self._authorized():
+                return
+            try:
+                contexto_datasets = COLETOR_DATASET_DUAL_AE5.contexto()
+            except Exception as erro:
+                contexto_datasets = {
+                    "sucesso": False,
+                    "estado": "coletor_dual_ae5_indisponivel",
+                    "origem": COLETOR_DATASET_DUAL_AE5.FONTE,
+                    "versao": COLETOR_DATASET_DUAL_AE5.VERSAO,
+                    "motivo": str(erro),
+                    "treinamento_automatico": False,
+                    "implantacao_automatica": False,
+                    "invariantes": {
+                        "autorizacao_explicita": False,
+                        "integracao_executada": False,
+                        "stable_modificada": False,
+                        "arquitetura_modificada": False,
+                        "conhecimento_permanente": False,
+                    },
+                }
+            self._send_json(200, contexto_datasets)
             return
 
         if self.path == "/api/status":

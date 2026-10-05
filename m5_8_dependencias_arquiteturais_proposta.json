@@ -1,0 +1,59 @@
+{
+  "versao": "M5.8.0-proposta.1",
+  "estado": "proposta_supervisionada",
+  "objetivo": "Formalizar um primeiro mapa auditável das dependências arquiteturais observadas entre componentes já declarados na planta, sem alterar a planta, o Runtime ou qualquer comportamento executável.",
+  "fonte": "revisao_supervisionada_2026-10-05",
+  "escopo": {
+    "fonte_componentes": "planta_nixal/planta.json",
+    "criterio_relacao": "dependencia_observada_por_importacao_direta",
+    "somente_leitura": true,
+    "nao_autoritativo": true
+  },
+  "relacoes": [
+    {
+      "origem": "agente_qwen",
+      "destino": "capacidades",
+      "tipo": "importacao_direta",
+      "evidencia": "nixal_agente_qwen.py importa GerenciadorCapacidades de nixal_capacidades.py"
+    },
+    {
+      "origem": "composicao",
+      "destino": "agente_qwen",
+      "tipo": "importacao_direta",
+      "evidencia": "nixal_composicao.py importa AgenteNixalQwen de nixal_agente_qwen.py"
+    },
+    {
+      "origem": "executor_contexto",
+      "destino": "operacoes_contexto",
+      "tipo": "importacao_direta",
+      "evidencia": "executor_contexto_nixal.py importa OperacoesContextoNixal de nixal_operacoes_contexto.py"
+    },
+    {
+      "origem": "interpretacao_qwen",
+      "destino": "gerenciador_cristal",
+      "tipo": "importacao_direta",
+      "evidencia": "experiencia_qwen.py importa símbolos de gerenciador_cristal.py"
+    }
+  ],
+  "componentes_sem_relacao_importacao_declarada_neste_checkpoint": [
+    "corpo_computacional",
+    "memoria_corporal",
+    "cristalizacao",
+    "gerenciador_cristal",
+    "capacidades",
+    "dependencias"
+  ],
+  "lacunas": [
+    "o mapa cobre somente dependencias observadas por importacao direta entre componentes da planta",
+    "modulos posteriores do Habitat NyxOS nao foram retroativamente inseridos na planta 56.4.2",
+    "dependencias de dados, runtime, persistencia e contratos podem exigir evidencias adicionais antes de serem declaradas como autoridade arquitetural"
+  ],
+  "invariantes": {
+    "autorizacao_explicita": false,
+    "integracao_executada": false,
+    "stable_modificada": false,
+    "arquitetura_modificada": false,
+    "conhecimento_permanente": false
+  },
+  "proxima_decisao": "revisar o mapa proposto antes de qualquer atualização da planta autoritativa"
+}

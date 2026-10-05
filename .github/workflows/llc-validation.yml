@@ -1,0 +1,37 @@
+name: Nyxal LLC — validação causal
+
+on:
+  push:
+    branches:
+      - feat/llc-learning-loop
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  llc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compilar LLC e dependencias
+        run: |
+          python -m py_compile nixal_learning_loop_causal.py
+          python -m py_compile nixal_evidencia_ambiental_llc.py
+          python -m py_compile nixal_aprendizado_persistente.py
+          python -m py_compile nixal_runtime.py
+          python -m py_compile teste_llc_learning_loop.py
+          python -m py_compile teste_llc4_evidencia_ambiental.py
+          python -m py_compile nixal_evidencia_longitudinal_llc.py
+          python -m py_compile teste_llc5_evidencia_longitudinal.py
+      - name: Testar LLC
+        run: python teste_llc_learning_loop.py
+      - name: Testar LLC.4
+        run: python teste_llc4_evidencia_ambiental.py
+
+      - name: Testar LLC.5
+        run: python teste_llc5_evidencia_longitudinal.py
