@@ -28,6 +28,7 @@ from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_habitat import HabitatNixOS
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
+from nixal_gateway_atuacao import GatewayAtuacaoNixOS
 from nixal_plano_central_controle import PlanoCentralControleNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 
@@ -50,6 +51,7 @@ class CicloResidenteNixOS:
         fisiologia_operacional: FisiologiaOperacionalNixOS | None = None,
         presenca_maquina: PresencaMaquinaNixOS | None = None,
         plano_central_controle: PlanoCentralControleNixOS | None = None,
+        gateway_atuacao: GatewayAtuacaoNixOS | None = None,
         *,
         coletor_dataset_dual_ae5: ColetorDatasetDualAE5 | None = None,
         intervalo_segundos: float = 5.0,
@@ -75,6 +77,7 @@ class CicloResidenteNixOS:
         self.fisiologia_operacional = fisiologia_operacional
         self.presenca_maquina = presenca_maquina
         self.plano_central_controle = plano_central_controle
+        self.gateway_atuacao = gateway_atuacao
         self.intervalo_segundos = float(intervalo_segundos)
         self.parar_em_erro = bool(parar_em_erro)
 
@@ -137,6 +140,13 @@ class CicloResidenteNixOS:
             ),
             "plano_central_controle_habilitado": (
                 self.plano_central_controle is not None
+            ),
+            "gateway_atuacao_habilitado": (
+                self.gateway_atuacao is not None
+            ),
+            "execucao_fisica_habilitada": bool(
+                self.gateway_atuacao is not None
+                and self.gateway_atuacao.execucao_fisica_habilitada
             ),
             "autorizacao_explicita": False,
             "integracao_executada": False,
@@ -318,6 +328,35 @@ class CicloResidenteNixOS:
                     }
                 resultado["plano_central_controle"] = copy.deepcopy(
                     plano_central
+                )
+
+            if self.gateway_atuacao is not None:
+                try:
+                    if (
+                        isinstance(plano_central, dict)
+                        and plano_central.get("sucesso", True) is not False
+                    ):
+                        gateway_operacao = self.gateway_atuacao.preparar(
+                            plano=plano_central
+                        )
+                    else:
+                        gateway_operacao = {
+                            "estado": "bloqueado",
+                            "origem": self.gateway_atuacao.FONTE,
+                            "motivo": "plano_central_invalido",
+                            "executada": False,
+                            "autorizacao_explicita": False,
+                        }
+                except Exception as erro:
+                    gateway_operacao = {
+                        "estado": "bloqueado",
+                        "origem": self.gateway_atuacao.FONTE,
+                        "motivo": f"{type(erro).__name__}: {erro}",
+                        "executada": False,
+                        "autorizacao_explicita": False,
+                    }
+                resultado["gateway_atuacao"] = copy.deepcopy(
+                    gateway_operacao
                 )
 
             if self.ciclo_evolucao_ae4 is not None:
