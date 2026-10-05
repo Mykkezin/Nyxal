@@ -12,7 +12,6 @@ import argparse
 from pathlib import Path
 
 from nixal_runtime import NyxalRuntime
-from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_ciclo_residente import CicloResidenteNixOS
 
 
@@ -43,12 +42,9 @@ def main() -> int:
     args = parser.parse_args()
 
     runtime = NyxalRuntime()
-    persistencia = PersistenciaOperacionalNixOS(
-        BASE_DIR / "estado_nyxos_operacional.json"
-    )
     residente = CicloResidenteNixOS(
         runtime,
-        persistencia,
+        runtime.persistencia_operacional,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
