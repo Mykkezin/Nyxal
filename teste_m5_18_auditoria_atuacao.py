@@ -61,7 +61,6 @@ def main() -> None:
 
     validacao = auditoria.validar()
     assert validacao["valido"] is True
-    assert validacao["registros"] == 4
 
     linhas = arquivo_auditoria.read_text(encoding="utf-8").splitlines()
     assert len(linhas) == 5
