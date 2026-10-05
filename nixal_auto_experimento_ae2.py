@@ -93,8 +93,10 @@ class AutoExperimentoIsoladoAE2:
         )
         return registros[:limite_efetivo]
 
-    @staticmethod
-    def _validar_politica(solicitacao: dict[str, Any]) -> str | None:
+    def _validar_politica(
+        self,
+        solicitacao: dict[str, Any],
+    ) -> str | None:
         if solicitacao.get("estado") != "pronta_para_experimento":
             return "solicitacao_nao_pronta"
 
@@ -107,6 +109,13 @@ class AutoExperimentoIsoladoAE2:
             return "artefato_inexistente"
         if caminho.suffix != ".py":
             return "artefato_nao_python"
+
+        try:
+            caminho.relative_to(
+                Path(self.solicitacao_evolucao.repositorio).resolve()
+            )
+        except ValueError:
+            return "artefato_fora_do_repositorio"
 
         if solicitacao.get("execucao_local") is not False:
             return "execucao_local_nao_permitida"
