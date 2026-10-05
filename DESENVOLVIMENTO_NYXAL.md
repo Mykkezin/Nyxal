@@ -49,6 +49,10 @@ Estado atual:
 - M5 — Habitat NyxOS: iniciado.
 - M5.1 — observabilidade real do host: implementado e validado.
 - M5.3 — persistência operacional: implementada e validada pelo CI.
+- M5.4 — eventos Delta de primeira classe: implementados e validados pelo CI.
+- M5.5 — interface orientada ao estado real: implementada e validada pelo CI.
+- M5.6 — ferramentas e módulos como recursos do habitat: implementados e validados pelo CI.
+- M5.7 — ciclo operacional residente: implementado e validado pelo CI.
 
 ## Próximo objetivo
 
@@ -68,5 +72,5 @@ host
 
 O primeiro marco M5.1 mantém a ponte somente leitura e não altera hardware, estado persistente ou os gates de evolução.
 
-M5.3 conclui a primeira camada de continuidade operacional. O próximo objetivo é transformar mudanças relevantes do habitat em eventos Delta de primeira classe, sem ainda conceder autoalteração irrestrita.
+M5.7 conclui o Habitat NyxOS desta fase. O próximo estágio é integrar uma camada de auto-evolution governada sobre o ciclo residente, reutilizando o N9 para manter autorização explícita, isolamento de candidatos e reversibilidade.
 
