@@ -110,6 +110,27 @@ def main():
     assert causal["efeito_medio_contrafactual"] < -1.0
     assert causal["repeticoes"] == 3
 
+    invalida = llc.avaliar_consequencia_controlada(
+        decisao=[],
+        acao_resultado={"sucesso": True, "acao": "registrar_estado_corpo", "executada": True},
+        resultado_observado={"sucesso": True},
+        metrica=metrica(),
+        observacoes=observacoes(),
+    )
+    assert invalida["sucesso"] is False
+    assert "decisao_invalido" in invalida["erros"]
+
+    sem_influencia = llc.avaliar_consequencia_controlada(
+        decisao={"acao": "registrar_estado_corpo", "llc": {}},
+        acao_resultado={"sucesso": True, "acao": "registrar_estado_corpo", "executada": True},
+        resultado_observado={"sucesso": True},
+        metrica=metrica(),
+        observacoes=observacoes(),
+    )
+    assert sem_influencia["sucesso"] is True
+    assert sem_influencia["evidencia_causal_controlada"] is False
+    assert "influencia_decisoria_nao_comprovada" in sem_influencia["erros"]
+
     inconclusiva = llc.avaliar_consequencia_controlada(
         decisao=causal,
         acao_resultado={"sucesso": True, "acao": "registrar_estado_corpo", "executada": True},

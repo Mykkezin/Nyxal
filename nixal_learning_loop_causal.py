@@ -235,10 +235,11 @@ class LearningLoopCausalNixal:
         for nome, valor in (
             ("decisao", decisao), ("acao_resultado", acao_resultado),
             ("resultado_observado", resultado_observado), ("metrica", metrica),
-            ("observacoes", observacoes),
         ):
-            if not isinstance(valor, (dict, list)):
+            if not isinstance(valor, dict):
                 erros.append(f"{nome}_invalido")
+        if not isinstance(observacoes, list):
+            erros.append("observacoes_invalido")
         if erros:
             return {
                 "sucesso": False, "estado": "llc3_entrada_invalida",
@@ -247,8 +248,15 @@ class LearningLoopCausalNixal:
                 "causalidade_ambiental_comprovada": False, **cls.INVARIANTES,
             }
 
+        influencia = bool(
+            (decisao.get("llc") or {}).get("influencia_decisoria_comprovada") is True
+        )
+        if not influencia:
+            erros.append("influencia_decisoria_nao_comprovada")
         if decisao.get("acao") == "observar_sem_atuar":
             erros.append("acao_sem_atuacao_nao_produz_intervencao")
+        if acao_resultado.get("acao") != decisao.get("acao"):
+            erros.append("acao_resultado_diverge_da_decisao")
         if acao_resultado.get("sucesso") is not True:
             erros.append("acao_nao_sucesso")
         if resultado_observado.get("sucesso") is not True:
