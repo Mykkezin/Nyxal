@@ -43,7 +43,7 @@ DELTA_NYXOS = RegistroDeltaNixOS(
 )
 RECURSOS_HABITAT = RecursosHabitatNixOS(BASE_DIR)
 PRESENCA_MAQUINA = PresencaMaquinaNixOS(
-    BASE_DIR / "presenca_maquina_nyxos.json"
+    arquivo=BASE_DIR / "presenca_maquina_nyxos.json"
 )
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
