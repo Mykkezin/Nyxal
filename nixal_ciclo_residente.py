@@ -21,6 +21,7 @@ import time
 from typing import Any
 
 from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
+from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 
 
 class CicloResidenteNixOS:
@@ -34,6 +35,7 @@ class CicloResidenteNixOS:
         runtime: Any,
         persistencia: Any | None = None,
         auto_evolucao: AutoEvolucaoGovernadaNixOS | None = None,
+        auto_experimento: AutoExperimentoIsoladoAE2 | None = None,
         *,
         intervalo_segundos: float = 5.0,
         parar_em_erro: bool = True,
@@ -49,6 +51,7 @@ class CicloResidenteNixOS:
         self.runtime = runtime
         self.persistencia = persistencia
         self.auto_evolucao = auto_evolucao
+        self.auto_experimento = auto_experimento
         self.intervalo_segundos = float(intervalo_segundos)
         self.parar_em_erro = bool(parar_em_erro)
 
@@ -82,7 +85,14 @@ class CicloResidenteNixOS:
             "intervalo_segundos": self.intervalo_segundos,
             "parar_em_erro": self.parar_em_erro,
             "auto_evolution_habilitada": self.auto_evolucao is not None,
-            "auto_evolution_execucao_automatica": False,
+            "auto_evolution_execucao_automatica": bool(
+                self.auto_experimento is not None
+                and self.auto_experimento.habilitada
+            ),
+            "auto_experimento_ae2_habilitado": bool(
+                self.auto_experimento is not None
+                and self.auto_experimento.habilitada
+            ),
             "autorizacao_explicita": False,
             "integracao_executada": False,
             "arquitetura_modificada": False,
@@ -196,6 +206,30 @@ class CicloResidenteNixOS:
 
                 resultado["auto_evolucao_ae1"] = copy.deepcopy(
                     auto_evolucao_resultado
+                )
+
+            if self.auto_experimento is not None:
+                try:
+                    auto_experimento_resultado = (
+                        self.auto_experimento.processar_pendentes()
+                    )
+                except Exception as erro:
+                    auto_experimento_resultado = {
+                        "sucesso": False,
+                        "estado": "auto_experimento_ae2_falhou",
+                        "origem": self.auto_experimento.FONTE,
+                        "motivo": (
+                            f"{type(erro).__name__}: {erro}"
+                        ),
+                        "processada": False,
+                        "autorizacao_explicita": False,
+                        "integracao_executada": False,
+                        "stable_modificada": False,
+                        "arquitetura_modificada": False,
+                    }
+
+                resultado["auto_experimento_ae2"] = copy.deepcopy(
+                    auto_experimento_resultado
                 )
 
             self._ultimo_resultado = copy.deepcopy(resultado)
