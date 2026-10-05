@@ -217,7 +217,10 @@ class FisiologiaOperacionalNixOS:
         }:
             self._amostras_muito_quente = 0
 
-        if self._estado_fisiologico == "febre":
+        if self._estado_fisiologico in {
+            "febre",
+            "recuperacao",
+        }:
             if estado_termico in {
                 "normal",
                 "fria",
