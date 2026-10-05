@@ -40,7 +40,7 @@ class VozNyxOS:
                 "voz_habilitada": False,
             })
         entrada = self.audio.preparar_captura()
-        saida = self.audio.reproduzir("")
+        saida = self.audio.preparar_saida()
         sucesso = bool(entrada.get("sucesso") and saida.get("sucesso"))
         return self._registrar({
             "sucesso": sucesso,
