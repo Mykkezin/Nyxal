@@ -4,12 +4,19 @@
 from __future__ import annotations
 
 import copy
-from typing import Any
+from typing import Any, Protocol
 
-from nixal_agente_qwen import AgenteNixalQwen
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
 from nixal_gateway_atuacao_host import GatewayAtuacaoHostNixOS
 from nixal_habitat import HabitatNixOS
+
+
+class AgenteSemantico(Protocol):
+    def selecionar_capacidade(
+        self,
+        necessidade: str,
+    ) -> dict[str, Any]:
+        """Seleciona uma capacidade sem executar o host."""
 
 
 class PlanoControleCentralNixOS:
@@ -30,7 +37,7 @@ class PlanoControleCentralNixOS:
         habitat: HabitatNixOS | None = None,
         fisiologia: FisiologiaOperacionalNixOS | None = None,
         gateway_host: GatewayAtuacaoHostNixOS | None = None,
-        agente: AgenteNixalQwen | None = None,
+        agente: AgenteSemantico | None = None,
     ) -> None:
         self.habitat = habitat or HabitatNixOS()
         self.fisiologia = fisiologia
