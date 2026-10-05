@@ -65,11 +65,46 @@ def main() -> None:
     assert "rm -f" in desinstalador
     assert "main" not in desinstalador.lower()
 
+    testar_historico_residente_limitado()
+
     print("TESTE_M5_9_RESIDENCIA_LINUX_OK")
+    print("TESTE_MEMORIA_RESIDENTE_LIMITADA_OK")
     print("PYTHON: .venv/bin/python")
     print("SERVICOS: 2")
     print("TARGET: nyxos.target")
     print("AE2_AUTOMATICA: DESABILITADA")
+
+def testar_historico_residente_limitado() -> None:
+    from nixal_ciclo_residente import CicloResidenteNixOS
+
+    class RuntimeFalso:
+        def __init__(self) -> None:
+            self.ciclos = 0
+            self.residente = None
+
+        def executar_ciclo(self) -> dict:
+            self.ciclos += 1
+            if self.ciclos >= 20 and self.residente is not None:
+                self.residente.parar()
+            return {
+                "sucesso": True,
+                "estado": "ciclo_concluido",
+                "ciclo": self.ciclos,
+            }
+
+    runtime = RuntimeFalso()
+    residente = CicloResidenteNixOS(
+        runtime,
+        intervalo_segundos=0,
+    )
+    runtime.residente = residente
+
+    resultados = residente.executar()
+
+    assert runtime.ciclos == 20
+    assert len(resultados) == 1
+    assert resultados[0]["ciclo"] == 20
+    assert residente.contexto()["ciclos_executados"] == 20
 
 
 if __name__ == "__main__":
