@@ -21,6 +21,7 @@ from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
+from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -78,6 +79,11 @@ def main() -> int:
     descoberta_continua_ae5 = DescobertaContinuaGovernadaAE5(
         repositorio=BASE_DIR,
     )
+    fisiologia_operacional = FisiologiaOperacionalNixOS(
+        intervalo_esperado_segundos=args.intervalo,
+        arquivo=BASE_DIR / "fisiologia_operacional_nyxos.json",
+        delta_nyxos=runtime.delta_nyxos,
+    )
     residente = CicloResidenteNixOS(
         runtime,
         runtime.persistencia_operacional,
@@ -86,6 +92,7 @@ def main() -> int:
         auto_avaliacao,
         ciclo_evolucao_ae4,
         descoberta_continua_ae5,
+        fisiologia_operacional,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
