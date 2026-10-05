@@ -1498,6 +1498,12 @@
       ctx.stroke();
     }
 
+    function escaparHtmlUI(valor) {
+      const elemento = document.createElement('div');
+      elemento.textContent = String(valor ?? '');
+      return elemento.innerHTML;
+    }
+
     async function fetchNyxalStatus() {
       try {
         const response = await fetch(`${window.NYXAL_API_BASE}/api/public/status`, { method: 'GET' });
@@ -1588,7 +1594,7 @@
               processesHabitatList.innerHTML = entidades
                 .slice(0, 5)
                 .map((processo) => {
-                  const nome = String(processo.nome || 'processo').slice(0, 22);
+                  const nome = escaparHtmlUI(String(processo.nome || 'processo').slice(0, 22));
                   const cpu =
                     processo.uso_cpu_percentual == null
                       ? '--'
