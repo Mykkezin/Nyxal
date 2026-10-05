@@ -57,7 +57,7 @@ def main() -> int:
     )
     depois = EvidenciaAmbientalLLC.observar_metrica(
         snapshot=real2,
-        caminho="cpu.uso_percentual",
+        caminho="recursos.cpu.uso_percentual",
         nome="cpu_uso",
         unidade="%",
         direcao_melhor="menor",
