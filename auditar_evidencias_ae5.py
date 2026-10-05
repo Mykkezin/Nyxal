@@ -66,6 +66,13 @@ def auditar(repositorio: Path, limite: int = 200) -> dict[str, Any]:
 
         oportunidade_id = etapa_ae1.get("oportunidade_id")
         if not isinstance(oportunidade_id, str) or not oportunidade_id:
+            vinculos = auditoria.get("vinculos")
+            oportunidade_id = (
+                vinculos.get("oportunidade_id")
+                if isinstance(vinculos, dict)
+                else None
+            )
+        if not isinstance(oportunidade_id, str) or not oportunidade_id:
             continue
 
         oportunidade = carregar(
