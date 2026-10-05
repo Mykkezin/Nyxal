@@ -13,6 +13,7 @@ from pathlib import Path
 
 from nixal_runtime import NyxalRuntime
 from nixal_ciclo_residente import CicloResidenteNixOS
+from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -42,9 +43,11 @@ def main() -> int:
     args = parser.parse_args()
 
     runtime = NyxalRuntime()
+    auto_evolucao = AutoEvolucaoGovernadaNixOS(BASE_DIR)
     residente = CicloResidenteNixOS(
         runtime,
         runtime.persistencia_operacional,
+        auto_evolucao,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
