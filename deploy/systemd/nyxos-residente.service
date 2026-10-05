@@ -6,7 +6,7 @@ Wants=nyxal-api.service
 [Service]
 Type=simple
 WorkingDirectory=%h/Nyxal
-ExecStart=/usr/bin/python3 %h/Nyxal/executar_nyxos_residente.py --intervalo 5
+ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/executar_nyxos_residente.py --intervalo 5
 EnvironmentFile=-%h/.config/nyxal/nyxal.env
 Restart=on-failure
 RestartSec=3
