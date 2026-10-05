@@ -26,7 +26,12 @@ jobs:
           python -m py_compile nixal_runtime.py
           python -m py_compile teste_llc_learning_loop.py
           python -m py_compile teste_llc4_evidencia_ambiental.py
+          python -m py_compile nixal_evidencia_longitudinal_llc.py
+          python -m py_compile teste_llc5_evidencia_longitudinal.py
       - name: Testar LLC
         run: python teste_llc_learning_loop.py
       - name: Testar LLC.4
         run: python teste_llc4_evidencia_ambiental.py
+
+      - name: Testar LLC.5
+        run: python teste_llc5_evidencia_longitudinal.py
