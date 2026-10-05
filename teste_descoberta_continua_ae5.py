@@ -116,6 +116,11 @@ def testar_janela_recente() -> None:
 
         resultado = ae5.processar(_resultado("ciclo-22", sucesso=False))
         assert resultado["observacoes"] == 20
+        assert resultado["observacoes_sucesso"] == 2
+        assert resultado["madura_para_formalizacao"] is True
+
+        resultado = ae5.processar(_resultado("ciclo-23", sucesso=False))
+        assert resultado["observacoes"] == 20
         assert resultado["observacoes_sucesso"] == 1
         assert resultado["madura_para_formalizacao"] is False
 
