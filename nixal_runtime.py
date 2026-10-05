@@ -84,6 +84,7 @@ from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
 from nixal_evolucao_remota import CicloEvolucaoRemotaNixal
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
+from nixal_delta import RegistroDeltaNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -138,6 +139,7 @@ class NyxalRuntime:
         evolucao_remota: CicloEvolucaoRemotaNixal | None = None,
         solicitacao_evolucao: SolicitacaoEvolucaoNixal | None = None,
         persistencia_operacional: PersistenciaOperacionalNixOS | None = None,
+        delta_nyxos: RegistroDeltaNixOS | None = None,
     ) -> None:
         if perceber_corpo is None:
             perceber_corpo = corpo_nixal.perceber_corpo
@@ -278,6 +280,13 @@ class NyxalRuntime:
             if persistencia_operacional is not None
             else PersistenciaOperacionalNixOS(
                 self.arquivo_estado.parent / "estado_nyxos_operacional.json"
+            )
+        )
+        self.delta_nyxos = (
+            delta_nyxos
+            if delta_nyxos is not None
+            else RegistroDeltaNixOS(
+                self.arquivo_estado.parent / "eventos_delta_nyxos.json"
             )
         )
 
@@ -1060,6 +1069,48 @@ class NyxalRuntime:
             ciclo["valor"]["persistencia_operacional"] = deepcopy(
                 persistencia_operacional
             )
+
+            try:
+                delta_evento = self.delta_nyxos.criar_evento(
+                    tipo="ciclo",
+                    estado_anterior=(
+                        persistencia_anterior.get("ultimo_ciclo", {})
+                        .get("estado")
+                        if isinstance(
+                            persistencia_anterior.get("ultimo_ciclo"),
+                            dict,
+                        )
+                        else "inicial"
+                    ) or "inicial",
+                    estado_novo=ciclo.get("estado"),
+                    causa="ciclo_runtime_concluido",
+                    evidencias=[
+                        {
+                            "ciclo_id": ciclo.get("ciclo_id"),
+                            "persistencia_operacional": (
+                                persistencia_operacional.get("estado")
+                            ),
+                        }
+                    ],
+                    ciclo=ciclo.get("ciclo_id"),
+                    resultado={
+                        "sucesso": ciclo.get("sucesso"),
+                        "avaliacao": avaliacao.get("avaliacao"),
+                    },
+                )
+                registro_delta = self.delta_nyxos.registrar(delta_evento)
+            except Exception as erro_delta:
+                registro_delta = {
+                    "sucesso": False,
+                    "estado": "delta_registro_falhou",
+                    "origem": self.FONTE,
+                    "motivo": f"{type(erro_delta).__name__}: {erro_delta}",
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "arquitetura_modificada": False,
+                }
+
+            ciclo["valor"]["delta"] = deepcopy(registro_delta)
             self._ultimo_ciclo = deepcopy(ciclo)
             return deepcopy(ciclo)
 
