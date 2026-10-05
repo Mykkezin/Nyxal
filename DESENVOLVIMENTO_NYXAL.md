@@ -197,3 +197,32 @@ ou artefato.
 O próximo passo é a definição supervisionada do próximo marco, mantendo autorização
 explícita, isolamento de candidatos e reversibilidade como barreiras invariantes.
 
+
+## M5.8 — proposta de mapa de dependências arquiteturais
+
+O primeiro marco supervisionado após o fechamento do gate AE5 é a formalização de um mapa **não autoritativo** das dependências entre componentes já declarados na planta.
+
+Critério da proposta atual:
+
+- declarar somente relações cuja evidência direta foi observada no código, começando por importações entre componentes da planta;
+- não inferir dependências de dados, runtime, persistência ou temporalidade sem evidência específica;
+- não alterar `planta_nixal/planta.json`;
+- não alterar o Runtime nem o ciclo residente;
+- manter os gates de evolução e integração intactos.
+
+Artefatos:
+
+- `M5_8_DEPENDENCIAS_ARQUITETURAIS.md`;
+- `m5_8_dependencias_arquiteturais_proposta.json`;
+- `teste_m5_8_dependencias_arquiteturais.py`.
+
+A proposta identifica, neste checkpoint, as relações:
+
+```
+agente_qwen        → capacidades
+composicao        → agente_qwen
+executor_contexto → operacoes_contexto
+interpretacao_qwen → gerenciador_cristal
+```
+
+Este marco não fecha a arquitetura como fato definitivo. A próxima decisão é revisar o mapa proposto antes de qualquer atualização da planta autoritativa. Nenhuma AE6 é criada por M5.8.
