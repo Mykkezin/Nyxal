@@ -82,6 +82,28 @@ O contrato mantém o campo legado `recursos.processos` como contagem total e adi
 
 O adaptador não coleta argumentos de linha de comando, ambiente do processo nem executa comandos externos.
 
+### M5.3 — Persistência operacional
+
+O terceiro marco cria a continuidade durável do habitat sem criar uma segunda camada de memória semântica.
+
+```
+Runtime / Habitat
+      ↓
+PersistenciaOperacionalNixOS
+      ↓
+estado_nyxos_operacional.json
+      ↓
+reinicialização
+      ↓
+contexto operacional restaurado
+```
+
+A camada registra somente estado operacional resumido: inicializações, última persistência, referência ao último ciclo, última observação sanitizada do habitat e histórico curto.
+
+A gravação usa substituição atômica. O histórico é limitado a 50 registros. Arquivo ausente ou corrompido não impede a inicialização; a camada recomeça com estrutura vazia válida.
+
+Persistência operacional não significa conhecimento permanente. Conversação, conhecimento candidato, aprendizado, governança de evolução e arquitetura continuam em suas respectivas camadas.
+
 ### Invariantes
 
 - nenhuma alteração de hardware;
