@@ -74,3 +74,6 @@ conhecimento_permanente    = false
 
 AE4 é uma camada de **orquestração**, não uma nova engine de evolução.
 Ela reutiliza os mecanismos já validados e torna o ciclo AE1→AE2→AE3 auditável.
+
+Após a auditoria, a AE5 pode consumir somente esse resultado para acumular sinais
+repetidos, sem executar novamente AE1, AE2 ou AE3.
