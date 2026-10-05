@@ -20,8 +20,9 @@
 6. LLC.6 — Integridade de proveniência
    - verifica a origem determinística da evidência do LLC.4 antes de seu uso causal.
 
-7. LLC.7 — Replicação independente
-   - exige replicações distintas, mesma ação e métrica, proveniência válida e direção consistente.
+7. LLC.7 — Replicação distinta verificável
+   - exige IDs distintos de replicação, execução e série, mesma ação e métrica, proveniência válida e direção consistente.
+   - não declara independência real sem uma fonte experimental que a demonstre.
 
 8. LLC.8 — Limite de escopo
    - impede extrapolar o resultado observado para uma afirmação universal.
@@ -43,11 +44,17 @@ percepção
 → evidência ambiental
 → longitudinal
 → proveniência
-→ replicação
+→ replicação distinta
 → escopo
 → aprendizado auditável
 → reutilização
 → validação
+
+## Limite da cadeia
+
+LLC.7 usa separação declarada de execuções e séries como gate de replicação distinta. Isso não é prova de independência experimental real.
+
+Uma futura camada de laboratório poderá provar independência experimental quando houver dados de execução adequados. Não será inventada uma prova de independência a partir de IDs.
 
 ## Governança
 
