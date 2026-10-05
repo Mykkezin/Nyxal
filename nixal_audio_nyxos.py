@@ -153,8 +153,13 @@ class AudioNyxOS:
         preferencia: str,
     ) -> DispositivoAudio | None:
         for dispositivo in dispositivos:
-            if preferencia in dispositivo.nome.lower():
+            nome = dispositivo.nome.lower()
+            if preferencia in nome:
                 return dispositivo
+        if preferencia == "som-023":
+            for dispositivo in dispositivos:
+                if dispositivo.nome.lower().startswith("bluez_"):
+                    return dispositivo
         return dispositivos[0] if dispositivos else None
 
     @staticmethod
