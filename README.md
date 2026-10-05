@@ -282,11 +282,11 @@ The stable branch is kept separate from active experimental development.
 
 **Branch:** `feat/m5-habitat-nyxos`
 
-**Current milestone:** M5.9 — Linux resident services
+**Current milestone:** M5.10 — Host action gateway
 
-**Validated before M5.9:** M5.8 dependency map, AE5 evidence checkpoint
+**Validated before M5.10:** M5.8 dependency map, M5.9 Linux residence, AE5 evidence checkpoint
 
-**Next:** validate the resident systemd stack, then build the host-action gateway
+**Next:** validate the host-action gateway, then add controlled process/application actions in M5.11
 
 **Stable branch:** `main`
 
