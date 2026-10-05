@@ -66,13 +66,14 @@ Estado: fechado.
 - persistência e Delta dos estados.
 
 ### M5.14 — Plano central de controle
-Estado: em implementação e validação.
+Estado: fechado.
 - unificar observação, decisão e atuação;
 - expor uma superfície principal de comandos;
 - preservar a separação entre intenção, capacidade e executor;
 - permitir que a Nyxal seja o ponto principal da máquina sem conceder autoridade implícita de evolução.
 
 ### M5.15 — Presença de máquina
+Estado: em implementação e validação.
 - integração de boot/login e disponibilidade do serviço;
 - interface principal persistente;
 - voz como canal de entrada/saída;
