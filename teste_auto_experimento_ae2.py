@@ -61,7 +61,9 @@ def main() -> int:
         assert resultado["estado"] == "ae2_desabilitada"
         assert runtime.chamadas == []
 
-        artefato = raiz / "melhoria.py"
+        repositorio = raiz / "repo"
+        repositorio.mkdir(parents=True, exist_ok=True)
+        artefato = repositorio / "melhoria.py"
         artefato.write_text("print('AE2_TEST')\n", encoding="utf-8")
 
         criado = solicitacoes.criar(
