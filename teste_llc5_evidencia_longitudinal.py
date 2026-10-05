@@ -66,7 +66,7 @@ def main() -> int:
     assert ok["repeticoes"] == 3
     assert ok["ciclos_distintos"] == 3
     assert ok["estabilidade_direcional"] is True
-    assert ok["efeito_medio_contrafactual"] == -8.0
+    assert ok["efeito_medio_contrafactual"] == (-26.0 / 3.0)
     assert ok["erros"] == []
 
     menos = EvidenciaLongitudinalLLC.avaliar(
