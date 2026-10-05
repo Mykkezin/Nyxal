@@ -24,13 +24,14 @@ from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
 from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
+from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 
 
 class CicloResidenteNixOS:
     """Orquestra a residência controlada do ciclo operacional."""
 
     FONTE = "ciclo_residente_nyxos"
-    VERSAO = "5.7.1"
+    VERSAO = "5.7.2"
 
     def __init__(
         self,
@@ -40,6 +41,7 @@ class CicloResidenteNixOS:
         auto_experimento: AutoExperimentoIsoladoAE2 | None = None,
         auto_avaliacao: AutoAvaliacaoAE3 | None = None,
         ciclo_evolucao_ae4: CicloEvolucaoResidenteAE4 | None = None,
+        descoberta_continua_ae5: DescobertaContinuaGovernadaAE5 | None = None,
         *,
         intervalo_segundos: float = 5.0,
         parar_em_erro: bool = True,
@@ -58,6 +60,7 @@ class CicloResidenteNixOS:
         self.auto_experimento = auto_experimento
         self.auto_avaliacao = auto_avaliacao
         self.ciclo_evolucao_ae4 = ciclo_evolucao_ae4
+        self.descoberta_continua_ae5 = descoberta_continua_ae5
         self.intervalo_segundos = float(intervalo_segundos)
         self.parar_em_erro = bool(parar_em_erro)
 
@@ -103,6 +106,10 @@ class CicloResidenteNixOS:
             "ciclo_evolucao_ae4_habilitado": bool(
                 self.ciclo_evolucao_ae4 is not None
                 and self.ciclo_evolucao_ae4.habilitada
+            ),
+            "descoberta_continua_ae5_habilitada": bool(
+                self.descoberta_continua_ae5 is not None
+                and self.descoberta_continua_ae5.habilitada
             ),
             "autorizacao_explicita": False,
             "integracao_executada": False,
@@ -217,6 +224,30 @@ class CicloResidenteNixOS:
                 resultado["auto_evolucao_ae4"] = copy.deepcopy(
                     auto_evolucao_ae4_resultado
                 )
+
+                if self.descoberta_continua_ae5 is not None:
+                    try:
+                        auto_descoberta_ae5_resultado = (
+                            self.descoberta_continua_ae5.processar(
+                                auto_evolucao_ae4_resultado
+                            )
+                        )
+                    except Exception as erro:
+                        auto_descoberta_ae5_resultado = {
+                            "sucesso": False,
+                            "estado": "descoberta_continua_ae5_falhou",
+                            "origem": self.descoberta_continua_ae5.FONTE,
+                            "motivo": f"{type(erro).__name__}: {erro}",
+                            "autorizacao_explicita": False,
+                            "integracao_executada": False,
+                            "stable_modificada": False,
+                            "arquitetura_modificada": False,
+                            "conhecimento_permanente": False,
+                        }
+
+                    resultado["auto_descoberta_ae5"] = copy.deepcopy(
+                        auto_descoberta_ae5_resultado
+                    )
             else:
                 auto_evolucao_resultado = None
                 if self.auto_evolucao is not None:
