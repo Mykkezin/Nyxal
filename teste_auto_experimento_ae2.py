@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -11,7 +12,8 @@ from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 
 
 class RuntimeFalso:
-    def __init__(self, resultado=None):
+    def __init__(self, solicitacoes, resultado=None):
+        self.solicitacoes = solicitacoes
         self.chamadas = []
         self.resultado = resultado or {
             "sucesso": True,
@@ -23,6 +25,16 @@ class RuntimeFalso:
 
     def executar_solicitacao_evolucao_remota(self, solicitacao_id):
         self.chamadas.append(solicitacao_id)
+        caminho = Path(self.solicitacoes.solicitacoes) / (
+            solicitacao_id + ".json"
+        )
+        registro = json.loads(caminho.read_text(encoding="utf-8"))
+        registro["estado"] = "experimento_concluido"
+        registro["estado_anterior"] = "experimento_em_execucao"
+        caminho.write_text(
+            json.dumps(registro, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
         return dict(self.resultado)
 
 
@@ -50,7 +62,7 @@ def main() -> int:
             repositorio=raiz / "repo",
             solicitacoes=raiz / "solicitacoes",
         )
-        runtime = RuntimeFalso()
+        runtime = RuntimeFalso(solicitacoes)
 
         desabilitado = AutoExperimentoIsoladoAE2(
             runtime,
@@ -110,7 +122,6 @@ def main() -> int:
         caminho = Path(solicitacoes.solicitacoes) / (
             pronto_bloqueado["solicitacao_id"] + ".json"
         )
-        import json
         registro = json.loads(caminho.read_text(encoding="utf-8"))
         registro["autorizacao_explicita"] = True
         caminho.write_text(
