@@ -138,6 +138,7 @@ def main() -> None:
         persistencia2,
         intervalo_segundos=0,
     )
+    runtime2.owner = residente2
     resultados2 = residente2.executar(max_ciclos=2)
 
     verificar(
