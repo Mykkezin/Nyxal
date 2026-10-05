@@ -21,6 +21,7 @@ from nixal_integracao_sessao_transporte import (
 from nixal_habitat import HabitatNixOS
 from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
+from nixal_recursos_habitat import RecursosHabitatNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -39,6 +40,7 @@ PERSISTENCIA_OPERACIONAL = PersistenciaOperacionalNixOS(
 DELTA_NYXOS = RegistroDeltaNixOS(
     BASE_DIR / "eventos_delta_nyxos.json"
 )
+RECURSOS_HABITAT = RecursosHabitatNixOS(BASE_DIR)
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -961,6 +963,17 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     "motivo": str(erro),
                 }
 
+            try:
+                recursos_habitat = RECURSOS_HABITAT.snapshot()
+            except Exception as erro:
+                recursos_habitat = {
+                    "sucesso": False,
+                    "estado": "recursos_habitat_indisponiveis",
+                    "origem": RECURSOS_HABITAT.FONTE,
+                    "versao": RECURSOS_HABITAT.VERSAO,
+                    "motivo": str(erro),
+                }
+
             self._send_json(
                 200,
                 {
@@ -980,6 +993,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     "habitat": habitat,
                     "persistencia_operacional": persistencia_operacional,
                     "delta": delta,
+                    "recursos_habitat": recursos_habitat,
                 },
             )
             return
