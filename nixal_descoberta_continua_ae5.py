@@ -252,7 +252,11 @@ class DescobertaContinuaGovernadaAE5:
         limite = agora - self.JANELA_DUPLICATA
         for caminho in self._auditorias_paths():
             registro = self._carregar(caminho)
-            if not isinstance(registro, dict) or registro.get("chave_deduplicacao") != digest:
+            if (
+                not isinstance(registro, dict)
+                or registro.get("chave_deduplicacao") != digest
+                or registro.get("nova_linha") is not True
+            ):
                 continue
             try:
                 instante = datetime.fromisoformat(str(registro.get("observado_em")))

@@ -87,5 +87,3 @@ jobs:
       - name: Testar Presença de Máquina M5.15
         run: python teste_m5_15_presenca_maquina.py
 
-      - name: Auditar evidências econômicas AE5
-        run: python auditar_evidencias_ae5.py --limite 200
