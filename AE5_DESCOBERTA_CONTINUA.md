@@ -38,6 +38,19 @@ Política padrão:
 
 Os limiares são configuráveis no construtor e ficam registrados na linha.
 
+## AE5.1 — reconciliação histórica e janela de evidência
+
+A implementação AE5.1.0 reconcilia auditorias persistidas da AE4 com oportunidades
+persistidas da AE1, além de consumir sinais do ciclo corrente.
+
+A maturidade usa uma janela móvel dos últimos 20 ciclos distintos por linha.
+Quando a janela avança, contagens e oportunidades ativas são recalculadas a partir
+das evidências que ainda pertencem à janela.
+
+A reconciliação histórica é idempotente: reprocessar a mesma auditoria não cria
+nova evidência. O campo de formalização permanece persistido e pode ser reconciliado
+com uma solicitação N9 existente sem que a AE5 crie a solicitação por conta própria.
+
 ## O que AE5 não faz
 
 - não gera código;
