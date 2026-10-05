@@ -22,6 +22,7 @@ from nixal_habitat import HabitatNixOS
 from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
 from nixal_recursos_habitat import RecursosHabitatNixOS
+from nixal_presenca_maquina import PresencaMaquinaNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -41,6 +42,9 @@ DELTA_NYXOS = RegistroDeltaNixOS(
     BASE_DIR / "eventos_delta_nyxos.json"
 )
 RECURSOS_HABITAT = RecursosHabitatNixOS(BASE_DIR)
+PRESENCA_MAQUINA = PresencaMaquinaNixOS(
+    BASE_DIR / "presenca_maquina_nyxos.json"
+)
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
