@@ -15,7 +15,11 @@ def _nova_ae5(temporario: str) -> DescobertaContinuaGovernadaAE5:
     )
 
 
-def _resultado(ciclo_id: str, sucesso: bool = True, oportunidade_id: str | None = None) -> dict:
+def _resultado(
+    ciclo_id: str,
+    sucesso: bool = True,
+    oportunidade_id: str | None = None,
+) -> dict:
     return {
         "sucesso": sucesso,
         "estado": "ae4_ciclo_observado",
@@ -57,7 +61,7 @@ def testar_maturidade_progressiva() -> None:
 
 def testar_sucessos_minimos() -> None:
     with tempfile.TemporaryDirectory() as temporario:
-        ae5 = DescobertaContinuaGovernadaAE5(repositorio=Path(temporario))
+        ae5 = _nova_ae5(temporario)
 
         ae5.processar(_resultado("ciclo-1", sucesso=False))
         ae5.processar(_resultado("ciclo-2", sucesso=False))
@@ -70,7 +74,7 @@ def testar_sucessos_minimos() -> None:
 
 def testar_deduplicacao_por_ciclo() -> None:
     with tempfile.TemporaryDirectory() as temporario:
-        ae5 = DescobertaContinuaGovernadaAE5(repositorio=Path(temporario))
+        ae5 = _nova_ae5(temporario)
 
         primeiro = ae5.processar(_resultado("ciclo-1"))
         repetido = ae5.processar(_resultado("ciclo-1", oportunidade_id="outro"))
@@ -79,14 +83,14 @@ def testar_deduplicacao_por_ciclo() -> None:
         assert repetido["observacoes"] == 1
 
         arquivos = list(
-            (Path(temporario).parent / "Nyxal-evolution-discovery").glob("linha-*.json")
+            (Path(temporario) / "Nyxal-evolution-discovery").glob("linha-*.json")
         )
         assert len(arquivos) == 1
 
 
 def testar_sem_sinal() -> None:
     with tempfile.TemporaryDirectory() as temporario:
-        ae5 = DescobertaContinuaGovernadaAE5(repositorio=Path(temporario))
+        ae5 = _nova_ae5(temporario)
 
         resultado = ae5.processar(
             {
@@ -101,30 +105,33 @@ def testar_sem_sinal() -> None:
 
 
 def testar_invariantes_e_fonte() -> None:
-    origem = Path("nixal_descoberta_continua_ae5.py").read_text(encoding="utf-8")
+    origem = Path("nixal_descoberta_continua_ae5.py").read_text(
+        encoding="utf-8"
+    )
 
     assert "subprocess" not in origem
     assert "os.system" not in origem
     assert "Popen" not in origem
     assert "git merge" not in origem
 
-    ae5 = DescobertaContinuaGovernadaAE5(repositorio=Path(".").resolve())
-    resultado = ae5.processar(
-        {
-            "sucesso": True,
-            "estado": "ae4_sem_experimento_para_avaliar",
-            "ciclo_id": "ciclo-invariante",
-        }
-    )
+    with tempfile.TemporaryDirectory() as temporario:
+        ae5 = _nova_ae5(temporario)
+        resultado = ae5.processar(
+            {
+                "sucesso": True,
+                "estado": "ae4_sem_experimento_para_avaliar",
+                "ciclo_id": "ciclo-invariante",
+            }
+        )
 
-    for chave in (
-        "autorizacao_explicita",
-        "integracao_executada",
-        "stable_modificada",
-        "arquitetura_modificada",
-        "conhecimento_permanente",
-    ):
-        assert resultado[chave] is False
+        for chave in (
+            "autorizacao_explicita",
+            "integracao_executada",
+            "stable_modificada",
+            "arquitetura_modificada",
+            "conhecimento_permanente",
+        ):
+            assert resultado[chave] is False
 
 
 def main() -> None:
