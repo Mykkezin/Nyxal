@@ -990,6 +990,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                         "ultimo_ciclo": presenca.get("ultimo_ciclo"),
                         "ciclos": presenca.get("ciclos"),
                     },
+                    "presenca_maquina": PRESENCA_MAQUINA.contexto(),
                     "estado": {
                         "modo": estado_operacional.get("modo"),
                         "status": estado_operacional.get("status"),
