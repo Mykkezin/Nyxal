@@ -73,7 +73,7 @@ Estado: fechado.
 - permitir que a Nyxal seja o ponto principal da máquina sem conceder autoridade implícita de evolução.
 
 ### M5.15 — Presença de máquina
-Estado: em implementação e validação.
+Estado: fechado.
 - integração de boot/login e disponibilidade do serviço;
 - interface principal persistente;
 - voz como canal de entrada/saída;
@@ -101,3 +101,5 @@ residência
 → presença de máquina
 
 A autorização de integração permanece separada em N9.
+
+A sequência M5.8 → M5.15 está encerrada. Nenhum M6 é criado por esta ordem; a próxima direção será definida por planejamento explícito.
