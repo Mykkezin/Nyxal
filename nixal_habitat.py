@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-NIXAL — HABITAT M5.1
+NIXAL — HABITAT M5.2
 
 Ponte somente leitura entre o NyxOS e o sistema hospedeiro.
 
-A camada usa o corpo computacional já existente e devolve somente os
-dados necessários para observabilidade do habitat.
+A camada usa o corpo computacional já existente e o adaptador de
+processos do habitat para devolver dados necessários à observabilidade.
 """
 
 from __future__ import annotations
@@ -15,13 +15,14 @@ import time
 from typing import Any
 
 from corpo_nixal import perceber_corpo
+from nixal_processos_habitat import ProcessosHabitat
 
 
 class HabitatNixOS:
     """Adaptador de observabilidade do host para o habitat NyxOS."""
 
     FONTE = "habitat_nyxos"
-    VERSAO = "5.1.0"
+    VERSAO = "5.2.0"
     INTERVALO_CPU_SEGUNDOS = 0.12
 
     def snapshot(self) -> dict[str, Any]:
@@ -31,7 +32,27 @@ class HabitatNixOS:
 
         atual, _ = perceber_corpo(cpu_anterior)
 
+        try:
+            processos_habitat = ProcessosHabitat().snapshot()
+        except Exception as erro:
+            processos_habitat = {
+                "sucesso": False,
+                "estado": "processos_indisponiveis",
+                "origem": ProcessosHabitat.FONTE,
+                "versao": ProcessosHabitat.VERSAO,
+                "motivo": str(erro),
+                "modo": "somente_leitura",
+                "total": None,
+                "limite": ProcessosHabitat.LIMITE_PADRAO,
+                "entidades": [],
+                "persistente": False,
+                "controle_habilitado": False,
+            }
+
         corpo = atual.get("corpo", {}) if isinstance(atual, dict) else {}
+
+        recursos = self._sanitizar_recursos(corpo)
+        recursos["processos_habitat"] = processos_habitat
 
         return {
             "sucesso": True,
@@ -44,7 +65,7 @@ class HabitatNixOS:
                 "arquitetura": platform.machine() or None,
                 "modo": "somente_leitura",
             },
-            "recursos": self._sanitizar_recursos(corpo),
+            "recursos": recursos,
             "timestamp": (
                 atual.get("percepcao", {}).get("timestamp")
                 if isinstance(atual, dict)
@@ -101,6 +122,7 @@ class HabitatNixOS:
                 "uso_percentual": armazenamento.get("uso_percentual"),
                 "estado": armazenamento.get("estado"),
             },
+            # Compatibilidade M5.1: contagem total de processos.
             "processos": corpo.get("processos"),
             "uptime_segundos": corpo.get("uptime_segundos"),
             "gpu": gpu_resumida,
