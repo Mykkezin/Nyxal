@@ -23,13 +23,14 @@ from typing import Any
 from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
 from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
+from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
 
 
 class CicloResidenteNixOS:
     """Orquestra a residência controlada do ciclo operacional."""
 
     FONTE = "ciclo_residente_nyxos"
-    VERSAO = "5.7.0"
+    VERSAO = "5.7.1"
 
     def __init__(
         self,
@@ -38,6 +39,7 @@ class CicloResidenteNixOS:
         auto_evolucao: AutoEvolucaoGovernadaNixOS | None = None,
         auto_experimento: AutoExperimentoIsoladoAE2 | None = None,
         auto_avaliacao: AutoAvaliacaoAE3 | None = None,
+        ciclo_evolucao_ae4: CicloEvolucaoResidenteAE4 | None = None,
         *,
         intervalo_segundos: float = 5.0,
         parar_em_erro: bool = True,
@@ -55,6 +57,7 @@ class CicloResidenteNixOS:
         self.auto_evolucao = auto_evolucao
         self.auto_experimento = auto_experimento
         self.auto_avaliacao = auto_avaliacao
+        self.ciclo_evolucao_ae4 = ciclo_evolucao_ae4
         self.intervalo_segundos = float(intervalo_segundos)
         self.parar_em_erro = bool(parar_em_erro)
 
@@ -97,6 +100,10 @@ class CicloResidenteNixOS:
                 and self.auto_experimento.habilitada
             ),
             "auto_avaliacao_ae3_habilitada": self.auto_avaliacao is not None,
+            "ciclo_evolucao_ae4_habilitado": bool(
+                self.ciclo_evolucao_ae4 is not None
+                and self.ciclo_evolucao_ae4.habilitada
+            ),
             "autorizacao_explicita": False,
             "integracao_executada": False,
             "arquitetura_modificada": False,
@@ -189,79 +196,16 @@ class CicloResidenteNixOS:
 
             ciclos_nesta_execucao += 1
             self._quantidade_ciclos += 1
-            auto_evolucao_resultado = None
-            if self.auto_evolucao is not None:
+            if self.ciclo_evolucao_ae4 is not None:
                 try:
-                    auto_evolucao_resultado = (
-                        self.auto_evolucao.avaliar_ciclo(resultado)
+                    auto_evolucao_ae4_resultado = (
+                        self.ciclo_evolucao_ae4.processar_ciclo(resultado)
                     )
                 except Exception as erro:
-                    auto_evolucao_resultado = {
+                    auto_evolucao_ae4_resultado = {
                         "sucesso": False,
-                        "estado": "auto_evolucao_ae1_falhou",
-                        "origem": self.auto_evolucao.FONTE,
-                        "motivo": (
-                            f"{type(erro).__name__}: {erro}"
-                        ),
-                        "autorizacao_explicita": False,
-                        "integracao_executada": False,
-                        "arquitetura_modificada": False,
-                    }
-
-                resultado["auto_evolucao_ae1"] = copy.deepcopy(
-                    auto_evolucao_resultado
-                )
-
-            if self.auto_experimento is not None:
-                try:
-                    auto_experimento_resultado = (
-                        self.auto_experimento.processar_pendentes()
-                    )
-                except Exception as erro:
-                    auto_experimento_resultado = {
-                        "sucesso": False,
-                        "estado": "auto_experimento_ae2_falhou",
-                        "origem": self.auto_experimento.FONTE,
-                        "motivo": (
-                            f"{type(erro).__name__}: {erro}"
-                        ),
-                        "processada": False,
-                        "autorizacao_explicita": False,
-                        "integracao_executada": False,
-                        "stable_modificada": False,
-                        "arquitetura_modificada": False,
-                    }
-
-                resultado["auto_experimento_ae2"] = copy.deepcopy(
-                    auto_experimento_resultado
-                )
-
-            if self.auto_avaliacao is not None:
-                try:
-                    if (
-                        isinstance(resultado.get("auto_experimento_ae2"), dict)
-                        and resultado["auto_experimento_ae2"].get("processada") is True
-                    ):
-                        auto_avaliacao_resultado = self.auto_avaliacao.avaliar(
-                            resultado["auto_experimento_ae2"]
-                        )
-                    else:
-                        auto_avaliacao_resultado = {
-                            "sucesso": True,
-                            "estado": "sem_experimento_para_avaliar",
-                            "origem": self.auto_avaliacao.FONTE,
-                            "versao": self.auto_avaliacao.VERSAO,
-                            "autorizacao_explicita": False,
-                            "integracao_executada": False,
-                            "stable_modificada": False,
-                            "arquitetura_modificada": False,
-                            "conhecimento_permanente": False,
-                        }
-                except Exception as erro:
-                    auto_avaliacao_resultado = {
-                        "sucesso": False,
-                        "estado": "auto_avaliacao_ae3_falhou",
-                        "origem": self.auto_avaliacao.FONTE,
+                        "estado": "auto_evolucao_ae4_falhou",
+                        "origem": self.ciclo_evolucao_ae4.FONTE,
                         "motivo": f"{type(erro).__name__}: {erro}",
                         "autorizacao_explicita": False,
                         "integracao_executada": False,
@@ -270,9 +214,90 @@ class CicloResidenteNixOS:
                         "conhecimento_permanente": False,
                     }
 
-                resultado["auto_avaliacao_ae3"] = copy.deepcopy(
-                    auto_avaliacao_resultado
+                resultado["auto_evolucao_ae4"] = copy.deepcopy(
+                    auto_evolucao_ae4_resultado
                 )
+            else:
+                auto_evolucao_resultado = None
+                if self.auto_evolucao is not None:
+                    try:
+                        auto_evolucao_resultado = (
+                            self.auto_evolucao.avaliar_ciclo(resultado)
+                        )
+                    except Exception as erro:
+                        auto_evolucao_resultado = {
+                            "sucesso": False,
+                            "estado": "auto_evolucao_ae1_falhou",
+                            "origem": self.auto_evolucao.FONTE,
+                            "motivo": f"{type(erro).__name__}: {erro}",
+                            "autorizacao_explicita": False,
+                            "integracao_executada": False,
+                            "arquitetura_modificada": False,
+                        }
+
+                    resultado["auto_evolucao_ae1"] = copy.deepcopy(
+                        auto_evolucao_resultado
+                    )
+
+                if self.auto_experimento is not None:
+                    try:
+                        auto_experimento_resultado = (
+                            self.auto_experimento.processar_pendentes()
+                        )
+                    except Exception as erro:
+                        auto_experimento_resultado = {
+                            "sucesso": False,
+                            "estado": "auto_experimento_ae2_falhou",
+                            "origem": self.auto_experimento.FONTE,
+                            "motivo": f"{type(erro).__name__}: {erro}",
+                            "processada": False,
+                            "autorizacao_explicita": False,
+                            "integracao_executada": False,
+                            "stable_modificada": False,
+                            "arquitetura_modificada": False,
+                        }
+
+                    resultado["auto_experimento_ae2"] = copy.deepcopy(
+                        auto_experimento_resultado
+                    )
+
+                if self.auto_avaliacao is not None:
+                    try:
+                        if (
+                            isinstance(resultado.get("auto_experimento_ae2"), dict)
+                            and resultado["auto_experimento_ae2"].get("processada") is True
+                        ):
+                            auto_avaliacao_resultado = self.auto_avaliacao.avaliar(
+                                resultado["auto_experimento_ae2"]
+                            )
+                        else:
+                            auto_avaliacao_resultado = {
+                                "sucesso": True,
+                                "estado": "sem_experimento_para_avaliar",
+                                "origem": self.auto_avaliacao.FONTE,
+                                "versao": self.auto_avaliacao.VERSAO,
+                                "autorizacao_explicita": False,
+                                "integracao_executada": False,
+                                "stable_modificada": False,
+                                "arquitetura_modificada": False,
+                                "conhecimento_permanente": False,
+                            }
+                    except Exception as erro:
+                        auto_avaliacao_resultado = {
+                            "sucesso": False,
+                            "estado": "auto_avaliacao_ae3_falhou",
+                            "origem": self.auto_avaliacao.FONTE,
+                            "motivo": f"{type(erro).__name__}: {erro}",
+                            "autorizacao_explicita": False,
+                            "integracao_executada": False,
+                            "stable_modificada": False,
+                            "arquitetura_modificada": False,
+                            "conhecimento_permanente": False,
+                        }
+
+                    resultado["auto_avaliacao_ae3"] = copy.deepcopy(
+                        auto_avaliacao_resultado
+                    )
 
             self._ultimo_resultado = copy.deepcopy(resultado)
             resultados.append(copy.deepcopy(resultado))
