@@ -92,13 +92,45 @@ Este gate separa validação estrutural de evidência empírica. A existência d
 - invariantes de autorização, integração, alteração de arquitetura e conhecimento permanente: preservadas;
 - CI M5/AE1–AE5: **SUCCESS**.
 
-### Evidência ainda não comprovada
+### Evidência ainda não comprovada no início do gate
+
+Antes da observação operacional, ainda não estavam comprovados:
 
 - existência de uma série histórica real de ciclos residentes suficiente para demonstrar maturidade operacional fora dos testes;
 - recorrência de oportunidades reais em ciclos independentes;
 - persistência de sinais reais atravessando a janela móvel de 20 ciclos;
 - ocorrência real de uma hipótese que alcance os critérios de maturidade sem ser produzida artificialmente pelo teste;
 - existência de uma solicitação N9 correspondente surgida de um fluxo operacional real.
+
+### Resultado da revisão operacional — 2026-10-05
+
+A execução residente real forneceu a evidência necessária para este checkpoint, sem criação de sinais artificiais:
+
+- ciclos AE4 válidos: **3**;
+- ciclos distintos observados: **3**;
+- linha de evidência avaliada: **1**;
+- limitação recorrente: dependencias_arquiteturais_nao_declaradas;
+- hipótese recorrente: "É possível que existam dependências entre os componentes da arquitetura que ainda não estão registradas formalmente na planta.";
+- observações acumuladas: **3**;
+- observações bem-sucedidas: **3**;
+- janela aplicada: **20 ciclos**;
+- maturidade pela política: **atingida** (3/3 observações, 3/3 sucessos; mínimo 3/2);
+- solicitações N9 correspondentes no diretório operacional: **0**;
+- autorização explícita: **false**;
+- integração executada: **false**;
+- alteração de stable/main: **false**;
+- alteração de arquitetura: **false**;
+- conhecimento permanente: **false**.
+
+Os ciclos observados foram:
+
+```text
+fase_01_1791181735125859641
+fase_01_1791181738172345762
+fase_01_1791181742859225468
+```
+
+Conclusão do checkpoint: o gate de evidência empírica da AE5 está **FECHADO PARA ESTE CHECKPOINT**, com maturidade operacional demonstrada pela política vigente. Isso não concede autorização de integração, não cria solicitação N9 e não implica criação de AE6.
 
 ### Ferramenta de auditoria
 
@@ -114,7 +146,7 @@ Código de saída `0`: há evidência operacional encontrada. Código de saída 
 
 ### Critério de saída
 
-O gate permanece **ABERTO** até que exista evidência observada em execução real ou em um conjunto de ciclos operacionais explicitamente identificados como observação, sem fabricar sinais para satisfazer os critérios.
+O gate permanece **ABERTO** até que exista evidência observada em execução real ou em um conjunto de ciclos operacionais explicitamente identificados como observação, sem fabricar sinais para satisfazer os critérios. Quando os critérios forem satisfeitos, o fechamento é restrito ao checkpoint observado e não concede autoridade de integração.
 
 A revisão deve registrar, no mínimo:
 
