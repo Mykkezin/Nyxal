@@ -940,6 +940,7 @@ class NyxalRuntime:
             avaliacao = self._avaliar_resultado(
                 acao_resultado=acao_resultado,
                 resultado_observado=resultado_observado,
+                decisao=decisao,
             )
             etapas.append(
                 {
@@ -1028,6 +1029,24 @@ class NyxalRuntime:
                 }
             )
 
+            transicao_llc2 = None
+            if self.learning_loop_causal is not None:
+                transicao_llc2 = self.learning_loop_causal.fechar_transicao(
+                    aprendizado_anterior=aprendizado_anterior,
+                    decisao=decisao,
+                    acao_resultado=acao_resultado,
+                    resultado_observado=resultado_observado,
+                    avaliacao=avaliacao,
+                    aprendizado_novo=aprendizado,
+                )
+                etapas.append(
+                    {
+                        "etapa": "llc2",
+                        "sucesso": bool(transicao_llc2.get("ciclo_fechado")),
+                        "resultado": deepcopy(transicao_llc2),
+                    }
+                )
+
             concluido_em = self._agora_iso()
             ciclo = {
                 "sucesso": True,
@@ -1046,6 +1065,7 @@ class NyxalRuntime:
                     "avaliacao": deepcopy(avaliacao),
                     "experiencia": deepcopy(experiencia),
                     "aprendizado": deepcopy(aprendizado),
+                    "llc2": deepcopy(transicao_llc2),
                     "aprendizado_anterior": deepcopy(
                         aprendizado_anterior
                     ),
@@ -1899,10 +1919,11 @@ class NyxalRuntime:
     # AVALIAÇÃO / EXPERIÊNCIA
     # ============================================================
 
-    @staticmethod
     def _avaliar_resultado(
+        self,
         acao_resultado: dict[str, Any],
         resultado_observado: dict[str, Any],
+        decisao: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not isinstance(acao_resultado, dict):
             return {
@@ -1923,6 +1944,14 @@ class NyxalRuntime:
         acao_sucesso = bool(acao_resultado.get("sucesso"))
         observacao_sucesso = bool(resultado_observado.get("sucesso"))
 
+        feedback_llc2 = None
+        if self.learning_loop_causal is not None and isinstance(decisao, dict):
+            feedback_llc2 = self.learning_loop_causal.avaliar_resultado(
+                decisao=decisao,
+                acao_resultado=acao_resultado,
+                resultado_observado=resultado_observado,
+            )
+
         if not acao_sucesso or not observacao_sucesso:
             return {
                 "sucesso": True,
@@ -1932,6 +1961,9 @@ class NyxalRuntime:
                     "A ação executada ou a observação do resultado "
                     "não foi considerada bem-sucedida."
                 ),
+                "llc2": deepcopy(feedback_llc2)
+                if feedback_llc2 is not None
+                else None,
             }
 
         return {
@@ -1943,6 +1975,9 @@ class NyxalRuntime:
                 "A ação autorizada foi executada com sucesso e "
                 "o resultado foi observado corretamente."
             ),
+            "llc2": deepcopy(feedback_llc2)
+            if feedback_llc2 is not None
+            else None,
         }
 
     @staticmethod
