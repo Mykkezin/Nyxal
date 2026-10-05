@@ -48,11 +48,14 @@ Estado atual:
 - 56.5.6 — voz contínua: integrado.
 - M5 — Habitat NyxOS: iniciado.
 - M5.1 — observabilidade real do host: implementado e validado.
+- M5.2 — processos como entidades do habitat: implementado e validado pelo CI.
 - M5.3 — persistência operacional: implementada e validada pelo CI.
 - M5.4 — eventos Delta de primeira classe: implementados e validados pelo CI.
 - M5.5 — interface orientada ao estado real: implementada e validada pelo CI.
 - M5.6 — ferramentas e módulos como recursos do habitat: implementados e validados pelo CI.
 - M5.7 — ciclo operacional residente: implementado e validado pelo CI.
+- AE1 — descoberta de auto-evolução governada: implementada e validada pelo CI.
+- AE2 — experimento isolado automático sob política: implementado e validado pelo CI.
 
 ## Próximo objetivo
 
@@ -72,5 +75,10 @@ host
 
 O primeiro marco M5.1 mantém a ponte somente leitura e não altera hardware, estado persistente ou os gates de evolução.
 
-M5.7 conclui o Habitat NyxOS desta fase. O próximo estágio é integrar uma camada de auto-evolution governada sobre o ciclo residente, reutilizando o N9 para manter autorização explícita, isolamento de candidatos e reversibilidade.
+M5.7 conclui o Habitat NyxOS desta fase. AE1 e AE2 já estão integradas no branch de desenvolvimento:
+AE1 descobre e registra oportunidades; AE2, quando explicitamente habilitada, processa no máximo uma
+solicitação formal pronta por ciclo através do caminho remoto N9.
+
+O próximo estágio é AE3 — comparação e aprendizagem automática, mantendo autorização explícita,
+isolamento de candidatos e reversibilidade como barreiras invariantes.
 
