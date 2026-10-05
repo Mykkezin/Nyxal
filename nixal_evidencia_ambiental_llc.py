@@ -47,13 +47,13 @@ class EvidenciaAmbientalLLC:
     }
 
     METRICAS_NUMERICAS = {
-        "cpu.uso_percentual": ("%", "maior"),
-        "memoria.uso_percentual": ("%", "menor"),
-        "armazenamento.uso_percentual": ("%", "menor"),
-        "processos": ("contagem", "menor"),
-        "uptime_segundos": ("s", "maior"),
-        "gpu.0.uso_percentual": ("%", "menor"),
-        "gpu.0.temperaturas.0.temperatura_c": ("celsius", "menor"),
+        "recursos.cpu.uso_percentual": ("%", "maior"),
+        "recursos.memoria.uso_percentual": ("%", "menor"),
+        "recursos.armazenamento.uso_percentual": ("%", "menor"),
+        "recursos.processos": ("contagem", "menor"),
+        "recursos.uptime_segundos": ("s", "maior"),
+        "recursos.gpu.0.uso_percentual": ("%", "menor"),
+        "recursos.gpu.0.temperaturas.0.temperatura_c": ("celsius", "menor"),
     }
 
     def __init__(
