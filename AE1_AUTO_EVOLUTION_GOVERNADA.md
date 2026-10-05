@@ -54,11 +54,17 @@ autoridade irrestrita
 
 A função final da auto-evolution deverá reutilizar `EvolucaoControladaNixal`, `SolicitacaoEvolucaoNixal`, laboratório remoto, candidatos e Governança de Evolução já existentes.
 
-## Etapas futuras
+## Estado atual
 
-- AE1: descobrir e preparar;
-- AE2: executar experimento isolado sob política;
-- AE3: comparar e aprender automaticamente;
+AE1 está implementada para descoberta e registro de oportunidades.
+AE2 está implementada para executar automaticamente, sob ativação explícita,
+no máximo um experimento formal já pronto por ciclo residente, reutilizando o caminho N9.
+
+A execução AE2 permanece desabilitada por padrão no launcher e não concede autoridade de integração.
+
+## Etapas seguintes
+
+- AE3: comparar e aprender automaticamente como camada explícita;
 - AE4: ciclo residente de evolução;
 - AE5: descoberta contínua com governança.
 
