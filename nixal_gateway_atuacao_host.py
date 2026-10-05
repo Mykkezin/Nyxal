@@ -78,6 +78,8 @@ class GatewayAtuacaoHostNixOS:
     NIVEIS_RISCO_VALIDOS = {"baixo", "medio", "alto"}
     MAX_EVENTOS_LOG = 100
     MAX_TAMANHO_RESULTADO = 5000
+    MAX_TAMANHO_STRING_ARGUMENTO = 256
+    MAX_TAMANHO_METADADO = 128
 
     def __init__(
         self,
@@ -367,6 +369,15 @@ class GatewayAtuacaoHostNixOS:
                     f"tipo_argumento_invalido:{nome}",
                 )
 
+            if (
+                tipo == "string"
+                and len(valor) > cls.MAX_TAMANHO_STRING_ARGUMENTO
+            ):
+                return (
+                    False,
+                    f"tamanho_argumento_excedido:{nome}",
+                )
+
             valores = regras.get(
                 "valores"
             )
@@ -458,6 +469,54 @@ class GatewayAtuacaoHostNixOS:
                 ),
             }
 
+        metadados = solicitacao.get("metadados", {})
+
+        if not isinstance(metadados, dict):
+            return {
+                "permitido": False,
+                "estado": "entrada_invalida",
+                "acao": acao,
+                "motivo": "metadados_precisam_ser_objeto",
+            }
+
+        metadados_permitidos = {
+            "origem",
+            "correlacao_id",
+        }
+
+        desconhecidos_metadados = (
+            set(metadados) - metadados_permitidos
+        )
+
+        if desconhecidos_metadados:
+            return {
+                "permitido": False,
+                "estado": "entrada_invalida",
+                "acao": acao,
+                "motivo": (
+                    "Metadados não permitidos: "
+                    + ", ".join(
+                        sorted(
+                            desconhecidos_metadados
+                        )
+                    )
+                ),
+            }
+
+        for nome_metadado, valor_metadado in metadados.items():
+            if (
+                not isinstance(valor_metadado, str)
+                or len(valor_metadado) > self.MAX_TAMANHO_METADADO
+            ):
+                return {
+                    "permitido": False,
+                    "estado": "entrada_invalida",
+                    "acao": acao,
+                    "motivo": (
+                        f"metadado_invalido:{nome_metadado}"
+                    ),
+                }
+
         valido, motivo = (
             self._validar_argumentos(
                 contrato,
@@ -518,6 +577,9 @@ class GatewayAtuacaoHostNixOS:
                     {},
                 )
             ),
+            "metadados": copy.deepcopy(
+                metadados
+            ),
         }
 
     def executar(
@@ -544,15 +606,8 @@ class GatewayAtuacaoHostNixOS:
 
         evento_base = {
             "timestamp": time.time(),
-            "solicitacao": (
-                copy.deepcopy(
-                    solicitacao
-                )
-                if isinstance(
-                    solicitacao,
-                    dict,
-                )
-                else None
+            "solicitacao": self._solicitacao_segura(
+                politica
             ),
             "politica": copy.deepcopy(
                 politica
@@ -665,6 +720,23 @@ class GatewayAtuacaoHostNixOS:
                 "acao_falhou",
                 evento,
             )
+
+    @staticmethod
+    def _solicitacao_segura(
+        politica: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        if not politica.get("acao"):
+            return None
+
+        return {
+            "acao": politica.get("acao"),
+            "argumentos": copy.deepcopy(
+                politica.get("argumentos", {})
+            ),
+            "metadados": copy.deepcopy(
+                politica.get("metadados", {})
+            ),
+        }
 
     @staticmethod
     def _resposta(
