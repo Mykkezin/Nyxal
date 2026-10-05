@@ -60,6 +60,24 @@ Estado atual:
 - AE4 — ciclo residente de evolução: implementado e validado pelo CI.
 - AE5 — descoberta contínua com governança: implementada e validada pelo CI.
 
+## Gate M5 / AE5 — estado consolidado
+
+O gate desta fase foi revalidado após o endurecimento da AE5.1.0.
+
+- reconciliação histórica AE4 → AE5: validada;
+- janela móvel de 20 ciclos: validada;
+- deduplicação por ciclo: validada;
+- formalização persistente: validada;
+- reconciliação histórica idempotente: validada;
+- invariantes de autorização e integração: preservados;
+- CI M5/AE1–AE5: **SUCCESS**;
+- CI Nível 9/10 determinístico: **SUCCESS**;
+- main: não modificada.
+
+Não há promoção automática para AE6 neste checkpoint. O próximo passo arquitetural é
+a revisão das evidências acumuladas pela AE5 e a definição supervisionada do próximo
+marco somente depois dessa revisão.
+
 ## Próximo objetivo
 
 Avançar o M5/Habitat sem criar um kernel próprio.
