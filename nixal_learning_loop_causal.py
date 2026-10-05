@@ -1,28 +1,15 @@
 #!/usr/bin/env python3
-"""NYXAL — Learning Loop Causal (LLC) / primeira camada decisoria.
+"""NYXAL — Learning Loop Causal (LLC).
 
-Objetivo:
-    demonstrar, de forma deterministica e auditavel, que um sinal de
-    aprendizado anterior pode mudar a escolha entre alternativas
-    previamente registradas.
+LLC.1 prova influencia decisoria pela comparacao entre uma escolha
+contrafactual sem aprendizado e a escolha usando aprendizado.
 
-Esta primeira versao NAO:
-- executa treinamento;
-- modifica arquitetura;
-- cria memoria nova;
-- autoriza integracao;
-- acessa shell;
-- executa a acao escolhida;
-- afirma causalidade sobre o ambiente.
+LLC.2 fecha o feedback operacional do ciclo:
+decisao -> acao -> resultado -> ganho/perda operacional -> novo aprendizado.
 
-Ela prova somente influencia decisoria no mecanismo de selecao:
-    decisao_sem_aprendizado
-        vs.
-    decisao_com_aprendizado
-
-Quando as duas escolhas diferirem por causa de um sinal estruturado
-valido, a influencia decisoria e considerada comprovada para aquele
-ciclo. A causalidade ambiental continua explicitamente nao comprovada.
+A metrica de ganho/perda e operacional. Ela mede somente o sucesso
+observado da acao e do resultado, sem afirmar causalidade ambiental.
+Esta camada nao treina, implanta, autoriza integracao ou cria memoria nova.
 """
 
 from __future__ import annotations
@@ -35,7 +22,7 @@ class LearningLoopCausalNixal:
     """Politica deterministica para a primeira etapa do LLC."""
 
     FONTE = "learning_loop_causal_nixal"
-    VERSAO = "LLC.1.0.0"
+    VERSAO = "LLC.2.0.0"
     POLITICA = "repetir_sucesso_evitar_falha"
 
     CANDIDATAS = (
@@ -245,6 +232,125 @@ class LearningLoopCausalNixal:
         }
 
     @classmethod
+    def avaliar_resultado(
+        cls,
+        *,
+        decisao: dict[str, Any],
+        acao_resultado: dict[str, Any],
+        resultado_observado: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Calcula apenas ganho/perda operacional observada."""
+        if not isinstance(decisao, dict):
+            return {
+                "sucesso": False,
+                "estado": "llc2_decisao_invalida",
+                "motivo": "A decisao precisa ser um objeto.",
+                **cls.INVARIANTES,
+            }
+        if not isinstance(acao_resultado, dict):
+            return {
+                "sucesso": False,
+                "estado": "llc2_acao_invalida",
+                "motivo": "O resultado da acao precisa ser um objeto.",
+                **cls.INVARIANTES,
+            }
+        if not isinstance(resultado_observado, dict):
+            return {
+                "sucesso": False,
+                "estado": "llc2_resultado_invalido",
+                "motivo": "O resultado observado precisa ser um objeto.",
+                **cls.INVARIANTES,
+            }
+
+        acao = decisao.get("acao")
+        acao_sucesso = bool(acao_resultado.get("sucesso"))
+        resultado_sucesso = bool(resultado_observado.get("sucesso"))
+
+        if not acao_sucesso or not resultado_sucesso:
+            ganho_perda = -1.0
+            classificacao = "perda_operacional"
+        elif acao == "observar_sem_atuar":
+            ganho_perda = 0.0
+            classificacao = "neutro_operacional"
+        else:
+            ganho_perda = 1.0
+            classificacao = "ganho_operacional"
+
+        return {
+            "sucesso": True,
+            "estado": "feedback_operacional_calculado",
+            "origem": cls.FONTE,
+            "versao": cls.VERSAO,
+            "ganho_perda_operacional": ganho_perda,
+            "classificacao": classificacao,
+            "base": "sucesso_da_acao_e_do_resultado_observado",
+            "acao": acao,
+            "acao_sucesso": acao_sucesso,
+            "resultado_sucesso": resultado_sucesso,
+            "influencia_decisoria_comprovada": bool(
+                (decisao.get("llc") or {}).get(
+                    "influencia_decisoria_comprovada"
+                ) is True
+            ),
+            "causalidade_ambiental_comprovada": False,
+            **cls.INVARIANTES,
+        }
+
+    @classmethod
+    def fechar_transicao(
+        cls,
+        *,
+        aprendizado_anterior: dict[str, Any] | None,
+        decisao: dict[str, Any],
+        acao_resultado: dict[str, Any],
+        resultado_observado: dict[str, Any],
+        avaliacao: dict[str, Any],
+        aprendizado_novo: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Fecha o encadeamento decisao -> resultado -> aprendizado."""
+        feedback = avaliacao.get("llc2") if isinstance(avaliacao, dict) else None
+        if not isinstance(feedback, dict):
+            feedback = {}
+
+        novo_valor = (
+            aprendizado_novo.get("valor")
+            if isinstance(aprendizado_novo, dict)
+            else None
+        )
+        novo_id = novo_valor.get("id") if isinstance(novo_valor, dict) else None
+        anterior_id = (
+            aprendizado_anterior.get("aprendizado_id")
+            if isinstance(aprendizado_anterior, dict)
+            else None
+        )
+
+        return {
+            "versao": cls.VERSAO,
+            "estado": "transicao_llc2_fechada",
+            "aprendizado_anterior_id": anterior_id,
+            "decisao": {
+                "acao": decisao.get("acao"),
+                "estrategia": decisao.get("estrategia"),
+                "influencia_decisoria_comprovada": bool(
+                    (decisao.get("llc") or {}).get(
+                        "influencia_decisoria_comprovada"
+                    ) is True
+                ),
+                "mudou_escolha": bool(
+                    (decisao.get("llc") or {}).get("mudou_escolha") is True
+                ),
+            },
+            "acao": copy.deepcopy(acao_resultado),
+            "resultado": copy.deepcopy(resultado_observado),
+            "feedback_operacional": copy.deepcopy(feedback),
+            "avaliacao": copy.deepcopy(avaliacao),
+            "aprendizado_novo_id": novo_id,
+            "ciclo_fechado": True,
+            "causalidade_ambiental_comprovada": False,
+            **cls.INVARIANTES,
+        }
+
+    @classmethod
     def contexto(cls) -> dict[str, Any]:
         return {
             "sucesso": True,
@@ -252,6 +358,8 @@ class LearningLoopCausalNixal:
             "origem": cls.FONTE,
             "versao": cls.VERSAO,
             "politica": cls.POLITICA,
+            "feedback_operacional": True,
+            "transicao_completa": True,
             "alternativas": [
                 copy.deepcopy(opcao) for opcao in cls.CANDIDATAS
             ],
