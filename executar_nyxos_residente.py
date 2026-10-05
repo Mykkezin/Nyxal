@@ -20,6 +20,7 @@ from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
+from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -56,7 +57,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    runtime = NyxalRuntime()
+    solicitacao_evolucao = SolicitacaoEvolucaoNixal(repositorio=BASE_DIR)
+    runtime = NyxalRuntime(solicitacao_evolucao=solicitacao_evolucao)
     auto_evolucao = AutoEvolucaoGovernadaNixOS(BASE_DIR)
     auto_experimento = AutoExperimentoIsoladoAE2(
         runtime,
