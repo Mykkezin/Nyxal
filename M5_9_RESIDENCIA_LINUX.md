@@ -138,3 +138,14 @@ M5.9 será considerado implementado quando:
 4. AE2 continuar desabilitada;
 5. a residência não conceder autoridade adicional;
 6. não houver alteração em main ou na planta autoritativa.
+
+
+## Perfil residente leve
+
+A residência contínua usa explicitamente `NyxalRuntime(modo_residente=True)`.
+
+Nesse perfil, o ciclo operacional mantém observação corporal, diagnóstico, necessidades, decisão, ação autorizada, observação do resultado, avaliação, experiência, aprendizado e persistência, mas adia a investigação profunda para execução sob demanda. Isso evita repetir uma investigação arquitetural pesada a cada intervalo curto de residência.
+
+O perfil residente também usa `log_nyxal_residente.json`, separado do log histórico completo do Runtime, evitando carregar um arquivo histórico local potencialmente grande durante a inicialização do serviço.
+
+A investigação profunda permanece disponível no Runtime normal, com `modo_residente=False`.
