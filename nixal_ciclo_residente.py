@@ -28,6 +28,7 @@ from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_habitat import HabitatNixOS
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
+from nixal_plano_central_controle import PlanoCentralControleNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 
 
@@ -48,6 +49,7 @@ class CicloResidenteNixOS:
         descoberta_continua_ae5: DescobertaContinuaGovernadaAE5 | None = None,
         fisiologia_operacional: FisiologiaOperacionalNixOS | None = None,
         presenca_maquina: PresencaMaquinaNixOS | None = None,
+        plano_central_controle: PlanoCentralControleNixOS | None = None,
         *,
         coletor_dataset_dual_ae5: ColetorDatasetDualAE5 | None = None,
         intervalo_segundos: float = 5.0,
@@ -72,6 +74,7 @@ class CicloResidenteNixOS:
         self._habitat_ae5 = HabitatNixOS() if coletor_dataset_dual_ae5 is not None else None
         self.fisiologia_operacional = fisiologia_operacional
         self.presenca_maquina = presenca_maquina
+        self.plano_central_controle = plano_central_controle
         self.intervalo_segundos = float(intervalo_segundos)
         self.parar_em_erro = bool(parar_em_erro)
 
@@ -131,6 +134,9 @@ class CicloResidenteNixOS:
             ),
             "presenca_maquina_habilitada": (
                 self.presenca_maquina is not None
+            ),
+            "plano_central_controle_habilitado": (
+                self.plano_central_controle is not None
             ),
             "autorizacao_explicita": False,
             "integracao_executada": False,
@@ -284,6 +290,36 @@ class CicloResidenteNixOS:
                         "conhecimento_permanente": False,
                     }
                 resultado["fisiologia"] = copy.deepcopy(fisiologia)
+
+            if self.plano_central_controle is not None:
+                try:
+                    plano_central = self.plano_central_controle.gerar_plano(
+                        ciclo=resultado,
+                        fisiologia=resultado.get("fisiologia"),
+                    )
+                except Exception as erro:
+                    plano_central = {
+                        "sucesso": False,
+                        "estado": "plano_central_controle_falhou",
+                        "origem": self.plano_central_controle.FONTE,
+                        "motivo": f"{type(erro).__name__}: {erro}",
+                        "execucao": {
+                            "planejada": False,
+                            "executada": False,
+                            "gateway_atuacao": False,
+                        },
+                        "governanca": {
+                            "autorizacao_explicita": False,
+                            "integracao_executada": False,
+                            "stable_modificada": False,
+                            "arquitetura_modificada": False,
+                            "conhecimento_permanente": False,
+                        },
+                    }
+                resultado["plano_central_controle"] = copy.deepcopy(
+                    plano_central
+                )
+
             if self.ciclo_evolucao_ae4 is not None:
                 try:
                     auto_evolucao_ae4_resultado = (
