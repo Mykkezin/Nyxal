@@ -1,6 +1,9 @@
 name: NyxOS M5 — validação do Habitat
 
 on:
+  push:
+    branches:
+      - feat/m5-habitat-nyxos
   pull_request:
   workflow_dispatch:
 
