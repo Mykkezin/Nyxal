@@ -89,6 +89,32 @@ Encerramento manual do serviço continua disponível com systemctl --user stop.
 - deploy/systemd/desinstalar_nyxos_servicos.sh;
 - teste_m5_9_residencia_linux.py.
 
+## Ordem de engenharia
+
+M5.9 é deliberadamente anterior à camada de atuação do host.
+
+A sequência registrada em `ORDEM_ENGENHARIA_NYXOS.md` é:
+
+```
+M5.8 dependências
+   ↓
+M5.9 residência Linux
+   ↓
+M5.10 gateway de atuação
+   ↓
+M5.11 processos e aplicativos
+   ↓
+M5.12 corpo térmico e ventilação
+   ↓
+M5.13 fisiologia operacional
+   ↓
+M5.14 plano central de controle
+   ↓
+M5.15 presença de máquina
+```
+
+A auto-evolution AE1→AE5 permanece paralela e governada, sem receber autoridade implícita sobre essas camadas.
+
 ## Critério de conclusão
 
 M5.9 será considerado implementado quando:
