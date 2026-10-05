@@ -35,6 +35,19 @@ Também não incorpora automaticamente módulos posteriores do Habitat NyxOS à 
 - `teste_m5_8_dependencias_arquiteturais.py` — validação estrutural da proposta.
 - `teste_m5_8_cobertura_importacoes.py` — reconciliação automática entre os imports diretos encontrados nos componentes Python da planta e as relações declaradas na proposta.
 
+## Checkpoint de validação — 2026-10-05
+
+A proposta foi validada em duas camadas no branch de desenvolvimento:
+
+- `teste_m5_8_dependencias_arquiteturais.py`: **PASSOU**.
+- `teste_m5_8_cobertura_importacoes.py`: **PASSOU**.
+- relações diretas encontradas nos componentes Python da planta: **4**.
+- relações declaradas na proposta: **4**.
+- relações encontradas na fonte e ausentes na proposta: **0**.
+- relações declaradas na proposta sem evidência direta: **0**.
+
+Conclusão deste checkpoint: o mapa está **completo dentro do critério declarado de importação direta**. Isso não o transforma em autoridade arquitetural e não autoriza alteração da planta.
+
 ## Invariantes
 
 ```
