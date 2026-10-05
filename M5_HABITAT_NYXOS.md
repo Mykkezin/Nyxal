@@ -55,6 +55,33 @@ São expostos para a interface:
 - uptime;
 - sinal resumido de GPU quando disponível.
 
+### M5.2 — Processos como entidade do habitat
+
+O segundo marco transforma a simples contagem de processos em uma observação estruturada do host:
+
+```
+/proc
+  ↓
+adaptador de processos
+  ↓
+entidades sanitizadas
+  ↓
+HabitatNixOS
+  ↓
+/api/public/status
+```
+
+Cada entidade exposta possui identidade mínima baseada em PID + instante de início do processo e telemetria de CPU/memória quando disponível.
+
+O contrato mantém o campo legado `recursos.processos` como contagem total e adiciona `recursos.processos_habitat` com:
+
+- total observado;
+- limite de exposição;
+- coleção limitada de entidades;
+- modo somente leitura.
+
+O adaptador não coleta argumentos de linha de comando, ambiente do processo nem executa comandos externos.
+
 ### Invariantes
 
 - nenhuma alteração de hardware;
