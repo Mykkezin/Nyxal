@@ -27,7 +27,7 @@ jobs:
 
       - name: Compilar módulos
         run: |
-          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nixal_delta.py             nixal_recursos_habitat.py             nixal_ciclo_residente.py             nixal_auto_experimento_ae2.py             nixal_auto_avaliacao_ae3.py             nyxal_web_api.py
+          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nixal_delta.py             nixal_recursos_habitat.py             nixal_ciclo_residente.py             nixal_auto_experimento_ae2.py             nixal_auto_avaliacao_ae3.py             nixal_ciclo_evolucao_ae4.py             nixal_descoberta_continua_ae5.py             nyxal_web_api.py
 
       - name: Suite Nível 9
         run: python teste_nivel_9_suite_final.py
@@ -115,3 +115,6 @@ jobs:
 
       - name: Teste Ciclo de Evolução AE4
         run: python teste_ciclo_evolucao_ae4.py
+
+      - name: Teste Descoberta Contínua AE5
+        run: python teste_descoberta_continua_ae5.py
