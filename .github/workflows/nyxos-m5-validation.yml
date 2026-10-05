@@ -42,3 +42,5 @@ jobs:
         run: python teste_recursos_habitat_m5_6.py
       - name: Testar Ciclo Residente M5.7
         run: python teste_ciclo_residente_m5_7.py
+      - name: Testar Auto-Evolution AE1
+        run: python teste_auto_evolucao_ae1.py
