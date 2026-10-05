@@ -49,11 +49,11 @@ def main() -> None:
 
     assert audio.contexto()["voz_habilitada"] is False
     assert any(
-        chamada[:3] == ["pactl", "set-default-sink"]
+        chamada[:2] == ["pactl", "set-default-sink"]
         for chamada in chamadas
     )
     assert any(
-        chamada[:3] == ["pactl", "set-default-source"]
+        chamada[:2] == ["pactl", "set-default-source"]
         for chamada in chamadas
     )
 
