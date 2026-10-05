@@ -11,7 +11,7 @@ class AudioMock:
     def preparar_captura(self):
         return {"sucesso": True, "entrada_id": "bluez_input.SOM"}
 
-    def reproduzir(self, _arquivo):
+    def preparar_saida(self):
         return {"sucesso": True, "saida_id": "bluez_output.SOM"}
 
 
@@ -32,6 +32,8 @@ def main() -> None:
     preparo = voz.preparar()
     assert preparo["sucesso"] is True
     assert preparo["voz_habilitada"] is False
+    assert preparo["entrada_id"] == "bluez_input.SOM"
+    assert preparo["saida_id"] == "bluez_output.SOM"
 
     entrada = voz.transcrever("/tmp/entrada.wav")
     assert entrada["texto"] == "Olá, Nyxal"
