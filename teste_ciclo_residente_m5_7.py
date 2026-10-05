@@ -92,6 +92,12 @@ def main() -> None:
     )
 
     verificar(
+        "SolicitacaoEvolucaoNixal" in texto_launcher
+        and "solicitacao_evolucao=solicitacao_evolucao" in texto_launcher,
+        "launcher injeta a solicitação formal no Runtime antes da AE2",
+    )
+
+    verificar(
         'auto_evolution_habilitada": False' in texto_modulo,
         "ciclo residente declara auto-evolution desabilitada",
     )
