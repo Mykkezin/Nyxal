@@ -48,7 +48,7 @@ Estado atual:
 - 56.5.6 — voz contínua: integrado.
 - M5 — Habitat NyxOS: iniciado.
 - M5.1 — observabilidade real do host: implementado e validado.
-- M5.3 — persistência operacional: implementada; aguardando nova execução de CI no HEAD atual.
+- M5.3 — persistência operacional: implementada e validada pelo CI.
 
 ## Próximo objetivo
 
@@ -68,5 +68,5 @@ host
 
 O primeiro marco M5.1 mantém a ponte somente leitura e não altera hardware, estado persistente ou os gates de evolução.
 
-A prioridade agora é transformar o NyxOS em um ambiente operacional persistente sobre o sistema hospedeiro, aumentando observabilidade e controle antes de aumentar o poder da Nyxal.
+M5.3 conclui a primeira camada de continuidade operacional. O próximo objetivo é transformar mudanças relevantes do habitat em eventos Delta de primeira classe, sem ainda conceder autoalteração irrestrita.
 
