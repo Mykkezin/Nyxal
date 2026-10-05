@@ -23,6 +23,7 @@ from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
+from nixal_plano_central_controle import PlanoCentralControleNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 
 
@@ -99,6 +100,9 @@ def main() -> int:
     presenca_maquina = PresencaMaquinaNixOS(
         arquivo=BASE_DIR / "presenca_maquina_nyxos.json",
     )
+    plano_central_controle = PlanoCentralControleNixOS(
+        arquivo=BASE_DIR / "plano_central_controle_nyxos.json",
+    )
     residente = CicloResidenteNixOS(
         runtime,
         runtime.persistencia_operacional,
@@ -109,6 +113,7 @@ def main() -> int:
         descoberta_continua_ae5,
         fisiologia_operacional,
         presenca_maquina,
+        plano_central_controle,
         coletor_dataset_dual_ae5=coletor_dataset_dual_ae5,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
