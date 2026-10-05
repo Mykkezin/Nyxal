@@ -83,6 +83,7 @@ from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
 from nixal_aprendizado_persistente import AprendizadoPersistenteNixal
 from nixal_evolucao_remota import CicloEvolucaoRemotaNixal
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
+from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -136,6 +137,7 @@ class NyxalRuntime:
         memoria_aprendizado: AprendizadoPersistenteNixal | None = None,
         evolucao_remota: CicloEvolucaoRemotaNixal | None = None,
         solicitacao_evolucao: SolicitacaoEvolucaoNixal | None = None,
+        persistencia_operacional: PersistenciaOperacionalNixOS | None = None,
     ) -> None:
         if perceber_corpo is None:
             perceber_corpo = corpo_nixal.perceber_corpo
@@ -271,6 +273,13 @@ class NyxalRuntime:
         self.evolucao_remota = evolucao_remota
 
         self.solicitacao_evolucao = solicitacao_evolucao
+        self.persistencia_operacional = (
+            persistencia_operacional
+            if persistencia_operacional is not None
+            else PersistenciaOperacionalNixOS(
+                self.arquivo_estado.parent / "estado_nyxos_operacional.json"
+            )
+        )
 
         self.formulacao_investigacao = (
             FormulacaoInvestigacaoNixal(
@@ -662,6 +671,7 @@ class NyxalRuntime:
         aprendizado_anterior = (
             self.memoria_aprendizado.contexto_para_proximo_ciclo()
         )
+        persistencia_anterior = self.persistencia_operacional.contexto()
 
         self._registrar_etapa(
             etapas,
@@ -671,6 +681,17 @@ class NyxalRuntime:
                 "aprendizado_anterior_disponivel": bool(
                     aprendizado_anterior.get("disponivel")
                 ),
+                "persistencia_operacional_disponivel": bool(
+                    persistencia_anterior.get("sucesso")
+                ),
+                "ultimo_ciclo_persistido": (
+                    persistencia_anterior.get("ultimo_ciclo") or {}
+                ).get("ciclo_id")
+                if isinstance(
+                    persistencia_anterior.get("ultimo_ciclo"),
+                    dict,
+                )
+                else None,
             },
         )
 
@@ -1005,6 +1026,40 @@ class NyxalRuntime:
 
             self._persistir_estado(ciclo)
             self._registrar_log(ciclo)
+
+            try:
+                persistencia_operacional = self.persistencia_operacional.registrar(
+                    ciclo=ciclo,
+                    habitat={
+                        "estado": "habitat_observado",
+                        "origem": "nyxal_runtime",
+                        "versao": self.VERSAO,
+                        "host": {
+                            "modo": "somente_leitura",
+                        },
+                        "recursos": estado_corpo.get("corpo", {}),
+                        "timestamp": estado_corpo.get("percepcao", {}).get(
+                            "timestamp"
+                        ),
+                    },
+                    estado=ciclo.get("estado"),
+                )
+            except Exception as erro_persistencia:
+                persistencia_operacional = {
+                    "sucesso": False,
+                    "estado": "persistencia_operacional_falhou",
+                    "origem": "nyxal_runtime",
+                    "motivo": (
+                        f"{type(erro_persistencia).__name__}: "
+                        f"{erro_persistencia}"
+                    ),
+                    "conhecimento_permanente": False,
+                    "arquitetura_modificada": False,
+                }
+
+            ciclo["valor"]["persistencia_operacional"] = deepcopy(
+                persistencia_operacional
+            )
             self._ultimo_ciclo = deepcopy(ciclo)
             return deepcopy(ciclo)
 
