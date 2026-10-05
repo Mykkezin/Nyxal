@@ -35,7 +35,10 @@ def normalizar(valor: Any) -> str:
 
 
 def auditar(repositorio: Path, limite: int = 200) -> dict[str, Any]:
-    externo = repositorio.resolve().parent
+    base = repositorio.resolve()
+    if base.is_file():
+        base = base.parent
+    externo = base.parent
     diretorio_ae4 = externo / "Nyxal-evolution-ae4"
     diretorio_oportunidades = externo / "Nyxal-evolution-opportunities"
 
