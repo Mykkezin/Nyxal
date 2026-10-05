@@ -65,6 +65,9 @@ jobs:
       - name: Teste Delta M5.4
         run: python teste_delta_m5_4.py
 
+      - name: Teste Interface M5.5
+        run: python teste_interface_m5_5.py
+
       - name: Sanidade de regras de segurança
         run: |
           python - <<'PY'
