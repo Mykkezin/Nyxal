@@ -78,6 +78,45 @@ Não há promoção automática para AE6 neste checkpoint. O próximo passo arqu
 a revisão das evidências acumuladas pela AE5 e a definição supervisionada do próximo
 marco somente depois dessa revisão.
 
+## Gate AE5 — revisão de evidências acumuladas
+
+Este gate separa validação estrutural de evidência empírica. A existência de testes, persistência e integração no ciclo residente comprova o comportamento implementado, mas não substitui uma sequência real de observações acumuladas.
+
+### Evidência já validada
+
+- integração AE1 → AE4 → AE5 no ciclo residente: validada por regressão;
+- persistência e reconciliação histórica: validadas;
+- janela móvel de 20 ciclos: validada;
+- deduplicação e idempotência: validadas;
+- classificação de maturidade: validada por testes determinísticos;
+- invariantes de autorização, integração, alteração de arquitetura e conhecimento permanente: preservadas;
+- CI M5/AE1–AE5: **SUCCESS**.
+
+### Evidência ainda não comprovada
+
+- existência de uma série histórica real de ciclos residentes suficiente para demonstrar maturidade operacional fora dos testes;
+- recorrência de oportunidades reais em ciclos independentes;
+- persistência de sinais reais atravessando a janela móvel de 20 ciclos;
+- ocorrência real de uma hipótese que alcance os critérios de maturidade sem ser produzida artificialmente pelo teste;
+- existência de uma solicitação N9 correspondente surgida de um fluxo operacional real.
+
+### Critério de saída
+
+O gate permanece **ABERTO** até que exista evidência observada em execução real ou em um conjunto de ciclos operacionais explicitamente identificados como observação, sem fabricar sinais para satisfazer os critérios.
+
+A revisão deve registrar, no mínimo:
+
+1. identificadores dos ciclos observados;
+2. oportunidades AE1 efetivamente observadas;
+3. auditorias AE4 correspondentes;
+4. sinais reconciliados pela AE5;
+5. janela de evidência utilizada;
+6. maturidade calculada;
+7. eventual formalização N9 já existente, sem criação automática;
+8. confirmação das invariantes de autorização e integração.
+
+Somente após esse gate produzir evidência suficiente será feita uma proposta supervisionada de próximo marco. **Nenhuma AE6 é criada ou ativada por este gate.**
+
 ## Próximo objetivo
 
 Avançar o M5/Habitat sem criar um kernel próprio.
