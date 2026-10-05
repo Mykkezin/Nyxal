@@ -108,8 +108,8 @@ def main() -> int:
         ciclo_evolucao_ae4,
         descoberta_continua_ae5,
         fisiologia_operacional,
-        coletor_dataset_dual_ae5=coletor_dataset_dual_ae5,
         presenca_maquina,
+        coletor_dataset_dual_ae5=coletor_dataset_dual_ae5,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
