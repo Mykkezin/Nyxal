@@ -10,7 +10,6 @@ manter o núcleo testável e não habilitar voz automaticamente no residente.
 from __future__ import annotations
 
 import copy
-import re
 import subprocess
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -27,7 +26,7 @@ class DispositivoAudio:
 
 class AudioNyxOS:
     FONTE = "audio_nyxos"
-    VERSAO = "5.21.0"
+    VERSAO = "5.21.1"
 
     def __init__(
         self,
@@ -63,18 +62,59 @@ class AudioNyxOS:
         self._ultimo_estado = copy.deepcopy(estado)
         return estado
 
-    def reproduzir(self, arquivo: str, *, dispositivo: str | None = None) -> dict[str, Any]:
+    def preparar_saida(self, *, dispositivo: str | None = None) -> dict[str, Any]:
         alvo = dispositivo or self._resolver_saida()
         if alvo is None:
             return self._bloqueado("saida_audio_nao_encontrada")
         resultado = self._pactl("set-default-sink", alvo.id)
         return {
             "sucesso": resultado.returncode == 0,
-            "acao": "reproduzir",
-            "arquivo": arquivo,
+            "acao": "preparar_saida",
             "saida_id": alvo.id,
             "estado": "dispositivo_selecionado" if resultado.returncode == 0 else "falha",
-            "execucao_voz": False,
+            "reproducao_voz": False,
+            "mutacao_host": False,
+        }
+
+    def reproduzir(
+        self,
+        arquivo: str,
+        *,
+        dispositivo: str | None = None,
+        executar_fisico: bool = False,
+    ) -> dict[str, Any]:
+        """Prepara e, somente com autorização explícita, reproduz via pw-play."""
+        preparacao = self.preparar_saida(dispositivo=dispositivo)
+        if not preparacao["sucesso"]:
+            return {**preparacao, "acao": "reproduzir", "arquivo": arquivo}
+
+        if not executar_fisico:
+            return {
+                **preparacao,
+                "acao": "reproduzir",
+                "arquivo": arquivo,
+                "execucao_voz": False,
+                "motivo": "execucao_fisica_nao_autorizada",
+            }
+
+        resultado = self._executor(
+            [
+                "pw-play",
+                "--target",
+                preparacao["saida_id"],
+                arquivo,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        return {
+            **preparacao,
+            "acao": "reproduzir",
+            "arquivo": arquivo,
+            "execucao_voz": resultado.returncode == 0,
+            "estado": "executada" if resultado.returncode == 0 else "falha",
+            "retorno": resultado.returncode,
             "mutacao_host": False,
         }
 
@@ -135,7 +175,7 @@ class AudioNyxOS:
             partes = linha.split(None, 4)
             if len(partes) < 5:
                 continue
-            numero, nome, _driver, _formato, estado = partes
+            _numero, nome, _driver, _formato, estado = partes
             dispositivos.append(
                 DispositivoAudio(
                     id=nome,
@@ -153,8 +193,7 @@ class AudioNyxOS:
         preferencia: str,
     ) -> DispositivoAudio | None:
         for dispositivo in dispositivos:
-            nome = dispositivo.nome.lower()
-            if preferencia in nome:
+            if preferencia in dispositivo.nome.lower():
                 return dispositivo
         if preferencia == "som-023":
             for dispositivo in dispositivos:
