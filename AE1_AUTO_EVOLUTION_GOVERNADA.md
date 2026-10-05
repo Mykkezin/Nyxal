@@ -61,6 +61,8 @@ AE2 está implementada para executar automaticamente, sob ativação explícita,
 no máximo um experimento formal já pronto por ciclo residente, reutilizando o caminho N9.
 
 A execução AE2 permanece desabilitada por padrão no launcher e não concede autoridade de integração.
+AE3 pode interpretar automaticamente resultados produzidos por AE2, reutilizando o aprendizado
+persistente existente sem criar uma segunda memória.
 
 ## Etapas seguintes
 
