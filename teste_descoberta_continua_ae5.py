@@ -177,6 +177,10 @@ def testar_reconciliacao_historica() -> None:
         assert resultado["novos_sinais"] == 3
         assert resultado["linhas_maduras"] == 1
 
+        repeticao = ae5.reconciliar_historico()
+        assert repeticao["auditorias_processadas"] == 3
+        assert repeticao["novos_sinais"] == 0
+
 
 def testar_invariantes_e_fonte() -> None:
     origem = Path("nixal_descoberta_continua_ae5.py").read_text(
