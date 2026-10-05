@@ -24,6 +24,7 @@ from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
 from nixal_gateway_atuacao import GatewayAtuacaoNixOS
+from nixal_adaptador_host_controlado import AdaptadorHostControladoNixOS
 from nixal_plano_central_controle import PlanoCentralControleNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 
@@ -104,8 +105,12 @@ def main() -> int:
     plano_central_controle = PlanoCentralControleNixOS(
         arquivo=BASE_DIR / "plano_central_controle_nyxos.json",
     )
+    adaptador_host_controlado = AdaptadorHostControladoNixOS(
+        arquivo=BASE_DIR / "adaptador_host_controlado_nyxos.json",
+    )
     gateway_atuacao = GatewayAtuacaoNixOS(
         arquivo=BASE_DIR / "gateway_atuacao_nyxos.json",
+        executor=adaptador_host_controlado,
         execucao_fisica_habilitada=False,
     )
     residente = CicloResidenteNixOS(
@@ -159,6 +164,7 @@ def main() -> int:
     print("AE5 — DATASETS DUAIS: " + ("HABILITADOS" if contexto["coleta_dataset_dual_ae5_habilitada"] else "DESABILITADOS"))
     print("M5.15 — GATEWAY DE ATUAÇÃO: " + ("HABILITADO" if contexto["gateway_atuacao_habilitado"] else "DESABILITADO"))
     print("M5.15 — EXECUÇÃO FÍSICA: " + ("HABILITADA" if contexto["execucao_fisica_habilitada"] else "DESABILITADA"))
+    print("M5.16 — ADAPTADOR HOST: CONTROLADO / SOMENTE LEITURA")
     print("=" * 64)
 
     return 0 if all(

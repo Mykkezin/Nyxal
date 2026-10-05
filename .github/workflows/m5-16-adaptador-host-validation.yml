@@ -1,0 +1,25 @@
+name: M5.16 Adaptador de Host Controlado
+
+on:
+  push:
+    branches:
+      - feat/m5-16-adaptador-host-controlado
+  pull_request:
+    branches:
+      - main
+      - feat/m5-16-adaptador-host-controlado
+
+jobs:
+  validate-m5-16:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compilar M5.16
+        run: python -m py_compile nixal_adaptador_host_controlado.py teste_m5_16_adaptador_host_controlado.py teste_m5_16_cadeia_gateway_adaptador.py nixal_gateway_atuacao.py nixal_plano_central_controle.py nixal_ciclo_residente.py executar_nyxos_residente.py
+      - name: Executar teste M5.16
+        run: python teste_m5_16_adaptador_host_controlado.py
+      - name: Executar teste da cadeia gateway + adaptador
+        run: python teste_m5_16_cadeia_gateway_adaptador.py
