@@ -2,6 +2,9 @@ name: Nyxal Nível 9/10 — validação determinística
 # 56.5.6: integração conversacional e voz contínua
 
 on:
+  push:
+    branches:
+      - feat/m5-habitat-nyxos
   pull_request:
   workflow_dispatch:
 
