@@ -193,6 +193,45 @@ Sequência supervisionada:
 
 AE1→AE5 permanece em paralelo como camada de evolução governada. Nenhuma AE6 é criada automaticamente.
 
+## LLC — Learning Loop Causal
+
+Após o fechamento do M5, o desenvolvimento foi separado em `feat/llc-learning-loop`.
+
+### LLC.1 — Influência decisória determinística
+
+Estado: **validado no CI**.
+
+A primeira camada prova que um sinal estruturado de aprendizado anterior pode alterar a escolha do Runtime entre alternativas previamente registradas.
+
+A prova compara:
+
+```
+decisão_sem_aprendizado
+        vs.
+decisão_com_aprendizado
+```
+
+Quando a escolha muda e o aprendizado válido foi explicitamente aplicado ao ciclo, o registro marca `influencia_decisoria_comprovada = true`.
+
+A prova é limitada à influência dentro do mecanismo de decisão. `causalidade_ambiental_comprovada` permanece false.
+
+A memoria persistente continua única; o contexto do ciclo seguinte expõe experiência e avaliação anteriores em formato estruturado.
+
+### LLC.2 — Próximo passo
+
+Fechar o elo completo:
+
+```
+aprendizado anterior
+→ decisão influenciada
+→ ação
+→ resultado observado
+→ ganho/perda
+→ novo aprendizado
+```
+
+LLC.2 não deve ser iniciado automaticamente por LLC.1 e não cria uma nova memoria, novo agente ou nova autoridade de integração.
+
 ## Próximo objetivo
 
 Avançar o M5/Habitat sem criar um kernel próprio.

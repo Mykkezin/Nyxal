@@ -280,17 +280,17 @@ The stable branch is kept separate from active experimental development.
 
 ## Current development line
 
-**Branch:** `feat/m5-habitat-nyxos`
+**M5 checkpoint:** fechado e validado no commit `3f9d6a572accce504de5f482a849e8b0707f289b`.
 
-**Current milestone:** M5 — Habitat NyxOS fechado (M5.8–M5.15)
+**LLC:** iniciado em branch separada `feat/llc-learning-loop`.
 
-**Validated before M5.14:** M5.8 dependency map, M5.9 Linux residence, M5.10 host action gateway, M5.11 process/application control, M5.12 thermal body/ventilation layer, M5.13 operational physiology, AE5 evidence checkpoint
+**LLC.1:** influencia decisoria deterministica validada — compara a decisão contrafactual sem aprendizado com a decisão usando aprendizado estruturado e registra quando a escolha muda.
 
-**Next:** definir explicitamente a próxima linha de engenharia; nenhum M6 é criado automaticamente.
+**LLC.2:** próximo refinamento supervisionado — ligar decisão influenciada -> ação -> resultado -> ganho/perda -> novo aprendizado.
 
 **Stable branch:** `main`
 
-**Current integration state:** Draft / awaiting explicit authorization
+**Current integration state:** desenvolvimento em branch separada; nenhuma integração em `main` autorizada.
 
 ## Vision
 
