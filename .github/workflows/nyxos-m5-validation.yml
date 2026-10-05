@@ -22,7 +22,10 @@ jobs:
 
       - name: Compilar Habitat M5.1
         run: |
-          python -m py_compile nixal_habitat.py corpo_nixal.py nyxal_web_api.py teste_habitat_m5_1.py
+          python -m py_compile nixal_habitat.py nixal_processos_habitat.py corpo_nixal.py nyxal_web_api.py teste_habitat_m5_1.py teste_processos_habitat_m5_2.py
 
       - name: Testar Habitat M5.1
         run: python teste_habitat_m5_1.py
+
+      - name: Testar Processos do Habitat M5.2
+        run: python teste_processos_habitat_m5_2.py
