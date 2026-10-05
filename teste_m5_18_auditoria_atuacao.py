@@ -64,23 +64,17 @@ def main() -> None:
     assert validacao["registros"] == 4
 
     linhas = arquivo_auditoria.read_text(encoding="utf-8").splitlines()
-    assert len(linhas) == 4
+    assert len(linhas) == 5
 
     eventos = [__import__("json").loads(linha)["evento"] for linha in linhas]
     assert eventos == [
         "operacao_preparada",
         "operacao_bloqueada",
-        "operacao_executada",
         "atuacao_sandbox_executada",
-    ] or eventos == [
-        "operacao_preparada",
-        "operacao_bloqueada",
         "operacao_executada",
-        "atuacao_sandbox_executada",
         "rollback_executado",
     ]
 
-    # O rollback também deve ser auditado; a contagem esperada é cinco.
     assert validacao["registros"] == 5
 
     print("TESTE_M5_18_AUDITORIA_ATUACAO_OK")
