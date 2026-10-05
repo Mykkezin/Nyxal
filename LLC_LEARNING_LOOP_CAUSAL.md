@@ -1,84 +1,97 @@
 # LLC — Learning Loop Causal
 
-## Estado atual: LLC.4 iniciado
+## Estado atual: LLC.5 implementado e validado
 
-O LLC possui quatro etapas:
+O LLC possui cinco etapas:
 
-1. **LLC.1 — influencia decisoria**
+1. **LLC.1 — influencia decisória**
 2. **LLC.2 — feedback operacional**
-3. **LLC.3 — protocolo de evidencia causal controlada**
-4. **LLC.4 — evidencia ambiental real/observacional**
+3. **LLC.3 — protocolo de evidência causal controlada**
+4. **LLC.4 — evidência ambiental real/observacional**
+5. **LLC.5 — evidência causal longitudinal do habitat**
 
 ## LLC.4
 
 A quarta etapa aproxima o Learning Loop do habitat real sem pular a etapa experimental.
 
-O novo componente `EvidenciaAmbientalLLC` usa o `HabitatNixOS` existente em modo somente leitura e pode:
+O componente `EvidenciaAmbientalLLC` usa o `HabitatNixOS` existente em modo somente leitura e pode:
 
 - capturar um snapshot real do host;
-- identificar o snapshot por hash deterministico;
-- observar metricas numericas declaradas;
+- identificar o snapshot por hash determinístico;
+- observar métricas numéricas declaradas;
 - comparar antes/depois;
-- registrar fonte, unidade, direcao de melhoria e ids dos snapshots.
+- registrar fonte, unidade, direção de melhoria e ids dos snapshots.
 
-Metricas atualmente declaradas incluem CPU, memoria, armazenamento, processos, uptime e leituras numericas de GPU quando disponiveis.
+Uma mudança real observada no host continua sendo evidência observacional.
 
-## Regra central
+## LLC.5
 
-LLC.4 produz:
+A quinta etapa testa uma propriedade arquitetural concreta:
+
+> uma mudança ambiental observada pode ser vinculada a uma transição LLC explicitamente identificada e repetida longitudinalmente dentro de um desenho controlado, sem atribuir causalidade por simples correlação.
+
+Cada repetição declara explicitamente:
+
+- `transicao_id`;
+- `ciclo_id`;
+- ação esperada e decisão LLC;
+- influência decisória comprovada;
+- resultado da ação;
+- snapshot ambiental antes/depois da intervenção;
+- snapshot ambiental antes/depois do controle;
+- métrica, unidade, fonte e direção.
+
+O protocolo exige pelo menos **3 transições e 3 ciclos distintos**, a mesma ação esperada e a mesma métrica declarada em todas as repetições.
+
+Para cada repetição:
 
 ```
-evidencia_ambiental_observacional = true
+efeito =
+(intervenção_depois - intervenção_antes)
+-
+(controle_depois - controle_antes)
 ```
 
-Mas mantém:
+O gate longitudinal passa somente quando todas as transições são válidas, os pares estão em ordem temporal, a decisão possui influência decisória comprovada e o efeito melhora na mesma direção em todas as repetições.
+
+O resultado é classificado como:
 
 ```
-causalidade_ambiental_comprovada = false
+evidencia_causal_longitudinal = true
+causalidade_ambiental_comprovada = true
 ```
 
-Uma mudanca real observada no host nao e automaticamente atribuida a acao do LLC.
+quando todos os gates passam.
 
-O resultado:
+Essa afirmação é limitada ao desenho e aos dados fornecidos. Não representa causalidade universal fora do protocolo.
 
-```
-acao -> mudanca observada
-```
+## Integração
 
-continua sendo observacional.
+LLC.4 e LLC.5 não alteram o Runtime para coletar automaticamente métricas ambientais em todos os ciclos.
 
-Para atribuir efeito causal ainda e necessario passar pelo protocolo controlado do LLC.3 com desenho experimental, controle, contrafactual e repeticoes adequadas.
+A captura e a avaliação longitudinal precisam ser invocadas explicitamente por uma camada que conheça o desenho de medição.
 
-## Integracao
+Não existe:
 
-LLC.4 nao altera o Runtime residente para coletar metricas automaticamente em todos os ciclos.
-
-A captura pode ser chamada explicitamente por uma camada superior que conheca o desenho da medicao.
-
-Nao existe:
-
-- treinamento automatico;
-- deployment;
-- autoalteracao;
-- nova memoria;
+- treinamento automático;
+- deployment automático;
+- autoalteração;
+- memória paralela;
 - boot adicional;
-- autorizacao implicita;
-- integracao em `main`.
+- autorização implícita;
+- integração automática em `main`.
 
-## Validacao
+## Validação
 
-O teste dedicado verifica:
+O LLC.5 possui teste dedicado para:
 
-- captura sintetica estruturada;
-- captura real do HabitatNixOS em somente leitura;
-- observacao de metrica declarada;
-- comparacao antes/depois;
-- rejeicao de metrica nao declarada;
-- invariantes de governanca.
-
-## Estado
-
-`LLC.4.0.0` — interface de evidencia ambiental real/observacional implementada e validada.
+- evidência longitudinal aprovada;
+- repetição mínima;
+- influência decisória ausente;
+- ação divergente;
+- compatibilidade com o formato de observação do LLC.4;
+- invariantes de governança;
+- ausência de execução externa.
 
 M5 permanece congelado.
 
