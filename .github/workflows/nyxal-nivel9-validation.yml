@@ -24,7 +24,7 @@ jobs:
 
       - name: Compilar módulos
         run: |
-          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nyxal_web_api.py
+          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nyxal_web_api.py
 
       - name: Suite Nível 9
         run: python teste_nivel_9_suite_final.py
@@ -55,6 +55,9 @@ jobs:
 
       - name: Teste Processos do Habitat M5.2
         run: python teste_processos_habitat_m5_2.py
+
+      - name: Teste Persistência Operacional M5.3
+        run: python teste_persistencia_operacional_m5_3.py
 
       - name: Sanidade de regras de segurança
         run: |
