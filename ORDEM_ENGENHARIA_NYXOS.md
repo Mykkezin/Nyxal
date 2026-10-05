@@ -48,7 +48,7 @@ Estado: fechado.
 - sem transformar texto do Qwen em comando shell.
 
 ### M5.12 — Corpo térmico e ventilação
-Estado: em implementação e validação.
+Estado: fechado.
 - consolidar sensores térmicos reais;
 - detectar tendência e estresse térmico;
 - definir estados corporais térmicos;
@@ -57,6 +57,7 @@ Estado: em implementação e validação.
 - começar com modo supervisionado antes de qualquer controle automático contínuo.
 
 ### M5.13 — Fisiologia operacional
+Estado: em implementação e validação.
 - heartbeat formal do NyxOS;
 - latência e regularidade dos ciclos;
 - estado de presença;
