@@ -113,6 +113,41 @@ def main() -> None:
     )
     assert contador["execucoes"] == 0
 
+    argumento_grande = gateway.executar(
+        {
+            "acao": "acao_teste_controlada",
+            "argumentos": {
+                "valor": "x" * 257,
+            },
+        },
+        autorizacao_acao=True,
+    )
+    assert argumento_grande["sucesso"] is False
+    assert (
+        argumento_grande["valor"]["politica"]["motivo"]
+        == "tamanho_argumento_excedido:valor"
+    )
+    assert contador["execucoes"] == 0
+
+    metadado_invalido = gateway.executar(
+        {
+            "acao": "acao_teste_controlada",
+            "argumentos": {
+                "valor": "teste",
+            },
+            "metadados": {
+                "campo_extra": "não permitido",
+            },
+        },
+        autorizacao_acao=True,
+    )
+    assert metadado_invalido["sucesso"] is False
+    assert (
+        metadado_invalido["valor"]["politica"]["estado"]
+        == "entrada_invalida"
+    )
+    assert contador["execucoes"] == 0
+
     simulacao = gateway.executar(
         {
             "acao": "acao_teste_controlada",
