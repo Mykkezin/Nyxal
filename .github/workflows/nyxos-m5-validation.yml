@@ -25,7 +25,7 @@ jobs:
 
       - name: Compilar Habitat M5.1
         run: |
-          python -m py_compile nixal_habitat.py nixal_processos_habitat.py nixal_persistencia_operacional.py corpo_nixal.py nixal_runtime.py nyxal_web_api.py teste_habitat_m5_1.py teste_processos_habitat_m5_2.py teste_persistencia_operacional_m5_3.py
+          python -m py_compile nixal_habitat.py nixal_processos_habitat.py nixal_persistencia_operacional.py nixal_delta.py corpo_nixal.py nixal_runtime.py nyxal_web_api.py teste_habitat_m5_1.py teste_processos_habitat_m5_2.py teste_persistencia_operacional_m5_3.py teste_delta_m5_4.py
 
       - name: Testar Habitat M5.1
         run: python teste_habitat_m5_1.py
@@ -34,3 +34,5 @@ jobs:
         run: python teste_processos_habitat_m5_2.py
       - name: Testar Persistência Operacional M5.3
         run: python teste_persistencia_operacional_m5_3.py
+      - name: Testar Delta M5.4
+        run: python teste_delta_m5_4.py
