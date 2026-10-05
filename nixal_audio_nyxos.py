@@ -26,7 +26,7 @@ class DispositivoAudio:
 
 class AudioNyxOS:
     FONTE = "audio_nyxos"
-    VERSAO = "5.21.0"
+    VERSAO = "5.21.1"
 
     def __init__(
         self,
@@ -76,14 +76,46 @@ class AudioNyxOS:
             "mutacao_host": False,
         }
 
-    def reproduzir(self, arquivo: str, *, dispositivo: str | None = None) -> dict[str, Any]:
-        """Seleciona a saída; a reprodução física é responsabilidade do adaptador externo."""
-        resultado = self.preparar_saida(dispositivo=dispositivo)
+    def reproduzir(
+        self,
+        arquivo: str,
+        *,
+        dispositivo: str | None = None,
+        executar_fisico: bool = False,
+    ) -> dict[str, Any]:
+        """Prepara e, somente com autorização explícita, reproduz via pw-play."""
+        preparacao = self.preparar_saida(dispositivo=dispositivo)
+        if not preparacao["sucesso"]:
+            return {**preparacao, "acao": "reproduzir", "arquivo": arquivo}
+
+        if not executar_fisico:
+            return {
+                **preparacao,
+                "acao": "reproduzir",
+                "arquivo": arquivo,
+                "execucao_voz": False,
+                "motivo": "execucao_fisica_nao_autorizada",
+            }
+
+        resultado = self._executor(
+            [
+                "pw-play",
+                "--target",
+                preparacao["saida_id"],
+                arquivo,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
         return {
-            **resultado,
+            **preparacao,
             "acao": "reproduzir",
             "arquivo": arquivo,
-            "execucao_voz": False,
+            "execucao_voz": resultado.returncode == 0,
+            "estado": "executada" if resultado.returncode == 0 else "falha",
+            "retorno": resultado.returncode,
+            "mutacao_host": False,
         }
 
     def preparar_captura(self, *, dispositivo: str | None = None) -> dict[str, Any]:
