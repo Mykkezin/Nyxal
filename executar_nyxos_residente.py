@@ -19,6 +19,7 @@ from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
 from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
+from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -69,6 +70,9 @@ def main() -> int:
         auto_avaliacao,
         repositorio=BASE_DIR,
     )
+    descoberta_continua_ae5 = DescobertaContinuaGovernadaAE5(
+        repositorio=BASE_DIR,
+    )
     residente = CicloResidenteNixOS(
         runtime,
         runtime.persistencia_operacional,
@@ -76,6 +80,7 @@ def main() -> int:
         auto_experimento,
         auto_avaliacao,
         ciclo_evolucao_ae4,
+        descoberta_continua_ae5,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
@@ -110,6 +115,7 @@ def main() -> int:
     )
     print("AE3 — AVALIAÇÃO: HABILITADA")
     print("AE4 — CICLO DE EVOLUÇÃO: " + ("HABILITADO" if contexto["ciclo_evolucao_ae4_habilitado"] else "DESABILITADO"))
+    print("AE5 — DESCOBERTA CONTÍNUA: " + ("HABILITADA" if contexto["descoberta_continua_ae5_habilitada"] else "DESABILITADA"))
     print("=" * 64)
 
     return 0 if all(
