@@ -19,15 +19,22 @@ install -m 0644 "${SCRIPT_DIR}/nyxos-residente.service" "${USER_SYSTEMD_DIR}/nyx
 install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
 
 systemctl --user daemon-reload
-systemctl --user enable nyxos.target
+systemctl --user enable --now nyxos.target
 
-echo "Serviços NyxOS instalados."
-echo "Para iniciar nesta sessão:"
-echo "  systemctl --user start nyxos.target"
+if loginctl enable-linger "${USER}" 2>/dev/null; then
+    LINGER_STATUS="ativado"
+else
+    LINGER_STATUS="não foi possível ativar automaticamente"
+fi
+
+echo "Serviços NyxOS instalados e iniciados."
+echo "Lingering da conta: ${LINGER_STATUS}"
 echo
 echo "Para acompanhar:"
 echo "  systemctl --user status nyxos.target"
 echo "  journalctl --user -u nyxal-api.service -u nyxos-residente.service -f"
 echo
-echo "Para residência também sem login gráfico, habilite o lingering da conta:"
-echo "  loginctl enable-linger ${USER}"
+if [[ "${LINGER_STATUS}" != "ativado" ]]; then
+    echo "Para residência também sem login gráfico, execute:"
+    echo "  loginctl enable-linger ${USER}"
+fi
