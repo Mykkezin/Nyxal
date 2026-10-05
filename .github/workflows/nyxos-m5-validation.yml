@@ -25,7 +25,7 @@ jobs:
 
       - name: Compilar Habitat M5.1
         run: |
-          python -m py_compile nixal_habitat.py nixal_processos_habitat.py nixal_persistencia_operacional.py nixal_delta.py nixal_recursos_habitat.py nixal_ciclo_residente.py nixal_auto_experimento_ae2.py corpo_nixal.py nixal_runtime.py nyxal_web_api.py executar_nyxos_residente.py teste_habitat_m5_1.py teste_processos_habitat_m5_2.py teste_persistencia_operacional_m5_3.py teste_delta_m5_4.py teste_auto_experimento_ae2.py teste_ae2_ciclo_residente.py
+          python -m py_compile nixal_habitat.py nixal_processos_habitat.py nixal_persistencia_operacional.py nixal_delta.py nixal_recursos_habitat.py nixal_ciclo_residente.py nixal_auto_experimento_ae2.py nixal_auto_avaliacao_ae3.py corpo_nixal.py nixal_runtime.py nyxal_web_api.py executar_nyxos_residente.py teste_habitat_m5_1.py teste_processos_habitat_m5_2.py teste_persistencia_operacional_m5_3.py teste_delta_m5_4.py teste_auto_experimento_ae2.py teste_ae2_ciclo_residente.py
 
       - name: Testar Habitat M5.1
         run: python teste_habitat_m5_1.py
@@ -49,3 +49,7 @@ jobs:
         run: python teste_auto_experimento_ae2.py
       - name: Testar AE2 no Ciclo Residente
         run: python teste_ae2_ciclo_residente.py
+      - name: Testar Auto-Avaliação AE3
+        run: python teste_auto_avaliacao_ae3.py
+      - name: Testar AE3 no Ciclo Residente
+        run: python teste_ae3_ciclo_residente.py
