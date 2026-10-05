@@ -168,7 +168,7 @@ def testar_deduplicacao_24h() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         clock = CicloFakeClock()
         coletor = novo(tmp, clock)
-        coletor.processar_ciclo(ciclo=ciclo("c1"), habitat=habitat())
+        coletor.processar_ciclo(ciclo=ciclo("c1", cpu=30.0), habitat=habitat())
         primeiro = coletor.processar_ciclo(ciclo=ciclo("c2", cpu=30.0), habitat=habitat())
         segundo = coletor.processar_ciclo(ciclo=ciclo("c3", cpu=30.0), habitat=habitat())
         assert primeiro["qwen"]["gravado"] is True
