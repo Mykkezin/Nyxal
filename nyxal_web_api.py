@@ -24,6 +24,7 @@ from nixal_delta import RegistroDeltaNixOS
 from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
+from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -47,6 +48,10 @@ PRESENCA_MAQUINA = PresencaMaquinaNixOS(
     arquivo=BASE_DIR / "presenca_maquina_nyxos.json"
 )
 DESCOBERTA_CONTINUA_AE5 = DescobertaContinuaGovernadaAE5(
+    repositorio=BASE_DIR,
+    habilitada=False,
+)
+COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
     repositorio=BASE_DIR,
     habilitada=False,
 )
@@ -1016,6 +1021,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                             0,
                         ),
                     },
+                    "datasets_ae5": {
+                        "versao": COLETOR_DATASET_DUAL_AE5.VERSAO,
+                        "qwen_registros": COLETOR_DATASET_DUAL_AE5.contexto()["datasets"]["qwen"]["registros"],
+                        "kernel_registros": COLETOR_DATASET_DUAL_AE5.contexto()["datasets"]["kernel"]["registros"],
+                        "treinamento_automatico": False,
+                    },
                 },
             )
             return
@@ -1039,6 +1050,31 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     "conhecimento_permanente": False,
                 }
             self._send_json(200, contexto_ae5)
+            return
+
+        if self.path == "/api/ae5/datasets":
+            if not self._authorized():
+                return
+            try:
+                contexto_datasets = COLETOR_DATASET_DUAL_AE5.contexto()
+            except Exception as erro:
+                contexto_datasets = {
+                    "sucesso": False,
+                    "estado": "coletor_dual_ae5_indisponivel",
+                    "origem": COLETOR_DATASET_DUAL_AE5.FONTE,
+                    "versao": COLETOR_DATASET_DUAL_AE5.VERSAO,
+                    "motivo": str(erro),
+                    "treinamento_automatico": False,
+                    "implantacao_automatica": False,
+                    "invariantes": {
+                        "autorizacao_explicita": False,
+                        "integracao_executada": False,
+                        "stable_modificada": False,
+                        "arquitetura_modificada": False,
+                        "conhecimento_permanente": False,
+                    },
+                }
+            self._send_json(200, contexto_datasets)
             return
 
         if self.path == "/api/status":

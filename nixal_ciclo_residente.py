@@ -25,6 +25,8 @@ from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
+from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
+from nixal_habitat import HabitatNixOS
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 
@@ -44,6 +46,7 @@ class CicloResidenteNixOS:
         auto_avaliacao: AutoAvaliacaoAE3 | None = None,
         ciclo_evolucao_ae4: CicloEvolucaoResidenteAE4 | None = None,
         descoberta_continua_ae5: DescobertaContinuaGovernadaAE5 | None = None,
+        coletor_dataset_dual_ae5: ColetorDatasetDualAE5 | None = None,
         fisiologia_operacional: FisiologiaOperacionalNixOS | None = None,
         presenca_maquina: PresencaMaquinaNixOS | None = None,
         *,
@@ -65,6 +68,8 @@ class CicloResidenteNixOS:
         self.auto_avaliacao = auto_avaliacao
         self.ciclo_evolucao_ae4 = ciclo_evolucao_ae4
         self.descoberta_continua_ae5 = descoberta_continua_ae5
+        self.coletor_dataset_dual_ae5 = coletor_dataset_dual_ae5
+        self._habitat_ae5 = HabitatNixOS() if coletor_dataset_dual_ae5 is not None else None
         self.fisiologia_operacional = fisiologia_operacional
         self.presenca_maquina = presenca_maquina
         self.intervalo_segundos = float(intervalo_segundos)
@@ -116,6 +121,10 @@ class CicloResidenteNixOS:
             "descoberta_continua_ae5_habilitada": bool(
                 self.descoberta_continua_ae5 is not None
                 and self.descoberta_continua_ae5.habilitada
+            ),
+            "coleta_dataset_dual_ae5_habilitada": bool(
+                self.coletor_dataset_dual_ae5 is not None
+                and self.coletor_dataset_dual_ae5.habilitada
             ),
             "fisiologia_operacional_habilitada": (
                 self.fisiologia_operacional is not None
@@ -320,6 +329,39 @@ class CicloResidenteNixOS:
                     resultado["auto_descoberta_ae5"] = copy.deepcopy(
                         auto_descoberta_ae5_resultado
                     )
+
+                    if (
+                        self.coletor_dataset_dual_ae5 is not None
+                        and self.coletor_dataset_dual_ae5.habilitada
+                    ):
+                        try:
+                            habitat_ae5 = (
+                                self._habitat_ae5.snapshot()
+                                if self._habitat_ae5 is not None
+                                else {}
+                            )
+                            coleta_dataset_dual = (
+                                self.coletor_dataset_dual_ae5.processar_ciclo(
+                                    ciclo=resultado,
+                                    habitat=habitat_ae5,
+                                    ae4_resultado=auto_evolucao_ae4_resultado,
+                                )
+                            )
+                        except Exception as erro:
+                            coleta_dataset_dual = {
+                                "sucesso": False,
+                                "estado": "coleta_dataset_dual_ae5_falhou",
+                                "origem": self.coletor_dataset_dual_ae5.FONTE,
+                                "motivo": f"{type(erro).__name__}: {erro}",
+                                "autorizacao_explicita": False,
+                                "integracao_executada": False,
+                                "stable_modificada": False,
+                                "arquitetura_modificada": False,
+                                "conhecimento_permanente": False,
+                            }
+                        resultado["coleta_dataset_dual_ae5"] = copy.deepcopy(
+                            coleta_dataset_dual
+                        )
             else:
                 auto_evolucao_resultado = None
                 if self.auto_evolucao is not None:

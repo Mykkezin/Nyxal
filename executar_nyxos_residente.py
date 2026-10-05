@@ -20,6 +20,7 @@ from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
 from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
+from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
@@ -86,6 +87,10 @@ def main() -> int:
         repositorio=BASE_DIR,
         habilitada=args.habilitar_ae5_descoberta,
     )
+    coletor_dataset_dual_ae5 = ColetorDatasetDualAE5(
+        repositorio=BASE_DIR,
+        habilitada=args.habilitar_ae5_descoberta,
+    )
     fisiologia_operacional = FisiologiaOperacionalNixOS(
         intervalo_esperado_segundos=args.intervalo,
         arquivo=BASE_DIR / "fisiologia_operacional_nyxos.json",
@@ -102,6 +107,7 @@ def main() -> int:
         auto_avaliacao,
         ciclo_evolucao_ae4,
         descoberta_continua_ae5,
+        coletor_dataset_dual_ae5,
         fisiologia_operacional,
         presenca_maquina,
         intervalo_segundos=args.intervalo,
@@ -139,6 +145,7 @@ def main() -> int:
     print("AE3 — AVALIAÇÃO: HABILITADA")
     print("AE4 — CICLO DE EVOLUÇÃO: " + ("HABILITADO" if contexto["ciclo_evolucao_ae4_habilitado"] else "DESABILITADO"))
     print("AE5 — DESCOBERTA CONTÍNUA: " + ("HABILITADA" if contexto["descoberta_continua_ae5_habilitada"] else "DESABILITADA"))
+    print("AE5 — DATASETS DUAIS: " + ("HABILITADOS" if contexto["coleta_dataset_dual_ae5_habilitada"] else "DESABILITADOS"))
     print("=" * 64)
 
     return 0 if all(
