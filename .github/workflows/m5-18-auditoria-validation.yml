@@ -1,0 +1,23 @@
+name: M5.18 Auditoria de Atuação
+
+on:
+  push:
+    branches:
+      - feat/m5-18-auditoria-atuacao
+  pull_request:
+    branches:
+      - main
+      - feat/m5-18-auditoria-atuacao
+
+jobs:
+  validate-m5-18:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compilar M5.18
+        run: python -m py_compile nixal_auditoria_atuacao.py nixal_gateway_atuacao.py nixal_adaptador_sandbox_fisico.py teste_m5_18_auditoria_atuacao.py
+      - name: Executar teste M5.18
+        run: python teste_m5_18_auditoria_atuacao.py
