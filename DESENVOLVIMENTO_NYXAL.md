@@ -48,6 +48,7 @@ Estado atual:
 - 56.5.6 — voz contínua: integrado.
 - M5 — Habitat NyxOS: iniciado.
 - M5.1 — observabilidade real do host: implementado e validado.
+- M5.3 — persistência operacional: implementada; aguardando nova execução de CI no HEAD atual.
 
 ## Próximo objetivo
 
@@ -59,7 +60,7 @@ Primeiro ciclo:
 host
 → observabilidade
 → processos
-→ persistência
+→ persistência operacional
 → eventos Delta
 → interface orientada a estado real
 → ciclo operacional residente
