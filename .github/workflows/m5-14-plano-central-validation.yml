@@ -1,0 +1,23 @@
+name: NyxOS M5.14 — plano central de controle
+
+on:
+  push:
+    branches:
+      - feat/m5-14-plano-central-controle
+  pull_request:
+    branches:
+      - main
+      - feat/m5-14-plano-central-controle
+
+jobs:
+  validar-m5-14:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compilar M5.14
+        run: python -m py_compile nixal_plano_central_controle.py teste_m5_14_plano_central_controle.py
+      - name: Executar teste M5.14
+        run: python teste_m5_14_plano_central_controle.py
