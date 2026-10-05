@@ -19,6 +19,7 @@ from nixal_integracao_sessao_transporte import (
     IntegracaoSessaoTransporteNixal,
 )
 from nixal_habitat import HabitatNixOS
+from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -31,6 +32,9 @@ INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
     transporte=TransporteConversacionalNixal(),
 )
 HABITAT_NYXOS = HabitatNixOS()
+PERSISTENCIA_OPERACIONAL = PersistenciaOperacionalNixOS(
+    BASE_DIR / "estado_nyxos_operacional.json"
+)
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -931,6 +935,17 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             presenca = estado.get("presenca", {})
             estado_operacional = estado.get("estado", {})
 
+            try:
+                persistencia_operacional = PERSISTENCIA_OPERACIONAL.contexto()
+            except Exception as erro:
+                persistencia_operacional = {
+                    "sucesso": False,
+                    "estado": "persistencia_operacional_indisponivel",
+                    "origem": PERSISTENCIA_OPERACIONAL.FONTE,
+                    "versao": PERSISTENCIA_OPERACIONAL.VERSAO,
+                    "motivo": str(erro),
+                }
+
             self._send_json(
                 200,
                 {
@@ -948,6 +963,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                         "status": estado_operacional.get("status"),
                     },
                     "habitat": habitat,
+                    "persistencia_operacional": persistencia_operacional,
                 },
             )
             return
