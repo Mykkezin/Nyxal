@@ -459,7 +459,7 @@ class DescobertaContinuaGovernadaAE5:
             "origem": self.FONTE,
             "versao": self.VERSAO,
             "linha_id": linha_id,
-            "observada": True,
+            "observada": not ja_observado,
             "madura_para_formalizacao": madura,
             "observacoes": linha["observacoes"],
             "observacoes_sucesso": linha["observacoes_sucesso"],
