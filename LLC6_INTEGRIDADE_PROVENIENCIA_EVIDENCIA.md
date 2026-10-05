@@ -1,7 +1,7 @@
 # LLC.6 — Integridade de Proveniência da Evidência
 
-## Estado
-Proposta arquitetural — não implementada.
+## Estado atual
+**Implementação inicial concluída na branch feat/llc-evidence-provenance; CI pendente de confirmação.**
 
 A LLC.5 já prova uma propriedade mais forte sobre o conteúdo fornecido:
 - pelo menos 3 ciclos distintos;
@@ -12,181 +12,100 @@ A LLC.5 já prova uma propriedade mais forte sobre o conteúdo fornecido:
 - influência decisória comprovada;
 - consistência direcional.
 
-A revisão do código da LLC.5 identificou uma lacuna anterior à causalidade: o avaliador recebe observações em dicionários e valida campos declarativos, mas não verifica de forma suficiente que cada observação é realmente derivada de uma observação produzida pelo LLC.4.
+A revisão do código da LLC.5 identificou uma lacuna anterior à causalidade: o avaliador recebe observações em dicionários e valida campos declarativos, mas não verificava de forma suficiente que cada observação era realmente derivada de uma observação produzida pelo LLC.4.
 
-Isso permite que uma estrutura sintética declare:
-`evidencia_ambiental_observacional = true`
-sem que a proveniência completa da observação seja verificável.
-
-A próxima propriedade arquitetural proposta é, portanto:
+A LLC.6 implementa a propriedade:
 
 > **Toda evidência usada pelo protocolo causal longitudinal deve possuir uma cadeia de proveniência verificável desde um artefato observacional do LLC.4 até a transição e o ciclo LLC que a utilizaram.**
 
-## O que essa propriedade NÃO prova
+## Implementação
 
-Ela não prova causalidade.
+O componente ProvenienciaEvidenciaLLC verifica:
 
-A separação permanece:
+1. origem e versão esperadas do LLC.4;
+2. modo somente leitura;
+3. identidade determinística do snapshot;
+4. identidade determinística da observação;
+5. correspondência entre snapshot e observação;
+6. timestamp válido e consistente;
+7. identidade completa da métrica;
+8. transicao_id e ciclo_id;
+9. ausência de causalidade pré-existente.
 
-```
-proveniência íntegra
-        ↓
-evidência observacional autêntica
-        ↓
-protocolo longitudinal
-        ↓
-evidência causal dentro do desenho
-```
+Quando todos os gates passam, proveniencia_evidencia_valida = true.
+Quando qualquer gate falha, proveniencia_evidencia_valida = false.
 
-Também não autoriza:
-- integração;
-- alteração de stable;
-- treinamento;
-- autoalteração;
-- execução arbitrária;
-- implantação automática.
+## Relação com LLC.5
 
-## Gates propostos
+A LLC.6 não substitui o LLC.5.
 
-A futura implementação deverá rejeitar a evidência se qualquer gate falhar.
+    LLC.4
+    evidência observacional
+            ↓
+    LLC.6
+    proveniência verificável
+            ↓
+    LLC.5
+    evidência causal longitudinal
 
-### Gate 1 — origem LLC.4
+A proveniência íntegra não é causalidade.
 
-A observação deve declarar uma origem/versionamento compatível com o produtor observacional do LLC.4.
+## Testes implementados
 
-Campos esperados:
-- `origem`;
-- `versao`;
-- `modo`.
+O teste dedicado cobre:
+- observação LLC.4 válida;
+- adulteração do id da observação;
+- adulteração do snapshot_id por alteração do snapshot;
+- origem incompatível;
+- modo diferente de somente leitura;
+- timestamp inválido;
+- métrica divergente;
+- cadeia snapshot → observação → transição → ciclo;
+- causalidade pré-existente;
+- ausência de execução externa;
+- invariantes de governança.
 
-A observação deve continuar em modo somente leitura.
+## CI
 
-### Gate 2 — identidade da observação
+Foi criado o workflow .github/workflows/llc6-proveniencia-validation.yml.
 
-O identificador da observação deve ser verificável.
+O workflow compila e executa LLC.4, LLC.5 e LLC.6.
 
-O LLC.4 já produz um `id` determinístico a partir de:
-- `snapshot_id`;
-- caminho da métrica;
-- valor;
-- timestamp.
-
-A próxima camada deve recomputar essa identidade e rejeitar divergência.
-
-### Gate 3 — identidade do snapshot
-
-`snapshot_id` deve existir e ser referenciável por um artefato observacional verificável.
-
-Não basta aceitar uma string arbitrária.
-
-A verificação deve permitir demonstrar:
-
-```
-snapshot observado
-      ↓ hash determinístico
-snapshot_id declarado
-```
-
-### Gate 4 — cadeia de proveniência
-
-A evidência deve manter a cadeia:
-
-```
-snapshot_id
-    ↓
-observacao_id
-    ↓
-transicao_id
-    ↓
-ciclo_id
-```
-
-Nenhum elo pode ser criado apenas por inferência posterior.
-
-### Gate 5 — integridade temporal
-
-Timestamps devem ser interpretados como instantes temporais válidos, preferencialmente normalizados para UTC.
-
-A comparação não deve depender somente de comparação lexical de strings.
-
-A relação temporal necessária deve ser explicitamente verificável.
-
-### Gate 6 — identidade da métrica
-
-A métrica usada na observação deve corresponder exatamente à métrica declarada pelo protocolo:
-- nome;
-- caminho;
-- unidade;
-- direção;
-- fonte.
-
-### Gate 7 — causalidade não pré-existente
-
-Uma observação de entrada não pode chegar ao protocolo já marcada como causalidade comprovada.
-
-A conclusão causal deve continuar sendo produzida somente pelo gate longitudinal.
-
-## Resultado esperado
-
-Quando todos os gates de proveniência passam:
-
-```
-proveniencia_evidencia_valida = true
-```
-
-Quando qualquer gate falha:
-
-```
-proveniencia_evidencia_valida = false
-```
-
-e a evidência não pode ser usada para elevar `causalidade_ambiental_comprovada`.
-
-## Testes mínimos
-
-A implementação futura deverá provar pelo menos:
-
-1. observação LLC.4 válida aceita;
-2. `id` adulterado rejeitado;
-3. `snapshot_id` adulterado rejeitado;
-4. versão/origem incompatível rejeitada;
-5. modo diferente de somente leitura rejeitado;
-6. timestamp inválido rejeitado;
-7. timestamp inconsistente rejeitado;
-8. métrica divergente rejeitada;
-9. cadeia `snapshot → observação → transição → ciclo` íntegra aceita;
-10. cadeia quebrada rejeitada;
-11. causalidade pré-existente rejeitada;
-12. invariantes de governança preservadas.
+O fechamento da implementação depende do runner do GitHub confirmar o novo workflow como verde.
 
 ## Limite arquitetural
 
-Esta proposta não adiciona coleta automática ao Runtime.
-
-A captura continua explícita e somente leitura.
-
-A propriedade a provar é **integridade e rastreabilidade da evidência**, não autonomia causal.
+A LLC.6 não adiciona:
+- coleta automática;
+- execução de ações;
+- treinamento automático;
+- autoalteração;
+- integração automática;
+- alteração de main;
+- conhecimento permanente.
 
 ## Governança
 
-```
-autorizacao_explicita = false
-integracao_executada = false
-stable_modificada = false
-arquitetura_modificada = false
-conhecimento_permanente = false
-execucao_local = false
-treinamento_automatico = false
-implantacao_automatica = false
-causalidade_ambiental_comprovada = false
-```
-
-A proposta não altera `main`.
+    autorizacao_explicita = false
+    integracao_executada = false
+    stable_modificada = false
+    arquitetura_modificada = false
+    conhecimento_permanente = false
+    execucao_local = false
+    treinamento_automatico = false
+    implantacao_automatica = false
+    causalidade_ambiental_comprovada = false
 
 ## Critério de avanço
 
-A implementação só deve começar depois de transformar cada gate acima em comportamento observável e teste determinístico.
+A LLC.6 só será considerada fechada depois de:
 
-Nenhuma integração no Runtime será feita apenas para demonstrar a feature.
+    implementação
+        ↓
+    testes determinísticos
+        ↓
+    CI verde
+        ↓
+    checkpoint
 
-O objetivo é tornar a evidência causal do LLC.5 **auditável até sua origem**, antes de aumentar a autonomia do sistema.
+Nenhuma nova camada será criada antes desse fechamento.
