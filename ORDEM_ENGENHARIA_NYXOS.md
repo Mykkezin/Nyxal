@@ -16,7 +16,7 @@ Estado: proposta validada, não autoritativa.
 - manter a planta autoritativa inalterada até revisão.
 
 ### M5.9 — Residência Linux
-Estado: iniciado.
+Estado: fechado operacionalmente.
 
 - API como serviço residente;
 - ciclo operacional residente como serviço separado;
@@ -26,9 +26,10 @@ Estado: iniciado.
 - AE2 permanece desabilitada.
 
 ### M5.10 — Gateway de atuação do host
-Próximo após validação operacional do M5.9.
+Estado: em implementação e validação.
 
 - criar uma fronteira única para ações sobre o host;
+- iniciar com allowlist vazio até M5.11 registrar as primeiras ações concretas;
 - contratos explícitos de ação;
 - allowlist de operações;
 - validação de argumentos;
@@ -37,6 +38,7 @@ Próximo após validação operacional do M5.9.
 - política separada da decisão semântica.
 
 ### M5.11 — Controle de processos e aplicativos
+Próximo após validação do M5.10.
 - listar processos como já observado pelo habitat;
 - controlar apenas operações explicitamente registradas;
 - iniciar/encerrar processos por capacidade;
