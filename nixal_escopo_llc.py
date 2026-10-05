@@ -10,7 +10,7 @@ class EscopoLLC:
     @classmethod
     def validar(cls, *, evidencia:dict[str,Any], escopo_observado:dict[str,Any], escopo_declarado:dict[str,Any])->dict[str,Any]:
         erros=[]
-        if not isinstance(evidencia,dict) or evidencia.get("replicacao_independente_comprovada") is not True: erros.append("replicacao_nao_comprovada")
+        if not isinstance(evidencia,dict) or evidencia.get("replicacao_distinta_validada") is not True: erros.append("replicacao_distinta_nao_validada")
         if not isinstance(escopo_observado,dict) or not isinstance(escopo_declarado,dict): erros.append("escopo_invalido")
         if isinstance(escopo_observado,dict) and isinstance(escopo_declarado,dict) and escopo_observado!=escopo_declarado: erros.append("escopo_declarado_excede_observado")
         if isinstance(escopo_declarado,dict) and escopo_declarado.get("universal") is True: erros.append("generalizacao_universal_proibida")
