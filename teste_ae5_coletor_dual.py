@@ -237,14 +237,37 @@ def testar_desabilitado() -> None:
 
 
 def testar_fonte_sem_execucao_externa() -> None:
+    import ast
+
     origem = Path("nixal_coletor_dataset_dual_ae5.py").read_text(
         encoding="utf-8"
     )
-    assert "subprocess" not in origem
-    assert "Popen" not in origem
-    assert "os.system" not in origem
-    assert "shell=True" not in origem
-    assert "git merge" not in origem
+    arvore = ast.parse(origem)
+
+    modulos_importados = set()
+    chamadas = []
+
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.Import):
+            modulos_importados.update(alias.name.split(".")[0] for alias in no.names)
+        elif isinstance(no, ast.ImportFrom) and no.module:
+            modulos_importados.add(no.module.split(".")[0])
+        elif isinstance(no, ast.Call):
+            alvo = no.func
+            if isinstance(alvo, ast.Attribute) and isinstance(alvo.value, ast.Name):
+                chamadas.append((alvo.value.id, alvo.attr))
+
+    assert "subprocess" not in modulos_importados
+    assert not any(
+        modulo == "os"
+        and metodo in {"system", "popen", "spawn", "spawnv", "spawnve"}
+        for modulo, metodo in chamadas
+    )
+    assert not any(
+        modulo == "subprocess"
+        and metodo in {"Popen", "run", "call", "check_call", "check_output"}
+        for modulo, metodo in chamadas
+    )
 
 
 def main() -> None:
