@@ -26,6 +26,7 @@ from nixal_auto_avaliacao_ae3 import AutoAvaliacaoAE3
 from nixal_ciclo_evolucao_ae4 import CicloEvolucaoResidenteAE4
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
+from nixal_presenca_maquina import PresencaMaquinaNixOS
 
 
 class CicloResidenteNixOS:
@@ -44,6 +45,7 @@ class CicloResidenteNixOS:
         ciclo_evolucao_ae4: CicloEvolucaoResidenteAE4 | None = None,
         descoberta_continua_ae5: DescobertaContinuaGovernadaAE5 | None = None,
         fisiologia_operacional: FisiologiaOperacionalNixOS | None = None,
+        presenca_maquina: PresencaMaquinaNixOS | None = None,
         *,
         intervalo_segundos: float = 5.0,
         parar_em_erro: bool = True,
@@ -64,6 +66,7 @@ class CicloResidenteNixOS:
         self.ciclo_evolucao_ae4 = ciclo_evolucao_ae4
         self.descoberta_continua_ae5 = descoberta_continua_ae5
         self.fisiologia_operacional = fisiologia_operacional
+        self.presenca_maquina = presenca_maquina
         self.intervalo_segundos = float(intervalo_segundos)
         self.parar_em_erro = bool(parar_em_erro)
 
@@ -116,6 +119,9 @@ class CicloResidenteNixOS:
             ),
             "fisiologia_operacional_habilitada": (
                 self.fisiologia_operacional is not None
+            ),
+            "presenca_maquina_habilitada": (
+                self.presenca_maquina is not None
             ),
             "autorizacao_explicita": False,
             "integracao_executada": False,
@@ -196,6 +202,12 @@ class CicloResidenteNixOS:
 
         self._persistir_estado("residente_iniciado")
 
+        if self.presenca_maquina is not None:
+            try:
+                self.presenca_maquina.iniciar()
+            except Exception:
+                pass
+
         while (
             max_ciclos is None
             or ciclos_nesta_execucao < max_ciclos
@@ -231,6 +243,20 @@ class CicloResidenteNixOS:
 
             ciclos_nesta_execucao += 1
             self._quantidade_ciclos += 1
+            if self.presenca_maquina is not None:
+                try:
+                    presenca = self.presenca_maquina.heartbeat(
+                        estado_residente=self._estado,
+                    )
+                except Exception as erro:
+                    presenca = {
+                        "sucesso": False,
+                        "estado": "presenca_maquina_falhou",
+                        "origem": self.presenca_maquina.FONTE,
+                        "motivo": f"{type(erro).__name__}: {erro}",
+                    }
+                resultado["presenca_maquina"] = copy.deepcopy(presenca)
+
             if self.fisiologia_operacional is not None:
                 try:
                     fisiologia = self.fisiologia_operacional.registrar_ciclo(
@@ -417,6 +443,14 @@ class CicloResidenteNixOS:
             f"residente_{self._estado}",
             self._ultimo_resultado,
         )
+
+        if self.presenca_maquina is not None:
+            try:
+                self.presenca_maquina.encerrar(
+                    motivo=f"residente_{self._estado}",
+                )
+            except Exception:
+                pass
 
         return resultados
 
