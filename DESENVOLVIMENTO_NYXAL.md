@@ -161,6 +161,21 @@ A revisão deve registrar, no mínimo:
 
 Com este checkpoint validado, qualquer próximo marco continua dependente de proposta supervisionada e revisão arquitetural. **Nenhuma AE6 é criada ou ativada automaticamente por este gate.**
 
+## Checkpoint M5.8 — validação do mapa de dependências arquiteturais
+
+Em 2026-10-05, a proposta supervisionada M5.8 foi validada por dois testes complementares:
+
+- validação estrutural da proposta: **PASSOU**;
+- cobertura automática por importações diretas entre os componentes Python declarados na planta: **PASSOU**;
+- relações diretas encontradas: **4**;
+- relações correspondentes declaradas na proposta: **4**;
+- relações ausentes na proposta: **0**;
+- relações declaradas sem evidência direta: **0**.
+
+O critério de M5.8, portanto, está satisfeito neste checkpoint **dentro do escopo de importação direta**.
+
+A proposta permanece não autoritativa. `planta_nixal/planta.json`, Runtime, ciclo residente e `main` não foram alterados por este marco. Nenhuma promoção de arquitetura ou integração foi executada.
+
 ## Próximo objetivo
 
 Avançar o M5/Habitat sem criar um kernel próprio.
