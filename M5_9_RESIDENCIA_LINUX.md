@@ -39,6 +39,23 @@ Não muda:
 
 A AE2 continua desabilitada. O serviço residente não passa a flag de habilitação experimental.
 
+## Ambiente Python da residência
+
+A residência usa obrigatoriamente o ambiente virtual do próprio projeto:
+
+```
+~/Nyxal/.venv/bin/python
+```
+
+Isso evita que o systemd execute a aplicação com um interpretador global que não contém as dependências do Nyxal.
+
+O instalador valida:
+
+1. existência e executabilidade de `.venv/bin/python`;
+2. importação da API e do launcher residente pelo mesmo interpretador.
+
+Se essa validação falhar, os serviços não são instalados/iniciados.
+
 ## Instalação local
 
 O instalador trabalha no escopo do usuário através de systemd --user:
