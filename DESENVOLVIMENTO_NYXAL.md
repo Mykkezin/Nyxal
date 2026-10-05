@@ -159,7 +159,7 @@ A revisão deve registrar, no mínimo:
 7. eventual formalização N9 já existente, sem criação automática;
 8. confirmação das invariantes de autorização e integração.
 
-Somente após esse gate produzir evidência suficiente será feita uma proposta supervisionada de próximo marco. **Nenhuma AE6 é criada ou ativada por este gate.**
+Com este checkpoint validado, qualquer próximo marco continua dependente de proposta supervisionada e revisão arquitetural. **Nenhuma AE6 é criada ou ativada automaticamente por este gate.**
 
 ## Próximo objetivo
 
@@ -194,6 +194,6 @@ AE5 está implementada para acumular sinais repetidos da AE1/AE4, agrupar linhas
 classificar maturidade e solicitar formalização externa sem inventar objetivo, métrica, baseline
 ou artefato.
 
-O próximo passo é a revisão de evidências da AE5 antes de definir qualquer AE6, mantendo autorização
+O próximo passo é a definição supervisionada do próximo marco, mantendo autorização
 explícita, isolamento de candidatos e reversibilidade como barreiras invariantes.
 
