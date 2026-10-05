@@ -360,12 +360,12 @@ class NyxalRuntime:
         if ciclo.get("estado_atual") != "provisoria":
             raise ValueError("hipotese_investigada_nao_provisoria")
 
-        if ciclo.get("confirmada") is not False:
+        if ciclo.get("confirmada", False) is not False:
             raise ValueError(
                 "hipotese_investigada_nao_pode_estar_confirmada"
             )
 
-        if ciclo.get("testada") is not False:
+        if ciclo.get("testada", False) is not False:
             raise ValueError(
                 "hipotese_investigada_nao_pode_estar_testada"
             )
