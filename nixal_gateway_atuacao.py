@@ -14,6 +14,8 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
+from nixal_auditoria_atuacao import AuditoriaAtuacaoNixOS
+
 
 class GatewayAtuacaoNixOS:
     FONTE = "gateway_atuacao_nyxos"
@@ -33,11 +35,13 @@ class GatewayAtuacaoNixOS:
         arquivo: str | Path | None = None,
         executor: Callable[[str], dict[str, Any]] | None = None,
         execucao_fisica_habilitada: bool = False,
+        auditoria: AuditoriaAtuacaoNixOS | None = None,
     ) -> None:
         self.arquivo = Path(arquivo) if arquivo is not None else None
         self.executor = executor
         self.execucao_fisica_habilitada = bool(execucao_fisica_habilitada)
         self._ultimo_gateway: dict[str, Any] | None = None
+        self.auditoria = auditoria
 
     @staticmethod
     def _id_operacao(plano_id: str, acao: str) -> str:
@@ -81,6 +85,7 @@ class GatewayAtuacaoNixOS:
         }
 
         self._ultimo_gateway = copy.deepcopy(operacao)
+        self._auditar("operacao_preparada", operacao)
         self._persistir()
         return copy.deepcopy(operacao)
 
@@ -137,6 +142,7 @@ class GatewayAtuacaoNixOS:
             },
         }
         self._ultimo_gateway = copy.deepcopy(saida)
+        self._auditar("operacao_executada", saida)
         self._persistir()
         return copy.deepcopy(saida)
 
@@ -163,8 +169,13 @@ class GatewayAtuacaoNixOS:
             },
         }
         self._ultimo_gateway = copy.deepcopy(saida)
+        self._auditar("operacao_bloqueada", saida)
         self._persistir()
         return copy.deepcopy(saida)
+
+    def _auditar(self, evento: str, dados: dict[str, Any]) -> None:
+        if self.auditoria is not None:
+            self.auditoria.registrar(evento=evento, dados=dados)
 
     def _persistir(self) -> None:
         if self.arquivo is None or self._ultimo_gateway is None:
