@@ -1,23 +1,12 @@
 #!/usr/bin/env python3
-"""Auditoria somente leitura do Gate de Evidências AE5.
-
-Não executa ciclos, não cria sinais, não altera persistência e não concede
-qualquer autorização. Serve para distinguir evidência operacional real de
-validação determinística por testes.
-"""
+"""Auditoria somente leitura das evidências persistidas pela AE5 econômica."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
 from pathlib import Path
 from typing import Any
-
-
-MAX_CICLOS = 20
-MIN_OBSERVACOES = 3
-MIN_SUCESSOS = 2
 
 
 def carregar(caminho: Path) -> dict[str, Any] | None:
@@ -28,142 +17,99 @@ def carregar(caminho: Path) -> dict[str, Any] | None:
     return valor if isinstance(valor, dict) else None
 
 
-def normalizar(valor: Any) -> str:
-    if not isinstance(valor, str):
-        return ""
-    return re.sub(r"\s+", " ", valor.strip().casefold())
-
-
 def auditar(repositorio: Path, limite: int = 200) -> dict[str, Any]:
+    if not isinstance(limite, int) or limite < 1:
+        raise ValueError("limite_invalido")
     base = repositorio.resolve()
     if base.is_file():
         base = base.parent
-    externo = base.parent
-    diretorio_ae4 = externo / "Nyxal-evolution-ae4"
-    diretorio_oportunidades = externo / "Nyxal-evolution-opportunities"
+    diretorio = base.parent / "Nyxal-evolution-discovery"
+    linhas_dir = diretorio
+    auditoria_dir = diretorio / "auditoria"
 
-    auditorias = sorted(
-        diretorio_ae4.glob("ae4-ciclo-*.json"),
-        key=lambda p: p.stat().st_mtime,
-    )[-limite:] if diretorio_ae4.is_dir() else []
+    linhas: list[dict[str, Any]] = []
+    if linhas_dir.is_dir():
+        arquivos = sorted(
+            linhas_dir.glob("valor-*.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )[:limite]
+        for caminho in arquivos:
+            linha = carregar(caminho)
+            if isinstance(linha, dict):
+                linhas.append(linha)
 
-    linhas: dict[tuple[str, str], dict[str, Any]] = {}
-    ciclos_validos: set[str] = set()
-    auditorias_validas = 0
+    auditorias: list[dict[str, Any]] = []
+    if auditoria_dir.is_dir():
+        arquivos = sorted(
+            auditoria_dir.glob("ae5-*.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )[:limite]
+        for caminho in arquivos:
+            registro = carregar(caminho)
+            if isinstance(registro, dict):
+                auditorias.append(registro)
 
-    for caminho in auditorias:
-        auditoria = carregar(caminho)
-        if not auditoria:
-            continue
-        ciclo_id = auditoria.get("ciclo_id")
-        etapas = auditoria.get("etapas")
-        if not isinstance(ciclo_id, str) or not isinstance(etapas, list):
-            continue
-
-        etapa_ae1 = next(
-            (e for e in etapas if isinstance(e, dict) and e.get("etapa") == "AE1"),
-            None,
-        )
-        if not isinstance(etapa_ae1, dict):
-            continue
-
-        oportunidade_id = etapa_ae1.get("oportunidade_id")
-        if not isinstance(oportunidade_id, str) or not oportunidade_id:
-            vinculos = auditoria.get("vinculos")
-            oportunidade_id = (
-                vinculos.get("oportunidade_id")
-                if isinstance(vinculos, dict)
-                else None
-            )
-        if not isinstance(oportunidade_id, str) or not oportunidade_id:
-            continue
-
-        oportunidade = carregar(
-            diretorio_oportunidades / f"{oportunidade_id}.json"
-        ) if diretorio_oportunidades.is_dir() else None
-        if not oportunidade:
-            continue
-
-        limitacao = oportunidade.get("limitacao")
-        hipotese = oportunidade.get("hipotese")
-        if not isinstance(limitacao, str) or not isinstance(hipotese, str):
-            continue
-
-        sucesso = auditoria.get("estado") != "ae4_ae1_falhou"
-        chave = (normalizar(limitacao), normalizar(hipotese))
-        linha = linhas.setdefault(
-            chave,
-            {
-                "limitacao": limitacao,
-                "hipotese": hipotese,
-                "ciclos": {},
-            },
-        )
-        linha["ciclos"][ciclo_id] = {
-            "oportunidade_id": oportunidade_id,
-            "sucesso": bool(sucesso),
-            "auditoria": caminho.name,
-        }
-        ciclos_validos.add(ciclo_id)
-        auditorias_validas += 1
-
-    resultados = []
-    maduras = 0
-    for linha in linhas.values():
-        evidencias = list(linha["ciclos"].items())[-MAX_CICLOS:]
-        sucessos = sum(1 for _, e in evidencias if e["sucesso"])
-        observacoes = len(evidencias)
-        madura = observacoes >= MIN_OBSERVACOES and sucessos >= MIN_SUCESSOS
-        if madura:
-            maduras += 1
-        resultados.append({
-            "limitacao": linha["limitacao"],
-            "hipotese": linha["hipotese"],
-            "ciclos_observados": [c for c, _ in evidencias],
-            "observacoes": observacoes,
-            "observacoes_sucesso": sucessos,
-            "madura_pela_politica": madura,
-        })
-
-    resultados.sort(key=lambda item: (-item["observacoes"], item["hipotese"]))
-    evidencia_real = bool(auditorias_validas)
+    estados = {}
+    for linha in linhas:
+        estado = linha.get("estado")
+        if isinstance(estado, str):
+            estados[estado] = estados.get(estado, 0) + 1
 
     return {
-        "gate": "AE5_EVIDENCIAS",
-        "estado": "evidencia_observacional_encontrada" if evidencia_real else "sem_evidencia_operacional",
-        "evidencia_operacional_encontrada": evidencia_real,
-        "auditorias_ae4_validas": auditorias_validas,
-        "ciclos_distintos": len(ciclos_validos),
-        "linhas_avaliadas": len(resultados),
-        "linhas_maduras": maduras,
-        "linhas": resultados,
-        "criterios": {
-            "janela_ciclos": MAX_CICLOS,
-            "min_observacoes": MIN_OBSERVACOES,
-            "min_sucessos": MIN_SUCESSOS,
-        },
-        "autorizacao_explicita": False,
-        "integracao_executada": False,
-        "stable_modificada": False,
-        "arquitetura_modificada": False,
-        "conhecimento_permanente": False,
+        "gate": "AE5_VALOR_ECONOMICO",
+        "estado": (
+            "evidencia_economica_encontrada"
+            if auditorias
+            else "sem_evidencia_economica"
+        ),
         "somente_leitura": True,
+        "linhas_economicas": len(linhas),
+        "linhas_maduras": sum(
+            x.get("estado") == "maduro_para_formalizacao" for x in linhas
+        ),
+        "estados": estados,
+        "auditorias_ae5": len(auditorias),
+        "descobertas_novas": sum(
+            x.get("nova_linha") is True for x in auditorias
+        ),
+        "duplicadas_24h": sum(
+            x.get("motivo") == "duplicata_exata_24h" for x in auditorias
+        ),
+        "cooldown": sum(
+            x.get("motivo") == "tipo_em_cooldown" for x in auditorias
+        ),
+        "sem_valor": sum(
+            x.get("motivo") == "valor_economico_ausente_ou_incompleto"
+            for x in auditorias
+        ),
+        "invariantes": {
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "stable_modificada": False,
+            "arquitetura_modificada": False,
+            "conhecimento_permanente": False,
+        },
     }
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Audita evidências operacionais reais da AE5.")
-    parser.add_argument("--repositorio", type=Path, default=Path(__file__).resolve())
+    parser = argparse.ArgumentParser(
+        description="Audita evidências econômicas reais da AE5."
+    )
+    parser.add_argument(
+        "--repositorio",
+        type=Path,
+        default=Path(__file__).resolve(),
+    )
     parser.add_argument("--limite", type=int, default=200)
     args = parser.parse_args()
-
     if args.limite < 1:
         parser.error("--limite deve ser >= 1")
-
     resultado = auditar(args.repositorio, args.limite)
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
-
-    return 0 if resultado["evidencia_operacional_encontrada"] else 2
+    return 0 if resultado["estado"] == "evidencia_economica_encontrada" else 2
 
 
 if __name__ == "__main__":

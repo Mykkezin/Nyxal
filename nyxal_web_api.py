@@ -23,6 +23,7 @@ from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
 from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
+from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -44,6 +45,10 @@ DELTA_NYXOS = RegistroDeltaNixOS(
 RECURSOS_HABITAT = RecursosHabitatNixOS(BASE_DIR)
 PRESENCA_MAQUINA = PresencaMaquinaNixOS(
     arquivo=BASE_DIR / "presenca_maquina_nyxos.json"
+)
+DESCOBERTA_CONTINUA_AE5 = DescobertaContinuaGovernadaAE5(
+    repositorio=BASE_DIR,
+    habilitada=False,
 )
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
@@ -999,8 +1004,41 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     "persistencia_operacional": persistencia_operacional,
                     "delta": delta,
                     "recursos_habitat": recursos_habitat,
+                    "descoberta_continua_ae5": {
+                        "versao": DESCOBERTA_CONTINUA_AE5.VERSAO,
+                        "habilitada": False,
+                        "linhas_economicas_ativas": DESCOBERTA_CONTINUA_AE5.contexto().get(
+                            "linhas_economicas_ativas",
+                            0,
+                        ),
+                        "linhas_maduras": DESCOBERTA_CONTINUA_AE5.contexto().get(
+                            "linhas_maduras",
+                            0,
+                        ),
+                    },
                 },
             )
+            return
+
+        if self.path == "/api/ae5/valor":
+            if not self._authorized():
+                return
+            try:
+                contexto_ae5 = DESCOBERTA_CONTINUA_AE5.contexto()
+            except Exception as erro:
+                contexto_ae5 = {
+                    "sucesso": False,
+                    "estado": "ae5_indisponivel",
+                    "origem": DESCOBERTA_CONTINUA_AE5.FONTE,
+                    "versao": DESCOBERTA_CONTINUA_AE5.VERSAO,
+                    "motivo": str(erro),
+                    "autorizacao_explicita": False,
+                    "integracao_executada": False,
+                    "stable_modificada": False,
+                    "arquitetura_modificada": False,
+                    "conhecimento_permanente": False,
+                }
+            self._send_json(200, contexto_ae5)
             return
 
         if self.path == "/api/status":

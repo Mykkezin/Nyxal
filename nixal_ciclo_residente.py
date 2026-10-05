@@ -33,7 +33,7 @@ class CicloResidenteNixOS:
     """Orquestra a residência controlada do ciclo operacional."""
 
     FONTE = "ciclo_residente_nyxos"
-    VERSAO = "5.7.2"
+    VERSAO = "5.8.0"
 
     def __init__(
         self,

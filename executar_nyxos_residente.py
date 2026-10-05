@@ -57,6 +57,11 @@ def main() -> int:
             "solicitação formal já pronta para experimento remoto."
         ),
     )
+    parser.add_argument(
+        "--habilitar-ae5-descoberta",
+        action="store_true",
+        help="Ativa explicitamente a descoberta contínua governada de valor econômico.",
+    )
     args = parser.parse_args()
 
     solicitacao_evolucao = SolicitacaoEvolucaoNixal(repositorio=BASE_DIR)
@@ -79,6 +84,7 @@ def main() -> int:
     )
     descoberta_continua_ae5 = DescobertaContinuaGovernadaAE5(
         repositorio=BASE_DIR,
+        habilitada=args.habilitar_ae5_descoberta,
     )
     fisiologia_operacional = FisiologiaOperacionalNixOS(
         intervalo_esperado_segundos=args.intervalo,
