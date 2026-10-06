@@ -200,20 +200,43 @@ O critério de M5.9 está satisfeito neste checkpoint. O OOM observado em uma ex
 
 A residência altera a forma operacional de execução para serviços Linux persistentes, sem conceder autoridade de integração, modificar `stable`, alterar a planta autoritativa ou habilitar automaticamente AE2.
 
+## Checkpoint M5.12 — corpo térmico e ventilação supervisionada
+
+Em 2026-10-05, o M5.12 foi validado por execução do teste formal no interpretador oficial `.venv/bin/python`.
+
+Evidências do checkpoint:
+
+- teste formal `teste_m5_12_corpo_termico.py`: **PASSOU**;
+- sensores térmicos: **OBSERVADOS**;
+- classificação térmica: **VALIDADA**;
+- histerese: **ATIVA**;
+- tendência térmica: **ATIVA**;
+- consolidação da temperatura máxima: **VALIDADA**;
+- planejamento de ventilação: **SUPERVISIONADO**;
+- ventilação automática: **DESABILITADA**;
+- autorização física: **DESABILITADA**;
+- fallback sem sensor confiável: **NÃO ATUAR**.
+
+O M5.12 permanece limitado à observação térmica, classificação, tendência e preparação de intenção supervisionada de resfriamento. A descoberta de interfaces PWM não concede permissão de escrita ou controle físico.
+
+O critério de M5.12 está satisfeito neste checkpoint. Nenhuma autoridade de evolução, alteração arquitetural, integração em `main` ou controle físico automático foi introduzida.
+
 ## Ordem atual de engenharia
 
-O fechamento do M5.9 mantém as restrições arquiteturais e de governança existentes. O próximo marco supervisionado é o M5.10 de gateway de atuação do host.
+O fechamento dos marcos M5.9 a M5.12 mantém as restrições arquiteturais e de governança existentes. A ordem oficial de engenharia registra a sequência M5.8 → M5.15 como encerrada.
 
 Sequência supervisionada:
 
-1. M5.8 — dependências arquiteturais observadas;
+1. M5.8 — dependências arquiteturais observadas — **concluído/validado**;
 2. M5.9 — residência Linux via systemd — **concluído/validado**;
-3. M5.10 — gateway de atuação do host;
-4. M5.11 — controle de processos e aplicativos;
-5. M5.12 — corpo térmico e ventilação;
-6. M5.13 — fisiologia operacional, heartbeat e febre como estados derivados;
-7. M5.14 — plano central de controle;
-8. M5.15 — presença de máquina.
+3. M5.10 — gateway de atuação do host — **concluído/validado**;
+4. M5.11 — controle de processos e aplicativos — **concluído/validado**;
+5. M5.12 — corpo térmico e ventilação — **concluído/validado**;
+6. M5.13 — fisiologia operacional — **concluído/validado**;
+7. M5.14 — plano central de controle — **concluído/validado**;
+8. M5.15 — presença de máquina — **concluído/validado**.
+
+A sequência M5.8 → M5.15 está encerrada. Nenhum M6 é criado automaticamente; a próxima direção será definida por planejamento explícito.
 
 AE1→AE5 permanece em paralelo como camada de evolução governada. Nenhuma AE6 é criada automaticamente.
 
