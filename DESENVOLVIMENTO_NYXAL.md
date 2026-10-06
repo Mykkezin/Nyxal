@@ -176,14 +176,38 @@ O critério de M5.8, portanto, está satisfeito neste checkpoint **dentro do esc
 
 A proposta permanece não autoritativa. `planta_nixal/planta.json`, Runtime, ciclo residente e `main` não foram alterados por este marco. Nenhuma promoção de arquitetura ou integração foi executada.
 
+## Checkpoint M5.9 — residência Linux via systemd
+
+Em 2026-10-05, o M5.9 foi validado estrutural e operacionalmente.
+
+Evidências do checkpoint:
+
+- teste formal `teste_m5_9_residencia_linux.py`: **PASSOU**;
+- residência Linux via `systemd --user`: **ATIVA**;
+- serviços residentes: **2**;
+- target: `nyxos.target`;
+- interpretador residente: `.venv/bin/python`;
+- perfil residente: `modo_residente=True`;
+- AE2 automática: **DESABILITADA**;
+- execução física: **DESABILITADA**;
+- residente completo: **30 ciclos concluídos**;
+- Runtime residente isolado: **10 ciclos com memória estável**;
+- serviço systemd: **ativo**;
+- memória observada no serviço atual: **62,6 MB**, pico **70,7 MB**;
+- nenhum novo `oom-kill` observado desde a inicialização operacional atual.
+
+O critério de M5.9 está satisfeito neste checkpoint. O OOM observado em uma execução histórica permanece registrado como ocorrência anterior e não foi reproduzido nos testes controlados deste checkpoint. Nenhuma alteração arquitetural especulativa foi introduzida em resposta a esse evento.
+
+A residência altera a forma operacional de execução para serviços Linux persistentes, sem conceder autoridade de integração, modificar `stable`, alterar a planta autoritativa ou habilitar automaticamente AE2.
+
 ## Ordem atual de engenharia
 
-O fechamento do M5.8 mantém o mapa arquitetural não autoritativo. O próximo marco iniciado é o M5.9 de residência Linux.
+O fechamento do M5.9 mantém as restrições arquiteturais e de governança existentes. O próximo marco supervisionado é o M5.10 de gateway de atuação do host.
 
 Sequência supervisionada:
 
 1. M5.8 — dependências arquiteturais observadas;
-2. M5.9 — residência Linux via systemd;
+2. M5.9 — residência Linux via systemd — **concluído/validado**;
 3. M5.10 — gateway de atuação do host;
 4. M5.11 — controle de processos e aplicativos;
 5. M5.12 — corpo térmico e ventilação;
