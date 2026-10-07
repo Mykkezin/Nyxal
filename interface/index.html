@@ -253,7 +253,10 @@
 @media(max-width:640px){.infinity-node{width:50px;height:50px}.infinity-core{width:68px;height:68px}.infinity-symbol{font-size:29px}.infinity-node:nth-child(1){--x:-110px;--y:-38px}.infinity-node:nth-child(2){--x:-76px;--y:-82px}.infinity-node:nth-child(3){--x:-27px;--y:-108px}.infinity-node:nth-child(4){--x:27px;--y:-108px}.infinity-node:nth-child(5){--x:76px;--y:-82px}.infinity-node:nth-child(6){--x:110px;--y:-38px}}
 </style>
 <style>
-#nyxosOperationalPanel{position:fixed;left:18px;bottom:18px;z-index:80;width:min(390px,calc(100vw - 36px));background:rgba(3,8,22,.92);border:1px solid rgba(0,242,254,.28);border-radius:12px;padding:12px;backdrop-filter:blur(16px);box-shadow:0 12px 36px rgba(0,0,0,.45)}
+#nyxosOperationalPanel{position:fixed;left:18px;top:calc(100vh - 220px);z-index:80;width:min(390px,calc(100vw - 36px));background:rgba(3,8,22,.92);border:1px solid rgba(0,242,254,.28);border-radius:12px;padding:12px;backdrop-filter:blur(16px);box-shadow:0 12px 36px rgba(0,0,0,.45);touch-action:none;user-select:none;cursor:grab}
+#nyxosOperationalPanel.nyxos-op-dragging{cursor:grabbing;border-color:rgba(0,242,254,.58);box-shadow:0 16px 44px rgba(0,0,0,.55),0 0 28px rgba(0,242,254,.12)}
+#nyxosOperationalPanel .nyxos-op-drag-handle{cursor:grab}
+#nyxosOperationalPanel.nyxos-op-dragging .nyxos-op-drag-handle{cursor:grabbing}
 #nyxosOperationalPanel .nyxos-op-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #nyxosOperationalPanel .nyxos-op-cell{border:1px solid rgba(148,163,184,.12);background:rgba(15,23,42,.68);border-radius:8px;padding:7px 8px}
 #nyxosOperationalPanel .nyxos-op-label{color:#64748b;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
@@ -3078,6 +3081,7 @@
       initGlobeVoiceControl();
       initSysGraph();
       initNyxosOperationalPanel();
+      initNyxosOperationalDrag();
       renderReflexaoDiaria();
 
       setInterval(updateLiveClock, 1000);
@@ -3099,7 +3103,7 @@
 function initNyxosOperationalPanel(){
  if(document.getElementById('nyxosOperationalPanel'))return;
  const p=document.createElement('section');p.id='nyxosOperationalPanel';
- p.innerHTML=`<div class="flex items-center justify-between mb-2"><div><div class="text-[9px] font-orbitron tracking-[0.18em] text-hud-cyan">NYXOS • CORPO OPERACIONAL</div><div class="text-[9px] text-slate-500 font-mono">PERCEPÇÃO → FISIOLOGIA → PLANO → GATEWAY</div></div><span id="nyxosOpLive" class="text-[9px] font-mono text-emerald-400">LIVE</span></div>
+ p.innerHTML=`<div class="nyxos-op-drag-handle flex items-center justify-between mb-2" title="Arraste para reposicionar o Corpo Operacional"><div><div class="text-[9px] font-orbitron tracking-[0.18em] text-hud-cyan">NYXOS • CORPO OPERACIONAL</div><div class="text-[9px] text-slate-500 font-mono">PERCEPÇÃO → FISIOLOGIA → PLANO → GATEWAY</div></div><span id="nyxosOpLive" class="text-[9px] font-mono text-emerald-400">LIVE</span></div>
  <div class="nyxos-op-grid">
  <div class="nyxos-op-cell"><div class="nyxos-op-label">Fisiologia</div><div id="nyxosOpFisio" class="nyxos-op-value">--</div></div>
  <div class="nyxos-op-cell"><div class="nyxos-op-label">Ação planejada</div><div id="nyxosOpAction" class="nyxos-op-value active">--</div></div>
