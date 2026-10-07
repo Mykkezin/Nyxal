@@ -3100,6 +3100,69 @@
     };
   </script>
 <script>
+function initNyxosOperationalDrag(){
+ const panel=document.getElementById('nyxosOperationalPanel');
+ if(!panel || panel.dataset.dragReady==='true') return;
+ panel.dataset.dragReady='true';
+ const storageKey='NYXOS_OPERATIONAL_PANEL_POSITION';
+ let dragging=false,moved=false,startX=0,startY=0,startLeft=0,startTop=0;
+ const clamp=()=>{
+  const r=panel.getBoundingClientRect();
+  const x=Math.max(8,Math.min(window.innerWidth-r.width-8,r.left));
+  const y=Math.max(8,Math.min(window.innerHeight-r.height-8,r.top));
+  panel.style.left=x+'px'; panel.style.top=y+'px';
+  panel.style.right='auto'; panel.style.bottom='auto';
+  return {x,y};
+ };
+ try{
+  const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
+  if(saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)){
+   panel.style.left=saved.x+'px'; panel.style.top=saved.y+'px';
+   panel.style.right='auto'; panel.style.bottom='auto';
+  }
+ }catch(_){}
+ const begin=(e)=>{
+  if(!e.target.closest('.nyxos-op-drag-handle')) return;
+  const p=e.touches?e.touches[0]:e;
+  const r=panel.getBoundingClientRect();
+  dragging=true; moved=false; startX=p.clientX; startY=p.clientY;
+  startLeft=r.left; startTop=r.top;
+  panel.classList.add('nyxos-op-dragging');
+  e.preventDefault();
+ };
+ const move=(e)=>{
+  if(!dragging) return;
+  const p=e.touches?e.touches[0]:e;
+  const dx=p.clientX-startX, dy=p.clientY-startY;
+  if(Math.abs(dx)+Math.abs(dy)>5) moved=true;
+  const r=panel.getBoundingClientRect();
+  const x=Math.max(8,Math.min(window.innerWidth-r.width-8,startLeft+dx));
+  const y=Math.max(8,Math.min(window.innerHeight-r.height-8,startTop+dy));
+  panel.style.left=x+'px'; panel.style.top=y+'px';
+  panel.style.right='auto'; panel.style.bottom='auto';
+  e.preventDefault();
+ };
+ const end=()=>{
+  if(!dragging) return;
+  dragging=false; panel.classList.remove('nyxos-op-dragging');
+  const pos=clamp();
+  try{localStorage.setItem(storageKey,JSON.stringify(pos));}catch(_){}
+ };
+ panel.addEventListener('pointerdown',begin);
+ window.addEventListener('pointermove',move,{passive:false});
+ window.addEventListener('pointerup',end);
+ panel.addEventListener('click',(e)=>{
+  if(moved){e.preventDefault();e.stopPropagation();moved=false;}
+ },true);
+ window.addEventListener('resize',()=>{
+  if(panel.style.top){
+   const pos=clamp();
+   try{localStorage.setItem(storageKey,JSON.stringify(pos));}catch(_){}
+  }
+ });
+ requestAnimationFrame(clamp);
+}
+
 function initNyxosOperationalPanel(){
  if(document.getElementById('nyxosOperationalPanel'))return;
  const p=document.createElement('section');p.id='nyxosOperationalPanel';
