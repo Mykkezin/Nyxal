@@ -176,20 +176,67 @@ O critério de M5.8, portanto, está satisfeito neste checkpoint **dentro do esc
 
 A proposta permanece não autoritativa. `planta_nixal/planta.json`, Runtime, ciclo residente e `main` não foram alterados por este marco. Nenhuma promoção de arquitetura ou integração foi executada.
 
+## Checkpoint M5.9 — residência Linux via systemd
+
+Em 2026-10-05, o M5.9 foi validado estrutural e operacionalmente.
+
+Evidências do checkpoint:
+
+- teste formal `teste_m5_9_residencia_linux.py`: **PASSOU**;
+- residência Linux via `systemd --user`: **ATIVA**;
+- serviços residentes: **2**;
+- target: `nyxos.target`;
+- interpretador residente: `.venv/bin/python`;
+- perfil residente: `modo_residente=True`;
+- AE2 automática: **DESABILITADA**;
+- execução física: **DESABILITADA**;
+- residente completo: **30 ciclos concluídos**;
+- Runtime residente isolado: **10 ciclos com memória estável**;
+- serviço systemd: **ativo**;
+- memória observada no serviço atual: **62,6 MB**, pico **70,7 MB**;
+- nenhum novo `oom-kill` observado desde a inicialização operacional atual.
+
+O critério de M5.9 está satisfeito neste checkpoint. O OOM observado em uma execução histórica permanece registrado como ocorrência anterior e não foi reproduzido nos testes controlados deste checkpoint. Nenhuma alteração arquitetural especulativa foi introduzida em resposta a esse evento.
+
+A residência altera a forma operacional de execução para serviços Linux persistentes, sem conceder autoridade de integração, modificar `stable`, alterar a planta autoritativa ou habilitar automaticamente AE2.
+
+## Checkpoint M5.12 — corpo térmico e ventilação supervisionada
+
+Em 2026-10-05, o M5.12 foi validado por execução do teste formal no interpretador oficial `.venv/bin/python`.
+
+Evidências do checkpoint:
+
+- teste formal `teste_m5_12_corpo_termico.py`: **PASSOU**;
+- sensores térmicos: **OBSERVADOS**;
+- classificação térmica: **VALIDADA**;
+- histerese: **ATIVA**;
+- tendência térmica: **ATIVA**;
+- consolidação da temperatura máxima: **VALIDADA**;
+- planejamento de ventilação: **SUPERVISIONADO**;
+- ventilação automática: **DESABILITADA**;
+- autorização física: **DESABILITADA**;
+- fallback sem sensor confiável: **NÃO ATUAR**.
+
+O M5.12 permanece limitado à observação térmica, classificação, tendência e preparação de intenção supervisionada de resfriamento. A descoberta de interfaces PWM não concede permissão de escrita ou controle físico.
+
+O critério de M5.12 está satisfeito neste checkpoint. Nenhuma autoridade de evolução, alteração arquitetural, integração em `main` ou controle físico automático foi introduzida.
+
 ## Ordem atual de engenharia
 
-O fechamento do M5.8 mantém o mapa arquitetural não autoritativo. O próximo marco iniciado é o M5.9 de residência Linux.
+O fechamento dos marcos M5.9 a M5.12 mantém as restrições arquiteturais e de governança existentes. A ordem oficial de engenharia registra a sequência M5.8 → M5.15 como encerrada.
 
 Sequência supervisionada:
 
-1. M5.8 — dependências arquiteturais observadas;
-2. M5.9 — residência Linux via systemd;
-3. M5.10 — gateway de atuação do host;
-4. M5.11 — controle de processos e aplicativos;
-5. M5.12 — corpo térmico e ventilação;
-6. M5.13 — fisiologia operacional, heartbeat e febre como estados derivados;
-7. M5.14 — plano central de controle;
-8. M5.15 — presença de máquina.
+1. M5.8 — dependências arquiteturais observadas — **concluído/validado**;
+2. M5.9 — residência Linux via systemd — **concluído/validado**;
+3. M5.10 — gateway de atuação do host — **concluído/validado**;
+4. M5.11 — controle de processos e aplicativos — **concluído/validado**;
+5. M5.12 — corpo térmico e ventilação — **concluído/validado**;
+6. M5.13 — fisiologia operacional — **concluído/validado**;
+7. M5.14 — plano central de controle — **concluído/validado**;
+8. M5.15 — presença de máquina — **concluído/validado**.
+
+A sequência M5.8 → M5.15 está encerrada. Nenhum M6 é criado automaticamente; a próxima direção será definida por planejamento explícito.
 
 AE1→AE5 permanece em paralelo como camada de evolução governada. Nenhuma AE6 é criada automaticamente.
 
