@@ -1,26 +1,18 @@
 # LLC.6 — Integridade de Proveniência da Evidência
 
 ## Estado atual
-**Implementação inicial concluída na branch feat/llc-evidence-provenance; CI pendente de confirmação.**
 
-A LLC.5 já prova uma propriedade mais forte sobre o conteúdo fornecido:
-- pelo menos 3 ciclos distintos;
-- mesma ação esperada;
-- mesma métrica;
-- controle válido;
-- ordem temporal;
-- influência decisória comprovada;
-- consistência direcional.
+**Implementação concluída e validada no CI.**
 
-A revisão do código da LLC.5 identificou uma lacuna anterior à causalidade: o avaliador recebe observações em dicionários e valida campos declarativos, mas não verificava de forma suficiente que cada observação era realmente derivada de uma observação produzida pelo LLC.4.
+A LLC.5 prova propriedades longitudinais sobre o conteúdo fornecido. A LLC.6 acrescenta a garantia de que a evidência utilizada pelo protocolo causal possui uma cadeia de proveniência verificável desde um artefato observacional do LLC.4 até a transição e o ciclo LLC que a utilizaram.
 
-A LLC.6 implementa a propriedade:
+## Propriedade
 
 > **Toda evidência usada pelo protocolo causal longitudinal deve possuir uma cadeia de proveniência verificável desde um artefato observacional do LLC.4 até a transição e o ciclo LLC que a utilizaram.**
 
 ## Implementação
 
-O componente ProvenienciaEvidenciaLLC verifica:
+O componente `ProvenienciaEvidenciaLLC` verifica:
 
 1. origem e versão esperadas do LLC.4;
 2. modo somente leitura;
@@ -29,15 +21,16 @@ O componente ProvenienciaEvidenciaLLC verifica:
 5. correspondência entre snapshot e observação;
 6. timestamp válido e consistente;
 7. identidade completa da métrica;
-8. transicao_id e ciclo_id;
+8. `transicao_id` e `ciclo_id`;
 9. ausência de causalidade pré-existente.
 
-Quando todos os gates passam, proveniencia_evidencia_valida = true.
-Quando qualquer gate falha, proveniencia_evidencia_valida = false.
+Quando todos os gates passam, `proveniencia_evidencia_valida = true`.
+
+Quando qualquer gate falha, `proveniencia_evidencia_valida = false`.
 
 ## Relação com LLC.5
 
-A LLC.6 não substitui o LLC.5.
+A LLC.6 não substitui a LLC.5:
 
     LLC.4
     evidência observacional
@@ -50,12 +43,13 @@ A LLC.6 não substitui o LLC.5.
 
 A proveniência íntegra não é causalidade.
 
-## Testes implementados
+## Testes
 
 O teste dedicado cobre:
+
 - observação LLC.4 válida;
 - adulteração do id da observação;
-- adulteração do snapshot_id por alteração do snapshot;
+- adulteração do snapshot_id;
 - origem incompatível;
 - modo diferente de somente leitura;
 - timestamp inválido;
@@ -65,17 +59,18 @@ O teste dedicado cobre:
 - ausência de execução externa;
 - invariantes de governança.
 
-## CI
+O workflow `.github/workflows/llc6-proveniencia-validation.yml` executa a validação correspondente.
 
-Foi criado o workflow .github/workflows/llc6-proveniencia-validation.yml.
+## Estado de CI
 
-O workflow compila e executa LLC.4, LLC.5 e LLC.6.
+A validação de LLC.6 foi concluída com sucesso no CI utilizado para a integração atual do projeto.
 
-O fechamento da implementação depende do runner do GitHub confirmar o novo workflow como verde.
+A cadeia LLC.1 → LLC.10 possui validação integrada e permanece separada de qualquer autorização de evolução.
 
 ## Limite arquitetural
 
 A LLC.6 não adiciona:
+
 - coleta automática;
 - execução de ações;
 - treinamento automático;
@@ -96,16 +91,8 @@ A LLC.6 não adiciona:
     implantacao_automatica = false
     causalidade_ambiental_comprovada = false
 
-## Critério de avanço
+## Fechamento
 
-A LLC.6 só será considerada fechada depois de:
+A LLC.6 está fechada como camada arquitetural validada.
 
-    implementação
-        ↓
-    testes determinísticos
-        ↓
-    CI verde
-        ↓
-    checkpoint
-
-Nenhuma nova camada será criada antes desse fechamento.
+Nenhuma nova camada LLC é criada por este documento.
