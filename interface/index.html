@@ -153,7 +153,7 @@
     /* Presence layering: avoid transform/animation conflicts with receded windows. */
     #nyxalHoloContainer { isolation: isolate; z-index: 25; }
     .nyxal-receded { animation: none !important; }
-    #infinityHub.nyxos-infinity-draggable { position: fixed !important; left: 50vw !important; top: 50vh !important; transform: none !important; z-index: 120 !important; width: 1px; height: 1px; }
+    #infinityHub.nyxos-infinity-draggable { position: fixed !important; left: 50vw !important; top: 50vh !important; transform: none !important; z-index: 9999 !important; width: 1px; height: 1px; pointer-events: none; touch-action: none; }
     #infinityHub.nyxos-infinity-dragging .infinity-core { cursor: grabbing; }
 
     /* Floating & Breathing Animation for Nyxal Hologram */
@@ -493,7 +493,7 @@
             <i class="fa-solid fa-music text-hud-cyan text-sm"></i>
             <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">MÚSICA</h2>
           </div>
-          <span class="text-[10px] font-rajdhani text-hud-cyan">STANDBY</span>
+          <span id="spotifyStatus" class="text-[10px] font-rajdhani text-hud-cyan">SPOTIFY</span>
         </div>
 
         <div class="flex items-center gap-3 mb-2">
@@ -984,6 +984,76 @@
       } catch (err) {
         console.warn('Não foi possível restaurar a presença holográfica:', err);
       }
+    }
+
+
+    // Clima — telemetria pública de São Paulo via Open-Meteo.
+    let weatherTimer = null;
+
+    function interpretarClima(code) {
+      const mapa = {
+        0: 'Céu limpo',
+        1: 'Principalmente limpo',
+        2: 'Parcialmente nublado',
+        3: 'Nublado',
+        45: 'Neblina',
+        48: 'Neblina com geada',
+        51: 'Garoa fraca',
+        53: 'Garoa moderada',
+        55: 'Garoa forte',
+        61: 'Chuva fraca',
+        63: 'Chuva moderada',
+        65: 'Chuva forte',
+        71: 'Neve fraca',
+        73: 'Neve moderada',
+        75: 'Neve forte',
+        80: 'Pancadas fracas',
+        81: 'Pancadas moderadas',
+        82: 'Pancadas fortes',
+        95: 'Trovoada',
+        96: 'Trovoada com granizo',
+        99: 'Trovoada com granizo forte'
+      };
+      return mapa[Number(code)] || 'Condição não identificada';
+    }
+
+    async function fetchWeather() {
+      const els = {
+        temp: document.getElementById('weatherTemp'),
+        cond: document.getElementById('weatherCond'),
+        feels: document.getElementById('weatherFeels'),
+        humidity: document.getElementById('weatherHumidity'),
+        wind: document.getElementById('weatherWind')
+      };
+      if (!els.temp) return;
+
+      try {
+        els.cond.textContent = 'Atualizando...';
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=-23.5505&longitude=-46.6333&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&wind_speed_unit=kmh&timezone=America%2FSao_Paulo';
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        const current = data.current || {};
+
+        els.temp.textContent = Number.isFinite(Number(current.temperature_2m))
+          ? Number(current.temperature_2m).toFixed(0) + '°C' : '--°C';
+        els.feels.textContent = Number.isFinite(Number(current.apparent_temperature))
+          ? Number(current.apparent_temperature).toFixed(0) + '°C' : '--°C';
+        els.humidity.textContent = Number.isFinite(Number(current.relative_humidity_2m))
+          ? Number(current.relative_humidity_2m).toFixed(0) + '%' : '--%';
+        els.wind.textContent = Number.isFinite(Number(current.wind_speed_10m))
+          ? Number(current.wind_speed_10m).toFixed(0) + ' km/h' : '-- km/h';
+        els.cond.textContent = interpretarClima(current.weather_code);
+      } catch (error) {
+        console.warn('[NyxOS] clima indisponível:', error);
+        els.cond.textContent = 'Dados indisponíveis';
+      }
+    }
+
+    function initWeather() {
+      fetchWeather();
+      if (weatherTimer) clearInterval(weatherTimer);
+      weatherTimer = setInterval(fetchWeather, 10 * 60 * 1000);
     }
 
     // WEB AUDIO SYNTHESIZER FOR HUD SFX & VOICE REVERB
@@ -2937,12 +3007,24 @@
       const hub = document.getElementById('infinityHub');
       const core = document.getElementById('infinityCoreButton');
       if (!hub || !core || hub.dataset.dragReady === '1') return;
+
+      // O hub deixa o contexto orbital e passa a viver diretamente no viewport.
+      // Isso evita clipping/stacking context durante o arraste.
+      if (hub.parentElement !== document.body) {
+        document.body.appendChild(hub);
+      }
+      hub.style.position = 'fixed';
+      hub.style.transform = 'none';
+      hub.style.left = hub.style.left || '50vw';
+      hub.style.top = hub.style.top || '50vh';
       hub.dataset.dragReady = '1';
       const saved = sessionStorage.getItem('NYXOS_INFINITY_POSITION');
       if (saved) { try { const p = JSON.parse(saved); if (Number.isFinite(p.x) && Number.isFinite(p.y)) { hub.style.left=p.x+'px'; hub.style.top=p.y+'px'; } } catch (_) {} }
       let dragging=false, moved=false, startX=0, startY=0, originX=0, originY=0;
+      core.style.touchAction = 'none';
       core.addEventListener('pointerdown', (event) => {
         if (event.button !== 0) return;
+        event.preventDefault();
         dragging=true; moved=false; startX=event.clientX; startY=event.clientY;
         const rect=hub.getBoundingClientRect(); originX=rect.left+rect.width/2; originY=rect.top+rect.height/2;
         core.setPointerCapture?.(event.pointerId); hub.classList.add('nyxos-infinity-dragging');
@@ -2951,8 +3033,8 @@
         if (!dragging) return;
         const dx=event.clientX-startX, dy=event.clientY-startY;
         if (Math.hypot(dx,dy)>4) moved=true;
-        const x=Math.max(40,Math.min(window.innerWidth-40,originX+dx));
-        const y=Math.max(40,Math.min(window.innerHeight-40,originY+dy));
+        const x=Math.max(70,Math.min(window.innerWidth-70,originX+dx));
+        const y=Math.max(70,Math.min(window.innerHeight-70,originY+dy));
         hub.style.left=x+'px'; hub.style.top=y+'px';
       });
       core.addEventListener('pointerup', (event) => {
@@ -2962,7 +3044,19 @@
         sessionStorage.setItem('NYXOS_INFINITY_POSITION', JSON.stringify({x:rect.left+rect.width/2,y:rect.top+rect.height/2}));
         if (moved) { event.preventDefault(); event.stopPropagation(); core.dataset.dragSuppressed='1'; setTimeout(()=>delete core.dataset.dragSuppressed,0); }
       });
-      core.addEventListener('click', (event) => { if (core.dataset.dragSuppressed==='1') { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
+      core.addEventListener('click', (event) => {
+        if (core.dataset.dragSuppressed==='1') {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+      window.addEventListener('resize', () => {
+        const rect = hub.getBoundingClientRect();
+        const x = Math.max(70, Math.min(window.innerWidth - 70, rect.left + rect.width / 2));
+        const y = Math.max(70, Math.min(window.innerHeight - 70, rect.top + rect.height / 2));
+        hub.style.left = x + 'px';
+        hub.style.top = y + 'px';
+      });
     }
 
     // Infinity — abre/fecha somente os seis atalhos existentes
@@ -3015,6 +3109,35 @@
 
     function togglePlayMusic() {
       playHudSound('click');
+      const button = document.getElementById('playPauseBtn');
+      const icon = button?.querySelector('i');
+      const title = document.getElementById('musicTrackTitle');
+      const artist = document.getElementById('musicArtist');
+
+      if (!window.__nyxosSpotifyOpen) {
+        window.__nyxosSpotifyOpen = true;
+        if (title) title.textContent = 'SPOTIFY';
+        if (artist) artist.textContent = 'Abrindo o player...';
+        if (icon) icon.className = 'fa-solid fa-arrow-up-right-from-square text-xs';
+
+        // Tenta o aplicativo Spotify local primeiro; se o navegador bloquear,
+        // abre o Spotify Web como fallback.
+        const fallback = window.open('https://open.spotify.com/', '_blank', 'noopener,noreferrer');
+        try {
+          window.location.href = 'spotify://';
+        } catch (_) {
+          // O fallback web já foi aberto.
+        }
+
+        if (artist) {
+          artist.textContent = fallback ? 'Spotify aberto' : 'Abra o Spotify Web';
+        }
+      } else {
+        window.__nyxosSpotifyOpen = false;
+        if (title) title.textContent = 'Sem Reprodução';
+        if (artist) artist.textContent = '--';
+        if (icon) icon.className = 'fa-solid fa-play text-xs';
+      }
     }
 
     function addNewEventPrompt() {
@@ -3044,6 +3167,7 @@
     // Initialize Everything
     window.onload = function() {
       initSpaceBgCanvas();
+      initWeather();
       init3DGlobe();
       initGlobeVoiceControl();
       initSysGraph();
