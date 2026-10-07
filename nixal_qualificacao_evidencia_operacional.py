@@ -16,6 +16,9 @@ class QualificacaoEvidencia:
     nos_verificados: int
     ciclos_verificados: int
     evidencias_epistemicas: Mapping[str, int]
+    # Referências imutáveis às relações que a qualificação verificou.
+    # Permite a passagem estrutural O10 -> O12/O13 sem reconstrução.
+    relacoes: Tuple[RelacaoOperacional, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -91,7 +94,6 @@ def qualificar(
 
     erros = []
 
-    # Cardinalidade
     if evidencia.total_relacoes != len(relacoes):
         erros.append("total_relacoes_inconsistente")
 
@@ -101,7 +103,6 @@ def qualificar(
     if evidencia.total_ciclos != len(ciclos):
         erros.append("total_ciclos_inconsistente")
 
-    # Distribuições
     if dict(evidencia.autoridades) != autoridades:
         erros.append("autoridades_inconsistentes")
 
@@ -114,37 +115,25 @@ def qualificar(
     if dict(evidencia.pares) != pares:
         erros.append("pares_inconsistentes")
 
-    # Identidade
     identidade_esperada = _identidade_esperada(evidencia)
 
     if evidencia.identidade != identidade_esperada:
         erros.append("identidade_inconsistente")
 
-    if erros:
-        return ResultadoQualificacao(
-            sucesso=QualificacaoEvidencia(
-                estado="rejeitada",
-                identidade=evidencia.identidade,
-                motivos=tuple(erros),
-                relacoes_verificadas=len(relacoes),
-                nos_verificados=len(nos),
-                ciclos_verificados=len(ciclos),
-                evidencias_epistemicas=MappingProxyType(
-                    dict(autoridades)
-                ),
-            )
-        )
+    estado = "rejeitada" if erros else "qualificada"
+    motivos = tuple(erros)
 
     return ResultadoQualificacao(
         sucesso=QualificacaoEvidencia(
-            estado="qualificada",
+            estado=estado,
             identidade=evidencia.identidade,
-            motivos=(),
+            motivos=motivos,
             relacoes_verificadas=len(relacoes),
             nos_verificados=len(nos),
             ciclos_verificados=len(ciclos),
             evidencias_epistemicas=MappingProxyType(
                 dict(autoridades)
             ),
+            relacoes=relacoes,
         )
     )
