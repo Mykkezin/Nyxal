@@ -62,6 +62,32 @@ def main() -> None:
     validacao = auditoria.validar()
     assert validacao["valido"] is True
 
+    # Um segundo processo/instância deve continuar a cadeia sem repetir
+    # sequência ou hash anterior.
+    auditoria_2 = AuditoriaAtuacaoNixOS(arquivo=arquivo_auditoria)
+    segundo = auditoria_2.registrar(
+        evento="teste_segunda_instancia",
+        dados={"origem": "teste"},
+    )
+    assert segundo["sequencia"] == 6
+    assert segundo["hash_anterior"] == validacao["ultimo_hash"]
+
+    # Um arquivo truncado/corrompido não pode derrubar o residente.
+    arquivo_corrompido = pasta / "auditoria-corrompida.jsonl"
+    arquivo_corrompido.write_text(
+        '{"sequencia":1,"hash":"incompleto"}\\n{"sequencia":2,',
+        encoding="utf-8",
+    )
+    recuperada = AuditoriaAtuacaoNixOS(arquivo=arquivo_corrompido)
+    assert recuperada.contexto()["sequencia"] == 0
+    assert recuperada.contexto()["arquivo_recuperado"] is not None
+    nova = recuperada.registrar(
+        evento="apos_recuperacao",
+        dados={"recuperado": True},
+    )
+    assert nova["sequencia"] == 1
+    assert recuperada.validar()["valido"] is True
+
     linhas = arquivo_auditoria.read_text(encoding="utf-8").splitlines()
     assert len(linhas) == 5
 
