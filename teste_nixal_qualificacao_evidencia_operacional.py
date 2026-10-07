@@ -449,6 +449,23 @@ class TesteQualificacaoEvidenciaOperacional(unittest.TestCase):
             modulo.__dict__,
         )
 
+    def test_31_qualificacao_preserva_relacoes_para_comparacao(self):
+        e = evidencia([
+            relacao("A", "B"),
+            relacao("B", "C"),
+        ])
+
+        resultado = qualificar(e)
+
+        self.assertEqual(
+            resultado.sucesso.relacoes,
+            e.relacoes,
+        )
+        self.assertIs(
+            resultado.sucesso.relacoes[0],
+            e.relacoes[0],
+        )
+
     def test_30_modulo_nao_acessa_filesystem(self):
         e = evidencia([
             relacao("A", "B"),
