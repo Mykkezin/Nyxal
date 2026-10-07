@@ -77,6 +77,9 @@ jobs:
       - name: Teste controle de aprendizado residente
         run: python teste_controle_aprendizado_residente.py
 
+      - name: Teste Série O9-O15 e handoff LLC
+        run: python teste_serie_o9_o15_handoff_final.py
+
       - name: Sanidade de regras de segurança
         run: |
           python - <<'PY'
