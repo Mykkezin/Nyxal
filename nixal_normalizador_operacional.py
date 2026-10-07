@@ -36,10 +36,6 @@ AUTORIDADES_PROIBIDAS = frozenset(
 )
 
 
-class NormalizacaoError(ValueError):
-    """Erro determinístico de validação da evidência."""
-
-
 @dataclass(frozen=True)
 class RelacaoOperacional:
     origem: str
@@ -163,6 +159,31 @@ class NormalizadorOperacional:
                 "O5.1",
             )
 
+        tipo_declarado = evidencia.get("tipo")
+        tipos_esperados = {
+            "habitat": "observacao",
+            "persistencia": "persistencia",
+            "delta": "transformacao",
+            "ae4": None,
+        }
+        tipo_esperado = tipos_esperados[fonte]
+        if tipo_declarado is not None and tipo_esperado is not None:
+            if tipo_declarado != tipo_esperado:
+                return self._rejeitar(
+                    "tipo_invalido",
+                    "tipo",
+                    "O tipo declarado não corresponde ao mapeamento determinístico da fonte.",
+                    "O6.2",
+                )
+        elif tipo_declarado is not None and tipo_esperado is None:
+            if tipo_declarado not in {"observacao", "evidencia_experimental"}:
+                return self._rejeitar(
+                    "tipo_invalido",
+                    "tipo",
+                    "O tipo declarado do AE4 está fora do domínio permitido.",
+                    "O5.1",
+                )
+
         if fonte == "habitat":
             tipo = "observacao"
             autoridade = "observacional"
@@ -242,7 +263,9 @@ class NormalizadorOperacional:
         )
 
     @staticmethod
-    def _ciclo(evidencia: Mapping[str, Any]) -> str | None:
+    def _resolver_ciclo(
+        evidencia: Mapping[str, Any],
+    ) -> str | None | RejeicaoNormalizacao:
         if "ciclo_id" in evidencia:
             valor = evidencia["ciclo_id"]
         elif "ciclo" in evidencia:
@@ -254,7 +277,12 @@ class NormalizadorOperacional:
             return None
         if isinstance(valor, str) and valor.strip():
             return valor
-        raise NormalizacaoError("ciclo_invalido")
+        return RejeicaoNormalizacao(
+            codigo="ciclo_invalido",
+            campo="ciclo",
+            motivo="O ciclo informado pela fonte não possui formato válido.",
+            regra="O5.1",
+        )
 
     @staticmethod
     def _destino(evidencia: Mapping[str, Any]) -> str | None | object:
