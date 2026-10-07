@@ -1,12 +1,12 @@
 [Unit]
-Description=NyxOS — vídeo de inicialização e interface local
+Description=NyxOS — shell residente, vídeo de inicialização e interface local
 After=nyxal-api.service
 Wants=nyxal-api.service
 
 [Service]
 Type=oneshot
 WorkingDirectory=%h/Nyxal
-ExecStart=%h/Nyxal/deploy/systemd/iniciar_nyxos_interface.sh
+ExecStart=%h/Nyxal/deploy/systemd/iniciar_nyxos_shell.sh
 Environment=DISPLAY=:0
 Environment=WAYLAND_DISPLAY=wayland-0
 Environment=XDG_RUNTIME_DIR=%t
