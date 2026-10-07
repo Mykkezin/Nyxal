@@ -104,7 +104,7 @@ class AdaptadorTTSKokoroNixOS:
         return self._pipeline
 
     @staticmethod
-    def _writer(caminho: str, audio: Any, sample_rate: int) -> None:
+    def _writer_padrao(caminho: str, audio: Any, sample_rate: int) -> None:
         try:
             import soundfile as sf
         except Exception as erro:
