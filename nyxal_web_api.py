@@ -4,6 +4,7 @@ import json
 import mimetypes
 import os
 import subprocess
+import shutil
 import sys
 import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -576,6 +577,60 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             "GET, POST, OPTIONS",
         )
         self.end_headers()
+
+    def do_POST(self) -> None:
+        if self.path == "/api/desktop/launch":
+            if not self._authorized():
+                return
+
+            try:
+                content_length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                self._send_json(400, {"estado": "entrada_invalida", "motivo": "Content-Length inválido."})
+                return
+
+            if content_length <= 0 or content_length > 8 * 1024:
+                self._send_json(400, {"estado": "entrada_invalida", "motivo": "Payload de lançamento inválido."})
+                return
+
+            try:
+                payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"estado": "entrada_invalida", "motivo": "JSON inválido."})
+                return
+
+            app = payload.get("app") if isinstance(payload, dict) else None
+            comandos = {
+                "firefox": ["/usr/bin/firefox", "--new-window", "about:blank"],
+                "terminal": ["/usr/bin/x-terminal-emulator"],
+                "arquivos": ["/usr/bin/xdg-open", str(Path.home())],
+                "configuracoes": ["/usr/bin/xdg-open", "settings://"],
+                "spotify": ["/usr/bin/spotify"],
+            }
+            comando = comandos.get(app)
+
+            if comando is None:
+                self._send_json(400, {"estado": "aplicativo_nao_permitido", "motivo": "Aplicativo não está na lista operacional do NyxOS."})
+                return
+
+            executavel = comando[0]
+            if shutil.which(Path(executavel).name) is None and not Path(executavel).exists():
+                self._send_json(404, {"estado": "aplicativo_indisponivel", "aplicativo": app})
+                return
+
+            try:
+                subprocess.Popen(
+                    comando,
+                    start_new_session=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except OSError as erro:
+                self._send_json(500, {"estado": "falha_ao_iniciar", "aplicativo": app, "motivo": str(erro)})
+                return
+
+            self._send_json(200, {"sucesso": True, "estado": "aplicativo_iniciado", "aplicativo": app})
+            return
 
     def do_POST(self) -> None:
         if self.path == "/api/stt":
