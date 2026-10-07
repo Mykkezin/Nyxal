@@ -23,4 +23,11 @@ else
     echo "AVISO: vídeo de inicialização não encontrado em ${VIDEO}; abrindo a interface normalmente." >&2
 fi
 
-exec /usr/bin/xdg-open "${INTERFACE_URL}"
+# NyxOS is the desktop shell: launch the local interface directly in
+# Firefox kiosk mode instead of delegating to the system's default browser.
+if command -v firefox >/dev/null 2>&1; then
+    exec /usr/bin/firefox --kiosk "${INTERFACE_URL}"
+fi
+
+echo "ERRO: Firefox não encontrado; NyxOS não pode iniciar a interface em modo desktop." >&2
+exit 127
