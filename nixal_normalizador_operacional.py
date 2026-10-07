@@ -191,11 +191,17 @@ class NormalizadorOperacional:
         elif fonte == "persistencia":
             tipo = "persistencia"
             autoridade = "observacional"
-            ciclo = self._ciclo(evidencia)
+            ciclo_resultado = self._resolver_ciclo(evidencia)
+            if isinstance(ciclo_resultado, RejeicaoNormalizacao):
+                return ResultadoNormalizacao.rejeitar(ciclo_resultado)
+            ciclo = ciclo_resultado
         elif fonte == "delta":
             tipo = "transformacao"
             autoridade = "observacional"
-            ciclo = self._ciclo(evidencia)
+            ciclo_resultado = self._resolver_ciclo(evidencia)
+            if isinstance(ciclo_resultado, RejeicaoNormalizacao):
+                return ResultadoNormalizacao.rejeitar(ciclo_resultado)
+            ciclo = ciclo_resultado
         else:
             return self._normalizar_ae4(evidencia, evidencia_final)
 
@@ -246,7 +252,7 @@ class NormalizadorOperacional:
             tipo=tipo,
             evidencia=evidencia_final,
             proveniencia=evidencia["proveniencia"],
-            ciclo=self._ciclo(evidencia),
+            ciclo=self._resolver_ciclo_ou_rejeitar(evidencia),
             instante=evidencia["instante"],
             autoridade=autoridade,
         )
@@ -261,6 +267,13 @@ class NormalizadorOperacional:
             and evidencia.get("stable_modificada") is False
             and evidencia.get("integracao_executada") is False
         )
+
+    @staticmethod
+    def _resolver_ciclo_ou_rejeitar(evidencia: Mapping[str, Any]) -> str | None:
+        resultado = NormalizadorOperacional._resolver_ciclo(evidencia)
+        if isinstance(resultado, RejeicaoNormalizacao):
+            raise ValueError(resultado.motivo)
+        return resultado
 
     @staticmethod
     def _resolver_ciclo(
