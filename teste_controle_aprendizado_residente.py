@@ -23,3 +23,12 @@ def test_aprendizado_runtime_continua_habilitavel_explicitamente():
     )
 
     assert runtime.aprendizado_habilitado is True
+
+def main():
+    test_aprendizado_residente_desabilitado_por_padrao()
+    test_aprendizado_runtime_continua_habilitavel_explicitamente()
+    print("APRENDIZADO_RESIDENTE_CONTROLE_OK")
+
+
+if __name__ == "__main__":
+    main()
