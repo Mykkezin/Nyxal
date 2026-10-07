@@ -90,7 +90,7 @@ def test_serie_o9_o15_handoff_llc_fechada_sem_aprendizado() -> None:
     assert o11.resultado.relacoes == (relacao_comum,)
 
     # O12: a comparação reconhece a relação comum sem alterar entradas.
-    o12 = comparar(o10_1, o10_2)
+    o12 = comparar(o9_1, o9_2)
     assert o12.sobreposicao is True
     assert o12.total_intersecao == 1
     assert o12.relacoes_primeira == (relacao_comum,)
