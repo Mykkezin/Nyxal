@@ -6,13 +6,13 @@ from nixal_agregador_operacional import agregar
 from nixal_analise_operacional import analisar
 from nixal_candidato_aprendizado_operacional import formular
 from nixal_comparacao_evidencias_operacional import comparar
-from nixal_consolidacao_evidencias import ConsolidacaoEvidenciasNixal
+from nixal_evidencia_operacional import consolidar as consolidar_evidencia
 from nixal_fechamento_cadeia_operacional import ORDEM_CADEIA, fechar
 from nixal_handoff_o15_llc import preparar as preparar_handoff
 from nixal_normalizador_operacional import NormalizadorOperacional
 from nixal_padroes_recorrentes_operacional import detectar
-from nixal_reutilizacao_evidencia_operacional import reutilizar
 from nixal_qualificacao_evidencia_operacional import qualificar
+from nixal_reutilizacao_evidencia_operacional import reutilizar
 
 
 def _artefato(identidade: str, objeto: object) -> str:
@@ -70,16 +70,11 @@ def test_serie_o9_o15_handoff_llc_fechada_sem_aprendizado() -> None:
     assert analise_1 is not None
     assert analise_2 is not None
 
-    evidencia_1 = ConsolidacaoEvidenciasNixal()
-    o9_1 = __import__("nixal_evidencia_operacional", fromlist=["consolidar"]).consolidar(
-        analise_1
-    ).sucesso
-    o9_2 = __import__("nixal_evidencia_operacional", fromlist=["consolidar"]).consolidar(
-        analise_2
-    ).sucesso
+    o9_1 = consolidar_evidencia(analise_1).sucesso
+    o9_2 = consolidar_evidencia(analise_2).sucesso
     assert o9_1 is not None
     assert o9_2 is not None
-    assert evidencia_1 is not None
+    assert o9_1.identidade != o9_2.identidade
 
     # O10: qualificação estrutural, sem interpretação.
     o10_1 = qualificar(o9_1).sucesso
@@ -89,12 +84,7 @@ def test_serie_o9_o15_handoff_llc_fechada_sem_aprendizado() -> None:
     assert o10_2.estado == "qualificada"
 
     # O11: reutilização explícita de uma evidência qualificada.
-    o11 = reutilizar(
-        o9_2,
-        o10_2,
-        "tipo",
-        "observacao",
-    )
+    o11 = reutilizar(o9_2, o10_2, "tipo", "observacao")
     assert o11.reutilizada is True
     assert o11.resultado is not None
     assert o11.resultado.relacoes == (relacao_comum,)
@@ -124,16 +114,8 @@ def test_serie_o9_o15_handoff_llc_fechada_sem_aprendizado() -> None:
 
     # O15: fecha exatamente O9 -> O14.
     cadeia = (
-        {
-            "etapa": "O9",
-            "identidade": o9_1.identidade,
-            "estado": "consolidada",
-        },
-        {
-            "etapa": "O10",
-            "identidade": o10_1.identidade,
-            "estado": o10_1.estado,
-        },
+        {"etapa": "O9", "identidade": o9_1.identidade, "estado": "consolidada"},
+        {"etapa": "O10", "identidade": o10_1.identidade, "estado": o10_1.estado},
         {
             "etapa": "O11",
             "identidade": _artefato("O11", o11.resultado),
@@ -175,8 +157,6 @@ def test_serie_o9_o15_handoff_llc_fechada_sem_aprendizado() -> None:
     assert handoff.autorizacao_integracao is False
     assert handoff.integracao_executada is False
 
-    # Fechamento da fronteira: nada na cadeia O9->handoff ultrapassa
-    # o estado de candidato/preparado.
     assert candidato.estado == "candidato"
     assert handoff.aprendizado_executado is False
     assert handoff.integracao_executada is False
