@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import mimetypes
 import os
 import subprocess
 import sys
@@ -94,6 +95,47 @@ def json_bytes(payload: dict) -> bytes:
         ensure_ascii=False,
         indent=2,
     ).encode("utf-8")
+
+
+def read_local_json(nome_arquivo: str) -> dict:
+    caminho = BASE_DIR / nome_arquivo
+    if not caminho.exists():
+        return {}
+    try:
+        valor = json.loads(caminho.read_text(encoding="utf-8"))
+        return valor if isinstance(valor, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def read_nyxos_contexto() -> dict:
+    return {
+        "sucesso": True,
+        "estado": "nyxos_contexto_disponivel",
+        "origem": "nyxos_contexto_residente",
+        "corpo": read_local_json("estado_corpo_nixal.json"),
+        "fisiologia": read_local_json("fisiologia_operacional_nyxos.json"),
+        "plano_central_controle": read_local_json("plano_central_controle_nyxos.json"),
+        "gateway_atuacao": read_local_json("gateway_atuacao_nyxos.json"),
+        "runtime": read_local_json("estado_nyxal_runtime.json"),
+        "governanca": {
+            "execucao_fisica_habilitada": False,
+            "autorizacao_explicita": False,
+            "integracao_executada": False,
+            "arquitetura_modificada": False,
+            "conhecimento_permanente": False,
+        },
+    }
+
+
+def caminho_interface(relativo: str) -> Path | None:
+    raiz = (BASE_DIR / "interface").resolve()
+    candidato = (raiz / relativo).resolve()
+    try:
+        candidato.relative_to(raiz)
+    except ValueError:
+        return None
+    return candidato if candidato.is_file() else None
 
 
 def get_whisper_model():
@@ -927,6 +969,40 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         )
 
     def do_GET(self) -> None:
+        if self.path == "/":
+            caminho = caminho_interface("index.html")
+            if caminho is None:
+                self._send_json(404, {"estado": "interface_indisponivel"})
+                return
+            corpo = caminho.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(corpo)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(corpo)
+            return
+
+        if self.path.startswith("/interface/"):
+            relativo = self.path.removeprefix("/interface/")
+            caminho = caminho_interface(relativo)
+            if caminho is None:
+                self._send_json(404, {"estado": "arquivo_interface_nao_encontrado"})
+                return
+            corpo = caminho.read_bytes()
+            tipo = mimetypes.guess_type(str(caminho))[0] or "application/octet-stream"
+            self.send_response(200)
+            self.send_header("Content-Type", tipo)
+            self.send_header("Content-Length", str(len(corpo)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(corpo)
+            return
+
+        if self.path == "/api/public/nyxos/contexto":
+            self._send_json(200, read_nyxos_contexto())
+            return
+
         if self.path == "/health":
             self._send_json(
                 200,
