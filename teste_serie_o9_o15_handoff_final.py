@@ -97,7 +97,7 @@ def test_serie_o9_o15_handoff_llc_fechada_sem_aprendizado() -> None:
     assert o12.relacoes_segunda == (relacao_comum, relacao_exclusiva)
 
     # O13: recorrência somente entre evidências distintas.
-    o13 = detectar((o9_1, o9_2))
+    o13 = detectar((o10_1, o10_2))
     assert o13.total_padroes == 1
     assert o13.padroes[0].evidencias_distintas == (
         o9_1.identidade,
