@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""NYXOS — M5.22 ponte conversacional de voz.
+"""NYXOS — M5.24 ponte supervisionada de voz.
 
 Coordena STT/TTS com a camada AudioNyxOS, sem assumir um motor externo.
 Motores reais são injetados na borda; o núcleo permanece determinístico e
-testável. Voz automática continua desligada até integração explícita.
+testável. Voz automática continua desligada.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from nixal_audio_nyxos import AudioNyxOS
 
 class VozNyxOS:
     FONTE = "voz_nyxos"
-    VERSAO = "5.22.0"
+    VERSAO = "5.24.0"
 
     def __init__(
         self,
@@ -84,6 +84,52 @@ class VozNyxOS:
             "texto": texto,
             "arquivo_audio": arquivo,
             "voz_habilitada": False,
+        })
+
+    def executar_supervisionado(self, arquivo_audio: str) -> dict[str, Any]:
+        if not isinstance(arquivo_audio, str) or not arquivo_audio.strip():
+            return self._registrar({
+                "sucesso": False,
+                "estado": "falha",
+                "motivo": "arquivo_audio_invalido",
+                "voz_habilitada": False,
+                "execucao_automatica": False,
+                "execucao_fisica": False,
+            })
+
+        entrada = self.transcrever(arquivo_audio)
+        if not entrada.get("sucesso"):
+            return self._registrar({
+                "sucesso": False,
+                "estado": "falha",
+                "motivo": "falha_stt",
+                "transcricao": copy.deepcopy(entrada),
+                "voz_habilitada": False,
+                "execucao_automatica": False,
+                "execucao_fisica": False,
+            })
+
+        saida = self.sintetizar(entrada["texto"])
+        if not saida.get("sucesso"):
+            return self._registrar({
+                "sucesso": False,
+                "estado": "falha",
+                "motivo": "falha_tts",
+                "transcricao": copy.deepcopy(entrada),
+                "sintese": copy.deepcopy(saida),
+                "voz_habilitada": False,
+                "execucao_automatica": False,
+                "execucao_fisica": False,
+            })
+
+        return self._registrar({
+            "sucesso": True,
+            "estado": "ciclo_supervisionado_concluido",
+            "transcricao": copy.deepcopy(entrada),
+            "sintese": copy.deepcopy(saida),
+            "voz_habilitada": False,
+            "execucao_automatica": False,
+            "execucao_fisica": False,
         })
 
     def contexto(self) -> dict[str, Any]:
