@@ -580,9 +580,6 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         if self.path == "/api/desktop/launch":
-            if not self._authorized():
-                return
-
             try:
                 content_length = int(self.headers.get("Content-Length", "0"))
             except ValueError:
