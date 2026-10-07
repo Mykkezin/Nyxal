@@ -1,0 +1,16 @@
+[Unit]
+Description=NyxOS — interface local no navegador
+After=nyxal-api.service
+Wants=nyxal-api.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Nyxal
+ExecStart=/usr/bin/xdg-open http://127.0.0.1:8010/
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=%t
+RemainAfterExit=no
+
+[Install]
+WantedBy=default.target
