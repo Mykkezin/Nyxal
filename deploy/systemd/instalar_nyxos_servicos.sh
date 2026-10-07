@@ -29,6 +29,7 @@ mkdir -p "${USER_SYSTEMD_DIR}" "${CONFIG_DIR}"
 
 install -m 0644 "${SCRIPT_DIR}/nyxal-api.service" "${USER_SYSTEMD_DIR}/nyxal-api.service"
 install -m 0644 "${SCRIPT_DIR}/nyxos-residente.service" "${USER_SYSTEMD_DIR}/nyxos-residente.service"
+install -m 0644 "${SCRIPT_DIR}/nyxos-interface.service" "${USER_SYSTEMD_DIR}/nyxos-interface.service"
 install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
 
 systemctl --user daemon-reload
