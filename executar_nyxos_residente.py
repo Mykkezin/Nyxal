@@ -56,6 +56,14 @@ def main() -> int:
         help="Não interrompe a residência quando um ciclo falhar.",
     )
     parser.add_argument(
+        "--habilitar-aprendizado",
+        action="store_true",
+        help=(
+            "Habilita explicitamente a persistência de aprendizado no residente. "
+            "Desabilitado por padrão para impedir aprendizado contínuo sem supervisão."
+        ),
+    )
+    parser.add_argument(
         "--habilitar-auto-experimento",
         action="store_true",
         help=(
@@ -74,6 +82,7 @@ def main() -> int:
     runtime = NyxalRuntime(
         solicitacao_evolucao=solicitacao_evolucao,
         modo_residente=True,
+        aprendizado_habilitado=args.habilitar_aprendizado,
     )
     auto_evolucao = AutoEvolucaoGovernadaNixOS(BASE_DIR)
     auto_experimento = AutoExperimentoIsoladoAE2(
