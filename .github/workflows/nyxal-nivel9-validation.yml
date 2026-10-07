@@ -74,6 +74,9 @@ jobs:
       - name: Teste Ciclo Residente M5.7
         run: python teste_ciclo_residente_m5_7.py
 
+      - name: Teste controle de aprendizado residente
+        run: python teste_controle_aprendizado_residente.py
+
       - name: Sanidade de regras de segurança
         run: |
           python - <<'PY'
