@@ -144,6 +144,7 @@ class NyxalRuntime:
         delta_nyxos: RegistroDeltaNixOS | None = None,
         *,
         modo_residente: bool = False,
+        aprendizado_habilitado: bool = True,
         learning_loop_causal: LearningLoopCausalNixal | None = None,
     ) -> None:
         if perceber_corpo is None:
@@ -225,6 +226,7 @@ class NyxalRuntime:
             )
 
         self.perceber_corpo = perceber_corpo
+        self.aprendizado_habilitado = bool(aprendizado_habilitado)
         self.estado = (
             estado
             if estado is not None
@@ -701,6 +703,15 @@ class NyxalRuntime:
 
         aprendizado_anterior = (
             self.memoria_aprendizado.contexto_para_proximo_ciclo()
+            if self.aprendizado_habilitado
+            else {
+                "disponivel": False,
+                "fonte": self.FONTE,
+                "motivo": "aprendizado_desabilitado_para_o_ciclo_residente",
+                "aplicado_no_ciclo_atual": False,
+                "conhecimento_permanente": False,
+                "arquitetura_modificada": False,
+            }
         )
         persistencia_anterior = self.persistencia_operacional.contexto()
 
@@ -1004,11 +1015,21 @@ class NyxalRuntime:
                 },
             )
 
-            aprendizado = self.memoria_aprendizado.registrar(
-                ciclo_id=ciclo_id,
-                experiencia=experiencia,
-                avaliacao=avaliacao,
-            )
+            if self.aprendizado_habilitado:
+                aprendizado = self.memoria_aprendizado.registrar(
+                    ciclo_id=ciclo_id,
+                    experiencia=experiencia,
+                    avaliacao=avaliacao,
+                )
+            else:
+                aprendizado = {
+                    "sucesso": True,
+                    "estado": "aprendizado_desabilitado",
+                    "origem": self.FONTE,
+                    "novo": False,
+                    "conhecimento_permanente": False,
+                    "arquitetura_modificada": False,
+                }
 
             if aprendizado.get("sucesso") is not True:
                 return self._encerrar_com_erro(
