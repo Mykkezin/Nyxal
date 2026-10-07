@@ -30,6 +30,7 @@ mkdir -p "${USER_SYSTEMD_DIR}" "${CONFIG_DIR}"
 install -m 0644 "${SCRIPT_DIR}/nyxal-api.service" "${USER_SYSTEMD_DIR}/nyxal-api.service"
 install -m 0644 "${SCRIPT_DIR}/nyxos-residente.service" "${USER_SYSTEMD_DIR}/nyxos-residente.service"
 install -m 0644 "${SCRIPT_DIR}/nyxos-interface.service" "${USER_SYSTEMD_DIR}/nyxos-interface.service"
+install -m 0755 "${SCRIPT_DIR}/iniciar_nyxos_interface.sh" "${USER_SYSTEMD_DIR}/iniciar_nyxos_interface.sh"
 install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
 
 systemctl --user daemon-reload
@@ -45,6 +46,12 @@ echo "Serviços NyxOS instalados e iniciados."
 echo "Lingering da conta: ${LINGER_STATUS}"
 echo
 echo "Interpretador residente: ${PYTHON_BIN}"
+echo "Vídeo de inicialização: ${NYXAL_DIR}/interface/assets/nyxos-startup.mp4"
+if command -v mpv >/dev/null 2>&1; then
+    echo "Reprodutor de vídeo: mpv"
+else
+    echo "AVISO: mpv não encontrado; o vídeo de inicialização não será reproduzido até sua instalação."
+fi
 echo "Para acompanhar:"
 echo "  systemctl --user status nyxos.target"
 echo "  journalctl --user -u nyxal-api.service -u nyxos-residente.service -f"
