@@ -98,6 +98,29 @@ def main() -> None:
         total,
     )
 
+    prompt = cliente_objeto.chamada["messages"][0]["content"]
+
+    verificar(
+        "não como uma atendente" in prompt,
+        "prompt impede o estilo de atendente",
+        falhas,
+        total,
+    )
+
+    verificar(
+        "mantenha o contexto da conversa" in prompt,
+        "prompt prioriza continuidade conversacional",
+        falhas,
+        total,
+    )
+
+    verificar(
+        cliente_objeto.chamada["options"]["temperature"] == 0.65,
+        "temperatura favorece respostas mais naturais sem perder controle",
+        falhas,
+        total,
+    )
+
     cliente_dicionario = ClienteFake(
         {
             "message": {
