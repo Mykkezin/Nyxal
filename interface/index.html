@@ -241,34 +241,25 @@
     }
   </style>
 <style>
+/* INFINITY — somente o novo acionamento visual */
+.infinity-core{position:absolute;left:0;top:0;width:78px;height:78px;transform:translate(-50%,-50%);border-radius:9999px;pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,242,254,.72);color:#00f2fe;background:radial-gradient(circle,rgba(0,242,254,.18),rgba(6,14,28,.95) 60%);box-shadow:0 0 20px rgba(0,242,254,.3);transition:transform .35s,box-shadow .35s}
+.infinity-core:hover{transform:translate(-50%,-50%) scale(1.08);box-shadow:0 0 35px rgba(0,242,254,.55)}
+.infinity-symbol{font:400 34px/1 'Orbitron',sans-serif;text-shadow:0 0 16px rgba(0,242,254,.8)}
+.infinity-label{position:absolute;bottom:-20px;white-space:nowrap;font:700 8px/1 'Orbitron',sans-serif;letter-spacing:.2em;color:#94a3b8}
+.infinity-node{--x:0px;--y:0px;position:absolute;left:0;top:0;width:110px;min-height:40px;transform:translate(-50%,-50%) translate(0,0) scale(.2);opacity:0;pointer-events:none;border:1px solid rgba(0,242,254,.4);border-radius:9999px;background:rgba(3,8,22,.95);color:#cbd5e1;display:flex;align-items:center;justify-content:center;gap:6px;font:700 8px/1 'Orbitron',sans-serif;transition:transform .45s cubic-bezier(.16,1.25,.3,1),opacity .25s ease}
+.infinity-node i{color:#00f2fe}.infinity-node:hover{color:#00f2fe;border-color:#00f2fe;box-shadow:0 0 20px rgba(0,242,254,.25);transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.06)}
+#infinityHub.open .infinity-node{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1)}
+#infinityHub .infinity-node:nth-child(1){--x:-140px;--y:-45px}#infinityHub .infinity-node:nth-child(2){--x:-95px;--y:-105px}#infinityHub .infinity-node:nth-child(3){--x:-32px;--y:-138px}#infinityHub .infinity-node:nth-child(4){--x:32px;--y:-138px}#infinityHub .infinity-node:nth-child(5){--x:95px;--y:-105px}#infinityHub .infinity-node:nth-child(6){--x:140px;--y:-45px}
+@media(max-width:640px){.infinity-node{width:92px;font-size:7px}.infinity-core{width:68px;height:68px}.infinity-symbol{font-size:29px}.infinity-node:nth-child(1){--x:-110px;--y:-38px}.infinity-node:nth-child(2){--x:-76px;--y:-82px}.infinity-node:nth-child(3){--x:-27px;--y:-108px}.infinity-node:nth-child(4){--x:27px;--y:-108px}.infinity-node:nth-child(5){--x:76px;--y:-82px}.infinity-node:nth-child(6){--x:110px;--y:-38px}}
+</style>
+<style>
 #nyxosOperationalPanel{position:fixed;left:18px;bottom:18px;z-index:80;width:min(390px,calc(100vw - 36px));background:rgba(3,8,22,.92);border:1px solid rgba(0,242,254,.28);border-radius:12px;padding:12px;backdrop-filter:blur(16px);box-shadow:0 12px 36px rgba(0,0,0,.45)}
 #nyxosOperationalPanel .nyxos-op-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #nyxosOperationalPanel .nyxos-op-cell{border:1px solid rgba(148,163,184,.12);background:rgba(15,23,42,.68);border-radius:8px;padding:7px 8px}
 #nyxosOperationalPanel .nyxos-op-label{color:#64748b;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
 #nyxosOperationalPanel .nyxos-op-value{color:#e2e8f0;font:600 12px/1.3 monospace;margin-top:3px}
 #nyxosOperationalPanel .nyxos-op-value.active{color:#00f2fe}
-</style><style>
-/* INFINITY HUB — visual menu em arco */
-.infinity-hub{position:absolute;left:50%;top:50%;width:1px;height:1px;z-index:40;pointer-events:none}
-.infinity-core{position:absolute;left:0;top:0;width:92px;height:92px;transform:translate(-50%,-50%);border-radius:9999px;pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,242,254,.72);color:#00f2fe;background:radial-gradient(circle at 50% 45%,rgba(0,242,254,.20),rgba(6,14,28,.94) 58%,rgba(2,5,14,.98) 100%);box-shadow:0 0 18px rgba(0,242,254,.30),0 0 48px rgba(0,242,254,.12),inset 0 0 22px rgba(0,242,254,.12);transition:transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s ease,border-color .35s ease}
-.infinity-core::before,.infinity-core::after{content:"";position:absolute;inset:-8px;border-radius:inherit;border:1px solid rgba(0,242,254,.16);pointer-events:none}
-.infinity-core::after{inset:-16px;border-color:rgba(79,172,254,.10);border-style:dashed;animation:infinityRingSpin 18s linear infinite}
-.infinity-core:hover{transform:translate(-50%,-50%) scale(1.08);border-color:#00f2fe;box-shadow:0 0 25px rgba(0,242,254,.55),0 0 70px rgba(0,242,254,.20),inset 0 0 28px rgba(0,242,254,.18)}
-.infinity-core .infinity-symbol{font:400 38px/1 'Orbitron',sans-serif;text-shadow:0 0 12px rgba(0,242,254,.85),0 0 28px rgba(0,242,254,.45);transition:transform .45s cubic-bezier(.16,1,.3,1)}
-.infinity-core .infinity-label{position:absolute;bottom:-24px;left:50%;transform:translateX(-50%);font:700 8px/1 'Orbitron',sans-serif;letter-spacing:.24em;color:rgba(226,232,240,.72);white-space:nowrap}
-.infinity-hub.open .infinity-core .infinity-symbol{transform:rotate(180deg)}
-.infinity-hub.open .infinity-core{box-shadow:0 0 30px rgba(0,242,254,.62),0 0 85px rgba(0,242,254,.22),inset 0 0 30px rgba(0,242,254,.20)}
-.infinity-node{--x:0px;--y:0px;--delay:0ms;position:absolute;left:0;top:0;width:112px;min-height:46px;transform:translate(-50%,-50%) translate(0,0) scale(.18);opacity:0;pointer-events:none;border:1px solid rgba(0,242,254,.38);border-radius:9999px;background:rgba(3,8,22,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#cbd5e1;box-shadow:0 0 0 rgba(0,242,254,0);transition:transform .52s cubic-bezier(.16,1.25,.3,1),opacity .28s ease,border-color .25s ease,color .25s ease,box-shadow .25s ease;transition-delay:var(--delay);display:flex;align-items:center;justify-content:center;gap:7px;font:700 9px/1 'Orbitron',sans-serif;letter-spacing:.08em}
-.infinity-node i{color:#00f2fe;font-size:12px;filter:drop-shadow(0 0 5px rgba(0,242,254,.45))}
-.infinity-node:hover{color:#00f2fe;border-color:#00f2fe;box-shadow:0 0 24px rgba(0,242,254,.24),inset 0 0 12px rgba(0,242,254,.08);transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.08)}
-.infinity-hub.open .infinity-node{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1)}
-.infinity-node:nth-child(2){--x:-141px;--y:-51px;--delay:35ms}.infinity-node:nth-child(3){--x:-100px;--y:-111px;--delay:70ms}.infinity-node:nth-child(4){--x:-36px;--y:-146px;--delay:105ms}.infinity-node:nth-child(5){--x:36px;--y:-146px;--delay:140ms}.infinity-node:nth-child(6){--x:100px;--y:-111px;--delay:175ms}.infinity-node:nth-child(7){--x:141px;--y:-51px;--delay:210ms}
-.infinity-arc{position:absolute;left:0;top:0;width:330px;height:190px;transform:translate(-50%,-100%);border:1px solid rgba(0,242,254,.10);border-bottom:0;border-radius:330px 330px 0 0;opacity:0;pointer-events:none;transition:opacity .35s ease}
-.infinity-hub.open .infinity-arc{opacity:1;animation:infinityArcPulse 2.4s ease-in-out infinite}
-@keyframes infinityRingSpin{to{transform:rotate(360deg)}}@keyframes infinityArcPulse{0%,100%{box-shadow:0 -8px 28px rgba(0,242,254,.03)}50%{box-shadow:0 -8px 42px rgba(0,242,254,.10)}}
-@media (max-width:640px){.infinity-core{width:78px;height:78px}.infinity-core .infinity-symbol{font-size:31px}.infinity-node{width:94px;min-height:42px;font-size:7px}.infinity-node:nth-child(2){--x:-108px;--y:-40px}.infinity-node:nth-child(3){--x:-78px;--y:-91px}.infinity-node:nth-child(4){--x:-28px;--y:-118px}.infinity-node:nth-child(5){--x:28px;--y:-118px}.infinity-node:nth-child(6){--x:78px;--y:-91px}.infinity-node:nth-child(7){--x:108px;--y:-40px}.infinity-arc{width:250px;height:155px}}
-</style>
-</head>
+</style></head>
 
 <body class="min-h-screen bg-[#02050e] text-slate-100 flex flex-col justify-between relative selection:bg-hud-cyan selection:text-black">
 
@@ -549,17 +540,49 @@
         <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
           <div class="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] rounded-full border border-hud-cyan/20 animate-[spin_60s_linear_infinite]"></div>
           <div class="absolute w-[260px] h-[260px] sm:w-[350px] sm:h-[350px] rounded-full border border-dashed border-hud-blue/30 animate-[spin_40s_linear_infinite_reverse]"></div>
-          <!-- INFINITY: hub visual central com seis módulos em arco -->
-          <div id="infinityHub" class="infinity-hub">
-            <div class="infinity-arc"></div>
-            <button type="button" class="infinity-node" onclick="triggerInfinityNode('INTELIGÊNCIA')"><i class="fa-solid fa-brain"></i><span>INTELIGÊNCIA</span></button>
-            <button type="button" class="infinity-node" onclick="triggerInfinityNode('MEMÓRIA')"><i class="fa-solid fa-database"></i><span>MEMÓRIA</span></button>
-            <button type="button" class="infinity-node" onclick="triggerInfinityNode('PRESENÇA')"><i class="fa-solid fa-eye"></i><span>PRESENÇA</span></button>
-            <button type="button" class="infinity-node" onclick="triggerInfinityNode('HABITAT')"><i class="fa-solid fa-microchip"></i><span>HABITAT</span></button>
-            <button type="button" class="infinity-node" onclick="triggerInfinityNode('VOZ')"><i class="fa-solid fa-wave-square"></i><span>VOZ</span></button>
-            <button type="button" class="infinity-node" onclick="triggerInfinityNode('SISTEMA')"><i class="fa-solid fa-gear"></i><span>SISTEMA</span></button>
+          <!-- INFINITY: seis atalhos para os seis módulos já existentes na navegação -->
+          <div id="infinityHub" class="absolute left-1/2 top-1/2 z-40 w-px h-px -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+            <button type="button" class="infinity-node" onclick="switchTab('inicio')"><i class="fa-solid fa-house"></i><span>INÍCIO</span></button>
+            <button type="button" class="infinity-node" onclick="switchTab('inteligencia')"><i class="fa-solid fa-brain"></i><span>INTELIGÊNCIA</span></button>
+            <button type="button" class="infinity-node" onclick="switchTab('projetos')"><i class="fa-solid fa-cube"></i><span>PROJETOS</span></button>
+            <button type="button" class="infinity-node" onclick="switchTab('estudos')"><i class="fa-solid fa-book"></i><span>ESTUDOS</span></button>
+            <button type="button" class="infinity-node" onclick="switchTab('aviacao')"><i class="fa-solid fa-plane"></i><span>AVIAÇÃO</span></button>
+            <button type="button" class="infinity-node" onclick="switchTab('sistema')"><i class="fa-solid fa-gear"></i><span>SISTEMA</span></button>
             <button id="infinityCoreButton" type="button" class="infinity-core" aria-expanded="false" onclick="toggleInfinityHub()"><span class="infinity-symbol">∞</span><span class="infinity-label">INFINITY</span></button>
           </div>
+
+          <!-- Nodes positioned radially around core -->
+          <button onclick="triggerOrbitalNode('IA')" class="orbital-node pointer-events-auto absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-hud-cyan text-hud-cyan hover:bg-hud-cyan hover:text-black px-3 py-1.5 rounded-full text-xs font-orbitron font-bold flex items-center gap-1.5 shadow-lg shadow-hud-cyan/20">
+            <i class="fa-solid fa-brain"></i> IA
+          </button>
+
+          <button onclick="triggerOrbitalNode('PROJETOS')" class="orbital-node pointer-events-auto absolute top-12 left-2 sm:top-16 sm:left-6 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-cube text-hud-cyan"></i> PROJETOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('ESTUDOS')" class="orbital-node pointer-events-auto absolute bottom-24 left-0 sm:bottom-28 sm:left-4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-book text-hud-cyan"></i> ESTUDOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('AVIAÇÃO')" class="orbital-node pointer-events-auto absolute bottom-4 left-1/4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-plane text-hud-cyan"></i> AVIAÇÃO
+          </button>
+
+          <button onclick="triggerOrbitalNode('JOGOS')" class="orbital-node pointer-events-auto absolute top-12 right-2 sm:top-16 sm:right-6 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-gamepad text-hud-cyan"></i> JOGOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('MÍDIA')" class="orbital-node pointer-events-auto absolute top-1/2 -right-4 sm:-right-6 -translate-y-1/2 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-play text-hud-cyan"></i> MÍDIA
+          </button>
+
+          <button onclick="triggerOrbitalNode('UTILITÁRIOS')" class="orbital-node pointer-events-auto absolute bottom-24 right-0 sm:bottom-28 sm:right-4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-border-all text-hud-cyan"></i> UTILITÁRIOS
+          </button>
+
+          <button onclick="triggerOrbitalNode('SISTEMA')" class="orbital-node pointer-events-auto absolute bottom-4 right-1/4 bg-slate-900/90 border border-hud-cyan/60 text-slate-200 hover:border-hud-cyan hover:text-hud-cyan px-3 py-1.5 rounded-full text-xs font-orbitron flex items-center gap-1.5">
+            <i class="fa-solid fa-gear text-hud-cyan"></i> SISTEMA
+          </button>
         </div>
       </div>
 
@@ -2962,38 +2985,15 @@
       desenharGraficoSistema();
     }
 
-    // Infinity Hub — menu visual em arco
-    function toggleInfinityHub(forceState) {
+    // Infinity — abre/fecha somente os seis atalhos existentes
+    function toggleInfinityHub() {
       const hub = document.getElementById('infinityHub');
       const button = document.getElementById('infinityCoreButton');
       if (!hub || !button) return;
-      const shouldOpen = typeof forceState === 'boolean'
-        ? forceState
-        : !hub.classList.contains('open');
-      hub.classList.toggle('open', shouldOpen);
-      button.setAttribute('aria-expanded', String(shouldOpen));
-      playHudSound(shouldOpen ? 'open' : 'click');
-    }
-
-    function triggerInfinityNode(nodeName) {
-      const details = {
-        'INTELIGÊNCIA': 'Núcleo de inteligência e conversa da Nyxal. Acesso visual à camada conversacional e aos módulos de raciocínio já existentes.',
-        'MEMÓRIA': 'Memória operacional e conhecimento utilizados pela NyxOS. Este módulo apresenta o estado sem alterar a arquitetura.',
-        'PRESENÇA': 'Presença da NyxOS: ciclos residentes, atividade e percepção do estado operacional do sistema.',
-        'HABITAT': 'Habitat computacional: recursos, fisiologia, processos e condições observadas no ambiente da NyxOS.',
-        'VOZ': 'Camada de voz da NyxOS: entrada, síntese e estados de escuta/processamento/fala.',
-        'SISTEMA': 'Estado geral da NyxOS: CPU, RAM, disco, gateway, plano central e conectividade com a API.'
-      };
-      playHudSound('open');
-      const modal = document.getElementById('nodeDetailModal');
-      const title = document.getElementById('nodeTitle');
-      const content = document.getElementById('nodeContent');
-      if (!modal || !title || !content) return;
-      title.innerHTML = `<i class="fa-solid fa-infinity text-hud-cyan"></i> INFINITY • ${nodeName}`;
-      content.innerText = details[nodeName] || 'Módulo visual ativado.';
-      modal.classList.remove('hidden');
-      setHologramReceded(true);
-      toggleInfinityHub(false);
+      const open = !hub.classList.contains('open');
+      hub.classList.toggle('open', open);
+      button.setAttribute('aria-expanded', String(open));
+      playHudSound(open ? 'open' : 'click');
     }
 
     // Orbital Node Modal Trigger
