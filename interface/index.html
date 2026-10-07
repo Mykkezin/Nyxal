@@ -250,7 +250,7 @@
 .infinity-node i{color:#00f2fe;font-size:17px}.infinity-node:hover{color:#00f2fe;border-color:#00f2fe;box-shadow:0 0 20px rgba(0,242,254,.25);transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1.12)}
 #infinityHub.open .infinity-node{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) translate(var(--x),var(--y)) scale(1)}
 #infinityHub .infinity-node:nth-child(1){--x:-140px;--y:-45px}#infinityHub .infinity-node:nth-child(2){--x:-95px;--y:-105px}#infinityHub .infinity-node:nth-child(3){--x:-32px;--y:-138px}#infinityHub .infinity-node:nth-child(4){--x:32px;--y:-138px}#infinityHub .infinity-node:nth-child(5){--x:95px;--y:-105px}#infinityHub .infinity-node:nth-child(6){--x:140px;--y:-45px}
-@media(max-width:640px){.infinity-node{width:92px;font-size:7px}.infinity-core{width:68px;height:68px}.infinity-symbol{font-size:29px}.infinity-node:nth-child(1){--x:-110px;--y:-38px}.infinity-node:nth-child(2){--x:-76px;--y:-82px}.infinity-node:nth-child(3){--x:-27px;--y:-108px}.infinity-node:nth-child(4){--x:27px;--y:-108px}.infinity-node:nth-child(5){--x:76px;--y:-82px}.infinity-node:nth-child(6){--x:110px;--y:-38px}}
+@media(max-width:640px){.infinity-node{width:50px;height:50px}.infinity-core{width:68px;height:68px}.infinity-symbol{font-size:29px}.infinity-node:nth-child(1){--x:-110px;--y:-38px}.infinity-node:nth-child(2){--x:-76px;--y:-82px}.infinity-node:nth-child(3){--x:-27px;--y:-108px}.infinity-node:nth-child(4){--x:27px;--y:-108px}.infinity-node:nth-child(5){--x:76px;--y:-82px}.infinity-node:nth-child(6){--x:110px;--y:-38px}}
 </style>
 <style>
 #nyxosOperationalPanel{position:fixed;left:18px;bottom:18px;z-index:80;width:min(390px,calc(100vw - 36px));background:rgba(3,8,22,.92);border:1px solid rgba(0,242,254,.28);border-radius:12px;padding:12px;backdrop-filter:blur(16px);box-shadow:0 12px 36px rgba(0,0,0,.45)}
@@ -540,7 +540,7 @@
         <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
           <div class="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] rounded-full border border-hud-cyan/20 animate-[spin_60s_linear_infinite]"></div>
           <div class="absolute w-[260px] h-[260px] sm:w-[350px] sm:h-[350px] rounded-full border border-dashed border-hud-blue/30 animate-[spin_40s_linear_infinite_reverse]"></div>
-          <!-- INFINITY: seis atalhos para os seis módulos já existentes na navegação -->
+          <!-- INFINITY: seis atalhos operacionais futuros -->
           <div id="infinityHub" class="absolute left-1/2 top-1/2 z-40 w-px h-px -translate-x-1/2 -translate-y-1/2 pointer-events-none">
             <button type="button" class="infinity-node" title="VPS" aria-label="VPS" data-infinity-shortcut="vps"><i class="fa-solid fa-server" aria-hidden="true"></i></button>
             <button type="button" class="infinity-node" title="RELATÓRIO DELTA" aria-label="Relatório Delta" data-infinity-shortcut="relatorio-delta"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></button>
