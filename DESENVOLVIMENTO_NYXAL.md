@@ -24,7 +24,7 @@ Estabelecer um ciclo versionado para desenvolvimento supervisionado da Nyxal:
 ## Branches
 
 - `main`: estado estável.
-- `desenvolvimento/mcp-bridge`: trabalho de integração e automação.
+- branches de desenvolvimento: alterações isoladas, pequenas e reversíveis.
 
 ## Regras de segurança
 
@@ -35,6 +35,9 @@ Estabelecer um ciclo versionado para desenvolvimento supervisionado da Nyxal:
 - Não promover conhecimento permanente apenas por alteração automática.
 - Não executar autoalteração fora das permissões e ferramentas explicitamente definidas.
 - Toda mudança automática deve deixar rastros verificáveis: arquivo alterado, teste executado e commit correspondente.
+- Voz automática permanece desabilitada até que um marco específico seja aprovado.
+- Execução física automática permanece desabilitada.
+- Proposta, candidato ou resultado experimental não equivale a autorização de integração.
 
 ## Estado consolidado
 
@@ -46,19 +49,43 @@ Estado atual:
 - Nível 10 — ciclo local formal: concluído.
 - 56.5.5 — conversa contextual: integrado.
 - 56.5.6 — voz contínua: integrado.
-- M5 — Habitat NyxOS: iniciado.
-- M5.1 — observabilidade real do host: implementado e validado.
-- M5.2 — processos como entidades do habitat: implementado e validado pelo CI.
-- M5.3 — persistência operacional: implementada e validada pelo CI.
-- M5.4 — eventos Delta de primeira classe: implementados e validados pelo CI.
-- M5.5 — interface orientada ao estado real: implementada e validada pelo CI.
-- M5.6 — ferramentas e módulos como recursos do habitat: implementados e validados pelo CI.
-- M5.7 — ciclo operacional residente: implementado e validado pelo CI.
-- AE1 — descoberta de auto-evolução governada: implementada e validada pelo CI.
-- AE2 — experimento isolado automático sob política: implementado e validado pelo CI.
-- AE3 — comparação e aprendizagem automática: implementada e validada pelo CI.
-- AE4 — ciclo residente de evolução: implementado e validado pelo CI.
-- AE5 — descoberta contínua com governança: implementada e validada pelo CI.
+- M5 — Habitat NyxOS: sequência M5.8 → M5.15 encerrada/validada.
+- M5.1 → M5.15 — habitat, residência, atuação supervisionada, fisiologia, controle e presença: concluídos/validados.
+- M5.16 — Host Controlled Adapter: concluído/validado.
+- M5.17 — Reversible Physical Sandbox: concluído/validado.
+- M5.18 — Actuation Audit: concluído/validado.
+- M5.19 — Resident Integration: concluído/validado.
+- M5.20 — E2E: concluído/validado.
+- M5.21 — AudioNyxOS: concluído/validado.
+- M5.22 — Voice NyxOS: concluído/validado; voz automática permanece desabilitada.
+- M5.23 — adaptadores STT/TTS: integrado em `main`; STT usa faster-whisper e TTS usa Kokoro.
+- AE1 — descoberta de auto-evolução governada: implementada e validada.
+- AE2 — experimento isolado automático sob política: implementado e validado.
+- AE3 — comparação e aprendizagem automática: implementada e validada.
+- AE4 — ciclo residente de evolução: implementado e validado.
+- AE5 — descoberta contínua com governança: implementada e validada.
+
+### M5.23 — adaptadores de voz
+
+O M5.23 integrou adaptadores externos de STT/TTS sem alterar o contrato central de `VozNyxOS`.
+
+Estado registrado:
+
+- PR #34: mergeado.
+- Merge commit: `195b1186a19e3be058b55e57c827e29461a91704`.
+- STT: `faster-whisper`.
+- TTS: `Kokoro`.
+- Contrato: `VozNyxOS` recebe callables STT/TTS.
+- Dependências externas permanecem na borda.
+- Injeção de dependência permanece disponível para validação determinística.
+- Voz automática: desabilitada.
+- Execução física automática: desabilitada.
+- Autoridade de evolução: não concedida.
+- M6: não criado automaticamente.
+
+O HEAD do PR #34 (`e8060bd01546d3117f38c24f7bd7bd5864114da7`) teve 14/14 checks do GitHub Actions concluídos com sucesso antes do merge.
+
+O checkpoint pós-M5.23 está registrado separadamente em `CHECKPOINT_POS_M5_23.md` e permanece como registro histórico do estado integrado.
 
 ## Gate M5 / AE5 — estado consolidado
 
@@ -70,46 +97,33 @@ O gate desta fase foi revalidado após o endurecimento da AE5.1.0.
 - formalização persistente: validada;
 - reconciliação histórica idempotente: validada;
 - invariantes de autorização e integração: preservados;
-- CI M5/AE1–AE5: **SUCCESS**;
-- CI Nível 9/10 determinístico: **SUCCESS**;
-- main: não modificada.
+- CI M5/AE1–AE5: SUCCESS;
+- CI Nível 9/10 determinístico: SUCCESS.
 
-Não há promoção automática para AE6 neste checkpoint. O próximo passo arquitetural é
-a revisão das evidências acumuladas pela AE5 e a definição supervisionada do próximo
-marco somente depois dessa revisão.
+Não há promoção automática para AE6.
 
 ## Gate AE5 — revisão de evidências acumuladas
 
 Este gate separa validação estrutural de evidência empírica. A existência de testes, persistência e integração no ciclo residente comprova o comportamento implementado, mas não substitui uma sequência real de observações acumuladas.
 
-### Evidência já validada
+### Evidência validada
 
-- integração AE1 → AE4 → AE5 no ciclo residente: validada por regressão;
-- persistência e reconciliação histórica: validadas;
-- janela móvel de 20 ciclos: validada;
-- deduplicação e idempotência: validadas;
-- classificação de maturidade: validada por testes determinísticos;
-- invariantes de autorização, integração, alteração de arquitetura e conhecimento permanente: preservadas;
-- CI M5/AE1–AE5: **SUCCESS**.
-
-### Evidência ainda não comprovada no início do gate
-
-Antes da observação operacional, ainda não estavam comprovados:
-
-- existência de uma série histórica real de ciclos residentes suficiente para demonstrar maturidade operacional fora dos testes;
-- recorrência de oportunidades reais em ciclos independentes;
-- persistência de sinais reais atravessando a janela móvel de 20 ciclos;
-- ocorrência real de uma hipótese que alcance os critérios de maturidade sem ser produzida artificialmente pelo teste;
-- existência de uma solicitação N9 correspondente surgida de um fluxo operacional real.
+- integração AE1 → AE4 → AE5 no ciclo residente;
+- persistência e reconciliação histórica;
+- janela móvel de 20 ciclos;
+- deduplicação e idempotência;
+- classificação de maturidade;
+- invariantes de autorização, integração, alteração de arquitetura e conhecimento permanente;
+- evidência operacional real do checkpoint de 2026-10-05.
 
 ### Resultado da revisão operacional — 2026-10-05
 
-A execução residente real forneceu a evidência necessária para este checkpoint, sem criação de sinais artificiais:
+A execução residente real forneceu a evidência necessária para o checkpoint, sem criação de sinais artificiais:
 
 - ciclos AE4 válidos: **3**;
 - ciclos distintos observados: **3**;
 - linha de evidência avaliada: **1**;
-- limitação recorrente: dependencias_arquiteturais_nao_declaradas;
+- limitação recorrente: `dependencias_arquiteturais_nao_declaradas`;
 - hipótese recorrente: "É possível que existam dependências entre os componentes da arquitetura que ainda não estão registradas formalmente na planta.";
 - observações acumuladas: **3**;
 - observações bem-sucedidas: **3**;
@@ -130,102 +144,11 @@ fase_01_1791181738172345762
 fase_01_1791181742859225468
 ```
 
-Conclusão do checkpoint: o gate de evidência empírica da AE5 está **FECHADO PARA ESTE CHECKPOINT**, com maturidade operacional demonstrada pela política vigente. Isso não concede autorização de integração, não cria solicitação N9 e não implica criação de AE6.
+Conclusão: o gate de evidência empírica da AE5 está **fechado para este checkpoint**, com maturidade operacional demonstrada pela política vigente. Isso não concede autorização de integração, não cria solicitação N9 e não implica criação de AE6.
 
-### Ferramenta de auditoria
+## M5.8 → M5.15 — sequência encerrada
 
-O arquivo `auditar_evidencias_ae5.py` foi adicionado como auditor somente leitura do gate. Ele inspeciona as auditorias AE4 e as oportunidades persistidas no ambiente operacional externo ao repositório, agrupa por limitação + hipótese e calcula a janela de evidência sem criar, reconciliar ou alterar registros.
-
-Execução local:
-
-```bash
-python3 auditar_evidencias_ae5.py
-```
-
-Código de saída `0`: há evidência operacional encontrada. Código de saída `2`: nenhuma evidência operacional encontrada. Nenhum dos dois estados concede autorização ou altera `main`.
-
-### Critério de saída
-
-O gate permanece **ABERTO** até que exista evidência observada em execução real ou em um conjunto de ciclos operacionais explicitamente identificados como observação, sem fabricar sinais para satisfazer os critérios. Quando os critérios forem satisfeitos, o fechamento é restrito ao checkpoint observado e não concede autoridade de integração.
-
-A revisão deve registrar, no mínimo:
-
-1. identificadores dos ciclos observados;
-2. oportunidades AE1 efetivamente observadas;
-3. auditorias AE4 correspondentes;
-4. sinais reconciliados pela AE5;
-5. janela de evidência utilizada;
-6. maturidade calculada;
-7. eventual formalização N9 já existente, sem criação automática;
-8. confirmação das invariantes de autorização e integração.
-
-Com este checkpoint validado, qualquer próximo marco continua dependente de proposta supervisionada e revisão arquitetural. **Nenhuma AE6 é criada ou ativada automaticamente por este gate.**
-
-## Checkpoint M5.8 — validação do mapa de dependências arquiteturais
-
-Em 2026-10-05, a proposta supervisionada M5.8 foi validada por dois testes complementares:
-
-- validação estrutural da proposta: **PASSOU**;
-- cobertura automática por importações diretas entre os componentes Python declarados na planta: **PASSOU**;
-- relações diretas encontradas: **4**;
-- relações correspondentes declaradas na proposta: **4**;
-- relações ausentes na proposta: **0**;
-- relações declaradas sem evidência direta: **0**.
-
-O critério de M5.8, portanto, está satisfeito neste checkpoint **dentro do escopo de importação direta**.
-
-A proposta permanece não autoritativa. `planta_nixal/planta.json`, Runtime, ciclo residente e `main` não foram alterados por este marco. Nenhuma promoção de arquitetura ou integração foi executada.
-
-## Checkpoint M5.9 — residência Linux via systemd
-
-Em 2026-10-05, o M5.9 foi validado estrutural e operacionalmente.
-
-Evidências do checkpoint:
-
-- teste formal `teste_m5_9_residencia_linux.py`: **PASSOU**;
-- residência Linux via `systemd --user`: **ATIVA**;
-- serviços residentes: **2**;
-- target: `nyxos.target`;
-- interpretador residente: `.venv/bin/python`;
-- perfil residente: `modo_residente=True`;
-- AE2 automática: **DESABILITADA**;
-- execução física: **DESABILITADA**;
-- residente completo: **30 ciclos concluídos**;
-- Runtime residente isolado: **10 ciclos com memória estável**;
-- serviço systemd: **ativo**;
-- memória observada no serviço atual: **62,6 MB**, pico **70,7 MB**;
-- nenhum novo `oom-kill` observado desde a inicialização operacional atual.
-
-O critério de M5.9 está satisfeito neste checkpoint. O OOM observado em uma execução histórica permanece registrado como ocorrência anterior e não foi reproduzido nos testes controlados deste checkpoint. Nenhuma alteração arquitetural especulativa foi introduzida em resposta a esse evento.
-
-A residência altera a forma operacional de execução para serviços Linux persistentes, sem conceder autoridade de integração, modificar `stable`, alterar a planta autoritativa ou habilitar automaticamente AE2.
-
-## Checkpoint M5.12 — corpo térmico e ventilação supervisionada
-
-Em 2026-10-05, o M5.12 foi validado por execução do teste formal no interpretador oficial `.venv/bin/python`.
-
-Evidências do checkpoint:
-
-- teste formal `teste_m5_12_corpo_termico.py`: **PASSOU**;
-- sensores térmicos: **OBSERVADOS**;
-- classificação térmica: **VALIDADA**;
-- histerese: **ATIVA**;
-- tendência térmica: **ATIVA**;
-- consolidação da temperatura máxima: **VALIDADA**;
-- planejamento de ventilação: **SUPERVISIONADO**;
-- ventilação automática: **DESABILITADA**;
-- autorização física: **DESABILITADA**;
-- fallback sem sensor confiável: **NÃO ATUAR**.
-
-O M5.12 permanece limitado à observação térmica, classificação, tendência e preparação de intenção supervisionada de resfriamento. A descoberta de interfaces PWM não concede permissão de escrita ou controle físico.
-
-O critério de M5.12 está satisfeito neste checkpoint. Nenhuma autoridade de evolução, alteração arquitetural, integração em `main` ou controle físico automático foi introduzida.
-
-## Ordem atual de engenharia
-
-O fechamento dos marcos M5.9 a M5.12 mantém as restrições arquiteturais e de governança existentes. A ordem oficial de engenharia registra a sequência M5.8 → M5.15 como encerrada.
-
-Sequência supervisionada:
+A sequência supervisionada foi concluída:
 
 1. M5.8 — dependências arquiteturais observadas — **concluído/validado**;
 2. M5.9 — residência Linux via systemd — **concluído/validado**;
@@ -236,13 +159,11 @@ Sequência supervisionada:
 7. M5.14 — plano central de controle — **concluído/validado**;
 8. M5.15 — presença de máquina — **concluído/validado**.
 
-A sequência M5.8 → M5.15 está encerrada. Nenhum M6 é criado automaticamente; a próxima direção será definida por planejamento explícito.
-
-AE1→AE5 permanece em paralelo como camada de evolução governada. Nenhuma AE6 é criada automaticamente.
+Nenhum M6 é criado automaticamente.
 
 ## LLC — Learning Loop Causal
 
-Após o fechamento do M5, o desenvolvimento foi separado em `feat/llc-learning-loop`.
+O LLC permanece uma linha arquitetural separada da concessão de autoridade de evolução.
 
 ### LLC.1 — Influência decisória determinística
 
@@ -258,15 +179,11 @@ decisão_sem_aprendizado
 decisão_com_aprendizado
 ```
 
-Quando a escolha muda e o aprendizado válido foi explicitamente aplicado ao ciclo, o registro marca `influencia_decisoria_comprovada = true`.
-
 A prova é limitada à influência dentro do mecanismo de decisão. `causalidade_ambiental_comprovada` permanece false.
 
-A memoria persistente continua única; o contexto do ciclo seguinte expõe experiência e avaliação anteriores em formato estruturado.
+### LLC.2 — próximo marco da linha LLC
 
-### LLC.2 — Próximo passo
-
-Fechar o elo completo:
+O objetivo conceitual é fechar o elo:
 
 ```
 aprendizado anterior
@@ -277,70 +194,56 @@ aprendizado anterior
 → novo aprendizado
 ```
 
-LLC.2 não deve ser iniciado automaticamente por LLC.1 e não cria uma nova memoria, novo agente ou nova autoridade de integração.
+LLC.2 não cria uma nova memória, novo agente ou nova autoridade de integração.
 
-## Próximo objetivo
+## Governança pós-M5.23
 
-Avançar o M5/Habitat sem criar um kernel próprio.
+O estado atual é de **integração arquitetural com voz disponível como capacidade externa, mas sem execução automática**.
 
-Primeiro ciclo:
-
-```
-host
-→ observabilidade
-→ processos
-→ persistência operacional
-→ eventos Delta
-→ interface orientada a estado real
-→ ciclo operacional residente
-```
-
-O primeiro marco M5.1 mantém a ponte somente leitura e não altera hardware, estado persistente ou os gates de evolução.
-
-M5.7 conclui o Habitat NyxOS desta fase. AE1 e AE2 já estão integradas no branch de desenvolvimento:
-AE1 descobre e registra oportunidades; AE2, quando explicitamente habilitada, processa no máximo uma
-solicitação formal pronta por ciclo através do caminho remoto N9.
-
-AE3 está implementada para interpretar resultados do AE2/N9, validar comparação e aprendizado
-e classificar a evidência sem conceder autorização.
-
-AE4 está implementado para orquestrar AE1→AE2→AE3 em uma única passagem residente, registrar um
-resumo auditável por ciclo e preservar a ausência de causalidade implícita entre oportunidade e
-solicitação quando o vínculo não estiver explicitamente persistido.
-
-AE5 está implementada para acumular sinais repetidos da AE1/AE4, agrupar linhas de evidência,
-classificar maturidade e solicitar formalização externa sem inventar objetivo, métrica, baseline
-ou artefato.
-
-O próximo passo é a definição supervisionada do próximo marco, mantendo autorização
-explícita, isolamento de candidatos e reversibilidade como barreiras invariantes.
-
-
-## M5.8 — proposta de mapa de dependências arquiteturais
-
-O primeiro marco supervisionado após o fechamento do gate AE5 é a formalização de um mapa **não autoritativo** das dependências entre componentes já declarados na planta.
-
-Critério da proposta atual:
-
-- declarar somente relações cuja evidência direta foi observada no código, começando por importações entre componentes da planta;
-- não inferir dependências de dados, runtime, persistência ou temporalidade sem evidência específica;
-- não alterar `planta_nixal/planta.json`;
-- não alterar o Runtime nem o ciclo residente;
-- manter os gates de evolução e integração intactos.
-
-Artefatos:
-
-- `M5_8_DEPENDENCIAS_ARQUITETURAIS.md`;
-- `m5_8_dependencias_arquiteturais_proposta.json`;
-- `teste_m5_8_dependencias_arquiteturais.py`.
-
-A proposta identifica, neste checkpoint, as relações:
+A arquitetura mantém:
 
 ```
-agente_qwen        → capacidades
-composicao        → agente_qwen
-executor_contexto → operacoes_contexto
-interpretacao_qwen → gerenciador_cristal
+percepção/estado
+→ diagnóstico
+→ necessidade
+→ priorização
+→ decisão
+→ ação/investigação
+→ resultado
+→ avaliação
+→ registro
+→ aprendizado/memória
+→ próximo ciclo
 ```
 
-Este marco não fecha a arquitetura como fato definitivo. A próxima decisão é revisar o mapa proposto antes de qualquer atualização da planta autoritativa. Nenhuma AE6 é criada por M5.8.
+Para voz:
+
+```
+AudioNyxOS
+→ VozNyxOS
+→ Adaptador STT/TTS
+→ dependência externa
+```
+
+A voz não recebe autoridade especial. O gateway de atuação continua reservado a ações planejadas e governadas; STT/TTS permanecem nas bordas da interface.
+
+## Próximo marco
+
+O próximo marco **não é criado automaticamente**.
+
+Antes de qualquer implementação, deverá existir uma proposta supervisionada contendo:
+
+1. objetivo mensurável;
+2. escopo exato;
+3. contrato de entrada/saída;
+4. autoridade concedida e autoridade proibida;
+5. reversibilidade;
+6. testes determinísticos;
+7. validação independente;
+8. documentação;
+9. critérios de promoção;
+10. critérios de rollback.
+
+A hipótese de trabalho para a próxima revisão é avaliar se **LLC.2** deve ser o próximo marco arquitetural, sem iniciar sua implementação antes da aprovação explícita do escopo.
+
+Nenhuma AE6 é criada automaticamente e nenhum M6 é iniciado por este documento.
