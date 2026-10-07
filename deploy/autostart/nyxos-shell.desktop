@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NyxOS Shell
+Comment=Shell residente da interface Nyxal
+Exec=%h/Nyxal/deploy/systemd/iniciar_nyxos_shell.sh
+Terminal=false
+StartupNotify=false
+X-GNOME-Autostart-enabled=true

@@ -150,6 +150,12 @@
       transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
+    /* Presence layering: avoid transform/animation conflicts with receded windows. */
+    #nyxalHoloContainer { isolation: isolate; z-index: 25; }
+    .nyxal-receded { animation: none !important; }
+    #infinityHub.nyxos-infinity-draggable { position: fixed !important; left: 50vw !important; top: 50vh !important; transform: none !important; z-index: 120 !important; width: 1px; height: 1px; }
+    #infinityHub.nyxos-infinity-dragging .infinity-core { cursor: grabbing; }
+
     /* Floating & Breathing Animation for Nyxal Hologram */
     @keyframes holoFloat {
       0% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 15px rgba(0,242,254,0.3)); }
@@ -541,7 +547,7 @@
           <div class="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] rounded-full border border-hud-cyan/20 animate-[spin_60s_linear_infinite]"></div>
           <div class="absolute w-[260px] h-[260px] sm:w-[350px] sm:h-[350px] rounded-full border border-dashed border-hud-blue/30 animate-[spin_40s_linear_infinite_reverse]"></div>
           <!-- INFINITY: seis atalhos operacionais futuros -->
-          <div id="infinityHub" class="absolute left-1/2 top-1/2 z-40 w-px h-px -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+          <div id="infinityHub" class="nyxos-infinity-draggable absolute left-1/2 top-1/2 z-40 w-px h-px -translate-x-1/2 -translate-y-1/2 pointer-events-none">
             <button type="button" class="infinity-node" title="VPS" aria-label="VPS" data-infinity-shortcut="vps"><i class="fa-solid fa-server" aria-hidden="true"></i></button>
             <button type="button" class="infinity-node" title="RELATÓRIO DELTA" aria-label="Relatório Delta" data-infinity-shortcut="relatorio-delta"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></button>
             <button type="button" class="infinity-node" title="DASHBOARD DE PRESENÇA" aria-label="Dashboard de Presença" data-infinity-shortcut="dashboard-presenca"><i class="fa-solid fa-user-astronaut" aria-hidden="true"></i></button>
@@ -690,11 +696,10 @@
             loop 
             muted 
             playsinline 
+            hidden
             class="w-full h-full object-cover object-center relative z-10 filter brightness-110 contrast-125 saturate-125 transition-all duration-500"
             onerror="handleVideoLoadError()"
           >
-            <!-- Generated Video Source -->
-            <source id="videoSource" src="http://googleusercontent.com/generated_video_content/8567766849646079774" type="video/mp4">
           </video>
 
           <!-- Fallback Image Element if Video unavailable -->
@@ -702,8 +707,7 @@
             id="hologramImageFallback" 
             src="/interface/nyxal-presenca.jpg" 
             alt="Nyxal Hologram Fallback" 
-            class="w-full h-full object-cover object-center relative z-10 hidden filter brightness-110 contrast-125"
-            onerror="this.src='https://placehold.co/400x600/030712/00f2fe?text=NYXAL+HOLOGRAPHIC+CORE'"
+            class="w-full h-full object-cover object-center relative z-10 filter brightness-110 contrast-125"
           />
 
           <!-- Subtitle / Voice Output Overlay -->
@@ -854,11 +858,6 @@
 
       <div class="space-y-3 text-xs font-rajdhani">
         <div>
-          <label class="block text-slate-300 font-bold mb-1">URL DO VÍDEO (.MP4)</label>
-          <input type="text" id="avatarVideoUrlInput" value="http://googleusercontent.com/generated_video_content/8567766849646079774" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg p-2.5 font-mono text-xs focus:border-hud-cyan outline-none" />
-        </div>
-
-        <div>
           <label class="block text-slate-300 font-bold mb-1">ARQUIVO LOCAL DE VÍDEO / IMAGEM</label>
           <input type="file" id="avatarFileInput" accept="video/*,image/*" onchange="handleLocalAvatarFile(event)" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-orbitron file:bg-hud-cyan file:text-black hover:file:bg-cyan-300 cursor-pointer" />
         </div>
@@ -866,7 +865,6 @@
 
       <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
         <button onclick="closeModal('avatarModal')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-orbitron">Fechar</button>
-        <button onclick="applyAvatarVideoUrl()" class="px-4 py-2 rounded-lg bg-hud-cyan hover:bg-cyan-300 text-black font-orbitron font-bold text-xs">Aplicar Holograma</button>
       </div>
     </div>
   </div>
@@ -892,6 +890,7 @@
   </div>
 
   <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script src="/interface/js/nyxal-api-client.js"></script>
   <script>
     // ================= CONFIGURATION & GLOBAL STATE =================
     window.NYXAL_API_BASE = localStorage.getItem('NYXAL_API_BASE') || 'http://127.0.0.1:8010';
@@ -982,14 +981,6 @@
           return;
         }
 
-        const savedUrl = localStorage.getItem('NYXAL_AVATAR_VIDEO_URL');
-        if (savedUrl) {
-          const video = document.getElementById('hologramVideo');
-          if (video) {
-            video.src = savedUrl;
-            video.play().catch(() => handleVideoLoadError());
-          }
-        }
       } catch (err) {
         console.warn('Não foi possível restaurar a presença holográfica:', err);
       }
@@ -1383,17 +1374,11 @@
       try {
         await desbloquearAudioNyxal();
 
-        const response = await fetch(`${window.NYXAL_API_BASE}/api/tts`, {
-          method: 'POST',
+        const { data: blob } = await nyxalApiPost('/api/tts', {
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texto: text })
+          body: JSON.stringify({ texto: text }),
+          parse: 'blob'
         });
-
-        if (!response.ok) {
-          throw new Error(`TTS HTTP ${response.status}`);
-        }
-
-        const blob = await response.blob();
         await tocarAudioTtsComContexto(blob);
       } catch (err) {
         console.warn('TTS local indisponível; usando voz do navegador:', err);
@@ -2031,8 +2016,7 @@
       showSubtitles(`Entendendo: "${msg}"...`);
 
       try {
-        const res = await fetch(`${window.NYXAL_API_BASE}/api/chat`, {
-          method: 'POST',
+        const { response: res, data } = await nyxalApiPost('/api/chat', {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
             nyxalSessionId
@@ -2040,14 +2024,6 @@
               : { mensagem: msg }
           )
         });
-
-        let data = null;
-
-        try {
-          data = await res.json();
-        } catch (_) {
-          data = null;
-        }
 
         if (
           !res.ok &&
@@ -2381,18 +2357,10 @@
         showSubtitles('Transcrevendo...');
 
         try {
-          const response = await fetch(
-            `${window.NYXAL_API_BASE}/api/stt`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': actualType.split(';')[0]
-              },
-              body: blob
-            }
-          );
-
-          const data = await response.json();
+          const { response, data } = await nyxalApiPost('/api/stt', {
+            headers: { 'Content-Type': actualType.split(';')[0] },
+            body: blob
+          });
 
           if (!response.ok || !data.sucesso) {
             throw new Error(
@@ -2805,33 +2773,12 @@
       setHologramReceded(true);
     }
 
-    async function applyAvatarVideoUrl() {
-      playHudSound('click');
-      const url = document.getElementById('avatarVideoUrlInput').value.trim();
-      if (!url) return;
-
-      localStorage.setItem('NYXAL_AVATAR_VIDEO_URL', url);
-      await clearStoredHologram().catch(() => {});
-
-      const video = document.getElementById('hologramVideo');
-      if (video) {
-        video.src = url;
-        video.classList.remove('hidden');
-        document.getElementById('hologramImageFallback')?.classList.add('hidden');
-        video.play().catch(() => handleVideoLoadError());
-      }
-
-      closeModal('avatarModal');
-      speakGoddessNyxVoice("Projeção holográfica calibrada e salva.");
-    }
-
     async function handleLocalAvatarFile(e) {
       const file = e.target.files[0];
       if (!file) return;
 
       try {
         await saveHologramBlob(file);
-        localStorage.removeItem('NYXAL_AVATAR_VIDEO_URL');
         const url = URL.createObjectURL(file);
         setHologramMedia(url, file.type || 'image/*');
 
@@ -2985,6 +2932,39 @@
       desenharGraficoSistema();
     }
 
+    // Infinity — reposicionamento livre mantido somente na sessão atual.
+    function initInfinityDrag() {
+      const hub = document.getElementById('infinityHub');
+      const core = document.getElementById('infinityCoreButton');
+      if (!hub || !core || hub.dataset.dragReady === '1') return;
+      hub.dataset.dragReady = '1';
+      const saved = sessionStorage.getItem('NYXOS_INFINITY_POSITION');
+      if (saved) { try { const p = JSON.parse(saved); if (Number.isFinite(p.x) && Number.isFinite(p.y)) { hub.style.left=p.x+'px'; hub.style.top=p.y+'px'; } } catch (_) {} }
+      let dragging=false, moved=false, startX=0, startY=0, originX=0, originY=0;
+      core.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        dragging=true; moved=false; startX=event.clientX; startY=event.clientY;
+        const rect=hub.getBoundingClientRect(); originX=rect.left+rect.width/2; originY=rect.top+rect.height/2;
+        core.setPointerCapture?.(event.pointerId); hub.classList.add('nyxos-infinity-dragging');
+      });
+      core.addEventListener('pointermove', (event) => {
+        if (!dragging) return;
+        const dx=event.clientX-startX, dy=event.clientY-startY;
+        if (Math.hypot(dx,dy)>4) moved=true;
+        const x=Math.max(40,Math.min(window.innerWidth-40,originX+dx));
+        const y=Math.max(40,Math.min(window.innerHeight-40,originY+dy));
+        hub.style.left=x+'px'; hub.style.top=y+'px';
+      });
+      core.addEventListener('pointerup', (event) => {
+        if (!dragging) return;
+        dragging=false; core.releasePointerCapture?.(event.pointerId); hub.classList.remove('nyxos-infinity-dragging');
+        const rect=hub.getBoundingClientRect();
+        sessionStorage.setItem('NYXOS_INFINITY_POSITION', JSON.stringify({x:rect.left+rect.width/2,y:rect.top+rect.height/2}));
+        if (moved) { event.preventDefault(); event.stopPropagation(); core.dataset.dragSuppressed='1'; setTimeout(()=>delete core.dataset.dragSuppressed,0); }
+      });
+      core.addEventListener('click', (event) => { if (core.dataset.dragSuppressed==='1') { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
+    }
+
     // Infinity — abre/fecha somente os seis atalhos existentes
     function toggleInfinityHub() {
       const hub = document.getElementById('infinityHub');
@@ -3068,6 +3048,8 @@
       initGlobeVoiceControl();
       initSysGraph();
       initNyxosOperationalPanel();
+      restoreStoredHologram();
+      initInfinityDrag();
       renderReflexaoDiaria();
 
       setInterval(updateLiveClock, 1000);
