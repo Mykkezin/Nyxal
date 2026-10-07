@@ -246,13 +246,17 @@ class NormalizadorOperacional:
                 "O6.2",
             )
 
+        ciclo_resultado = self._resolver_ciclo(evidencia)
+        if isinstance(ciclo_resultado, RejeicaoNormalizacao):
+            return ResultadoNormalizacao.rejeitar(ciclo_resultado)
+
         return self._emitir(
             origem=evidencia["origem"],
             destino=destino,
             tipo=tipo,
             evidencia=evidencia_final,
             proveniencia=evidencia["proveniencia"],
-            ciclo=self._resolver_ciclo_ou_rejeitar(evidencia),
+            ciclo=ciclo_resultado,
             instante=evidencia["instante"],
             autoridade=autoridade,
         )
@@ -267,13 +271,6 @@ class NormalizadorOperacional:
             and evidencia.get("stable_modificada") is False
             and evidencia.get("integracao_executada") is False
         )
-
-    @staticmethod
-    def _resolver_ciclo_ou_rejeitar(evidencia: Mapping[str, Any]) -> str | None:
-        resultado = NormalizadorOperacional._resolver_ciclo(evidencia)
-        if isinstance(resultado, RejeicaoNormalizacao):
-            raise ValueError(resultado.motivo)
-        return resultado
 
     @staticmethod
     def _resolver_ciclo(
