@@ -259,6 +259,15 @@
 #nyxosOperationalPanel .nyxos-op-label{color:#64748b;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
 #nyxosOperationalPanel .nyxos-op-value{color:#e2e8f0;font:600 12px/1.3 monospace;margin-top:3px}
 #nyxosOperationalPanel .nyxos-op-value.active{color:#00f2fe}
+</style><style id="nyxos-shell-style">
+#nyxosShellLauncher{position:fixed;inset:0;z-index:200;display:none;background:rgba(1,5,12,.72);backdrop-filter:blur(18px);align-items:center;justify-content:center}
+#nyxosShellLauncher.open{display:flex}
+.nyxos-shell-card{width:min(720px,calc(100vw - 32px));border:1px solid rgba(0,242,254,.28);border-radius:20px;background:rgba(3,10,22,.94);box-shadow:0 30px 90px rgba(0,0,0,.65),0 0 50px rgba(0,242,254,.08);padding:22px}
+.nyxos-shell-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.nyxos-shell-app{min-height:92px;border:1px solid rgba(148,163,184,.15);border-radius:13px;background:rgba(15,23,42,.7);color:#e2e8f0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:.2s}
+.nyxos-shell-app:hover{border-color:rgba(0,242,254,.55);background:rgba(0,242,254,.08);transform:translateY(-2px)}
+.nyxos-shell-app i{font-size:21px;color:#00f2fe}.nyxos-shell-app span{font:600 10px Orbitron,sans-serif;letter-spacing:.08em}
+@media(max-width:600px){.nyxos-shell-grid{grid-template-columns:repeat(2,1fr)}}
 </style></head>
 
 <body class="min-h-screen bg-[#02050e] text-slate-100 flex flex-col justify-between relative selection:bg-hud-cyan selection:text-black">
@@ -3114,5 +3123,52 @@ async function fetchNyxosOperationalContext(){
   document.getElementById('nyxosOpLive').innerText='LIVE';
  }catch(e){const x=document.getElementById('nyxosOpLive');if(x){x.innerText='OFFLINE';x.className='text-[9px] font-mono text-rose-400';}}
 }
+</script><div id="nyxosShellLauncher" aria-hidden="true">
+  <div class="nyxos-shell-card" role="dialog" aria-modal="true" aria-label="Centro do NyxOS">
+    <div class="flex items-center justify-between">
+      <div><div class="text-[11px] font-orbitron tracking-[.2em] text-hud-cyan">NYXOS • CENTRO DO COMPUTADOR</div>
+      <div class="text-[10px] text-slate-500 font-mono mt-1">APLICAÇÕES • SISTEMA • SESSÃO</div></div>
+      <button id="nyxosShellClose" class="w-9 h-9 rounded-lg border border-slate-700 text-slate-400 hover:text-hud-cyan hover:border-hud-cyan" aria-label="Fechar">×</button>
+    </div>
+    <div class="nyxos-shell-grid">
+      <button class="nyxos-shell-app" data-shell-app="firefox"><i class="fa-brands fa-firefox-browser"></i><span>FIREFOX</span></button>
+      <button class="nyxos-shell-app" data-shell-app="spotify"><i class="fa-brands fa-spotify"></i><span>SPOTIFY</span></button>
+      <button class="nyxos-shell-app" data-shell-app="terminal"><i class="fa-solid fa-terminal"></i><span>TERMINAL</span></button>
+      <button class="nyxos-shell-app" data-shell-app="arquivos"><i class="fa-solid fa-folder-open"></i><span>ARQUIVOS</span></button>
+      <button class="nyxos-shell-app" data-shell-app="configuracoes"><i class="fa-solid fa-sliders"></i><span>CONFIGURAÇÕES</span></button>
+    </div>
+    <div id="nyxosShellFeedback" class="mt-4 text-center text-[10px] font-mono text-slate-500">Ctrl + Alt + N abre este centro. Esc fecha.</div>
+  </div>
+</div><script id="nyxos-shell-script">
+(function(){
+  const launcher=document.getElementById('nyxosShellLauncher');
+  const close=document.getElementById('nyxosShellClose');
+  const feedback=document.getElementById('nyxosShellFeedback');
+  function openShell(){launcher.classList.add('open');launcher.setAttribute('aria-hidden','false');close?.focus();playHudSound('open')}
+  function closeShell(){launcher.classList.remove('open');launcher.setAttribute('aria-hidden','true')}
+  window.NYXOS_OPEN_SHELL=openShell;
+  window.addEventListener('keydown',function(e){
+    if(e.ctrlKey&&e.altKey&&e.key.toLowerCase()==='n'){e.preventDefault();openShell();return}
+    if(e.key==='Escape'&&launcher.classList.contains('open')){e.preventDefault();closeShell();return}
+    if(e.key==='F11'){e.preventDefault();feedback.textContent='NyxOS permanece no modo desktop.';setTimeout(()=>feedback.textContent='Ctrl + Alt + N abre este centro. Esc fecha.',1800)}
+  });
+  close?.addEventListener('click',closeShell);
+  launcher?.addEventListener('click',e=>{if(e.target===launcher)closeShell()});
+  document.querySelectorAll('[data-shell-app]').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const app=btn.dataset.shellApp;
+      feedback.textContent='Iniciando '+app.toUpperCase()+'...';
+      try{
+        const r=await fetch(window.NYXAL_API_BASE+'/api/desktop/launch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({app})});
+        const d=await r.json();
+        if(!r.ok)throw new Error(d.motivo||d.estado||'falha');
+        feedback.textContent=app.toUpperCase()+' iniciado pelo NyxOS.';
+        setTimeout(closeShell,450);
+      }catch(err){
+        feedback.textContent='Não foi possível iniciar '+app.toUpperCase()+'.';
+      }
+    });
+  });
+})();
 </script></body>
 </html>
