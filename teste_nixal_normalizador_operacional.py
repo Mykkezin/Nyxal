@@ -116,14 +116,15 @@ class TestNormalizadorOperacional(unittest.TestCase):
         e = base("delta")
         e["tipo"] = "tipo_inventado"
         r = self.n.normalizar(e)
-        self.assertTrue(r.sucesso)
-        self.assertEqual(r.relacao.tipo, "transformacao")
+        self.assertFalse(r.sucesso)
+        self.assertEqual(r.rejeicao.codigo, "tipo_invalido")
 
     def test_rejeitar_ciclo_inventado(self):
         e = base("persistencia")
         e["ciclo_id"] = 42
-        with self.assertRaises(ValueError):
-            self.n.normalizar(e)
+        r = self.n.normalizar(e)
+        self.assertFalse(r.sucesso)
+        self.assertEqual(r.rejeicao.codigo, "ciclo_invalido")
 
     def test_rejeitar_tentativa_autoridade_arquitetural(self):
         e = base("habitat")
