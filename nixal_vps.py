@@ -132,7 +132,7 @@ class VpsNyxOS:
 
         ips: list[str] = []
         for linha in texto.splitlines():
-            match = re.search(r"\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?:/\\d{1,2})?\\b", linha)
+            match = re.search(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/\d{1,2})?\b", linha)
             if match:
                 ip = match.group(0)
                 if ip not in ips:
