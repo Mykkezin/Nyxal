@@ -470,6 +470,52 @@ def read_status() -> dict:
         }
 
 
+
+RESIDENCIA_UNIDADES = (
+    "nyxos.target",
+    "nyxal-api.service",
+    "nyxos-residente.service",
+    "nyxos-interface.service",
+)
+
+def residencia_snapshot() -> dict:
+    unidades = []
+    for nome in RESIDENCIA_UNIDADES:
+        try:
+            resultado = subprocess.run(
+                ["systemctl", "--user", "show", nome, "--property=ActiveState,SubState,LoadState,MainPID,MemoryCurrent,CPUUsageNSec,UnitFileState,Description"],
+                capture_output=True, text=True, timeout=3, check=False,
+            )
+            valores = {}
+            for linha in resultado.stdout.splitlines():
+                chave, separador, valor = linha.partition('=')
+                if separador:
+                    valores[chave] = valor
+            active = valores.get("ActiveState", "unknown")
+            substate = valores.get("SubState", "unknown")
+            pid = int(valores.get("MainPID", "0") or 0)
+            memory_bytes = int(valores.get("MemoryCurrent", "0") or 0)
+            unidades.append({
+                "name": nome,
+                "description": valores.get("Description", nome),
+                "status": active,
+                "subState": substate,
+                "loadState": valores.get("LoadState", "unknown"),
+                "pid": pid or None,
+                "memoryUsageMb": round(memory_bytes / 1024 / 1024, 2) if memory_bytes else 0,
+                "cpuUsagePct": None,
+                "enabled": valores.get("UnitFileState") in {"enabled", "static", "alias", "linked"},
+            })
+        except (OSError, ValueError, subprocess.TimeoutExpired) as erro:
+            unidades.append({"name": nome, "description": nome, "status": "unknown", "subState": "unavailable", "loadState": "unknown", "pid": None, "memoryUsageMb": 0, "cpuUsagePct": None, "enabled": False, "erro": str(erro)})
+    return {
+        "sucesso": True,
+        "estado": "residencia_observada",
+        "origem": "systemd_user",
+        "target": "nyxos.target",
+        "unidades": unidades,
+        "modo": "somente_leitura",
+    }
 class NyxalAPIHandler(BaseHTTPRequestHandler):
     server_version = "NyxalAPI/1.0"
 
@@ -1089,6 +1135,39 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         if self.path == "/api/public/nyxos/contexto":
             self._send_json(200, read_nyxos_contexto())
+            return
+
+        if self.path == "/api/public/residencia":
+            self._send_json(200, residencia_snapshot())
+            return
+
+        if self.path == "/api/public/delta":
+            self._send_json(200, {"sucesso": True, "estado": "delta_disponivel", "eventos": DELTA_NYXOS.listar(100), "quantidade": DELTA_NYXOS.quantidade()})
+            return
+
+        if self.path == "/api/public/dataset":
+            self._send_json(200, COLETOR_DATASET_DUAL_AE5.contexto())
+            return
+
+        if self.path == "/api/public/presenca":
+            self._send_json(200, PRESENCA_MAQUINA.contexto())
+            return
+
+        if self.path == "/api/public/recursos":
+            self._send_json(200, RECURSOS_HABITAT.snapshot())
+            return
+
+        if self.path == "/api/public/operacional":
+            self._send_json(200, PERSISTENCIA_OPERACIONAL.contexto())
+            return
+
+        if self.path == "/api/public/gateway":
+            contexto = read_nyxos_contexto()
+            self._send_json(200, {"sucesso": True, "estado": "gateway_contexto_disponivel", "gateway": contexto.get("gateway_atuacao", {}), "plano_central_controle": contexto.get("plano_central_controle", {}), "governanca": contexto.get("governanca", {})})
+            return
+
+        if self.path == "/api/public/ae5":
+            self._send_json(200, {"descoberta": DESCOBERTA_CONTINUA_AE5.contexto(), "datasets": COLETOR_DATASET_DUAL_AE5.contexto()})
             return
 
         if self.path == "/health":
