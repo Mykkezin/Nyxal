@@ -1,16 +1,18 @@
 [Unit]
-Description=NyxOS — shell residente, vídeo de inicialização e interface local
-After=nyxal-api.service
+Description=NyxOS — desktop principal residente
+After=graphical-session.target nyxal-api.service
 Wants=nyxal-api.service
+PartOf=graphical-session.target
 
 [Service]
-Type=oneshot
+Type=simple
 WorkingDirectory=%h/Nyxal
 ExecStart=%h/Nyxal/deploy/systemd/iniciar_nyxos_shell.sh
-Environment=DISPLAY=:0
-Environment=WAYLAND_DISPLAY=wayland-0
 Environment=XDG_RUNTIME_DIR=%t
-RemainAfterExit=no
+Restart=always
+RestartSec=2
+KillSignal=SIGTERM
+TimeoutStopSec=10
 
 [Install]
-WantedBy=default.target
+WantedBy=graphical-session.target
