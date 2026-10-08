@@ -34,6 +34,7 @@ install -m 0644 "${SCRIPT_DIR}/nyxos-interface.service" "${USER_SYSTEMD_DIR}/nyx
 install -m 0755 "${SCRIPT_DIR}/iniciar_nyxos_interface.sh" "${USER_SYSTEMD_DIR}/iniciar_nyxos_interface.sh"
 install -m 0755 "${SCRIPT_DIR}/iniciar_nyxos_shell.sh" "${USER_SYSTEMD_DIR}/iniciar_nyxos_shell.sh"
 install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
+install -m 0644 "${NYXAL_DIR}/deploy/display/nyxos-display.service" "${USER_SYSTEMD_DIR}/nyxos-display.service"
 
 # O shell gráfico agora pertence ao graphical-session.target. O .desktop
 # permanece apenas como fallback manual e não é instalado automaticamente,
@@ -43,6 +44,7 @@ rm -f "${AUTOSTART_DIR}/nyxos-shell.desktop"
 systemctl --user daemon-reload
 systemctl --user enable --now nyxos.target
 systemctl --user enable nyxos-interface.service
+systemctl --user enable nyxos-display.service
 
 if loginctl enable-linger "${USER}" 2>/dev/null; then
     LINGER_STATUS="ativado"
@@ -61,6 +63,7 @@ echo "Serviços NyxOS instalados e residência ativada."
 echo "API: $(systemctl --user is-active nyxal-api.service || true)"
 echo "Residente: $(systemctl --user is-active nyxos-residente.service || true)"
 echo "Shell gráfico: ${SHELL_STATUS}"
+echo "Display visual: $(systemctl --user is-active nyxos-display.service || true)"
 echo "Lingering da conta: ${LINGER_STATUS}"
 echo
 echo "O servidor não depende mais de um terminal aberto."
