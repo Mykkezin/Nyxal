@@ -2996,6 +2996,8 @@
             <div class="text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-2">Criar VPS a partir de imagem QCOW2/IMG</div>
             <div class="grid grid-cols-2 gap-2">
               <input id="vpsCreateName" class="col-span-2 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="nome (ex.: nyx-vps-01)" />
+              <input id="vpsCreateUser" class="bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" value="ubuntu" placeholder="usuário" />
+              <input id="vpsCreateKey" class="bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="chave SSH pública" />
               <input id="vpsCreateImage" class="col-span-2 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="/caminho/para/ubuntu-24.04-server-cloudimg-amd64.img" />
               <input id="vpsCreateRam" type="number" min="512" value="2048" class="bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="RAM MB" />
               <input id="vpsCreateCpu" type="number" min="1" value="2" class="bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="vCPU" />
@@ -3079,12 +3081,14 @@
     async function createVpsFromPanel() {
       const nome = document.getElementById('vpsCreateName')?.value.trim();
       const imagePath = document.getElementById('vpsCreateImage')?.value.trim();
+      const username = document.getElementById('vpsCreateUser')?.value.trim() || 'ubuntu';
+      const sshPublicKey = document.getElementById('vpsCreateKey')?.value.trim();
       const memoryMb = Number(document.getElementById('vpsCreateRam')?.value || 2048);
       const vcpus = Number(document.getElementById('vpsCreateCpu')?.value || 2);
       const diskGb = Number(document.getElementById('vpsCreateDisk')?.value || 20);
 
-      if (!nome || !imagePath) {
-        alert('Informe o nome da VPS e o caminho da imagem.');
+      if (!nome || !imagePath || !sshPublicKey) {
+        alert('Informe nome, imagem e chave SSH pública da VPS.');
         return;
       }
 
@@ -3096,6 +3100,8 @@
           body: JSON.stringify({
             nome,
             image_path: imagePath,
+            username,
+            ssh_public_key: sshPublicKey,
             memory_mb: memoryMb,
             vcpus,
             disk_gb: diskGb,
