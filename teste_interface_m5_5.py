@@ -83,7 +83,8 @@ def main() -> None:
     verificar(
         "function togglePlayMusic()" in texto
         and "https://open.spotify.com/" in texto
-        and "window.open(" in texto,
+        and "window.open(" in texto
+        and "spotifyStatus" not in texto,
         "botão de música abre o Spotify Web sem navegação destrutiva",
     )
 
