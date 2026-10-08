@@ -31,7 +31,7 @@ class DisplayHandler(SimpleHTTPRequestHandler):
 
 def main() -> None:
     if not (ROOT / "index.html").is_file():
-        raise SystemExit(f"build do Nyxal-Display não encontrado: {ROOT / "index.html"}")
+        raise SystemExit(f"build do Nyxal-Display não encontrado: {ROOT / 'index.html'}")
     server = ThreadingHTTPServer((HOST, PORT), DisplayHandler)
     print(f"[NyxOS-Display] servindo {ROOT}")
     print(f"[NyxOS-Display] escutando em http://{HOST}:{PORT}")
