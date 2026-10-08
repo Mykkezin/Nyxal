@@ -73,6 +73,28 @@ def main() -> None:
         "interface mostra identidade e telemetria mínima do processo",
     )
 
+    verificar(
+        "function initWeather()" in texto
+        and "api.open-meteo.com/v1/forecast" in texto
+        and "setInterval(fetchWeather, 10 * 60 * 1000)" in texto,
+        "interface atualiza a telemetria do clima automaticamente",
+    )
+
+    verificar(
+        "function togglePlayMusic()" in texto
+        and "https://open.spotify.com/" in texto
+        and "window.open(" in texto,
+        "botão de música abre o Spotify Web sem navegação destrutiva",
+    )
+
+    verificar(
+        "document.body.appendChild(hub)" in texto
+        and "core.style.pointerEvents = 'auto'" in texto
+        and "pointercancel" in texto
+        and "NYXOS_INFINITY_POSITION" in texto,
+        "Infinity permanece arrastável, recuperável e seguro contra cancelamento do ponteiro",
+    )
+
     print()
     print("=" * 64)
     print("TESTE — INTERFACE ORIENTADA AO ESTADO REAL NYXOS M5.5")
