@@ -20,7 +20,8 @@ if ! command -v apt-get >/dev/null 2>&1; then
 fi
 
 sudo apt-get update
-sudo apt-get install -y     qemu-kvm     libvirt-daemon-system     libvirt-clients     virtinst     qemu-utils
+sudo apt-get install -y     qemu-kvm     libvirt-daemon-system     libvirt-clients     virtinst     qemu-utils \
+    cloud-image-utils
 
 if systemctl list-unit-files libvirtd.service >/dev/null 2>&1; then
     sudo systemctl enable --now libvirtd.service || true
