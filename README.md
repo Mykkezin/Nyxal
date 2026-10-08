@@ -53,6 +53,10 @@ Runtime / Corpo / Memória / Conhecimento / Ferramentas
 / Processos / Experimentos / Interface / Delta
    ↓
 NYXAL
+   ↓
+NYXAL-DISPLAY
+   ↓
+desktop visual do NyxOS
 ```
 
 The current NyxOS line remains a Linux-first habitat. A custom kernel is a later direction, not a shortcut around the current architecture and governance work.
