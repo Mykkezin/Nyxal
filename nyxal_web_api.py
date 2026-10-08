@@ -26,6 +26,7 @@ from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
+from nixal_vps import VpsNyxOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -56,6 +57,7 @@ COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
     repositorio=BASE_DIR,
     habilitada=False,
 )
+VPS_NYXOS = VpsNyxOS()
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -578,6 +580,52 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
+        if self.path in {"/api/vps/action", "/api/vps/provisionar"}:
+            try:
+                content_length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                self._send_json(400, {"estado": "entrada_invalida", "motivo": "Content-Length inválido."})
+                return
+
+            if content_length <= 0 or content_length > 32 * 1024:
+                self._send_json(400 if content_length <= 0 else 413, {
+                    "estado": "entrada_invalida",
+                    "motivo": "Payload VPS inválido.",
+                })
+                return
+
+            try:
+                payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"estado": "entrada_invalida", "motivo": "JSON VPS inválido."})
+                return
+
+            if not isinstance(payload, dict):
+                self._send_json(400, {"estado": "entrada_invalida", "motivo": "Payload VPS precisa ser objeto."})
+                return
+
+            try:
+                if self.path == "/api/vps/action":
+                    resultado = VPS_NYXOS.action(
+                        nome=payload.get("nome"),
+                        acao=payload.get("acao"),
+                    )
+                else:
+                    resultado = VPS_NYXOS.provisionar(
+                        nome=payload.get("nome"),
+                        image_path=payload.get("image_path"),
+                        memory_mb=payload.get("memory_mb", 2048),
+                        vcpus=payload.get("vcpus", 2),
+                        disk_gb=payload.get("disk_gb", 20),
+                        autostart=payload.get("autostart", True),
+                    )
+                self._send_json(200 if resultado.get("sucesso") else 422, resultado)
+            except (TypeError, ValueError, FileNotFoundError, FileExistsError) as erro:
+                self._send_json(400, {"estado": "entrada_vps_invalida", "motivo": str(erro)})
+            except Exception as erro:
+                self._send_json(500, {"estado": "erro_vps", "motivo": str(erro)})
+            return
+
         if self.path == "/api/stt":
             try:
                 content_length = int(
