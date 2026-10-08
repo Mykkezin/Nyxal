@@ -470,6 +470,52 @@ def read_status() -> dict:
         }
 
 
+
+RESIDENCIA_UNIDADES = (
+    "nyxos.target",
+    "nyxal-api.service",
+    "nyxos-residente.service",
+    "nyxos-interface.service",
+)
+
+def residencia_snapshot() -> dict:
+    unidades = []
+    for nome in RESIDENCIA_UNIDADES:
+        try:
+            resultado = subprocess.run(
+                ["systemctl", "--user", "show", nome, "--property=ActiveState,SubState,LoadState,MainPID,MemoryCurrent,CPUUsageNSec,UnitFileState,Description"],
+                capture_output=True, text=True, timeout=3, check=False,
+            )
+            valores = {}
+            for linha in resultado.stdout.splitlines():
+                chave, separador, valor = linha.partition('=')
+                if separador:
+                    valores[chave] = valor
+            active = valores.get("ActiveState", "unknown")
+            substate = valores.get("SubState", "unknown")
+            pid = int(valores.get("MainPID", "0") or 0)
+            memory_bytes = int(valores.get("MemoryCurrent", "0") or 0)
+            unidades.append({
+                "name": nome,
+                "description": valores.get("Description", nome),
+                "status": active,
+                "subState": substate,
+                "loadState": valores.get("LoadState", "unknown"),
+                "pid": pid or None,
+                "memoryUsageMb": round(memory_bytes / 1024 / 1024, 2) if memory_bytes else 0,
+                "cpuUsagePct": None,
+                "enabled": valores.get("UnitFileState") in {"enabled", "static", "alias", "linked"},
+            })
+        except (OSError, ValueError, subprocess.TimeoutExpired) as erro:
+            unidades.append({"name": nome, "description": nome, "status": "unknown", "subState": "unavailable", "loadState": "unknown", "pid": None, "memoryUsageMb": 0, "cpuUsagePct": None, "enabled": False, "erro": str(erro)})
+    return {
+        "sucesso": True,
+        "estado": "residencia_observada",
+        "origem": "systemd_user",
+        "target": "nyxos.target",
+        "unidades": unidades,
+        "modo": "somente_leitura",
+    }
 class NyxalAPIHandler(BaseHTTPRequestHandler):
     server_version = "NyxalAPI/1.0"
 
