@@ -1137,6 +1137,39 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self._send_json(200, read_nyxos_contexto())
             return
 
+        if self.path == "/api/public/residencia":
+            self._send_json(200, residencia_snapshot())
+            return
+
+        if self.path == "/api/public/delta":
+            self._send_json(200, {"sucesso": True, "estado": "delta_disponivel", "eventos": DELTA_NYXOS.listar(100), "quantidade": DELTA_NYXOS.quantidade()})
+            return
+
+        if self.path == "/api/public/dataset":
+            self._send_json(200, COLETOR_DATASET_DUAL_AE5.contexto())
+            return
+
+        if self.path == "/api/public/presenca":
+            self._send_json(200, PRESENCA_MAQUINA.contexto())
+            return
+
+        if self.path == "/api/public/recursos":
+            self._send_json(200, RECURSOS_HABITAT.snapshot())
+            return
+
+        if self.path == "/api/public/operacional":
+            self._send_json(200, PERSISTENCIA_OPERACIONAL.contexto())
+            return
+
+        if self.path == "/api/public/gateway":
+            contexto = read_nyxos_contexto()
+            self._send_json(200, {"sucesso": True, "estado": "gateway_contexto_disponivel", "gateway": contexto.get("gateway_atuacao", {}), "plano_central_controle": contexto.get("plano_central_controle", {}), "governanca": contexto.get("governanca", {})})
+            return
+
+        if self.path == "/api/public/ae5":
+            self._send_json(200, {"descoberta": DESCOBERTA_CONTINUA_AE5.contexto(), "datasets": COLETOR_DATASET_DUAL_AE5.contexto()})
+            return
+
         if self.path == "/health":
             self._send_json(
                 200,
