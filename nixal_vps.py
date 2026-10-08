@@ -201,6 +201,59 @@ class VpsNyxOS:
                 "motivo": str(erro),
             }
 
+    def _criar_cloud_init(self, *, nome: str, username: str, ssh_public_key: str) -> Path:
+        cloud_localds = self._tool("cloud-localds")
+        if not cloud_localds:
+            raise RuntimeError("cloud_localds_nao_instalado")
+
+        seed = (self.STORAGE / f"{nome}-seed.img").resolve()
+        user_data = (
+            "#cloud-config\n"
+            "users:\n"
+            f"  - name: {username}\n"
+            "    sudo: ALL=(ALL) NOPASSWD:ALL\n"
+            "    groups: [adm, sudo]\n"
+            "    shell: /bin/bash\n"
+            "ssh_pwauth: false\n"
+            "disable_root: true\n"
+            "ssh_authorized_keys:\n"
+            f"  - {ssh_public_key.strip()}\n"
+            "package_update: true\n"
+            "packages:\n"
+            "  - qemu-guest-agent\n"
+            "runcmd:\n"
+            "  - systemctl enable --now qemu-guest-agent || true\n"
+        )
+        metadata = (
+            "instance-id: " + nome + "\n"
+            "local-hostname: " + nome + "\n"
+        )
+        user_data_path = self.STORAGE / f"{nome}-user-data.yaml"
+        metadata_path = self.STORAGE / f"{nome}-meta-data.yaml"
+        user_data_path.write_text(user_data, encoding="utf-8")
+        metadata_path.write_text(metadata, encoding="utf-8")
+
+        try:
+            result = subprocess.run(
+                [
+                    cloud_localds,
+                    str(seed),
+                    str(user_data_path),
+                    str(metadata_path),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            )
+            if result.returncode != 0:
+                raise RuntimeError((result.stderr or result.stdout).strip() or "falha_cloud_localds")
+        finally:
+            user_data_path.unlink(missing_ok=True)
+            metadata_path.unlink(missing_ok=True)
+
+        return seed
+
     def provisionar(
         self,
         *,
@@ -210,6 +263,8 @@ class VpsNyxOS:
         vcpus: int = 2,
         disk_gb: int = 20,
         autostart: bool = True,
+        username: str = "ubuntu",
+        ssh_public_key: str | None = None,
     ) -> dict[str, Any]:
         nome = self._nome_valido(nome)
         if not isinstance(image_path, str) or not image_path:
@@ -220,6 +275,10 @@ class VpsNyxOS:
             raise ValueError("vcpus_vps_invalido")
         if not 8 <= int(disk_gb) <= 4096:
             raise ValueError("disco_vps_invalido")
+        if not isinstance(username, str) or not re.fullmatch(r"[a-z_][a-z0-9_-]{0,31}", username):
+            raise ValueError("usuario_vps_invalido")
+        if not isinstance(ssh_public_key, str) or not ssh_public_key.strip():
+            raise ValueError("ssh_public_key_obrigatoria")
 
         source = Path(image_path).expanduser().resolve()
         if not source.is_file():
@@ -232,8 +291,15 @@ class VpsNyxOS:
 
         self.STORAGE.mkdir(parents=True, exist_ok=True)
         disk = (self.STORAGE / f"{nome}.qcow2").resolve()
-        if disk.exists():
+        seed = (self.STORAGE / f"{nome}-seed.img").resolve()
+        if disk.exists() or seed.exists():
             raise FileExistsError("disco_vps_ja_existe")
+
+        seed = self._criar_cloud_init(
+            nome=nome,
+            username=username,
+            ssh_public_key=ssh_public_key,
+        )
 
         convert = subprocess.run(
             [
@@ -252,6 +318,7 @@ class VpsNyxOS:
         )
         if convert.returncode != 0:
             disk.unlink(missing_ok=True)
+            seed.unlink(missing_ok=True)
             raise RuntimeError((convert.stderr or convert.stdout).strip() or "falha_qemu_img")
 
         resize = subprocess.run(
@@ -268,6 +335,7 @@ class VpsNyxOS:
         )
         if resize.returncode != 0:
             disk.unlink(missing_ok=True)
+            seed.unlink(missing_ok=True)
             raise RuntimeError((resize.stderr or resize.stdout).strip() or "falha_resize")
 
         command = [
@@ -282,6 +350,8 @@ class VpsNyxOS:
             str(int(vcpus)),
             "--disk",
             f"path={disk},format=qcow2,bus=virtio",
+            "--disk",
+            f"path={seed},device=cdrom",
             "--import",
             "--network",
             "network=default,model=virtio",
@@ -300,6 +370,7 @@ class VpsNyxOS:
         )
         if created.returncode != 0:
             disk.unlink(missing_ok=True)
+            seed.unlink(missing_ok=True)
             raise RuntimeError((created.stderr or created.stdout).strip() or "falha_virt_install")
 
         if autostart:
@@ -315,6 +386,8 @@ class VpsNyxOS:
             "disk_gb": int(disk_gb),
             "disk": str(disk),
             "autostart": bool(autostart),
+            "username": username,
+            "ssh_seed": str(seed),
         }
 
     def contexto(self) -> dict[str, Any]:
