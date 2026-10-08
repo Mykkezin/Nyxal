@@ -4,7 +4,7 @@
 
 O primeiro atalho do Infinity passa a controlar o backend de VPS local do NyxOS.
 
-A implementação usa **libvirt/KVM** como hypervisor e o comando `virsh` para gerenciamento. O libvirt permite listar, iniciar, desligar, reiniciar, destruir e configurar autostart de domínios; a camada NyxOS chama essas operações sem aceitar shell arbitrário. citeturn2search0
+A implementação usa **libvirt/KVM** como hypervisor e o comando `virsh` para gerenciamento. O libvirt permite listar, iniciar, desligar, reiniciar, destruir e configurar autostart de domínios; a camada NyxOS chama essas operações sem aceitar shell arbitrário.
 
 ## Componentes
 
@@ -20,7 +20,7 @@ A implementação usa **libvirt/KVM** como hypervisor e o comando `virsh` para g
 - `deploy/vps/preparar_base_ubuntu.sh` — baixa uma imagem oficial Ubuntu Server 24.04 para servir de base.
 - `teste_nixal_vps.py` — validações determinísticas da camada.
 
-As imagens Ubuntu Cloud são publicadas oficialmente pela Canonical e incluem imagens para execução em KVM. citeturn5view0turn7search0
+As imagens Ubuntu Cloud são publicadas oficialmente pela Canonical e incluem imagens para execução em KVM.
 
 ## Preparação no host
 
