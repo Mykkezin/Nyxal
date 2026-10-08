@@ -74,7 +74,7 @@ class VpsNyxOS:
             r"ecdsa-sha2-nistp521|"
             r"sk-ssh-ed25519@openssh\.com|"
             r"sk-ecdsa-sha2-nistp256@openssh\.com"
-            r")\s+[A-Za-z0-9+/]+={0,2}(?:\s+[^\r\n]+)?$"
+            r")[ \t]+[A-Za-z0-9+/]+={0,2}(?:[ \t]+[^\r\n]+)?$"
         )
         if not padrao.fullmatch(valor):
             raise ValueError("ssh_public_key_invalida")
