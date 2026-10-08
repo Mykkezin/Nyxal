@@ -3300,7 +3300,6 @@
       const title = document.getElementById('musicTrackTitle');
       const artist = document.getElementById('musicArtist');
       const icon = document.getElementById('playPauseBtn')?.querySelector('i');
-      const status = document.getElementById('spotifyStatus');
 
       const opened = window.open(
         'https://open.spotify.com/',
@@ -3310,7 +3309,6 @@
 
       if (title) title.textContent = 'SPOTIFY';
       if (artist) artist.textContent = opened ? 'Spotify Web aberto' : 'Permita pop-ups para abrir';
-      if (status) status.textContent = opened ? 'ONLINE' : 'BLOQUEADO';
       if (icon) icon.className = 'fa-solid fa-arrow-up-right-from-square text-xs';
     }
 
