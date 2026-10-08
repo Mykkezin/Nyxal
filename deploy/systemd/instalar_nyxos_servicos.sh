@@ -35,15 +35,14 @@ install -m 0755 "${SCRIPT_DIR}/iniciar_nyxos_interface.sh" "${USER_SYSTEMD_DIR}/
 install -m 0755 "${SCRIPT_DIR}/iniciar_nyxos_shell.sh" "${USER_SYSTEMD_DIR}/iniciar_nyxos_shell.sh"
 install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
 
-AUTOSTART_STATUS="fallback_systemd"
-if install -m 0644 "${NYXAL_DIR}/deploy/autostart/nyxos-shell.desktop" "${AUTOSTART_DIR}/nyxos-shell.desktop" 2>/dev/null; then
-    AUTOSTART_STATUS="desktop"
-else
-    echo "AVISO: não foi possível instalar o autostart .desktop; usando residência via systemd --user." >&2
-fi
+# O shell gráfico agora pertence ao graphical-session.target. O .desktop
+# permanece apenas como fallback manual e não é instalado automaticamente,
+# evitando duas instâncias do desktop NyxOS.
+rm -f "${AUTOSTART_DIR}/nyxos-shell.desktop"
 
 systemctl --user daemon-reload
 systemctl --user enable --now nyxos.target
+systemctl --user enable nyxos-interface.service
 
 if loginctl enable-linger "${USER}" 2>/dev/null; then
     LINGER_STATUS="ativado"
@@ -51,22 +50,27 @@ else
     LINGER_STATUS="não foi possível ativar automaticamente"
 fi
 
-echo "Serviços NyxOS instalados e iniciados."
-echo "Lingering da conta: ${LINGER_STATUS}"
-echo "Autostart do shell: ${AUTOSTART_STATUS}"
-echo
-echo "Interpretador residente: ${PYTHON_BIN}"
-echo "Vídeo de inicialização: ${NYXAL_DIR}/interface/assets/nyxos-startup.mp4"
-if command -v mpv >/dev/null 2>&1; then
-    echo "Reprodutor de vídeo: mpv"
+if systemctl --user is-active --quiet graphical-session.target; then
+    systemctl --user restart nyxos-interface.service
+    SHELL_STATUS="iniciado"
 else
-    echo "AVISO: mpv não encontrado; o vídeo de inicialização não será reproduzido até sua instalação."
+    SHELL_STATUS="aguardando a próxima sessão gráfica"
 fi
+
+echo "Serviços NyxOS instalados e residência ativada."
+echo "API: $(systemctl --user is-active nyxal-api.service || true)"
+echo "Residente: $(systemctl --user is-active nyxos-residente.service || true)"
+echo "Shell gráfico: ${SHELL_STATUS}"
+echo "Lingering da conta: ${LINGER_STATUS}"
+echo
+echo "O servidor não depende mais de um terminal aberto."
+echo "O desktop NyxOS será iniciado no graphical-session.target."
+echo
 echo "Para acompanhar:"
-echo "  systemctl --user status nyxos.target"
-echo "  journalctl --user -u nyxal-api.service -u nyxos-residente.service -f"
+echo "  systemctl --user status nyxal-api.service nyxos-residente.service nyxos-interface.service"
+echo "  journalctl --user -u nyxal-api.service -u nyxos-residente.service -u nyxos-interface.service -f"
 echo
 if [[ "${LINGER_STATUS}" != "ativado" ]]; then
-    echo "Para residência também sem login gráfico, execute:"
+    echo "ATENÇÃO: para residência mesmo antes do login, execute:"
     echo "  loginctl enable-linger ${USER}"
 fi
