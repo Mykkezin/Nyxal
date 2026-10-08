@@ -2,24 +2,66 @@
 set -euo pipefail
 
 NYXAL_DIR="${HOME}/Nyxal"
-LOCK_DIR="${XDG_RUNTIME_DIR:-/tmp}/nyxos-shell"
+INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/}"
+VIDEO="${NYXOS_STARTUP_VIDEO:-${NYXAL_DIR}/interface/assets/nyxos-startup.mp4}"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
+LOCK_DIR="${RUNTIME_DIR}/nyxos-shell"
 LOCK_FILE="${LOCK_DIR}/singleton.lock"
-INTERFACE_URL="http://127.0.0.1:8010/"
-VIDEO="${NYXAL_DIR}/interface/assets/nyxos-startup.mp4"
+BROWSER_PROFILE="${NYXOS_BROWSER_PROFILE:-${HOME}/.config/nyxos/browser}"
+API_HEALTH_URL="${NYXOS_API_HEALTH_URL:-http://127.0.0.1:8010/health}"
 
-mkdir -p "${LOCK_DIR}"
+mkdir -p "${LOCK_DIR}" "${BROWSER_PROFILE}"
 exec 9>"${LOCK_FILE}"
 if ! flock -n 9; then
     exit 0
 fi
 
-# Se a interface já estiver aberta, não cria outra instância.
-if pgrep -af -- "127\.0\.0\.1:8010" | grep -v "pgrep -af" >/dev/null 2>&1; then
-    exit 0
+wait_for_api() {
+    local tentativa
+    for tentativa in {1..40}; do
+        if command -v curl >/dev/null 2>&1 && curl -fsS --max-time 2 "${API_HEALTH_URL}" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.5
+    done
+    return 1
+}
+
+wait_for_api || true
+
+STARTUP_MARKER="${RUNTIME_DIR}/nyxos-shell/startup-video.played"
+if [[ -f "${VIDEO}" ]] && [[ ! -f "${STARTUP_MARKER}" ]] && command -v mpv >/dev/null 2>&1; then
+    touch "${STARTUP_MARKER}"
+    /usr/bin/mpv         --no-config         --fs         --osc=no         --osd-level=0         --cursor-autohide=always         --really-quiet         --keep-open=no         "${VIDEO}" || true
 fi
 
-if [[ -f "${VIDEO}" ]] && command -v mpv >/dev/null 2>&1; then
-    /usr/bin/mpv --no-config --fs --osc=no --osd-level=0 --cursor-autohide=always --really-quiet --keep-open=no "${VIDEO}" || true
+find_browser() {
+    if [[ -n "${NYXOS_BROWSER_BIN:-}" && -x "${NYXOS_BROWSER_BIN}" ]]; then
+        printf '%s\n' "${NYXOS_BROWSER_BIN}"
+        return 0
+    fi
+
+    local candidato
+    for candidato in chromium chromium-browser google-chrome google-chrome-stable firefox; do
+        if command -v "${candidato}" >/dev/null 2>&1; then
+            command -v "${candidato}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+BROWSER="$(find_browser || true)"
+if [[ -z "${BROWSER}" ]]; then
+    echo "ERRO: nenhum navegador compatível foi encontrado para o shell NyxOS." >&2
+    exit 1
 fi
 
-exec /usr/bin/xdg-open "${INTERFACE_URL}"
+case "$(basename "${BROWSER}")" in
+    firefox)
+        exec "${BROWSER}" --kiosk "${INTERFACE_URL}"
+        ;;
+    *)
+        exec "${BROWSER}"             --kiosk             --no-first-run             --no-default-browser-check             --disable-session-crashed-bubble             --disable-infobars             --user-data-dir="${BROWSER_PROFILE}"             "${INTERFACE_URL}"
+        ;;
+esac
