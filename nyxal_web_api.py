@@ -27,6 +27,7 @@ from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_vps import VpsNyxOS
+from nixal_residencia import ResidenciaNyxOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -58,6 +59,7 @@ COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
     habilitada=False,
 )
 VPS_NYXOS = VpsNyxOS()
+RESIDENCIA_NYXOS = ResidenciaNyxOS()
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -1059,6 +1061,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         if self.path == "/api/vps/contexto":
             self._send_json(200, VPS_NYXOS.contexto())
+            return
+
+        if self.path == "/api/public/residencia":
+            self._send_json(200, RESIDENCIA_NYXOS.snapshot())
             return
 
         if self.path == "/api/public/nyxos/contexto":
