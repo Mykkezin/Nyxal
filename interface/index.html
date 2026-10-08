@@ -153,7 +153,7 @@
     /* Presence layering: avoid transform/animation conflicts with receded windows. */
     #nyxalHoloContainer { isolation: isolate; z-index: 25; }
     .nyxal-receded { animation: none !important; }
-    #infinityHub.nyxos-infinity-draggable { position: fixed !important; left: 50vw !important; top: 50vh !important; transform: none !important; z-index: 120 !important; width: 1px; height: 1px; }
+    #infinityHub.nyxos-infinity-draggable { position: fixed !important; left: 50vw; top: 50vh; transform: none !important; z-index: 120 !important; width: 1px; height: 1px; }
     #infinityHub.nyxos-infinity-dragging .infinity-core { cursor: grabbing; }
 
     /* Floating & Breathing Animation for Nyxal Hologram */
@@ -548,7 +548,7 @@
           <div class="absolute w-[260px] h-[260px] sm:w-[350px] sm:h-[350px] rounded-full border border-dashed border-hud-blue/30 animate-[spin_40s_linear_infinite_reverse]"></div>
           <!-- INFINITY: seis atalhos operacionais futuros -->
           <div id="infinityHub" class="nyxos-infinity-draggable absolute left-1/2 top-1/2 z-40 w-px h-px -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-            <button type="button" class="infinity-node" title="VPS" aria-label="VPS" data-infinity-shortcut="vps"><i class="fa-solid fa-server" aria-hidden="true"></i></button>
+            <button type="button" class="infinity-node" title="VPS" aria-label="VPS" data-infinity-shortcut="vps" onclick="openVpsPanel()"><i class="fa-solid fa-server" aria-hidden="true"></i></button>
             <button type="button" class="infinity-node" title="RELATÓRIO DELTA" aria-label="Relatório Delta" data-infinity-shortcut="relatorio-delta"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></button>
             <button type="button" class="infinity-node" title="DASHBOARD DE PRESENÇA" aria-label="Dashboard de Presença" data-infinity-shortcut="dashboard-presenca"><i class="fa-solid fa-user-astronaut" aria-hidden="true"></i></button>
             <button type="button" class="infinity-node" title="COLETA DUAL DE DATASET" aria-label="Coleta Dual de Dataset" data-infinity-shortcut="coleta-dual-dataset"><i class="fa-solid fa-database" aria-hidden="true"></i></button>
@@ -2974,6 +2974,139 @@
       hub.classList.toggle('open', open);
       button.setAttribute('aria-expanded', String(open));
       playHudSound(open ? 'open' : 'click');
+    }
+
+    async function openVpsPanel() {
+      playHudSound('open');
+      const modal = document.getElementById('nodeDetailModal');
+      const title = document.getElementById('nodeTitle');
+      const content = document.getElementById('nodeContent');
+      if (!modal || !title || !content) return;
+
+      title.innerHTML = '<i class="fa-solid fa-server text-hud-cyan"></i> VPS • NYXOS';
+      content.innerHTML = `
+        <div class="space-y-4">
+          <div id="vpsStatusBox" class="rounded-lg border border-hud-cyan/20 bg-slate-950/70 p-3 font-mono text-[10px]">Consultando hypervisor local...</div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] uppercase tracking-[0.18em] text-slate-500">Instâncias</span>
+            <button onclick="refreshVpsPanel()" class="px-2 py-1 rounded border border-hud-cyan/30 text-hud-cyan hover:bg-hud-cyan/10 text-[9px] font-orbitron">ATUALIZAR</button>
+          </div>
+          <div id="vpsInstances" class="space-y-2"></div>
+          <div class="border-t border-slate-800 pt-3">
+            <div class="text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-2">Criar VPS a partir de imagem QCOW2/IMG</div>
+            <div class="grid grid-cols-2 gap-2">
+              <input id="vpsCreateName" class="col-span-2 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="nome (ex.: nyx-vps-01)" />
+              <input id="vpsCreateImage" class="col-span-2 bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="/caminho/para/ubuntu-24.04-server-cloudimg-amd64.img" />
+              <input id="vpsCreateRam" type="number" min="512" value="2048" class="bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="RAM MB" />
+              <input id="vpsCreateCpu" type="number" min="1" value="2" class="bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="vCPU" />
+              <input id="vpsCreateDisk" type="number" min="8" value="20" class="bg-slate-950 border border-slate-700 rounded px-2 py-2 text-xs" placeholder="Disco GB" />
+              <button onclick="createVpsFromPanel()" class="bg-hud-cyan text-black rounded px-3 py-2 text-[10px] font-orbitron font-bold">PROVISIONAR</button>
+            </div>
+          </div>
+        </div>`;
+      modal.classList.remove('hidden');
+      setHologramReceded(true);
+      await refreshVpsPanel();
+    }
+
+    async function refreshVpsPanel() {
+      const statusBox = document.getElementById('vpsStatusBox');
+      const list = document.getElementById('vpsInstances');
+      if (!statusBox || !list) return;
+
+      statusBox.textContent = 'Consultando hypervisor local...';
+      list.innerHTML = '<div class="text-[10px] text-slate-500">Carregando...</div>';
+
+      try {
+        const [statusResponse, instancesResponse] = await Promise.all([
+          fetch(window.NYXAL_API_BASE + '/api/vps/status', { cache: 'no-store' }),
+          fetch(window.NYXAL_API_BASE + '/api/vps/instances', { cache: 'no-store' })
+        ]);
+        const status = await statusResponse.json();
+        const instances = await instancesResponse.json();
+
+        if (status.operacional) {
+          statusBox.innerHTML = '<div class="text-emerald-400">● HYPERVISOR ONLINE</div>' +
+            '<div class="mt-1 text-slate-400">' + String(status.backend || 'libvirt_kvm') +
+            ' • ' + String(status.virsh || 'libvirt') +
+            ' • ' + String(status.uri || 'qemu:///system') + '</div>' +
+            '<div class="mt-1 text-slate-500">Domínios: ' + String(status.dominios ?? 0) + '</div>';
+        } else {
+          statusBox.innerHTML = '<div class="text-amber-400">● VPS INDISPONÍVEL</div>' +
+            '<div class="mt-1 text-slate-400">' + String(status.motivo || 'backend não pronto') + '</div>';
+        }
+
+        const rows = Array.isArray(instances.instancias) ? instances.instancias : [];
+        if (!rows.length) {
+          list.innerHTML = '<div class="rounded border border-slate-800 bg-slate-950/50 p-3 text-[10px] text-slate-500">Nenhuma VPS cadastrada.</div>';
+          return;
+        }
+
+        list.innerHTML = rows.map(item => {
+          const nome = String(item.nome || '');
+          const estado = String(item.estado || 'desconhecido');
+          const safeNome = nome.replace(/'/g, "\\'");
+          return '<div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3">' +
+            '<div class="flex items-center justify-between gap-2">' +
+            '<div><div class="font-orbitron text-xs text-slate-200">' + nome + '</div>' +
+            '<div class="text-[9px] uppercase tracking-[0.14em] text-slate-500">' + estado + '</div></div>' +
+            '<div class="flex gap-1">' +
+            '<button onclick="vpsAction(\'' + safeNome + '\',\'start\')" class="px-2 py-1 rounded border border-emerald-400/30 text-emerald-300 text-[9px]">ON</button>' +
+            '<button onclick="vpsAction(\'' + safeNome + '\',\'shutdown\')" class="px-2 py-1 rounded border border-amber-400/30 text-amber-300 text-[9px]">OFF</button>' +
+            '<button onclick="vpsAction(\'' + safeNome + '\',\'reboot\')" class="px-2 py-1 rounded border border-hud-cyan/30 text-hud-cyan text-[9px]">REBOOT</button>' +
+            '</div></div></div>';
+        }).join('');
+      } catch (error) {
+        statusBox.textContent = 'Falha ao consultar o backend VPS.';
+        list.innerHTML = '<div class="text-[10px] text-rose-400">' + String(error) + '</div>';
+      }
+    }
+
+    async function vpsAction(nome, acao) {
+      if (acao === 'destroy' && !window.confirm('Desligar a VPS à força?')) return;
+      try {
+        const result = await nyxalApiPost('/api/vps/action', {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome, acao })
+        });
+        if (!result.data?.sucesso) throw new Error(result.data?.motivo || 'ação VPS falhou');
+        await refreshVpsPanel();
+      } catch (error) {
+        alert('VPS: ' + error.message);
+      }
+    }
+
+    async function createVpsFromPanel() {
+      const nome = document.getElementById('vpsCreateName')?.value.trim();
+      const imagePath = document.getElementById('vpsCreateImage')?.value.trim();
+      const memoryMb = Number(document.getElementById('vpsCreateRam')?.value || 2048);
+      const vcpus = Number(document.getElementById('vpsCreateCpu')?.value || 2);
+      const diskGb = Number(document.getElementById('vpsCreateDisk')?.value || 20);
+
+      if (!nome || !imagePath) {
+        alert('Informe o nome da VPS e o caminho da imagem.');
+        return;
+      }
+
+      if (!window.confirm('Provisionar ' + nome + ' com ' + memoryMb + ' MB, ' + vcpus + ' vCPU e ' + diskGb + ' GB?')) return;
+
+      try {
+        const result = await nyxalApiPost('/api/vps/provisionar', {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome,
+            image_path: imagePath,
+            memory_mb: memoryMb,
+            vcpus,
+            disk_gb: diskGb,
+            autostart: true
+          })
+        });
+        if (!result.data?.sucesso) throw new Error(result.data?.motivo || 'provisionamento falhou');
+        await refreshVpsPanel();
+      } catch (error) {
+        alert('Provisionamento VPS: ' + error.message);
+      }
     }
 
     // Orbital Node Modal Trigger
