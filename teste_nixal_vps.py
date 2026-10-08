@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import subprocess
 import unittest
 
 from nixal_vps import VpsNyxOS
@@ -30,6 +31,31 @@ class VpsNyxOSTest(unittest.TestCase):
             vps._tool = original
         self.assertFalse(status["operacional"])
         self.assertEqual(status["motivo"], "virsh_nao_instalado")
+
+    def test_chave_ssh(self) -> None:
+        chave = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEJvdGVja2VkLWtleQ teste"
+        self.assertEqual(VpsNyxOS._validar_chave_ssh(chave), chave)
+        with self.assertRaises(ValueError):
+            VpsNyxOS._validar_chave_ssh("ssh-ed25519\nFAKE")
+        with self.assertRaises(ValueError):
+            VpsNyxOS._validar_chave_ssh("texto arbitrário")
+
+    def test_parser_ips(self) -> None:
+        vps = VpsNyxOS()
+        original = vps._run
+        vps._run = lambda *args, **kwargs: subprocess.CompletedProcess(
+            args=["virsh"],
+            returncode=0,
+            stdout=(
+                "Interface  MAC                 Protocol     Address\n"
+                "vnet0       aa:bb               ipv4         192.168.122.42/24\n"
+            ),
+            stderr="",
+        )
+        try:
+            self.assertEqual(vps._ip_addresses("nyx-vps-01"), ["192.168.122.42/24"])
+        finally:
+            vps._run = original
 
 
 if __name__ == "__main__":
