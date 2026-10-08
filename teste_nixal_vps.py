@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import subprocess
 import unittest
 
 from nixal_vps import VpsNyxOS
@@ -19,6 +20,23 @@ class VpsNyxOSTest(unittest.TestCase):
             vps._nome_valido("nome com espaço")
         with self.assertRaises(ValueError):
             vps._nome_valido("../escape")
+
+    def test_parser_ips(self) -> None:
+        vps = VpsNyxOS()
+        original = vps._run
+        vps._run = lambda *args, **kwargs: subprocess.CompletedProcess(
+            args=["virsh"],
+            returncode=0,
+            stdout=(
+                "Interface  MAC                 Protocol     Address\n"
+                "vnet0       aa:bb               ipv4         192.168.122.42/24\n"
+            ),
+            stderr="",
+        )
+        try:
+            self.assertEqual(vps._ip_addresses("nyx-vps-01"), ["192.168.122.42/24"])
+        finally:
+            vps._run = original
 
     def test_status_sem_virsh(self) -> None:
         vps = VpsNyxOS()
