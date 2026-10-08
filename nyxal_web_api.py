@@ -1047,6 +1047,18 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(corpo)
             return
 
+        if self.path == "/api/vps/status":
+            self._send_json(200, VPS_NYXOS.status())
+            return
+
+        if self.path == "/api/vps/instances":
+            self._send_json(200, VPS_NYXOS.instances())
+            return
+
+        if self.path == "/api/vps/contexto":
+            self._send_json(200, VPS_NYXOS.contexto())
+            return
+
         if self.path == "/api/public/nyxos/contexto":
             self._send_json(200, read_nyxos_contexto())
             return
