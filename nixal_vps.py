@@ -59,6 +59,27 @@ class VpsNyxOS:
             raise ValueError("nome_vps_invalido")
         return nome
 
+    @staticmethod
+    def _validar_chave_ssh(chave: str) -> str:
+        if not isinstance(chave, str):
+            raise ValueError("ssh_public_key_obrigatoria")
+
+        valor = chave.strip()
+        padrao = re.compile(
+            r"^(?:"
+            r"ssh-ed25519|"
+            r"ssh-rsa|"
+            r"ecdsa-sha2-nistp256|"
+            r"ecdsa-sha2-nistp384|"
+            r"ecdsa-sha2-nistp521|"
+            r"sk-ssh-ed25519@openssh\.com|"
+            r"sk-ecdsa-sha2-nistp256@openssh\.com"
+            r")\s+[A-Za-z0-9+/]+={0,2}(?:\s+[^\r\n]+)?$"
+        )
+        if not padrao.fullmatch(valor):
+            raise ValueError("ssh_public_key_invalida")
+        return valor
+
     def _virsh_available(self) -> bool:
         return self._tool("virsh") is not None
 
@@ -132,7 +153,7 @@ class VpsNyxOS:
 
         ips: list[str] = []
         for linha in texto.splitlines():
-            match = re.search(r"\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?:/\\d{1,2})?\\b", linha)
+            match = re.search(r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/\d{1,2})?\b", linha)
             if match:
                 ip = match.group(0)
                 if ip not in ips:
@@ -295,8 +316,7 @@ class VpsNyxOS:
             raise ValueError("disco_vps_invalido")
         if not isinstance(username, str) or not re.fullmatch(r"[a-z_][a-z0-9_-]{0,31}", username):
             raise ValueError("usuario_vps_invalido")
-        if not isinstance(ssh_public_key, str) or not ssh_public_key.strip():
-            raise ValueError("ssh_public_key_obrigatoria")
+        ssh_public_key = self._validar_chave_ssh(ssh_public_key)
 
         source = Path(image_path).expanduser().resolve()
         if not source.is_file():
@@ -391,8 +411,9 @@ class VpsNyxOS:
             seed.unlink(missing_ok=True)
             raise RuntimeError((created.stderr or created.stdout).strip() or "falha_virt_install")
 
+        autostart_result = {"sucesso": True}
         if autostart:
-            self.action(nome, "autostart")
+            autostart_result = self.action(nome, "autostart")
 
         return {
             "sucesso": True,
@@ -404,6 +425,8 @@ class VpsNyxOS:
             "disk_gb": int(disk_gb),
             "disk": str(disk),
             "autostart": bool(autostart),
+            "autostart_aplicado": bool(autostart_result.get("sucesso")),
+            "autostart_motivo": autostart_result.get("motivo"),
             "username": username,
             "ssh_seed": str(seed),
         }
