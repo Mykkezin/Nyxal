@@ -3047,11 +3047,12 @@
         list.innerHTML = rows.map(item => {
           const nome = String(item.nome || '');
           const estado = String(item.estado || 'desconhecido');
+          const ips = Array.isArray(item.ips) ? item.ips.join(', ') : '--';
           const safeNome = nome.replace(/'/g, "\\'");
           return '<div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3">' +
             '<div class="flex items-center justify-between gap-2">' +
             '<div><div class="font-orbitron text-xs text-slate-200">' + nome + '</div>' +
-            '<div class="text-[9px] uppercase tracking-[0.14em] text-slate-500">' + estado + '</div></div>' +
+            '<div class="text-[9px] uppercase tracking-[0.14em] text-slate-500">' + estado + ' • IP ' + ips + '</div></div>' +
             '<div class="flex gap-1">' +
             '<button onclick="vpsAction(\'' + safeNome + '\',\'start\')" class="px-2 py-1 rounded border border-emerald-400/30 text-emerald-300 text-[9px]">ON</button>' +
             '<button onclick="vpsAction(\'' + safeNome + '\',\'shutdown\')" class="px-2 py-1 rounded border border-amber-400/30 text-amber-300 text-[9px]">OFF</button>' +
