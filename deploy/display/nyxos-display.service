@@ -1,0 +1,22 @@
+[Unit]
+Description=NyxOS Display — camada visual do desktop
+After=network-online.target nyxal-api.service
+Wants=nyxal-api.service
+PartOf=nyxos.target
+ConditionPathExists=%h/Nyxal-Display/dist/index.html
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Nyxal
+ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/deploy/display/servir_nyxos_display.py
+Environment=NYXOS_DISPLAY_DIR=%h/Nyxal-Display/dist
+Environment=NYXOS_DISPLAY_HOST=127.0.0.1
+Environment=NYXOS_DISPLAY_PORT=3000
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=nyxos.target
