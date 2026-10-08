@@ -122,6 +122,23 @@ class VpsNyxOS:
                 dados[chave] = valor
         return dados
 
+    def _ip_addresses(self, nome: str) -> list[str]:
+        try:
+            texto = self._require_ok(
+                self._run("domifaddr", nome, "--source", "lease", timeout=10)
+            )
+        except Exception:
+            return []
+
+        ips: list[str] = []
+        for linha in texto.splitlines():
+            match = re.search(r"\\b(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?:/\\d{1,2})?\\b", linha)
+            if match:
+                ip = match.group(0)
+                if ip not in ips:
+                    ips.append(ip)
+        return ips
+
     def instances(self) -> dict[str, Any]:
         if not self._virsh_available():
             return {
@@ -140,6 +157,7 @@ class VpsNyxOS:
                     {
                         "nome": nome,
                         "estado": estado.splitlines()[0] if estado else "desconhecido",
+                        "ips": self._ip_addresses(nome),
                         "info": self._parse_dominfo(info),
                     }
                 )
