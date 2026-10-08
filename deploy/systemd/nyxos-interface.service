@@ -1,6 +1,7 @@
 [Unit]
 Description=NyxOS — desktop principal residente
-After=graphical-session.target nyxal-api.service
+After=graphical-session-pre.target nyxal-api.service
+Before=graphical-session.target
 Wants=nyxal-api.service
 PartOf=graphical-session.target
 
