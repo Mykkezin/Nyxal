@@ -1,6 +1,6 @@
 [Unit]
 Description=NyxOS — residência operacional
-Wants=nyxal-api.service nyxos-residente.service
+Wants=nyxal-api.service nyxos-residente.service nyxos-display.service
 After=network-online.target nyxal-api.service nyxos-residente.service
 
 [Install]
