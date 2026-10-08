@@ -28,6 +28,13 @@ fi
 
 mkdir -p "${USER_SYSTEMD_DIR}" "${AUTOSTART_DIR}" "${CONFIG_DIR}"
 
+if [[ -f "${NYXAL_DIR}/.gitmodules" ]] && command -v npm >/dev/null 2>&1; then
+    git -C "${NYXAL_DIR}" submodule update --init --recursive
+    bash "${NYXAL_DIR}/deploy/display/preparar_nyxos_display.sh"
+else
+    echo "AVISO: Nyxal-Display não foi preparado; mantendo a interface legada." >&2
+fi
+
 install -m 0644 "${SCRIPT_DIR}/nyxal-api.service" "${USER_SYSTEMD_DIR}/nyxal-api.service"
 install -m 0644 "${SCRIPT_DIR}/nyxos-residente.service" "${USER_SYSTEMD_DIR}/nyxos-residente.service"
 install -m 0644 "${SCRIPT_DIR}/nyxos-interface.service" "${USER_SYSTEMD_DIR}/nyxos-interface.service"

@@ -140,6 +140,16 @@ def caminho_interface(relativo: str) -> Path | None:
     return candidato if candidato.is_file() else None
 
 
+def caminho_display(relativo: str) -> Path | None:
+    raiz = (BASE_DIR / "interface" / "display" / "dist").resolve()
+    candidato = (raiz / relativo).resolve()
+    try:
+        candidato.relative_to(raiz)
+    except ValueError:
+        return None
+    return candidato if candidato.is_file() else None
+
+
 def get_whisper_model():
     global WHISPER_MODEL
 
@@ -1020,13 +1030,29 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path == "/":
-            caminho = caminho_interface("index.html")
+            caminho = caminho_display("index.html") or caminho_interface("index.html")
             if caminho is None:
                 self._send_json(404, {"estado": "interface_indisponivel"})
                 return
             corpo = caminho.read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(corpo)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(corpo)
+            return
+
+        if self.path.startswith("/display/"):
+            relativo = self.path.removeprefix("/display/")
+            caminho = caminho_display(relativo)
+            if caminho is None:
+                self._send_json(404, {"estado": "display_arquivo_nao_encontrado"})
+                return
+            corpo = caminho.read_bytes()
+            tipo = mimetypes.guess_type(str(caminho))[0] or "application/octet-stream"
+            self.send_response(200)
+            self.send_header("Content-Type", tipo)
             self.send_header("Content-Length", str(len(corpo)))
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
