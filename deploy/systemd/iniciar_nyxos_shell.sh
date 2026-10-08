@@ -2,7 +2,7 @@
 set -euo pipefail
 
 NYXAL_DIR="${HOME}/Nyxal"
-INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/}"
+INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:3000/}"
 VIDEO="${NYXOS_STARTUP_VIDEO:-${NYXAL_DIR}/interface/assets/nyxos-startup.mp4}"
 RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 LOCK_DIR="${RUNTIME_DIR}/nyxos-shell"
