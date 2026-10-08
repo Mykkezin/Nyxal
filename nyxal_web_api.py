@@ -618,6 +618,8 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                         vcpus=payload.get("vcpus", 2),
                         disk_gb=payload.get("disk_gb", 20),
                         autostart=payload.get("autostart", True),
+                        username=payload.get("username", "ubuntu"),
+                        ssh_public_key=payload.get("ssh_public_key"),
                     )
                 self._send_json(200 if resultado.get("sucesso") else 422, resultado)
             except (TypeError, ValueError, FileNotFoundError, FileExistsError) as erro:
