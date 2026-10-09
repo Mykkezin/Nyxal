@@ -182,7 +182,7 @@ class NyxalAgentHub:
                 "segredo_presente_no_core": False,
             },
             "criacao_visual": {
-                "modelo": _env("NYXAL_GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image"),
+                "modelo": _env("NYXAL_GEMINI_IMAGE_MODEL", "gemini-nano-banana-2.1"),
                 "configurado": bool(_env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")),
                 "funcao": "geração e edição de imagens",
             },
