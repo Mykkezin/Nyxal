@@ -7,7 +7,6 @@ import json
 import os
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
@@ -56,6 +55,10 @@ class CapacidadeVisualGeminiNixOS:
         )
         if not api_key:
             raise RuntimeError("Gemini não configurado. Adicione NYXAL_GEMINI_API_KEY à configuração local.")
+        if imagem_base64 is not None and not isinstance(imagem_base64, str):
+            raise ValueError("A imagem precisa ser enviada como Base64.")
+        if mime_type is not None and not isinstance(mime_type, str):
+            raise ValueError("O tipo MIME da imagem é inválido.")
 
         inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
         if imagem_base64:
