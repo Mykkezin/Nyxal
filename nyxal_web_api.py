@@ -24,6 +24,7 @@ from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
 from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
+from nixal_estado_presenca import compor_presenca_efetiva
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_vps import VpsNyxOS
@@ -108,6 +109,21 @@ def read_local_json(nome_arquivo: str) -> dict:
         return valor if isinstance(valor, dict) else {}
     except (OSError, json.JSONDecodeError):
         return {}
+
+
+def read_machine_presence() -> dict:
+    """Lê a presença residente do arquivo atualizado pelo próprio ciclo."""
+    try:
+        return PresencaMaquinaNixOS(
+            arquivo=BASE_DIR / "presenca_maquina_nyxos.json"
+        ).contexto()
+    except Exception as erro:
+        return {
+            "sucesso": False,
+            "estado": "presenca_maquina_indisponivel",
+            "origem": "presenca_maquina_nyxos",
+            "motivo": f"{type(erro).__name__}: {erro}",
+        }
 
 
 def read_nyxos_contexto() -> dict:
@@ -1150,7 +1166,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/api/public/presenca":
-            self._send_json(200, PRESENCA_MAQUINA.contexto())
+            self._send_json(200, read_machine_presence())
             return
 
         if self.path == "/api/public/recursos":
@@ -1198,8 +1214,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             presenca = estado.get("presenca", {})
             estado_operacional = estado.get("estado", {})
 
+            presenca_maquina = read_machine_presence()
+
             try:
-                persistencia_operacional = PERSISTENCIA_OPERACIONAL.contexto()
+                # A API é independente do processo residente; recarrega o
+                # snapshot para não publicar um estado em memória antigo.
+                persistencia_operacional = PERSISTENCIA_OPERACIONAL.recarregar()
             except Exception as erro:
                 persistencia_operacional = {
                     "sucesso": False,
@@ -1208,6 +1228,27 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     "versao": PERSISTENCIA_OPERACIONAL.VERSAO,
                     "motivo": str(erro),
                 }
+
+            presenca_efetiva = compor_presenca_efetiva(
+                presenca_legada=presenca,
+                estado_legado=estado_operacional,
+                presenca_maquina=presenca_maquina,
+                persistencia_operacional=persistencia_operacional,
+            )
+
+            estado_publicado = {
+                "modo": (
+                    "residente"
+                    if presenca_efetiva.get("ativa")
+                    and presenca_efetiva.get("origem") == "presenca_maquina_nyxos"
+                    else estado_operacional.get("modo")
+                ),
+                "status": (
+                    "ativa"
+                    if presenca_efetiva.get("ativa")
+                    else estado_operacional.get("status")
+                ),
+            }
 
             try:
                 delta = DELTA_NYXOS.contexto()
@@ -1238,13 +1279,15 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                         "nome": identidade.get("nome"),
                         "versao": identidade.get("versao"),
                     },
-                    "presenca": {
+                    "presenca": presenca_efetiva,
+                    "presenca_legada": {
                         "ativa": presenca.get("ativa"),
                         "ultimo_ciclo": presenca.get("ultimo_ciclo"),
                         "ciclos": presenca.get("ciclos"),
                     },
-                    "presenca_maquina": PRESENCA_MAQUINA.contexto(),
-                    "estado": {
+                    "presenca_maquina": presenca_maquina,
+                    "estado": estado_publicado,
+                    "estado_legado": {
                         "modo": estado_operacional.get("modo"),
                         "status": estado_operacional.get("status"),
                     },
