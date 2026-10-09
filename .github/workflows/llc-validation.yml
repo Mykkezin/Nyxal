@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - feat/llc-learning-loop
-  pull_request:
-    branches:
-      - main
 
 jobs:
   llc:
