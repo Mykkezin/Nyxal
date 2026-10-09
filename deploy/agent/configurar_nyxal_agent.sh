@@ -74,24 +74,24 @@ if [[ "${use_letta,,}" == "s" || "${use_letta,,}" == "sim" ]]; then
 fi
 
 read -r -p "Configurar WhatsApp pelo gateway Hermes? [s/N]: " use_whatsapp
-if [[ "\${use_whatsapp,,}" == "s" || "\${use_whatsapp,,}" == "sim" ]]; then
+if [[ "${use_whatsapp,,}" == "s" || "${use_whatsapp,,}" == "sim" ]]; then
     read -r -p "Modo WhatsApp [self-chat/bot] (self-chat para usar sua conta): " whatsapp_mode
-    whatsapp_mode="\${whatsapp_mode:-self-chat}"
-    case "\${whatsapp_mode}" in self-chat|bot) ;; *) echo "Modo WhatsApp inválido." >&2; exit 2 ;; esac
+    whatsapp_mode="${whatsapp_mode:-self-chat}"
+    case "${whatsapp_mode}" in self-chat|bot) ;; *) echo "Modo WhatsApp inválido." >&2; exit 2 ;; esac
 
     read -r -p "Número(s) autorizado(s), com DDI e sem + (ex.: 5511999999999; vários separados por vírgula): " whatsapp_users
-    whatsapp_users="$(printf '%s' "\${whatsapp_users}" | tr -d '[:space:]+()-')"
-    if [[ ! "\${whatsapp_users}" =~ ^[0-9]{8,15}(,[0-9]{8,15})*$ ]]; then
+    whatsapp_users="$(printf '%s' "${whatsapp_users}" | tr -d '[:space:]+()-')"
+    if [[ ! "${whatsapp_users}" =~ ^[0-9]{8,15}(,[0-9]{8,15})*$ ]]; then
         echo "Número inválido. Use somente dígitos com DDI, separados por vírgula." >&2
         exit 2
     fi
 
-    set_env "\${HERMES_ENV}" "WHATSAPP_ENABLED" "true"
-    set_env "\${HERMES_ENV}" "WHATSAPP_MODE" "\${whatsapp_mode}"
-    set_env "\${HERMES_ENV}" "WHATSAPP_ALLOWED_USERS" "\${whatsapp_users}"
-    set_env "\${HERMES_ENV}" "WHATSAPP_ALLOW_ALL_USERS" "false"
-    ROOT="$(cd "$(dirname "\${BASH_SOURCE[0]}")/../.." && pwd)"
-    python3 "\${ROOT}/scripts/configurar_hermes_whatsapp_policy.py"
+    set_env "${HERMES_ENV}" "WHATSAPP_ENABLED" "true"
+    set_env "${HERMES_ENV}" "WHATSAPP_MODE" "${whatsapp_mode}"
+    set_env "${HERMES_ENV}" "WHATSAPP_ALLOWED_USERS" "${whatsapp_users}"
+    set_env "${HERMES_ENV}" "WHATSAPP_ALLOW_ALL_USERS" "false"
+    ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    python3 "${ROOT}/scripts/configurar_hermes_whatsapp_policy.py"
 fi
 
 set_env "${NYXAL_ENV}" "NYXAL_KOKORO_VOICE" "pf_dora"
