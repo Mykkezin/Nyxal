@@ -1287,11 +1287,15 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(corpo)
             return
 
-        if self.path.startswith("/display/"):
-            relativo = self.path.removeprefix("/display/")
+        if parsed_path == "/display" or parsed_path.startswith("/display/"):
+            relativo = parsed_path.removeprefix("/display/") if parsed_path.startswith("/display/") else ""
+            relativo = relativo.lstrip("/") or "index.html"
             caminho = caminho_display(relativo)
+            # Suporte a rotas SPA sem transformar assets ausentes em HTML.
+            if caminho is None and not Path(relativo).suffix:
+                caminho = caminho_display("index.html")
             if caminho is None:
-                self._send_json(404, {"estado": "display_arquivo_nao_encontrado"})
+                self._send_json(404, {"estado": "display_arquivo_nao_encontrado", "arquivo": relativo})
                 return
             corpo = caminho.read_bytes()
             tipo = mimetypes.guess_type(str(caminho))[0] or "application/octet-stream"
