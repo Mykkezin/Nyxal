@@ -82,7 +82,7 @@ class AmdDeveloperCloudTest(unittest.TestCase):
         })
         with patch("nixal_amd_developer_cloud.urlopen", return_value=fake) as opened:
             result = AmdCloudChatClient(cloud).chat(
-                model="ignored-model",
+                model="qwen-test",
                 messages=[{"role": "user", "content": "Teste"}],
                 options={"temperature": 0.4},
             )
