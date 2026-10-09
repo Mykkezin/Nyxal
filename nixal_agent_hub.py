@@ -95,7 +95,9 @@ class NyxalAgentHub:
         if provider == "hermes":
             return bool(_env("NYXAL_HERMES_API_KEY") and _env("NYXAL_HERMES_BASE_URL", "http://127.0.0.1:8642/v1"))
         if provider == "letta":
-            return bool(_env("LETTA_AGENT_ID") and (_env("LETTA_API_KEY") or _env("LETTA_BASE_URL", "http://127.0.0.1:8283")))
+            base = _env("LETTA_BASE_URL", "http://127.0.0.1:8283").lower()
+            local_endpoint = base.startswith(("http://127.0.0.1", "http://localhost", "http://[::1]"))
+            return bool(_env("LETTA_AGENT_ID") and (_env("LETTA_API_KEY") or local_endpoint))
         return False
 
     def resolve_provider(self, requested: str | None = None) -> str:
@@ -146,7 +148,15 @@ class NyxalAgentHub:
             },
             "whatsapp": {
                 "integracao": "gateway Hermes",
-                "estado": "requer pareamento/configuracao no Hermes",
+                "habilitado": _env("WHATSAPP_ENABLED", "false").lower() in {"1", "true", "yes"},
+                "modo": _env("WHATSAPP_MODE", "self-chat"),
+                "allowlist_configurada": bool(_env("WHATSAPP_ALLOWED_USERS")),
+                "sessao_pareada": (__import__("pathlib").Path.home() / ".hermes" / "platforms" / "whatsapp" / "session" / "creds.json").is_file(),
+                "estado": (
+                    "pareado_verificar_gateway"
+                    if (__import__("pathlib").Path.home() / ".hermes" / "platforms" / "whatsapp" / "session" / "creds.json").is_file()
+                    else "requer_pareamento"
+                ),
                 "segredo_presente_no_core": False,
             },
             "criacao_visual": {
