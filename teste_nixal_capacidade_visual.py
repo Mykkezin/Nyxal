@@ -44,14 +44,14 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
 
     def test_retorna_imagem_sem_guardar_upload(self):
         response = {
-            "candidates": [{
-                "content": {
-                    "parts": [
-                        {"text": "Imagem concluída."},
-                        {"inlineData": {"mimeType": "image/png", "data": base64.b64encode(b"png").decode()}},
-                    ]
-                }
-            }]
+            "steps": [{
+                "type": "model_output",
+                "content": [
+                    {"type": "text", "text": "Imagem concluída."},
+                    {"type": "image", "mime_type": "image/png", "data": base64.b64encode(b"png").decode()},
+                ],
+            }],
+            "status": "completed",
         }
         with patch.dict(os.environ, {
             "NYXAL_GEMINI_API_KEY": "test-key",
@@ -64,7 +64,11 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertEqual(result["mime_type"], "image/png")
         self.assertEqual(base64.b64decode(result["imagem_base64"]), b"png")
         self.assertFalse(result["upload_salvo_no_servidor"])
-        self.assertIn("x-goog-api-key", {key.lower() for key in mocked.call_args.args[0].headers})
+        request = mocked.call_args.args[0]
+        self.assertIn("x-goog-api-key", {key.lower() for key in request.headers})
+        request_payload = json.loads(request.data.decode("utf-8"))
+        self.assertFalse(request_payload["store"])
+        self.assertEqual(request_payload["model"], "gemini-3.1-flash-image")
 
     def test_status_nao_confunde_configuracao_com_chave(self):
         with patch.dict(os.environ, {}, clear=True):
