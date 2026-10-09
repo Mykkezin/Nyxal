@@ -121,6 +121,30 @@ def _precisa_contexto_email(mensagem: str) -> bool:
     ))
 
 
+def _precisa_contexto_agenda(mensagem: str) -> bool:
+    texto = mensagem.lower()
+    return any(termo in texto for termo in (
+        "agenda", "calendário", "calendario", "reunião", "reuniao",
+        "compromisso", "evento", "próximo evento", "proximo evento",
+    ))
+
+
+def _precisa_contexto_contatos(mensagem: str) -> bool:
+    texto = mensagem.lower()
+    return any(termo in texto for termo in (
+        "contato", "contatos", "telefone de", "email de", "e-mail de",
+        "endereço de e-mail", "endereco de email", "pessoa chamada",
+    ))
+
+
+def _precisa_contexto_drive(mensagem: str) -> bool:
+    texto = mensagem.lower()
+    return any(termo in texto for termo in (
+        "drive", "google drive", "arquivo no google", "documentos do drive",
+        "meus documentos", "arquivo no drive", "arquivos do drive",
+    ))
+
+
 def json_bytes(payload: dict) -> bytes:
     return json.dumps(
         payload,
@@ -1123,6 +1147,21 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                                 "somente_leitura": True,
                                 "motivo": "Não foi possível consultar o Gmail nesta solicitação.",
                             }
+                    if _precisa_contexto_agenda(mensagem):
+                        try:
+                            contexto_sistema["agenda"] = GMAIL_NYXOS.listar_eventos()
+                        except Exception:
+                            contexto_sistema["agenda"] = {"estado": "indisponivel", "somente_leitura": True}
+                    if _precisa_contexto_contatos(mensagem):
+                        try:
+                            contexto_sistema["contatos"] = GMAIL_NYXOS.listar_contatos()
+                        except Exception:
+                            contexto_sistema["contatos"] = {"estado": "indisponivel", "somente_leitura": True}
+                    if _precisa_contexto_drive(mensagem):
+                        try:
+                            contexto_sistema["google_drive"] = GMAIL_NYXOS.listar_arquivos_drive()
+                        except Exception:
+                            contexto_sistema["google_drive"] = {"estado": "indisponivel", "somente_leitura": True}
                     resposta_agente = AGENTE_NYXAL.responder(
                         mensagem,
                         sessao=sessao_id,
@@ -1275,6 +1314,56 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 "observabilidade": OBSERVABILIDADE_NYXOS.snapshot(),
                 "residencia": residencia_snapshot(),
             })
+            return
+
+        if self.path == "/api/integracoes/google/status":
+            self._send_json(200, GMAIL_NYXOS.status())
+            return
+
+        if self.path == "/api/integracoes/google/agenda":
+            parsed = urlsplit(self.path)
+            query = parse_qs(parsed.query)
+            try:
+                self._send_json(200, GMAIL_NYXOS.listar_eventos(
+                    limite=int(query.get("limit", ["20"])[0]),
+                    dias=int(query.get("days", ["14"])[0]),
+                ))
+            except ValueError as erro:
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+            except Exception as erro:
+                self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
+            return
+
+        if self.path == "/api/integracoes/google/contatos":
+            parsed = urlsplit(self.path)
+            query = parse_qs(parsed.query)
+            try:
+                self._send_json(200, GMAIL_NYXOS.listar_contatos(
+                    limite=int(query.get("limit", ["25"])[0]),
+                ))
+            except ValueError as erro:
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+            except Exception as erro:
+                self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
+            return
+
+        if self.path == "/api/integracoes/google/drive":
+            parsed = urlsplit(self.path)
+            query = parse_qs(parsed.query)
+            try:
+                self._send_json(200, GMAIL_NYXOS.listar_arquivos_drive(
+                    limite=int(query.get("limit", ["25"])[0]),
+                ))
+            except ValueError as erro:
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+            except Exception as erro:
+                self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
 
         if self.path.startswith("/api/integracoes/gmail/"):
