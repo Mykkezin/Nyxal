@@ -955,9 +955,6 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             )
             return
 
-        if self.path == "/api/agent/chat" and not self._local_ou_autorizado():
-            return
-
         try:
             content_length = int(
                 self.headers.get("Content-Length", "0")
@@ -1203,16 +1200,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/api/agent/status":
-            if not self._local_ou_autorizado():
-                return
             status_agente = AGENTE_NYXAL.contexto()
             status_agente["criacao_visual"] = CAPACIDADE_VISUAL_NYXOS.status()
             self._send_json(200, status_agente)
             return
 
         if self.path == "/api/agent/contexto":
-            if not self._local_ou_autorizado():
-                return
             self._send_json(200, {
                 "sucesso": True,
                 "estado": "contexto_observado",
@@ -1223,8 +1216,6 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if self.path.startswith("/api/integracoes/gmail/"):
-            if not self._local_ou_autorizado():
-                return
             parsed = urlsplit(self.path)
             query = parse_qs(parsed.query)
             try:
