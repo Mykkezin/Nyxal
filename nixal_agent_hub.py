@@ -366,7 +366,7 @@ class NyxalAgentHub:
         history: list[dict[str, str]] | None = None,
     ) -> str:
         api_key = _env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
-        model = _env("NYXAL_GEMINI_MODEL", "gemini-3.7-flash")
+        model = _env("NYXAL_GEMINI_MODEL", "gemini-3.8-flash")
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
             + quote(model, safe="")

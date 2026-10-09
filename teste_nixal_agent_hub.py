@@ -31,6 +31,14 @@ class TestNyxalAgentHub(unittest.TestCase):
         self.assertEqual(result["provedor"], "nyxal")
         self.assertEqual(result["provedores_tentados"], ["gemini: RuntimeError"])
 
+    def test_modelo_gemini_padrao_e_38_flash(self):
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch("nixal_agent_hub._json_request", return_value={
+                "candidates": [{"content": {"parts": [{"text": "resposta"}]}}]
+            }) as request:
+                NyxalAgentHub()._ask_gemini("Olá", "identidade")
+        self.assertIn("/models/gemini-3.8-flash:generateContent", request.call_args.args[0])
+
     def test_provedor_explicito_nao_configurado_falha(self):
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaises(RuntimeError):
