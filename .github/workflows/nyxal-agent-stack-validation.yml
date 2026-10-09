@@ -28,6 +28,7 @@ jobs:
           python -m compileall -q \
             nyxal_web_api.py \
             nixal_display_routes.py \
+            nixal_http_security.py \
             nixal_agent_hub.py \
             nixal_observabilidade_sistema.py \
             nixal_integracao_gmail.py \
@@ -48,6 +49,7 @@ jobs:
         run: |
           python -m unittest -v \
             teste_nixal_display_routes \
+            teste_nixal_http_security \
             teste_nixal_agent_hub \
             teste_nixal_observabilidade_sistema \
             teste_nixal_capacidade_visual \
