@@ -1236,19 +1236,39 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 persistencia_operacional=persistencia_operacional,
             )
 
-            estado_publicado = {
-                "modo": (
-                    "residente"
-                    if presenca_efetiva.get("ativa")
-                    and presenca_efetiva.get("origem") == "presenca_maquina_nyxos"
-                    else estado_operacional.get("modo")
-                ),
-                "status": (
-                    "ativa"
-                    if presenca_efetiva.get("ativa")
-                    else estado_operacional.get("status")
-                ),
-            }
+            if presenca_efetiva.get("ativa"):
+                estado_publicado = {
+                    "modo": (
+                        "residente"
+                        if presenca_efetiva.get("origem") == "presenca_maquina_nyxos"
+                        else estado_operacional.get("modo")
+                    ),
+                    "status": "ativa",
+                }
+            else:
+                status_legado = str(
+                    estado_operacional.get("status") or ""
+                ).strip().lower()
+                legado_ja_encerrado = status_legado in {
+                    "encerrada",
+                    "encerrado",
+                    "inativa",
+                    "inativo",
+                    "erro",
+                    "falhou",
+                }
+                estado_publicado = {
+                    "modo": (
+                        estado_operacional.get("modo")
+                        if legado_ja_encerrado
+                        else "sem_sinal_recente"
+                    ),
+                    "status": (
+                        estado_operacional.get("status")
+                        if legado_ja_encerrado
+                        else "inativa"
+                    ),
+                }
 
             try:
                 delta = DELTA_NYXOS.contexto()
