@@ -137,7 +137,6 @@ class NyxalAgentHub:
             base = _env("LETTA_BASE_URL", "http://127.0.0.1:8283")
             safe_local = _safe_provider_base(base)
             safe_cloud = _safe_provider_base(base, allow_letta_cloud=True)
-            needs_key = urlsplit(base).hostname == "api.letta.com" if safe_cloud else False
             return bool(_env("LETTA_AGENT_ID") and (safe_local or (safe_cloud and _env("LETTA_API_KEY"))))
         return False
 
@@ -211,8 +210,8 @@ class NyxalAgentHub:
                 "perfil": "feminina pt-BR" if _env("NYXAL_KOKORO_VOICE", "pf_dora").startswith("pf_") else "configurável",
             },
             "gmail": {
-                "integracao": "Gmail API OAuth",
-                "estado": "consultar /api/integracoes/gmail/status",
+                "integracao": "Google Workspace OAuth somente leitura",
+                "estado": "consultar /api/integracoes/google/status",
             },
             "habilidades": {
                 "diretorio": str((__import__("pathlib").Path(__file__).resolve().parent / "skills")),
