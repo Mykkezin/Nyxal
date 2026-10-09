@@ -8,7 +8,7 @@ import sys
 import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from secrets import compare_digest
+from secrets import compare_digest, token_urlsafe
 
 from nixal_nucleo_conversacional import (
     NucleoConversacionalNixal,
@@ -27,13 +27,18 @@ from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_vps import VpsNyxOS
+from nixal_agent_hub import NyxalAgentHub
+from nixal_observabilidade_sistema import ObservabilidadeSistemaNixOS
+from nixal_integracao_gmail import IntegracaoGmailNixOS
+from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
+from urllib.parse import parse_qs, urlsplit
 
 
 BASE_DIR = Path(__file__).resolve().parent
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
-CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
+CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "http://127.0.0.1:3000")
 NUCLEO_CONVERSACIONAL = NucleoConversacionalNixal()
 INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
     transporte=TransporteConversacionalNixal(),
@@ -58,6 +63,10 @@ COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
     habilitada=False,
 )
 VPS_NYXOS = VpsNyxOS()
+AGENTE_NYXAL = NyxalAgentHub()
+OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
+GMAIL_NYXOS = IntegracaoGmailNixOS()
+CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -89,6 +98,27 @@ TTS_MODEL = Path(
         str(BASE_DIR / "voices/dii_pt-BR/dii_pt-BR.onnx"),
     )
 )
+
+
+def _precisa_contexto_sistema(mensagem: str) -> bool:
+    texto = mensagem.lower()
+    termos = (
+        "sistema", "cpu", "ram", "memória", "memoria", "processo", "serviço",
+        "servico", "serviços", "servicos", "recursos", "ocorrendo", "computador",
+        "máquina", "maquina", "rodando", "temperatura", "disco", "armazenamento",
+        "hardware", "saúde", "saude", "status do", "estado do", "residência",
+        "residencia", "uso da", "uso do", "está ativo", "esta ativo",
+    )
+    return any(termo in texto for termo in termos)
+
+
+def _precisa_contexto_email(mensagem: str) -> bool:
+    texto = mensagem.lower()
+    return any(termo in texto for termo in (
+        "email", "e-mail", "gmail", "caixa de entrada", "inbox",
+        "correio eletrônico", "correio eletronico", "meus e-mails",
+        "meus emails", "mensagens do email",
+    ))
 
 
 def json_bytes(payload: dict) -> bytes:
@@ -619,6 +649,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         return True
 
+    def _local_ou_autorizado(self) -> bool:
+        endereco = self.client_address[0] if self.client_address else ""
+        if endereco in {"127.0.0.1", "::1"}:
+            return True
+        return self._authorized()
+
     def do_OPTIONS(self) -> None:
         self.send_response(204)
         self.send_header(
@@ -636,6 +672,44 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
+        if not self._local_ou_autorizado():
+            return
+
+        if self.path == "/api/agent/image":
+            try:
+                content_length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                self._send_json(400, {"estado": "entrada_invalida", "motivo": "Content-Length inválido."})
+                return
+            if content_length <= 0 or content_length > 12 * 1024 * 1024:
+                self._send_json(400 if content_length <= 0 else 413, {
+                    "estado": "entrada_visual_invalida",
+                    "motivo": "O pedido precisa conter JSON e não pode exceder 12 MiB.",
+                })
+                return
+            try:
+                payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"estado": "entrada_visual_invalida", "motivo": "O corpo precisa ser JSON UTF-8 válido."})
+                return
+            if not isinstance(payload, dict):
+                self._send_json(400, {"estado": "entrada_visual_invalida", "motivo": "O corpo precisa ser um objeto JSON."})
+                return
+            try:
+                result = CAPACIDADE_VISUAL_NYXOS.gerar_ou_editar(
+                    prompt=payload.get("prompt", ""),
+                    imagem_base64=payload.get("imagem_base64"),
+                    mime_type=payload.get("mime_type"),
+                )
+                self._send_json(200, result)
+            except ValueError as erro:
+                self._send_json(400, {"estado": "entrada_visual_invalida", "motivo": str(erro)})
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "capacidade_visual_indisponivel", "motivo": str(erro)})
+            except Exception as erro:
+                self._send_json(502, {"estado": "falha_visual", "motivo": f"{type(erro).__name__}: operação visual indisponível."})
+            return
+
         if self.path in {"/api/vps/action", "/api/vps/provisionar"}:
             try:
                 content_length = int(self.headers.get("Content-Length", "0"))
@@ -925,7 +999,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     )
             return
 
-        if self.path != "/api/chat":
+        if self.path not in {"/api/chat", "/api/agent/chat"}:
             self._send_json(
                 404,
                 {
@@ -997,6 +1071,8 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         mensagem = payload.get("mensagem")
         sessao_id = payload.get("sessao")
+        if self.path == "/api/agent/chat" and sessao_id is None:
+            sessao_id = token_urlsafe(18)
 
         if not isinstance(mensagem, str) or not mensagem.strip():
             self._send_json(
@@ -1020,6 +1096,51 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 },
             )
             return
+
+        if self.path == "/api/agent/chat":
+            provedor = payload.get("provedor", os.environ.get("NYXAL_AGENT_PROVIDER", "auto"))
+            if not isinstance(provedor, str):
+                self._send_json(400, {"estado": "provedor_invalido", "motivo": "O campo provedor precisa ser texto."})
+                return
+            try:
+                provedor_resolvido = AGENTE_NYXAL.resolve_provider(provedor)
+                if provedor_resolvido != "nyxal":
+                    contexto_sistema = {}
+                    if _precisa_contexto_sistema(mensagem):
+                        contexto_sistema["observabilidade"] = OBSERVABILIDADE_NYXOS.snapshot()
+                        contexto_sistema["residencia"] = residencia_snapshot()
+                    if _precisa_contexto_email(mensagem):
+                        try:
+                            gmail_status = GMAIL_NYXOS.status()
+                            contexto_sistema["gmail"] = (
+                                GMAIL_NYXOS.listar_mensagens(query="is:unread newer_than:7d", limite=10)
+                                if gmail_status.get("estado") == "configurado"
+                                else gmail_status
+                            )
+                        except Exception:
+                            contexto_sistema["gmail"] = {
+                                "estado": "gmail_indisponivel",
+                                "somente_leitura": True,
+                                "motivo": "Não foi possível consultar o Gmail nesta solicitação.",
+                            }
+                    resposta_agente = AGENTE_NYXAL.responder(
+                        mensagem,
+                        sessao=sessao_id,
+                        provedor=provedor,
+                        contexto_sistema=contexto_sistema,
+                    )
+                    if not resposta_agente.get("fallback_local"):
+                        self._send_json(200, resposta_agente)
+                        return
+            except ValueError as erro:
+                self._send_json(400, {"estado": "provedor_invalido", "motivo": str(erro)})
+                return
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "provedor_indisponivel", "motivo": str(erro)})
+                return
+            except Exception as erro:
+                self._send_json(502, {"estado": "falha_no_agente", "motivo": f"{type(erro).__name__}: integração indisponível."})
+                return
 
         try:
             resultado = (
@@ -1075,6 +1196,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         )
 
     def do_GET(self) -> None:
+        if self.path != "/health" and not self._local_ou_autorizado():
+            return
+
         if self.path == "/":
             caminho = caminho_display("index.html") or caminho_interface("index.html")
             if caminho is None:
@@ -1135,6 +1259,46 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         if self.path == "/api/public/nyxos/contexto":
             self._send_json(200, read_nyxos_contexto())
+            return
+
+        if self.path == "/api/agent/status":
+            status_agente = AGENTE_NYXAL.contexto()
+            status_agente["criacao_visual"] = CAPACIDADE_VISUAL_NYXOS.status()
+            self._send_json(200, status_agente)
+            return
+
+        if self.path == "/api/agent/contexto":
+            self._send_json(200, {
+                "sucesso": True,
+                "estado": "contexto_observado",
+                "origem": "nyxal_agent_context",
+                "observabilidade": OBSERVABILIDADE_NYXOS.snapshot(),
+                "residencia": residencia_snapshot(),
+            })
+            return
+
+        if self.path.startswith("/api/integracoes/gmail/"):
+            parsed = urlsplit(self.path)
+            query = parse_qs(parsed.query)
+            try:
+                if parsed.path == "/api/integracoes/gmail/status":
+                    self._send_json(200, GMAIL_NYXOS.status())
+                    return
+                if parsed.path == "/api/integracoes/gmail/mensagens":
+                    pesquisa = query.get("q", ["is:unread newer_than:7d"])[0]
+                    limite = int(query.get("limit", ["10"])[0])
+                    self._send_json(200, GMAIL_NYXOS.listar_mensagens(pesquisa, limite))
+                    return
+                if parsed.path == "/api/integracoes/gmail/mensagem":
+                    self._send_json(200, GMAIL_NYXOS.obter_mensagem(query.get("id", [""])[0]))
+                    return
+                self._send_json(404, {"estado": "rota_gmail_nao_encontrada"})
+            except ValueError as erro:
+                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": str(erro)})
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": str(erro)})
+            except Exception as erro:
+                self._send_json(502, {"estado": "falha_gmail", "motivo": f"{type(erro).__name__}: integração indisponível."})
             return
 
         if self.path == "/api/public/residencia":
