@@ -149,6 +149,11 @@ class NyxalAgentHub:
                 "estado": "requer pareamento/configuracao no Hermes",
                 "segredo_presente_no_core": False,
             },
+            "criacao_visual": {
+                "modelo": _env("NYXAL_GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image"),
+                "configurado": bool(_env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")),
+                "funcao": "geração e edição de imagens",
+            },
             "voz": {
                 "motor": "Kokoro",
                 "voz_configurada": _env("NYXAL_KOKORO_VOICE", "pf_dora"),
@@ -298,7 +303,7 @@ class NyxalAgentHub:
         history: list[dict[str, str]] | None = None,
     ) -> str:
         api_key = _env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
-        model = _env("NYXAL_GEMINI_MODEL", "gemini-3.7-flash")
+        model = _env("NYXAL_GEMINI_MODEL", "gemini-3.8-flash")
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
             + quote(model, safe="")
