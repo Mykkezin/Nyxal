@@ -55,7 +55,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         }
         with patch.dict(os.environ, {
             "NYXAL_GEMINI_API_KEY": "test-key",
-            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-image",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
         }, clear=True):
             with patch("nixal_capacidade_visual.urlopen", return_value=FakeResponse(json.dumps(response).encode())) as mocked:
                 result = CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
@@ -68,7 +68,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertIn("x-goog-api-key", {key.lower() for key in request.headers})
         request_payload = json.loads(request.data.decode("utf-8"))
         self.assertFalse(request_payload["store"])
-        self.assertEqual(request_payload["model"], "gemini-3.1-flash-image")
+        self.assertEqual(request_payload["model"], "gemini-nano-banana-2.1")
 
     def test_status_nao_confunde_configuracao_com_chave(self):
         with patch.dict(os.environ, {}, clear=True):
