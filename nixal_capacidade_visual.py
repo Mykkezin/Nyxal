@@ -57,7 +57,7 @@ class CapacidadeVisualGeminiNixOS:
         if not api_key:
             raise RuntimeError("Gemini não configurado. Adicione NYXAL_GEMINI_API_KEY à configuração local.")
 
-        parts: list[dict[str, Any]] = [{"text": prompt}]
+        inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
         if imagem_base64:
             if not isinstance(mime_type, str) or mime_type.lower() not in ALLOWED_MIME:
                 raise ValueError("Formato de imagem não permitido. Use PNG, JPEG ou WebP.")
@@ -69,24 +69,19 @@ class CapacidadeVisualGeminiNixOS:
                 raise ValueError("O arquivo de imagem está vazio.")
             if len(binary) > MAX_INPUT_BYTES:
                 raise ValueError("A imagem excede o limite de 8 MiB.")
-            parts.append({
-                "inlineData": {
-                    "mimeType": mime_type.lower(),
-                    "data": base64.b64encode(binary).decode("ascii"),
-                }
+            inputs.insert(0, {
+                "type": "image",
+                "mime_type": mime_type.lower(),
+                "data": base64.b64encode(binary).decode("ascii"),
             })
 
         model = os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image").strip()
-        url = (
-            "https://generativelanguage.googleapis.com/v1beta/models/"
-            + quote(model, safe="")
-            + ":generateContent"
-        )
+        url = "https://generativelanguage.googleapis.com/v1beta/interactions"
         payload = {
-            "contents": [{"role": "user", "parts": parts}],
-            "generationConfig": {
-                "responseModalities": ["TEXT", "IMAGE"],
-            },
+            "model": model,
+            "input": inputs,
+            "response_format": [{"type": "text"}, {"type": "image"}],
+            "store": False,
         }
         request = Request(
             url,
@@ -109,29 +104,46 @@ class CapacidadeVisualGeminiNixOS:
         except (URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"Falha ao comunicar com Gemini Image ({type(exc).__name__}).") from exc
 
-        candidates = result.get("candidates", []) if isinstance(result, dict) else []
-        if not candidates or not isinstance(candidates[0], dict):
-            raise RuntimeError("Gemini Image não retornou candidatos. Verifique cota, região e modelo.")
-        response_content = candidates[0].get("content", {})
-        response_parts = response_content.get("parts", []) if isinstance(response_content, dict) else []
         image = None
         text_parts: list[str] = []
-        for item in response_parts if isinstance(response_parts, list) else []:
-            if not isinstance(item, dict):
+        steps = result.get("steps", []) if isinstance(result, dict) else []
+        for step in steps if isinstance(steps, list) else []:
+            if not isinstance(step, dict) or step.get("type") != "model_output":
                 continue
-            text_value = item.get("text")
-            if isinstance(text_value, str) and text_value.strip():
-                text_parts.append(text_value.strip())
-            for key in ("inlineData", "inline_data"):
-                image_data = item.get(key)
-                if isinstance(image_data, dict) and isinstance(image_data.get("data"), str):
-                    mime = image_data.get("mimeType") or image_data.get("mime_type") or "image/png"
-                    if mime not in ALLOWED_MIME:
-                        continue
-                    image = {"mime_type": mime, "base64": image_data["data"]}
-                    break
+            blocks = step.get("content", [])
+            for item in blocks if isinstance(blocks, list) else []:
+                if not isinstance(item, dict):
+                    continue
+                block_type = item.get("type")
+                if block_type == "text":
+                    text_value = item.get("text")
+                    if isinstance(text_value, str) and text_value.strip():
+                        text_parts.append(text_value.strip())
+                elif block_type == "image" and isinstance(item.get("data"), str):
+                    mime = item.get("mime_type") or "image/png"
+                    if mime in ALLOWED_MIME:
+                        image = {"mime_type": mime, "base64": item["data"]}
+                        break
             if image:
                 break
+
+        # Compatibilidade defensiva com respostas antigas do endpoint Gemini.
+        if image is None:
+            candidates = result.get("candidates", []) if isinstance(result, dict) else []
+            if candidates and isinstance(candidates[0], dict):
+                content = candidates[0].get("content", {})
+                blocks = content.get("parts", []) if isinstance(content, dict) else []
+                for item in blocks if isinstance(blocks, list) else []:
+                    if not isinstance(item, dict):
+                        continue
+                    if isinstance(item.get("text"), str) and item["text"].strip():
+                        text_parts.append(item["text"].strip())
+                    data = item.get("inlineData") or item.get("inline_data")
+                    if isinstance(data, dict) and isinstance(data.get("data"), str):
+                        mime = data.get("mimeType") or data.get("mime_type") or "image/png"
+                        if mime in ALLOWED_MIME:
+                            image = {"mime_type": mime, "base64": data["data"]}
+                            break
 
         if image is None:
             raise RuntimeError("Gemini respondeu sem imagem. Tente descrever melhor a edição ou consulte a cota do modelo.")
