@@ -39,8 +39,8 @@ read -r -p "Configurar Gemini direto no Nyxal como fallback do Hermes? [S/n]: " 
 if [[ -z "${use_gemini}" || "${use_gemini,,}" == "s" || "${use_gemini,,}" == "sim" ]]; then
     gemini_key="$(prompt_secret "Gemini API key (entrada oculta; Enter mantém a atual): ")"
     if [[ -n "${gemini_key}" ]]; then set_env "${NYXAL_ENV}" "NYXAL_GEMINI_API_KEY" "${gemini_key}"; fi
-    read -r -p "Modelo Gemini [gemini-3.7-flash]: " gemini_model
-    set_env "${NYXAL_ENV}" "NYXAL_GEMINI_MODEL" "${gemini_model:-gemini-3.7-flash}"
+    read -r -p "Modelo Gemini [gemini-3.8-flash]: " gemini_model
+    set_env "${NYXAL_ENV}" "NYXAL_GEMINI_MODEL" "${gemini_model:-gemini-3.8-flash}"
     set_env "${NYXAL_ENV}" "NYXAL_GEMINI_IMAGE_MODEL" "gemini-nano-banana-2.1"
 fi
 
