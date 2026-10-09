@@ -146,6 +146,11 @@ class NyxalAgentHub:
                 "estado": "requer pareamento/configuracao no Hermes",
                 "segredo_presente_no_core": False,
             },
+            "voz": {
+                "motor": "Kokoro",
+                "voz_configurada": _env("NYXAL_KOKORO_VOICE", "pf_dora"),
+                "perfil": "feminina pt-BR" if _env("NYXAL_KOKORO_VOICE", "pf_dora").startswith("pf_") else "configurável",
+            },
             "gmail": {
                 "integracao": "Gmail API OAuth",
                 "estado": "consultar /api/integracoes/gmail/status",
