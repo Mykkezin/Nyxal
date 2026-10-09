@@ -389,7 +389,7 @@ class NyxalAgentHub:
         if isinstance(result, list):
             blocks = result
         elif isinstance(result, dict):
-            items = result.get("blocks") or result.get("items") or []
+            items = result.get("blocks") or result.get("items") or result.get("data") or []
             blocks = items if isinstance(items, list) else []
         else:
             blocks = []
