@@ -73,11 +73,34 @@ if [[ "${use_letta,,}" == "s" || "${use_letta,,}" == "sim" ]]; then
     else set_env "${NYXAL_ENV}" "LETTA_MEMORY_SYNC_ENABLED" "false"; fi
 fi
 
+read -r -p "Configurar WhatsApp pelo gateway Hermes? [s/N]: " use_whatsapp
+if [[ "\${use_whatsapp,,}" == "s" || "\${use_whatsapp,,}" == "sim" ]]; then
+    read -r -p "Modo WhatsApp [self-chat/bot] (self-chat para usar sua conta): " whatsapp_mode
+    whatsapp_mode="\${whatsapp_mode:-self-chat}"
+    case "\${whatsapp_mode}" in self-chat|bot) ;; *) echo "Modo WhatsApp inválido." >&2; exit 2 ;; esac
+
+    read -r -p "Número(s) autorizado(s), com DDI e sem + (ex.: 5511999999999; vários separados por vírgula): " whatsapp_users
+    whatsapp_users="$(printf '%s' "\${whatsapp_users}" | tr -d '[:space:]+()-')"
+    if [[ ! "\${whatsapp_users}" =~ ^[0-9]{8,15}(,[0-9]{8,15})*$ ]]; then
+        echo "Número inválido. Use somente dígitos com DDI, separados por vírgula." >&2
+        exit 2
+    fi
+
+    set_env "\${HERMES_ENV}" "WHATSAPP_ENABLED" "true"
+    set_env "\${HERMES_ENV}" "WHATSAPP_MODE" "\${whatsapp_mode}"
+    set_env "\${HERMES_ENV}" "WHATSAPP_ALLOWED_USERS" "\${whatsapp_users}"
+    set_env "\${HERMES_ENV}" "WHATSAPP_ALLOW_ALL_USERS" "false"
+    ROOT="$(cd "$(dirname "\${BASH_SOURCE[0]}")/../.." && pwd)"
+    python3 "\${ROOT}/scripts/configurar_hermes_whatsapp_policy.py"
+fi
+
 set_env "${NYXAL_ENV}" "NYXAL_KOKORO_VOICE" "pf_dora"
 chmod 600 "${NYXAL_ENV}" "${HERMES_ENV}"
 echo "Configuração salva:"
 echo "  ${NYXAL_ENV}"
 echo "  ${HERMES_ENV}"
-echo "Próximos passos: hermes model; hermes gateway setup; configurar Gmail conforme docs/NYXAL_AGENT_STACK.md;"
+echo "Próximos passos: instale skills/identidade Nyxal com bash deploy/agent/instalar_nyxal_agent.sh;"
+echo "configure Gmail/Calendar/Contatos/Drive conforme docs/NYXAL_AGENT_STACK.md;"
+echo "se WhatsApp foi ativado, execute: hermes whatsapp e escaneie o QR; depois hermes gateway install && hermes gateway start;"
 echo "reiniciar com: systemctl --user restart nyxal-api.service"
 echo "verificar com: curl -fsS http://127.0.0.1:8010/api/agent/status"
