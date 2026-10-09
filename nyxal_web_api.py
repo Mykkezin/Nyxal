@@ -103,22 +103,32 @@ TTS_MODEL = Path(
 def _precisa_contexto_sistema(mensagem: str) -> bool:
     texto = mensagem.lower()
     termos = (
-        "sistema", "cpu", "ram", "memória", "memoria", "processo", "serviço",
-        "servico", "serviços", "servicos", "recursos", "ocorrendo", "computador",
-        "máquina", "maquina", "rodando", "temperatura", "disco", "armazenamento",
-        "hardware", "saúde", "saude", "status do", "estado do", "residência",
-        "residencia", "uso da", "uso do", "está ativo", "esta ativo",
+        "sistema", "nyxos", "nyxal", "pc", "cpu", "ram", "memória", "memoria",
+        "processo", "serviço", "servico", "serviços", "servicos", "recursos",
+        "ocorrendo", "acontecendo", "acontece", "o que está acontecendo",
+        "computador", "máquina", "maquina", "notebook", "rodando", "funcionando",
+        "travando", "lento", "temperatura", "disco", "armazenamento", "hardware",
+        "saúde", "saude", "status do", "estado do", "residência", "residencia",
+        "uso da", "uso do", "está ativo", "esta ativo", "problema na máquina",
+        "problema no computador",
     )
     return any(termo in texto for termo in termos)
 
 
 def _precisa_contexto_email(mensagem: str) -> bool:
     texto = mensagem.lower()
-    return any(termo in texto for termo in (
-        "email", "e-mail", "gmail", "caixa de entrada", "inbox",
-        "correio eletrônico", "correio eletronico", "meus e-mails",
-        "meus emails", "mensagens do email",
-    ))
+    contato_por_email = _precisa_contexto_contatos(texto)
+    termos_caixa = (
+        "gmail", "caixa de entrada", "inbox", "correio eletrônico",
+        "correio eletronico", "meu email", "meu e-mail", "meus emails",
+        "meus e-mails", "mensagens do email", "mensagens do e-mail",
+        "email recebido", "e-mail recebido", "e-mails recebidos",
+        "emails recebidos", "não lidos", "nao lidos", "buscar no email",
+        "procurar no email", "pesquisar email", "resumo dos emails",
+    )
+    if contato_por_email and not any(termo in texto for termo in termos_caixa):
+        return False
+    return any(termo in texto for termo in termos_caixa)
 
 
 def _precisa_contexto_agenda(mensagem: str) -> bool:
