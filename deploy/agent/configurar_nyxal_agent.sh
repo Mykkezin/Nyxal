@@ -41,7 +41,7 @@ if [[ "${use_gemini,,}" == "s" || "${use_gemini,,}" == "sim" ]]; then
     if [[ -n "${gemini_key}" ]]; then set_env "${NYXAL_ENV}" "NYXAL_GEMINI_API_KEY" "${gemini_key}"; fi
     read -r -p "Modelo Gemini [gemini-3.8-flash]: " gemini_model
     set_env "${NYXAL_ENV}" "NYXAL_GEMINI_MODEL" "${gemini_model:-gemini-3.8-flash}"
-    set_env "${NYXAL_ENV}" "NYXAL_GEMINI_IMAGE_MODEL" "gemini-3.1-flash-image"
+    set_env "${NYXAL_ENV}" "NYXAL_GEMINI_IMAGE_MODEL" "gemini-nano-banana-2.1"
 fi
 
 read -r -p "Conectar o Nyxal ao Hermes Agent local? [S/n]: " use_hermes
