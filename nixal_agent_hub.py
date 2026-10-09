@@ -273,15 +273,14 @@ class NyxalAgentHub:
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
             + quote(model, safe="")
-            + "/generateContent?"
-            + urlencode({"key": api_key})
+            + ":generateContent"
         )
         payload = {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": message}]}],
             "generationConfig": {"temperature": 0.4},
         }
-        result = _json_request(url, method="POST", payload=payload, timeout=60)
+        result = _json_request(url, method="POST", payload=payload, headers={"x-goog-api-key": api_key}, timeout=60)
         candidates = result.get("candidates", []) if isinstance(result, dict) else []
         if not candidates or not isinstance(candidates[0], dict):
             raise RuntimeError("Gemini não retornou candidatos de resposta.")
