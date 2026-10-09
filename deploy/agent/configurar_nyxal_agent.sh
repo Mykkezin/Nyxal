@@ -39,8 +39,9 @@ read -r -p "Configurar Gemini direto no Nyxal? [s/N]: " use_gemini
 if [[ "${use_gemini,,}" == "s" || "${use_gemini,,}" == "sim" ]]; then
     gemini_key="$(prompt_secret "Gemini API key (entrada oculta; Enter mantém a atual): ")"
     if [[ -n "${gemini_key}" ]]; then set_env "${NYXAL_ENV}" "NYXAL_GEMINI_API_KEY" "${gemini_key}"; fi
-    read -r -p "Modelo Gemini [gemini-3.7-flash]: " gemini_model
-    set_env "${NYXAL_ENV}" "NYXAL_GEMINI_MODEL" "${gemini_model:-gemini-3.7-flash}"
+    read -r -p "Modelo Gemini [gemini-3.8-flash]: " gemini_model
+    set_env "${NYXAL_ENV}" "NYXAL_GEMINI_MODEL" "${gemini_model:-gemini-3.8-flash}"
+    set_env "${NYXAL_ENV}" "NYXAL_GEMINI_IMAGE_MODEL" "gemini-3.1-flash-image"
 fi
 
 read -r -p "Conectar o Nyxal ao Hermes Agent local? [S/n]: " use_hermes
