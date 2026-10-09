@@ -12,7 +12,7 @@ import os
 import sys
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
 
 
@@ -68,9 +68,12 @@ def _config() -> tuple[str, str, str, bool]:
     write_enabled = values.get("LETTA_MEMORY_SYNC_ENABLED", "false").lower() in {"1", "true", "yes"}
     if not agent:
         raise RuntimeError("LETTA_AGENT_ID não está configurado em ~/.config/nyxal/nyxal.env.")
-    if not base.startswith(("http://127.0.0.1", "http://localhost", "http://[::1]", "https://api.letta.com")):
-        raise RuntimeError("URL Letta bloqueada: use loopback local ou https://api.letta.com.")
-    if base.startswith("https://api.letta.com") and not key:
+    parsed = urlsplit(base)
+    local_host = parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost", "::1"}
+    cloud_host = parsed.scheme == "https" and parsed.hostname == "api.letta.com"
+    if not (local_host or cloud_host):
+        raise RuntimeError("URL Letta bloqueada: use loopback local ou exatamente https://api.letta.com.")
+    if cloud_host and not key:
         raise RuntimeError("LETTA_API_KEY é obrigatório para Letta Cloud.")
     return base, quote(agent, safe=""), key, write_enabled
 
