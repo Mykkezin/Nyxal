@@ -100,3 +100,10 @@ The current architectural phase is closed at M5.24. The next phase must be deriv
 Nyxal can route conversational inference to an AMD Developer Cloud GPU VM through an OpenAI-compatible endpoint (for example, vLLM with ROCm). Ollama remains the default. This integration is opt-in, does not provision or start cloud instances, and preserves the existing governed evolution model.
 
 Setup, environment variables, SSH tunneling and connection checks: [AMD Developer Cloud — Nyxal/NyxOS](docs/AMD_DEVELOPER_CLOUD_NYXOS.md).
+
+## Optional agent stack
+
+The integration branch adds an optional agent hub for **Hermes Agent + Gemini**, with Letta persistent memory and a local Nyxal/AMD inference fallback. It also includes read-only Google Workspace access (Gmail, Calendar, Contacts and Drive metadata), local system observability, Gemini Nano Banana 2.1 image creation/editing, versioned skills and WhatsApp setup instructions. The default TTS voice is Kokoro `pf_dora`.
+
+External accounts are **not considered connected until keys, OAuth consent, services and any WhatsApp pairing have been configured and verified locally**. Google Workspace starts read-only; the host observer uses fixed read-only queries; secrets and messaging sessions remain outside Git. Follow [docs/NYXAL_AGENT_STACK.md](docs/NYXAL_AGENT_STACK.md) to configure the stack and [Gemini model documentation](https://ai.google.dev/gemini-api/docs/models) to verify model access.
+
