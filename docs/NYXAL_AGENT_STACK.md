@@ -144,6 +144,25 @@ bash deploy/agent/instalar_nyxal_agent.sh
 
 Elas abrangem design, edição de imagem, edição audiovisual, desenvolvimento, observabilidade do sistema e triagem de e-mails. Skills fornecem procedimentos; a capacidade real depende das ferramentas e dos aplicativos instalados.
 
+## 9. Verificação após configurar
+
+Depois de configurar Gemini/Hermes, autorizar Google Workspace, parear WhatsApp e instalar as skills, execute o preflight local:
+
+```bash
+cd ~/Nyxal
+bash deploy/agent/verificar_nyxal_agent.sh
+```
+
+Esse comando verifica a saúde da API, os endpoints do agente, a observabilidade local, o estado OAuth do Google Workspace e se o Display é servido em **http://127.0.0.1:8010/display/**. Os campos **configurado** indicam apenas que as credenciais/arquivos existem e passam pelas verificações locais — não significam que o provedor remoto respondeu.
+
+Para também testar a geração real de voz e conferir que a API devolve um arquivo WAV, execute:
+
+```bash
+bash deploy/agent/verificar_nyxal_agent.sh --test-voice
+```
+
+Esse segundo comando aciona o TTS local e pode levar mais tempo na primeira execução. A voz configurada é Kokoro **pf_dora**; se Kokoro falhar, a API pode tentar o fallback Piper, portanto confira o log e a voz ouvida antes de considerar a voz feminina validada.
+
 ## 8. Voz feminina
 
 O Nyxal Core já tem **NYXAL_KOKORO_VOICE=pf_dora** como padrão de TTS para voz feminina brasileira. O endpoint **POST /api/tts** continua usando Kokoro local. Se a voz local ou o modelo não estiverem instalados, o status do serviço deve ser tratado como indisponível — não como voz conectada.

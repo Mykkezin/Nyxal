@@ -38,6 +38,11 @@ jobs:
         run: |
           bash -n deploy/agent/configurar_nyxal_agent.sh
           bash -n deploy/agent/instalar_nyxal_agent.sh
+      - name: Validate local configuration scripts
+        run: |
+          bash -n deploy/agent/configurar_nyxal_agent.sh
+          bash -n deploy/agent/instalar_nyxal_agent.sh
+          bash -n deploy/agent/verificar_nyxal_agent.sh
       - name: Run focused unit tests
         run: |
           python -m unittest -v \
