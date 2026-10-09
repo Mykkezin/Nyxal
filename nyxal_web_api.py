@@ -894,6 +894,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             )
             return
 
+        if self.path == "/api/agent/chat" and not self._local_ou_autorizado():
+            return
+
         try:
             content_length = int(
                 self.headers.get("Content-Length", "0")
