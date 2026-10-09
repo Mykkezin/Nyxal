@@ -62,7 +62,7 @@ O teste chama GET /v1/models e retorna apenas os identificadores de modelos e o 
 | Variável | Finalidade |
 | --- | --- |
 | NYXAL_LLM_PROVIDER | Use amd_cloud para rotear o diálogo para a nuvem; o padrão existente é Ollama. |
-| NYXAL_AMD_CLOUD_BASE_URL | URL base do serviço OpenAI-compatible. O valor deve terminar em /v1; se omitido, o adaptador acrescenta /v1. |
+| NYXAL_AMD_CLOUD_BASE_URL | URL base do serviço OpenAI-compatible. Se o caminho não terminar em /v1, o adaptador acrescenta /v1; se a variável estiver vazia, o provedor permanece não configurado. |
 | NYXAL_AMD_CLOUD_MODEL | Nome de modelo que o servidor remoto anuncia. |
 | NYXAL_AMD_CLOUD_API_KEY | Chave opcional para o serviço de inferência. Nunca é devolvida pela API de status. |
 
