@@ -1366,6 +1366,35 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
 
+        if self.path.startswith("/api/integracoes/google/"):
+            parsed = urlsplit(self.path)
+            query = parse_qs(parsed.query)
+            try:
+                if parsed.path == "/api/integracoes/google/status":
+                    self._send_json(200, GMAIL_NYXOS.status())
+                    return
+                if parsed.path == "/api/integracoes/google/agenda":
+                    limite = int(query.get("limit", ["20"])[0])
+                    dias = int(query.get("days", ["7"])[0])
+                    self._send_json(200, GMAIL_NYXOS.listar_eventos(limite=limite, dias=dias))
+                    return
+                if parsed.path == "/api/integracoes/google/contatos":
+                    limite = int(query.get("limit", ["50"])[0])
+                    self._send_json(200, GMAIL_NYXOS.listar_contatos(limite=limite))
+                    return
+                if parsed.path == "/api/integracoes/google/drive":
+                    limite = int(query.get("limit", ["50"])[0])
+                    self._send_json(200, GMAIL_NYXOS.listar_arquivos_drive(limite=limite))
+                    return
+                self._send_json(404, {"estado": "rota_google_nao_encontrada"})
+            except ValueError as erro:
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+            except Exception as erro:
+                self._send_json(502, {"estado": "falha_google_workspace", "motivo": f"{type(erro).__name__}: integração indisponível."})
+            return
+
         if self.path.startswith("/api/integracoes/gmail/"):
             parsed = urlsplit(self.path)
             query = parse_qs(parsed.query)
