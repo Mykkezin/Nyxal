@@ -8,7 +8,7 @@ API_BASE="${NYXAL_API_BASE:-http://127.0.0.1:8010}"
 TEST_VOICE="false"
 if [[ "${1:-}" == "--test-voice" ]]; then
   TEST_VOICE="true"
-elif [[ ${#} -gt 0 ]]; then
+elif [[ $# -gt 0 ]]; then
   echo "Uso: $0 [--test-voice]" >&2
   exit 2
 fi
