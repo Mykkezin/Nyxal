@@ -56,9 +56,9 @@ class DialogoQwenNixal:
         if modelo is not None:
             self.modelo = modelo
         elif provedor_amd_cloud:
-            self.modelo = os.environ.get(
-                "NYXAL_AMD_CLOUD_MODEL",
-                AmdDeveloperCloud.MODELO_PADRAO,
+            self.modelo = (
+                os.environ.get("NYXAL_AMD_CLOUD_MODEL")
+                or AmdDeveloperCloud.MODELO_PADRAO
             )
         else:
             self.modelo = os.environ.get(
