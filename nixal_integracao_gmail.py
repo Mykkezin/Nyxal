@@ -118,8 +118,8 @@ class IntegracaoGmailNixOS:
             raise RuntimeError("Token Google expirado ou inválido; execute novamente o fluxo OAuth.")
         return credentials
 
-    def _service(self):
-        return self._google_service("gmail", "v1")
+    def _service(self, service_name: str = "gmail", version: str = "v1"):
+        return self._google_service(service_name, version)
 
     def _google_service(self, service_name: str, version: str):
         try:
@@ -189,7 +189,7 @@ class IntegracaoGmailNixOS:
     def listar_eventos(self, limite: int = 20, dias: int = 7) -> dict[str, Any]:
         limite = max(1, min(int(limite), 50))
         dias = max(1, min(int(dias), 14))
-        service = self._google_service("calendar", "v3")
+        service = self._service("calendar", "v3")
         start = datetime.now(timezone.utc)
         end = start + timedelta(days=dias)
         response = service.events().list(
@@ -219,7 +219,7 @@ class IntegracaoGmailNixOS:
 
     def listar_contatos(self, limite: int = 50) -> dict[str, Any]:
         limite = max(1, min(int(limite), 100))
-        service = self._google_service("people", "v1")
+        service = self._service("people", "v1")
         response = service.people().connections().list(
             resourceName="people/me",
             pageSize=limite,
@@ -245,7 +245,7 @@ class IntegracaoGmailNixOS:
 
     def listar_arquivos_drive(self, limite: int = 50) -> dict[str, Any]:
         limite = max(1, min(int(limite), 100))
-        service = self._google_service("drive", "v3")
+        service = self._service("drive", "v3")
         response = service.files().list(
             q="trashed = false",
             pageSize=limite,
