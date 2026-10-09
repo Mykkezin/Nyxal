@@ -34,6 +34,12 @@ jobs:
             scripts/autorizar_gmail_nyxal.py \
             scripts/configurar_hermes_whatsapp_policy.py \
             scripts/nyxal_letta_memory.py
+      - name: Validate local setup scripts
+        run: |
+          bash -n deploy/agent/configurar_nyxal_agent.sh
+          bash -n deploy/agent/instalar_nyxal_agent.sh
+      - name: Validate resident systemd contract
+        run: python teste_m5_9_residencia_linux.py
       - name: Run focused unit tests
         run: |
           python -m unittest -v \
@@ -41,5 +47,4 @@ jobs:
             teste_nixal_observabilidade_sistema \
             teste_nixal_capacidade_visual \
             teste_nixal_integracao_google \
-            teste_nixal_residencia \
             teste_nixal_vps
