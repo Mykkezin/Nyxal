@@ -109,6 +109,15 @@ class CapacidadeVisualGeminiNixOS:
 
         image = None
         text_parts: list[str] = []
+        if isinstance(result, dict):
+            output_text = result.get("output_text")
+            if isinstance(output_text, str) and output_text.strip():
+                text_parts.append(output_text.strip())
+            output_image = result.get("output_image")
+            if isinstance(output_image, dict) and isinstance(output_image.get("data"), str):
+                mime = output_image.get("mime_type") or "image/png"
+                if mime in ALLOWED_MIME:
+                    image = {"mime_type": mime, "base64": output_image["data"]}
         steps = result.get("steps", []) if isinstance(result, dict) else []
         for step in steps if isinstance(steps, list) else []:
             if not isinstance(step, dict) or step.get("type") != "model_output":
