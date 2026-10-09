@@ -2,10 +2,21 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
+import types
 import unittest
 from unittest.mock import patch
 
+try:
+    import ollama  # noqa: F401
+except ImportError:
+    ollama_stub = types.ModuleType("ollama")
+    ollama_stub.chat = lambda **_kwargs: None
+    sys.modules["ollama"] = ollama_stub
+
 from nixal_amd_developer_cloud import AmdCloudChatClient, AmdDeveloperCloud
+from nixal_dialogo_qwen import DialogoQwenNixal
 
 
 class FakeResponse:
@@ -87,6 +98,17 @@ class AmdDeveloperCloudTest(unittest.TestCase):
         self.assertFalse(payload["stream"])
         self.assertEqual(payload["temperature"], 0.4)
         self.assertEqual(request.get_header("Authorization"), "Bearer secret-token")
+
+    def test_dialogue_selects_cloud_provider_when_configured(self) -> None:
+        env = {
+            "NYXAL_LLM_PROVIDER": "amd_cloud",
+            "NYXAL_AMD_CLOUD_BASE_URL": "http://127.0.0.1:8000/v1",
+            "NYXAL_AMD_CLOUD_MODEL": "amd-test-model",
+        }
+        with patch.dict(os.environ, env):
+            dialogo = DialogoQwenNixal()
+        self.assertIsInstance(dialogo.cliente, AmdCloudChatClient)
+        self.assertEqual(dialogo.modelo, "amd-test-model")
 
     def test_chat_refuses_to_call_without_endpoint(self) -> None:
         cloud = AmdDeveloperCloud(base_url="")
