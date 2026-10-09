@@ -29,7 +29,7 @@ class CapacidadeVisualGeminiNixOS:
             "origem": self.FONTE,
             "versao": self.VERSAO,
             "estado": "configurado" if configured else "configuracao_pendente",
-            "modelo": os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image"),
+            "modelo": os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "gemini-nano-banana-2.1"),
             "entrada_max_bytes": MAX_INPUT_BYTES,
             "mime_permitidos": sorted(ALLOWED_MIME),
             "salva_upload_no_servidor": False,
@@ -78,7 +78,7 @@ class CapacidadeVisualGeminiNixOS:
                 "data": base64.b64encode(binary).decode("ascii"),
             })
 
-        model = os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image").strip()
+        model = os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "gemini-nano-banana-2.1").strip()
         url = "https://generativelanguage.googleapis.com/v1beta/interactions"
         payload = {
             "model": model,
