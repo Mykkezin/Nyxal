@@ -94,3 +94,9 @@ The goal is a **living software system** with an operational habitat, persistent
 ## Status
 This is an active experimental engineering project.
 The current architectural phase is closed at M5.24. The next phase must be derived from a new architectural review and measurable operational need rather than from an automatically incremented milestone.
+
+## Optional inference backend
+
+Nyxal can route conversational inference to an AMD Developer Cloud GPU VM through an OpenAI-compatible endpoint (for example, vLLM with ROCm). Ollama remains the default. This integration is opt-in, does not provision or start cloud instances, and preserves the existing governed evolution model.
+
+Setup, environment variables, SSH tunneling and connection checks: [AMD Developer Cloud — Nyxal/NyxOS](docs/AMD_DEVELOPER_CLOUD_NYXOS.md).
