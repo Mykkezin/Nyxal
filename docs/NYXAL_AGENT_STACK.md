@@ -95,7 +95,7 @@ A integração usa apenas **gmail.readonly**. Envio e edição precisam de escop
 
 ## 5. WhatsApp
 
-O caminho com Hermes é **hermes gateway setup**. Escolha a integração disponível na sua conta, configure remetentes permitidos e verifique **hermes gateway status**. A conta/telefone não pode ser conectada daqui sem pareamento ou credenciais fornecidas por você.
+Para parear uma conta pessoal com o bridge integrado do Hermes, use **hermes whatsapp** no terminal; o assistente mostra um QR. No celular, abra WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho e escaneie esse QR. Depois configure a lista de remetentes permitidos em **~/.hermes/config.yaml** / **~/.hermes/.env**, execute **hermes gateway setup** conforme as opções instaladas e inicie o gateway Hermes. Confirme o estado com **hermes gateway status**. A conta/telefone não está conectado até que o pareamento termine com sucesso.
 
 Opções atuais:
 - WhatsApp Cloud API oficial: exige Meta Business, credenciais e webhook HTTPS público; tipicamente usa um número de negócios separado.
