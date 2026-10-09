@@ -1,0 +1,45 @@
+name: Nyxal Agent Stack Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/nyxal-agent-stack-20261009]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-agent-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile changed integration modules
+        run: |
+          python -m compileall -q \
+            nyxal_web_api.py \
+            nixal_agent_hub.py \
+            nixal_observabilidade_sistema.py \
+            nixal_integracao_gmail.py \
+            nixal_capacidade_visual.py \
+            scripts/autorizar_gmail_nyxal.py \
+            scripts/configurar_hermes_whatsapp_policy.py \
+            scripts/nyxal_letta_memory.py
+      - name: Run focused unit tests
+        run: |
+          python -m unittest -v \
+            teste_nixal_agent_hub \
+            teste_nixal_observabilidade_sistema \
+            teste_nixal_capacidade_visual \
+            teste_nixal_integracao_google \
+            teste_nixal_residencia \
+            teste_nixal_vps
