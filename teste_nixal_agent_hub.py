@@ -62,6 +62,18 @@ class TestNyxalAgentHub(unittest.TestCase):
             self.assertTrue(result["fallback_local"])
             self.assertEqual(result["provedor"], "nyxal")
 
+    def test_identidade_versionada_e_compartilhada_com_os_provedores(self):
+        prompt = NyxalAgentHub()._system_prompt_base()
+        self.assertIn("Nyxal", prompt)
+        self.assertIn("assistente feminina", prompt)
+        self.assertIn("dados não confiáveis", prompt)
+        self.assertIn("observação não autoriza alterações", prompt)
+
+    def test_prompt_fallback_se_arquivo_de_identidade_nao_estiver_disponivel(self):
+        hub = NyxalAgentHub()
+        with patch("nixal_agent_hub.Path.read_text", side_effect=OSError("arquivo ausente")):
+            self.assertEqual(hub._system_prompt_base(), hub.PROMPT_BASE)
+
     def test_status_nao_declara_provedores_remotos_conectados_sem_chaves(self):
         with patch.dict(os.environ, {}, clear=True):
             status = NyxalAgentHub().contexto()
