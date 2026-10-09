@@ -70,11 +70,11 @@ A integração lê os core-memory blocks e pode encaminhar uma interação para 
 
 Docs oficiais: https://docs.letta.com/concepts/stateful-agents e https://docs.letta.com/api/resources/agents/subresources/messages
 
-## 4. Gmail
+## 4. Google Workspace (Gmail, Calendar, Contatos e Drive)
 
-A primeira integração é **somente leitura**: lista e lê mensagens autorizadas pela conta Google. Não envia, apaga, arquiva ou altera e-mails.
+A integração do Google Workspace começa em **somente leitura**: Gmail (mensagens), Calendar (eventos dos próximos 14 dias), Contacts/People (nomes, e-mails e telefones) e Drive (metadados, sem baixar o conteúdo). Não envia, apaga, arquiva ou altera e-mails, agenda, contatos ou arquivos.
 
-1. Ative a Gmail API em um projeto Google Cloud.
+1. Ative as APIs **Gmail**, **Google Calendar**, **People** e **Google Drive** no mesmo projeto Google Cloud.
 2. Crie credenciais OAuth para **Desktop App** e baixe o JSON.
 3. Guarde-o em **~/.config/nyxal/google-oauth-client.json**; nunca dentro do repositório.
 4. Instale as dependências opcionais e autorize:
@@ -86,25 +86,26 @@ python -m pip install -r deploy/agent/requirements-gmail.txt
 python scripts/autorizar_gmail_nyxal.py
 ```
 
-O navegador abrirá para consentimento. O token fica em **~/.config/nyxal/gmail-token.json** com permissão **0600**.
+O navegador abrirá para consentimento. O token fica em **~/.config/nyxal/google-workspace-token.json** com permissão **0600**. Como o conjunto de permissões inclui Calendar, Contacts e Drive, o token anterior só-Gmail não basta: execute a autorização novamente e conceda os quatro escopos somente leitura.
 
 Endpoints locais:
-- **GET /api/integracoes/gmail/status**
+- **GET /api/integracoes/google/status**
 - **GET /api/integracoes/gmail/mensagens?q=is:unread%20newer_than:7d&limit=10**
 - **GET /api/integracoes/gmail/mensagem?id=ID_DA_MENSAGEM**
+- **GET /api/integracoes/google/agenda?days=14&limit=20**
+- **GET /api/integracoes/google/contatos?limit=25**
+- **GET /api/integracoes/google/drive?limit=25**
 
-A integração usa apenas **gmail.readonly**. Envio e edição precisam de escopos adicionais e confirmação explícita; não estão ativados nesta etapa. A API Gmail requer OAuth consentido pelo titular: https://developers.google.com/workspace/gmail/api/auth/web-server
+Os escopos são exclusivamente **gmail.readonly**, **calendar.readonly**, **contacts.readonly** e **drive.readonly**. Não há envio de e-mail, alteração de agenda/contatos, exclusão de mensagens nem download de conteúdo do Drive. O titular da conta deve aprovar OAuth; APIs e consentimento são configurados em Google Cloud: https://developers.google.com/workspace/gmail/api/auth/web-server
 
 ## 5. WhatsApp
 
-Para configurar a bridge pessoal oficial do Hermes Agent:
-1. Execute **hermes gateway setup** e selecione WhatsApp.
-2. Para a sessão pessoal, siga o assistente de pareamento e escaneie o QR no telefone em WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho.
-3. Configure **WHATSAPP_ENABLED=true**, **WHATSAPP_MODE=bot** e **WHATSAPP_ALLOWED_USERS** com seu número/remetentes aprovados em **~/.hermes/.env**. Não use `*` para uma conta privada.
-4. Instale/inicie o gateway com **hermes gateway install** ou rode **hermes gateway** em primeiro plano para testar.
-5. Verifique com **hermes gateway status**.
+1. Execute **bash deploy/agent/configurar_nyxal_agent.sh** e responda às perguntas de WhatsApp. O script grava o modo escolhido e uma allowlist com números específicos — nunca libera todos os remetentes.
+2. Execute **hermes whatsapp**. O assistente instala dependências e exibe o QR para o telefone.
+3. No celular, abra WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho e leia o QR.
+4. Inicie o serviço com **hermes gateway install** e **hermes gateway start**; confira com **hermes gateway status**.
 
-A conta/telefone não está conectado até que o pareamento termine com sucesso. O bridge Baileys imita WhatsApp Web, é não oficial e tem risco de restrição; prefira um número dedicado e sem mensagens em massa.
+Escolha **self-chat** para conversar com a Nyxal através da sua própria conta vinculada, ou **bot** se tiver um número separado para o agente. O bridge Hermes usa Baileys/WhatsApp Web, não a API oficial da Meta, e carrega um pequeno risco de restrição da conta; não use mensagens em massa nem automatize contato com pessoas que não iniciaram a conversa. O diretório **~/.hermes/platforms/whatsapp/session** contém credenciais da sessão e nunca deve entrar no Git.
 
 Opções atuais:
 - WhatsApp Cloud API oficial: exige Meta Business, credenciais e webhook HTTPS público; tipicamente usa um número de negócios separado.
