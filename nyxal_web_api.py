@@ -35,13 +35,14 @@ from nixal_observabilidade_sistema import ObservabilidadeSistemaNixOS
 from nixal_integracao_gmail import IntegracaoGmailNixOS
 from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
 from urllib.parse import parse_qs, urlsplit
+from nixal_http_security import cors_response_origin, origin_is_allowed, parse_allowed_origins
 
 
 BASE_DIR = Path(__file__).resolve().parent
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
-CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
+CORS_ORIGINS = parse_allowed_origins(os.environ.get("NYXAL_API_CORS_ORIGIN", ""))
 NUCLEO_CONVERSACIONAL = NucleoConversacionalNixal()
 INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
     transporte=TransporteConversacionalNixal(),
@@ -611,18 +612,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             "Content-Length",
             str(len(body)),
         )
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            CORS_ORIGIN,
-        )
-        self.send_header(
-            "Access-Control-Allow-Headers",
-            "Authorization, Content-Type",
-        )
-        self.send_header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS",
-        )
+        self._send_cors_headers()
         self.end_headers()
 
         self.wfile.write(body)
@@ -642,20 +632,21 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             "Content-Length",
             str(len(body)),
         )
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            CORS_ORIGIN,
-        )
-        self.send_header(
-            "Access-Control-Allow-Headers",
-            "Authorization, Content-Type",
-        )
-        self.send_header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS",
-        )
+        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_cors_headers(self) -> None:
+        origin = cors_response_origin(self.headers.get("Origin"), CORS_ORIGINS)
+        if origin is None:
+            return
+        self.send_header("Access-Control-Allow-Origin", origin)
+        self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
+    def _origin_autorizada(self) -> bool:
+        return origin_is_allowed(self.headers.get("Origin"), CORS_ORIGINS)
 
     def _authorized(self) -> bool:
         if not API_TOKEN:
@@ -702,22 +693,20 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         return self._authorized()
 
     def do_OPTIONS(self) -> None:
+        if not self._origin_autorizada():
+            self.send_response(403)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         self.send_response(204)
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            CORS_ORIGIN,
-        )
-        self.send_header(
-            "Access-Control-Allow-Headers",
-            "Authorization, Content-Type",
-        )
-        self.send_header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS",
-        )
+        self._send_cors_headers()
         self.end_headers()
 
     def do_POST(self) -> None:
+        if not self._origin_autorizada():
+            self._send_json(403, {"estado": "origem_nao_autorizada"})
+            return
+
         if self.path == "/api/agent/chat" and not self._local_ou_autorizado():
             return
 
@@ -1265,6 +1254,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         )
 
     def do_GET(self) -> None:
+        if not self._origin_autorizada():
+            self._send_json(403, {"estado": "origem_nao_autorizada"})
+            return
+
         parsed_path = urlsplit(self.path).path
         is_agent_or_workspace = (
             parsed_path in {"/api/agent/status", "/api/agent/contexto", "/api/integracoes/google/status", "/api/integracoes/gmail/status"}
