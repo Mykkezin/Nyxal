@@ -28,6 +28,10 @@ from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_vps import VpsNyxOS
 from nixal_residencia import ResidenciaNyxOS
+from nixal_agent_hub import NyxalAgentHub
+from nixal_observabilidade_sistema import ObservabilidadeSistemaNixOS
+from nixal_integracao_gmail import IntegracaoGmailNixOS
+from urllib.parse import parse_qs, urlsplit
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -60,6 +64,9 @@ COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
 )
 VPS_NYXOS = VpsNyxOS()
 RESIDENCIA_NYXOS = ResidenciaNyxOS()
+AGENTE_NYXAL = NyxalAgentHub()
+OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
+GMAIL_NYXOS = IntegracaoGmailNixOS()
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -565,6 +572,13 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         return True
 
+    def _local_ou_autorizado(self) -> bool:
+        """Permite integrações sensíveis em loopback; demais clientes exigem bearer token."""
+        endereco = self.client_address[0] if self.client_address else ""
+        if endereco in {"127.0.0.1", "::1"}:
+            return True
+        return self._authorized()
+
     def do_OPTIONS(self) -> None:
         self.send_response(204)
         self.send_header(
@@ -871,7 +885,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     )
             return
 
-        if self.path != "/api/chat":
+        if self.path not in {"/api/chat", "/api/agent/chat"}:
             self._send_json(
                 404,
                 {
@@ -966,6 +980,37 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 },
             )
             return
+
+        if self.path == "/api/agent/chat":
+            provedor = payload.get("provedor", "auto")
+            if not isinstance(provedor, str):
+                self._send_json(400, {"estado": "provedor_invalido", "motivo": "O campo provedor precisa ser texto."})
+                return
+            try:
+                provedor_resolvido = AGENTE_NYXAL.resolve_provider(provedor)
+                if provedor_resolvido != "nyxal":
+                    # Snapshot somente leitura: não carrega conteúdo bruto de arquivos pessoais.
+                    contexto_sistema = {
+                        "observabilidade": OBSERVABILIDADE_NYXOS.snapshot(),
+                        "residencia": RESIDENCIA_NYXOS.snapshot(),
+                    }
+                    resposta_agente = AGENTE_NYXAL.responder(
+                        mensagem,
+                        sessao=sessao_id,
+                        provedor=provedor,
+                        contexto_sistema=contexto_sistema,
+                    )
+                    self._send_json(200, resposta_agente)
+                    return
+            except ValueError as erro:
+                self._send_json(400, {"estado": "provedor_invalido", "motivo": str(erro)})
+                return
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "provedor_indisponivel", "motivo": str(erro)})
+                return
+            except Exception as erro:
+                self._send_json(502, {"estado": "falha_no_agente", "motivo": f"{type(erro).__name__}: integração indisponível."})
+                return
 
         try:
             resultado = (
@@ -1069,6 +1114,51 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         if self.path == "/api/public/nyxos/contexto":
             self._send_json(200, read_nyxos_contexto())
+            return
+
+        if self.path == "/api/agent/status":
+            if not self._local_ou_autorizado():
+                return
+            self._send_json(200, AGENTE_NYXAL.contexto())
+            return
+
+        if self.path == "/api/agent/contexto":
+            if not self._local_ou_autorizado():
+                return
+            self._send_json(200, {
+                "sucesso": True,
+                "estado": "contexto_observado",
+                "origem": "nyxal_agent_context",
+                "observabilidade": OBSERVABILIDADE_NYXOS.snapshot(),
+                "residencia": RESIDENCIA_NYXOS.snapshot(),
+            })
+            return
+
+        if self.path.startswith("/api/integracoes/gmail/"):
+            if not self._local_ou_autorizado():
+                return
+            parsed = urlsplit(self.path)
+            query = parse_qs(parsed.query)
+            try:
+                if parsed.path == "/api/integracoes/gmail/status":
+                    self._send_json(200, GMAIL_NYXOS.status())
+                    return
+                if parsed.path == "/api/integracoes/gmail/mensagens":
+                    pesquisa = query.get("q", ["is:unread newer_than:7d"])[0]
+                    limite = int(query.get("limit", ["10"])[0])
+                    self._send_json(200, GMAIL_NYXOS.listar_mensagens(pesquisa, limite))
+                    return
+                if parsed.path == "/api/integracoes/gmail/mensagem":
+                    mensagem_id = query.get("id", [""])[0]
+                    self._send_json(200, GMAIL_NYXOS.obter_mensagem(mensagem_id))
+                    return
+                self._send_json(404, {"estado": "rota_gmail_nao_encontrada"})
+            except ValueError as erro:
+                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": str(erro)})
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": str(erro)})
+            except Exception as erro:
+                self._send_json(502, {"estado": "falha_gmail", "motivo": f"{type(erro).__name__}: integração indisponível."})
             return
 
         if self.path == "/health":
