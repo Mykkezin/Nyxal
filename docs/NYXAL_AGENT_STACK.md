@@ -97,7 +97,14 @@ A integração usa apenas **gmail.readonly**. Envio e edição precisam de escop
 
 ## 5. WhatsApp
 
-Para parear uma conta pessoal com o bridge integrado do Hermes, use **hermes whatsapp** no terminal; o assistente mostra um QR. No celular, abra WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho e escaneie esse QR. Depois configure a lista de remetentes permitidos em **~/.hermes/config.yaml** / **~/.hermes/.env**, execute **hermes gateway setup** conforme as opções instaladas e inicie o gateway Hermes. Confirme o estado com **hermes gateway status**. A conta/telefone não está conectado até que o pareamento termine com sucesso.
+Para configurar a bridge pessoal oficial do Hermes Agent:
+1. Execute **hermes gateway setup** e selecione WhatsApp.
+2. Para a sessão pessoal, siga o assistente de pareamento e escaneie o QR no telefone em WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho.
+3. Configure **WHATSAPP_ENABLED=true**, **WHATSAPP_MODE=bot** e **WHATSAPP_ALLOWED_USERS** com seu número/remetentes aprovados em **~/.hermes/.env**. Não use `*` para uma conta privada.
+4. Instale/inicie o gateway com **hermes gateway install** ou rode **hermes gateway** em primeiro plano para testar.
+5. Verifique com **hermes gateway status**.
+
+A conta/telefone não está conectado até que o pareamento termine com sucesso. O bridge Baileys imita WhatsApp Web, é não oficial e tem risco de restrição; prefira um número dedicado e sem mensagens em massa.
 
 Opções atuais:
 - WhatsApp Cloud API oficial: exige Meta Business, credenciais e webhook HTTPS público; tipicamente usa um número de negócios separado.
@@ -108,6 +115,8 @@ Guias:
 - https://developers.facebook.com/documentation/business-messaging/whatsapp/get-started
 - https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/messaging/whatsapp-cloud.md
 - https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/messaging/whatsapp.md
+
+Antes de expor o gateway, instale as skills e identidade Nyxal com `bash deploy/agent/instalar_nyxal_agent.sh`. O instalador faz backup antes de substituir um `~/.hermes/SOUL.md` existente e pergunta antes de sobrescrever.
 
 ## 6. Sistema e serviços
 
