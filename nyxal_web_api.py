@@ -1320,7 +1320,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self._send_json(200, GMAIL_NYXOS.status())
             return
 
-        if self.path == "/api/integracoes/google/agenda":
+        if urlsplit(self.path).path == "/api/integracoes/google/agenda":
             parsed = urlsplit(self.path)
             query = parse_qs(parsed.query)
             try:
@@ -1336,7 +1336,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
 
-        if self.path == "/api/integracoes/google/contatos":
+        if urlsplit(self.path).path == "/api/integracoes/google/contatos":
             parsed = urlsplit(self.path)
             query = parse_qs(parsed.query)
             try:
@@ -1351,7 +1351,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
 
-        if self.path == "/api/integracoes/google/drive":
+        if urlsplit(self.path).path == "/api/integracoes/google/drive":
             parsed = urlsplit(self.path)
             query = parse_qs(parsed.query)
             try:
