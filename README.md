@@ -61,6 +61,14 @@ desktop visual do NyxOS
 
 The current NyxOS line remains a Linux-first habitat. A custom kernel is a later direction, not a shortcut around the current architecture and governance work.
 
+## Agent integrations (experimental)
+
+The integration branch adds an optional agent hub for the local Nyxal/Qwen core, Gemini API, Hermes Agent and Letta memory, plus read-only Linux observability and Gmail OAuth. It also includes dedicated skills for design, image editing, audiovisual editing, email triage, system observability and development.
+
+These integrations are **not considered connected until configured and verified on the user's machine**. Provider keys, OAuth client files, mail tokens and WhatsApp sessions must stay outside Git. Gmail access is initially read-only. System observation is read-only; privileged actions require separate authorization.
+
+See [docs/NYXAL_AGENT_STACK.md](docs/NYXAL_AGENT_STACK.md) for configuration, security boundaries, APIs, voice and WhatsApp setup.
+
 ## Evolution pipeline
 ```
 limitation → hypothesis → formal request → experimental artifact
