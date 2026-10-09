@@ -8,7 +8,7 @@ import sys
 import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from secrets import compare_digest
+from secrets import compare_digest, token_urlsafe
 
 from nixal_nucleo_conversacional import (
     NucleoConversacionalNixal,
@@ -617,6 +617,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
+        if not self._local_ou_autorizado():
+            return
+
         if self.path in {"/api/vps/action", "/api/vps/provisionar"}:
             try:
                 content_length = int(self.headers.get("Content-Length", "0"))
@@ -981,6 +984,8 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         mensagem = payload.get("mensagem")
         sessao_id = payload.get("sessao")
+        if self.path == "/api/agent/chat" and sessao_id is None:
+            sessao_id = token_urlsafe(18)
 
         if not isinstance(mensagem, str) or not mensagem.strip():
             self._send_json(
