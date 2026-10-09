@@ -8,36 +8,49 @@ A integração não provisiona VMs, não altera cobranças da AMD e não ativa a
 
 ## 1. Criar o ambiente AMD
 
-1. Entre na [AMD Developer Cloud](https://www.amd.com/en/developer/resources/cloud-access/amd-developer-cloud.html) usando a conta do programa de desenvolvedores AMD.
-2. Crie uma VM GPU elegível e escolha uma imagem ROCm/vLLM, quando disponível.
-3. Siga o guia oficial [How to Get Started on the AMD Developer Cloud](https://www.amd.com/en/developer/resources/technical-articles/2025/how-to-get-started-on-the-amd-developer-cloud-.html) para iniciar a VM e adicionar uma chave SSH.
-4. Inicie um servidor de inferência com API OpenAI-compatible e confirme que o endpoint /v1/models responde dentro da VM.
+1. Acesse a [AMD Developer Cloud](https://www.amd.com/en/developer/resources/cloud-access/amd-developer-cloud.html) usando as credenciais do programa AMD AI Developer.
+2. Crie uma instância GPU MI300X elegível, selecione a imagem oficial ROCm e cadastre uma chave SSH.
+3. Siga o guia AMD de 2026 [Deploying Hermes Agent for Free on AMD Developer Cloud with open models and vLLM](https://www.amd.com/en/developer/resources/technical-articles/2026/deploying-hermes-agent-for-free-on-amd-developer-cloud-with-open.html).
+4. No computador NyxOS, copie o lançador para a VM (substitua o IP pelos dados exibidos no painel):
 
-Os nomes de modelos válidos dependem do modelo instalado e do nome que o servidor anuncia. Configure `NYXAL_AMD_CLOUD_MODEL` com esse identificador exato.
+    scp deploy/amd_cloud/start_vllm_rocm.sh root@<IP_DA_VM>:/root/
+    ssh root@<IP_DA_VM>
+
+5. Na sessão SSH da VM, execute:
+
+    bash /root/start_vllm_rocm.sh
+
+O lançador usa como padrão o modelo `Qwen/Qwen3.5-35B-A3B`, a imagem `vllm/vllm-openai-rocm:latest` e a porta 8001, acompanhando a referência técnica da AMD. Ele verifica Docker e os dispositivos ROCm, recusa substituir um container existente e limita o endpoint a `127.0.0.1` para não expor a API diretamente à internet. Para alterar os parâmetros, configure `NYXAL_AMD_CLOUD_MODEL`, `NYXAL_AMD_CLOUD_PORT` e `NYXAL_AMD_MAX_MODEL_LEN` antes de executar o script.
+
+Acompanhe o carregamento até o servidor ficar pronto:
+
+    docker logs -f nyxal-vllm-rocm
+
+Confirme dentro da VM:
+
+    curl http://127.0.0.1:8001/v1/models
 
 ## 2. Conectar a Nyxal com um túnel SSH
 
-A opção recomendada é manter a API de inferência acessível somente na VM e transportar o tráfego por SSH, sem abrir a porta do modelo publicamente.
+Mantenha a API de inferência acessível somente pela própria VM e transporte o tráfego por SSH. **Não abra a porta 8001 para a internet.**
 
-No computador que executa a Nyxal, abra um terminal e mantenha este túnel ativo, substituindo o usuário e o IP pelos dados exibidos no painel da VM:
+No computador NyxOS, mantenha este túnel ativo em um terminal:
 
-    ssh -N -L 8000:127.0.0.1:8000 <usuario-ssh>@<ip-publico-da-vm>
+    ssh -N -L 8001:127.0.0.1:8001 root@<IP_DA_VM>
 
-O servidor de inferência remoto precisa escutar na porta 8000 da própria VM. Se utilizar outra porta, altere ambos os números no túnel e na configuração abaixo.
-
-Edite o arquivo de ambiente já usado pelo serviço residente:
+Edite o arquivo de ambiente usado pelo serviço residente:
 
     mkdir -p ~/.config/nyxal
     nano ~/.config/nyxal/nyxal.env
 
-Adicione as variáveis. Use o nome exato do modelo disponível na VM:
+Configure o nome exato de modelo anunciado pelo endpoint:
 
     NYXAL_LLM_PROVIDER=amd_cloud
-    NYXAL_AMD_CLOUD_BASE_URL=http://127.0.0.1:8000/v1
-    NYXAL_AMD_CLOUD_MODEL=Qwen/Qwen2.5-7B-Instruct
+    NYXAL_AMD_CLOUD_BASE_URL=http://127.0.0.1:8001/v1
+    NYXAL_AMD_CLOUD_MODEL=Qwen/Qwen3.5-35B-A3B
     NYXAL_AMD_CLOUD_API_KEY=
 
-Se a VM/servidor exigir uma chave, defina NYXAL_AMD_CLOUD_API_KEY nesse arquivo. Não faça commit do arquivo de ambiente, tokens, chave SSH privada ou credenciais da conta AMD.
+O servidor iniciado pelo script não configura uma chave de API por padrão. Como o endpoint fica protegido pelo túnel SSH, deixe a variável vazia, salvo se você habilitou autenticação no servidor de inferência. O adaptador rejeita HTTP para hosts remotos; para endpoints remotos sem túnel, use HTTPS. Nunca faça commit do arquivo de ambiente, tokens, chave SSH privada ou credenciais da conta AMD.
 
 Reinicie o serviço de usuário para carregar as variáveis:
 
@@ -80,6 +93,9 @@ O teste chama GET /v1/models e retorna apenas os identificadores de modelos e o 
 
 Execute na raiz do repositório:
 
+    bash -n deploy/amd_cloud/start_vllm_rocm.sh
     .venv/bin/python teste_nixal_amd_developer_cloud.py
     .venv/bin/python teste_dialogo_qwen_56_5_5.py
     .venv/bin/python teste_api_chat_sem_voz.py
+
+**Custos:** créditos e elegibilidade dependem da conta/aprovação. Segundo as instruções da AMD, desligar uma instância pode não interromper a cobrança; quando terminar, destrua a instância no painel do provedor e confirme o estado do faturamento. Parar apenas o container não encerra uma instância faturável.
