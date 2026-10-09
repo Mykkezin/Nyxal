@@ -19,7 +19,7 @@ from typing import Any
 
 import ollama
 
-from nixal_amd_developer_cloud import AmdCloudChatClient
+from nixal_amd_developer_cloud import AmdCloudChatClient, AmdDeveloperCloud
 
 
 class DialogoQwenNixal:
@@ -58,7 +58,7 @@ class DialogoQwenNixal:
         elif provedor_amd_cloud:
             self.modelo = os.environ.get(
                 "NYXAL_AMD_CLOUD_MODEL",
-                AmdCloudChatClient().cloud.MODELO_PADRAO,
+                AmdDeveloperCloud.MODELO_PADRAO,
             )
         else:
             self.modelo = os.environ.get(
