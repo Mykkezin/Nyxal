@@ -41,7 +41,15 @@ O modo **auto** tenta Hermes, Gemini, Letta e depois o Qwen local. Hermes é o a
 
 ## 2. Hermes Agent e Gemini
 
-Instale e valide o Hermes seguindo a documentação oficial: https://hermes-agent.nousresearch.com/docs/getting-started/quickstart
+Instale o CLI seguindo o instalador oficial do Hermes Agent (Linux):
+
+```bash
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+source ~/.bashrc
+command -v hermes
+```
+
+Depois configure e valide uma conversa normal antes de habilitar gateway, ferramentas remotas ou WhatsApp:
 
 ```bash
 hermes setup
@@ -49,7 +57,18 @@ hermes model
 hermes
 ```
 
-Primeiro confirme uma conversa normal. Depois, no Hermes, configure Google AI Studio/Gemini como provedor se esse for o modelo principal. Para expor a API ao Nyxal, a configuração usa:
+No seletor de modelos, escolha o provedor que deseja usar dentro do Hermes (Gemini é a opção pretendida para a Nyxal) e confirme que a conversa responde. O Gemini direto do Core é um caminho separado de fallback e usa `NYXAL_GEMINI_API_KEY`.
+
+O script de configuração da Nyxal prepara `API_SERVER_KEY` em `~/.hermes/.env` e o endereço local `127.0.0.1:8642`. Depois que o CLI estiver funcionando, habilite o servidor OpenAI-compatible e instale/inicie o gateway:
+
+```bash
+hermes config set API_SERVER_ENABLED true
+hermes gateway install
+hermes gateway start
+curl -fsS http://127.0.0.1:8642/health
+```
+
+Para expor a API ao Nyxal, a configuração usa:
 - bind local **127.0.0.1**;
 - porta **8642**;
 - autenticação Bearer obrigatória;
@@ -108,9 +127,9 @@ Os escopos são exclusivamente **gmail.readonly**, **calendar.readonly**, **cont
 
 ## 5. WhatsApp
 
-1. Execute **bash deploy/agent/configurar_nyxal_agent.sh** e responda às perguntas de WhatsApp. O script grava o modo escolhido e uma allowlist com números específicos — nunca libera todos os remetentes.
-2. Execute **hermes whatsapp**. O assistente instala dependências e exibe o QR para o telefone.
-3. No celular, abra WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho e leia o QR.
+1. Confirme que o Hermes CLI está instalado e que uma conversa básica funciona (seção 2).
+2. Execute **hermes gateway setup** e selecione WhatsApp no assistente. Ele orienta o pareamento e a configuração do bridge.
+3. Se aparecer um QR, no celular abra WhatsApp → Configurações → Aparelhos conectados → Conectar um aparelho e leia o QR.
 4. Inicie o serviço com **hermes gateway install** e **hermes gateway start**; confira com **hermes gateway status**.
 
 Escolha **self-chat** para conversar com a Nyxal através da sua própria conta vinculada, ou **bot** se tiver um número separado para o agente. O bridge Hermes usa Baileys/WhatsApp Web, não a API oficial da Meta, e carrega um pequeno risco de restrição da conta; não use mensagens em massa nem automatize contato com pessoas que não iniciaram a conversa. O diretório **~/.hermes/platforms/whatsapp/session** contém credenciais da sessão e nunca deve entrar no Git.
