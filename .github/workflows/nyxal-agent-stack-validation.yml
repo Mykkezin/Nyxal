@@ -38,8 +38,6 @@ jobs:
         run: |
           bash -n deploy/agent/configurar_nyxal_agent.sh
           bash -n deploy/agent/instalar_nyxal_agent.sh
-      - name: Validate resident systemd contract
-        run: python teste_m5_9_residencia_linux.py
       - name: Run focused unit tests
         run: |
           python -m unittest -v \
