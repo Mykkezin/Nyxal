@@ -38,7 +38,7 @@ BASE_DIR = Path(__file__).resolve().parent
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
-CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
+CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "http://127.0.0.1:3000")
 NUCLEO_CONVERSACIONAL = NucleoConversacionalNixal()
 INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
     transporte=TransporteConversacionalNixal(),
@@ -67,6 +67,27 @@ RESIDENCIA_NYXOS = ResidenciaNyxOS()
 AGENTE_NYXAL = NyxalAgentHub()
 OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
+
+def _precisa_contexto_sistema(mensagem: str) -> bool:
+    texto = mensagem.lower()
+    termos = (
+        "sistema", "cpu", "ram", "memória", "memoria", "processo", "serviço",
+        "servico", "serviços", "servicos", "recursos", "ocorrendo", "computador",
+        "máquina", "maquina", "rodando", "temperatura", "disco", "armazenamento",
+        "hardware", "saúde", "saude", "status do", "estado do", "residência",
+        "residencia", "uso da", "uso do", "está ativo", "esta ativo",
+    )
+    return any(termo in texto for termo in termos)
+
+
+def _precisa_contexto_email(mensagem: str) -> bool:
+    texto = mensagem.lower()
+    return any(termo in texto for termo in (
+        "email", "e-mail", "gmail", "caixa de entrada", "inbox",
+        "correio eletrônico", "correio eletronico", "meus e-mails",
+        "meus emails", "mensagens do email",
+    ))
+
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -992,11 +1013,27 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             try:
                 provedor_resolvido = AGENTE_NYXAL.resolve_provider(provedor)
                 if provedor_resolvido != "nyxal":
-                    # Snapshot somente leitura: não carrega conteúdo bruto de arquivos pessoais.
-                    contexto_sistema = {
-                        "observabilidade": OBSERVABILIDADE_NYXOS.snapshot(),
-                        "residencia": RESIDENCIA_NYXOS.snapshot(),
-                    }
+                    # Dados locais só são anexados quando a pergunta pede esse contexto.
+                    contexto_sistema = {}
+                    if _precisa_contexto_sistema(mensagem):
+                        contexto_sistema["observabilidade"] = OBSERVABILIDADE_NYXOS.snapshot()
+                        contexto_sistema["residencia"] = RESIDENCIA_NYXOS.snapshot()
+                    if _precisa_contexto_email(mensagem):
+                        try:
+                            gmail_status = GMAIL_NYXOS.status()
+                            if gmail_status.get("estado") == "configurado":
+                                contexto_sistema["gmail"] = GMAIL_NYXOS.listar_mensagens(
+                                    query="is:unread newer_than:7d",
+                                    limite=10,
+                                )
+                            else:
+                                contexto_sistema["gmail"] = gmail_status
+                        except Exception:
+                            contexto_sistema["gmail"] = {
+                                "estado": "gmail_indisponivel",
+                                "somente_leitura": True,
+                                "motivo": "Não foi possível consultar o Gmail nesta solicitação.",
+                            }
                     resposta_agente = AGENTE_NYXAL.responder(
                         mensagem,
                         sessao=sessao_id,
