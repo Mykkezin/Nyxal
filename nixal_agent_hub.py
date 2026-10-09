@@ -269,7 +269,7 @@ class NyxalAgentHub:
 
     def _ask_gemini(self, message: str, system_prompt: str) -> str:
         api_key = _env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
-        model = _env("NYXAL_GEMINI_MODEL", "gemini-2.5-flash")
+        model = _env("NYXAL_GEMINI_MODEL", "gemini-3.7-flash")
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
             + quote(model, safe="")
