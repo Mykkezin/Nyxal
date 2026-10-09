@@ -105,7 +105,7 @@ class NyxalAgentHub:
             return provider
         # Hermes é o agente executor/orquestrador; pode ser configurado para usar Gemini
         # como modelo no próprio Hermes. Letta mantém a identidade/memória persistente.
-        for candidate in ("hermes", "letta", "gemini"):
+        for candidate in ("hermes", "gemini", "letta"):
             if self.provider_configured(candidate):
                 return candidate
         return "nyxal"
@@ -175,18 +175,60 @@ class NyxalAgentHub:
     ) -> dict[str, Any]:
         if not isinstance(mensagem, str) or not mensagem.strip():
             raise ValueError("A mensagem é obrigatória.")
-        resolved = self.resolve_provider(provedor)
-        if resolved == "nyxal":
-            return {
-                "sucesso": True,
-                "estado": "fallback_local",
-                "provedor": "nyxal",
-                "resposta": "",
-                "sessao": sessao,
-                "fallback_local": True,
-            }
 
-        memory = self._letta_memory_context() if resolved != "letta" else ""
+        requested = (provedor or _env("NYXAL_AGENT_PROVIDER", "auto")).lower().strip()
+        if requested != "auto":
+            resolved = self.resolve_provider(requested)
+            if resolved == "nyxal":
+                return self._fallback_local(sessao)
+            return self._responder_provedor(
+                mensagem.strip(), resolved, sessao, contexto_sistema
+            )
+
+        # No modo automático, um provedor remoto fora do ar não deixa a Nyxal muda.
+        candidates = [
+            name for name in ("hermes", "gemini", "letta")
+            if self.provider_configured(name)
+        ]
+        failures: list[str] = []
+        for resolved in [*candidates, "nyxal"]:
+            if resolved == "nyxal":
+                self._last_provider = "nyxal"
+                result = self._fallback_local(sessao)
+                result["provedores_tentados"] = failures
+                return result
+            try:
+                return self._responder_provedor(
+                    mensagem.strip(), resolved, sessao, contexto_sistema
+                )
+            except Exception as exc:
+                failures.append(f"{resolved}: {type(exc).__name__}")
+        return self._fallback_local(sessao)
+
+    @staticmethod
+    def _fallback_local(sessao: str | None) -> dict[str, Any]:
+        return {
+            "sucesso": True,
+            "estado": "fallback_local",
+            "provedor": "nyxal",
+            "resposta": "",
+            "sessao": sessao,
+            "fallback_local": True,
+        }
+
+    def _responder_provedor(
+        self,
+        mensagem: str,
+        resolved: str,
+        sessao: str | None,
+        contexto_sistema: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        # Uma indisponibilidade do servidor de memória não deve bloquear o modelo principal.
+        try:
+            memory = self._letta_memory_context() if resolved != "letta" else ""
+        except Exception:
+            memory = ""
+
         system_prompt = self.PROMPT_BASE
         if memory:
             system_prompt += "\n\nMemória persistente da Nyxal (contexto; pode estar desatualizada):\n" + memory[:12000]
@@ -197,12 +239,12 @@ class NyxalAgentHub:
             )
 
         if resolved == "gemini":
-            answer = self._ask_gemini(mensagem.strip(), system_prompt)
+            answer = self._ask_gemini(mensagem, system_prompt)
             new_session = sessao
         elif resolved == "hermes":
-            answer, new_session = self._ask_hermes(mensagem.strip(), system_prompt, sessao)
+            answer, new_session = self._ask_hermes(mensagem, system_prompt, sessao)
         else:
-            answer, new_session = self._ask_letta(mensagem.strip(), system_prompt, sessao)
+            answer, new_session = self._ask_letta(mensagem, system_prompt, sessao)
 
         if not answer.strip():
             raise RuntimeError(f"O provedor '{resolved}' retornou uma resposta vazia.")
@@ -211,10 +253,9 @@ class NyxalAgentHub:
         memory_sync = "não solicitado"
         if resolved != "letta" and self._memory_sync_enabled() and self.provider_configured("letta"):
             try:
-                self._sync_letta_memory(mensagem.strip(), answer.strip())
+                self._sync_letta_memory(mensagem, answer.strip())
                 memory_sync = "enviado para revisão pelo agente Letta"
             except Exception:
-                # A resposta principal continua válida se o subsistema de memória estiver fora.
                 memory_sync = "falhou; resposta principal preservada"
 
         return {
