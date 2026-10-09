@@ -9,6 +9,9 @@ on:
       - "nyxal_web_api.py"
       - "teste_nixal_amd_developer_cloud.py"
       - "teste_dialogo_qwen_56_5_5.py"
+      - "deploy/amd_cloud/start_vllm_rocm.sh"
+      - "docs/AMD_DEVELOPER_CLOUD_NYXOS.md"
+      - "deploy/systemd/nyxal-amd-cloud.env.example"
       - ".github/workflows/amd-developer-cloud-validation.yml"
   push:
     branches:
@@ -34,6 +37,8 @@ jobs:
           python-version: "3.12"
       - name: Compile AMD cloud integration
         run: python -m py_compile nixal_amd_developer_cloud.py nixal_dialogo_qwen.py nyxal_web_api.py teste_nixal_amd_developer_cloud.py
+      - name: Check cloud launcher syntax
+        run: bash -n deploy/amd_cloud/start_vllm_rocm.sh
       - name: Run adapter tests
         run: python teste_nixal_amd_developer_cloud.py
       - name: Run existing conversational regression tests
