@@ -66,8 +66,12 @@ class FakeService:
 
 
 class TestGmailReadonly(unittest.TestCase):
-    def test_scope_e_somente_leitura(self):
-        self.assertEqual(SCOPES, ["https://www.googleapis.com/auth/gmail.readonly"])
+    def test_escopos_sao_somente_leitura(self):
+        self.assertIn("https://www.googleapis.com/auth/gmail.readonly", SCOPES)
+        self.assertIn("https://www.googleapis.com/auth/calendar.readonly", SCOPES)
+        self.assertIn("https://www.googleapis.com/auth/contacts.readonly", SCOPES)
+        self.assertIn("https://www.googleapis.com/auth/drive.metadata.readonly", SCOPES)
+        self.assertTrue(all(scope.endswith(".readonly") for scope in SCOPES))
 
     def test_lista_mensagens_com_resumo_sem_alterar_estado(self):
         messages = FakeMessages()
