@@ -19,6 +19,8 @@ from typing import Any
 
 import ollama
 
+from nixal_amd_developer_cloud import AmdCloudChatClient
+
 
 class DialogoQwenNixal:
     """Adaptador conversacional do Qwen com dependência injetável."""
@@ -41,15 +43,35 @@ class DialogoQwenNixal:
         modelo: str | None = None,
         cliente: Any = None,
     ) -> None:
-        self.modelo = (
-            modelo
-            or os.environ.get(
+        self.provedor = os.environ.get(
+            "NYXAL_LLM_PROVIDER",
+            "ollama",
+        ).strip().lower()
+        provedor_amd_cloud = self.provedor in {
+            "amd_cloud",
+            "amd-developer-cloud",
+            "amd",
+        }
+
+        if modelo is not None:
+            self.modelo = modelo
+        elif provedor_amd_cloud:
+            self.modelo = os.environ.get(
+                "NYXAL_AMD_CLOUD_MODEL",
+                AmdCloudChatClient().cloud.MODELO_PADRAO,
+            )
+        else:
+            self.modelo = os.environ.get(
                 "NYXAL_CONVERSATIONAL_MODEL",
                 self.MODELO_PADRAO,
             )
-        )
 
-        self.cliente = cliente or ollama
+        if cliente is not None:
+            self.cliente = cliente
+        elif provedor_amd_cloud:
+            self.cliente = AmdCloudChatClient()
+        else:
+            self.cliente = ollama
 
     def responder(
         self,
