@@ -717,6 +717,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
+        if self.path == "/api/agent/chat" and not self._local_ou_autorizado():
+            return
+
         if self.path == "/api/agent/image":
             if not self._local_ou_autorizado():
                 return
