@@ -20,7 +20,7 @@ A integração não provisiona VMs, não altera cobranças da AMD e não ativa a
 
     bash /root/start_vllm_rocm.sh
 
-O lançador usa como padrão o modelo `Qwen/Qwen3.5-35B-A3B`, a imagem `vllm/vllm-openai-rocm:latest` e a porta 8001, seguindo a referência da AMD. Ele verifica Docker e dispositivos ROCm, recusa substituir um container já existente e limita o endpoint a `127.0.0.1) para não expor a API diretamente à internet. Para mudar os parâmetros, use as variáveis `NYXAL_AMD_CLOUD_MODEL`, `NYXAL_AMD_CLOUD_PORT` e `NYXAL_AMD_MAX_MODEL_LEN` antes de executar o script.
+O lançador usa como padrão o modelo `Qwen/Qwen3.5-35B-A3B`, a imagem `vllm/vllm-openai-rocm:latest` e a porta 8001, seguindo a referência da AMD. Ele verifica Docker e dispositivos ROCm, recusa substituir um container já existente e limita o endpoint a `127.0.0.1` para não expor a API diretamente à internet. Para mudar os parâmetros, use as variáveis `NYXAL_AMD_CLOUD_MODEL`, `NYXAL_AMD_CLOUD_PORT` e `NYXAL_AMD_MAX_MODEL_LEN` antes de executar o script.
 
 Acompanhe o carregamento até o servidor ficar pronto:
 
