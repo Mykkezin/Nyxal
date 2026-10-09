@@ -5,6 +5,11 @@ description: Consultar o estado real do NyxOS e do Nyxal Core a partir de APIs l
 
 # Nyxal Core Operator
 
+Memória compartilhada com Hermes/WhatsApp:
+- Para fatos duradouros e preferências, use `python3 ~/Nyxal/scripts/nyxal_letta_memory.py recall` se o terminal tiver acesso ao host local.
+- Para salvar um resumo, use o comando `remember --summary` apenas após pedido explícito do operador e somente com sincronização Letta habilitada.
+- Se o script não estiver acessível (por exemplo, por sandbox isolado), diga que a memória compartilhada não pôde ser consultada; não declare sucesso.
+
 Use esta skill quando o operador perguntar sobre o estado atual da Nyxal, do NyxOS, da máquina, dos processos, dos serviços ou das integrações.
 
 ## Fontes autorizadas
