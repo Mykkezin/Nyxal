@@ -68,6 +68,14 @@ Escolha Letta Cloud ou uma instalação local/self-hosted. Crie um agente dedica
 
 A integração lê os core-memory blocks e pode encaminhar uma interação para revisão de memória quando **LETTA_MEMORY_SYNC_ENABLED=true**. A sincronização inicia desligada. Antes de ativá-la, confira a política e o modelo do agente Letta; não inclua senhas, códigos de autenticação, tokens ou dados sensíveis na memória. A disponibilidade e a atualização da memória dependem de o servidor/agente Letta existir e estar acessível.
 
+Para compartilhar essa memória com skills executadas pelo Hermes no host local:
+```bash
+python3 ~/Nyxal/scripts/nyxal_letta_memory.py recall
+python3 ~/Nyxal/scripts/nyxal_letta_memory.py remember --summary "Resumo duradouro aprovado pelo operador"
+```
+
+O comando `recall` é somente leitura. `remember` só funciona quando `LETTA_MEMORY_SYNC_ENABLED=true`, pede ao agente Letta que atualize a memória com o resumo e bloqueia gravação se a sincronização estiver desligada. O Hermes precisa ter acesso ao diretório local `~/Nyxal` e ao arquivo `~/.config/nyxal/nyxal.env`; em sandbox isolado, esses caminhos podem não estar disponíveis. Não declare que consultou a memória se o comando falhar.
+
 Docs oficiais: https://docs.letta.com/concepts/stateful-agents e https://docs.letta.com/api/resources/agents/subresources/messages
 
 ## 4. Google Workspace (Gmail, Calendar, Contatos e Drive)
