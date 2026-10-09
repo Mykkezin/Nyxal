@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [feat/nyxal-agent-stack-current-main-20261009]
+    branches: [feat/nyxal-agent-stack-current-main-20261009, fix/display-root-route-20261009]
   workflow_dispatch:
 
 permissions:
@@ -27,6 +27,7 @@ jobs:
         run: |
           python -m compileall -q \
             nyxal_web_api.py \
+            nixal_display_routes.py \
             nixal_agent_hub.py \
             nixal_observabilidade_sistema.py \
             nixal_integracao_gmail.py \
@@ -46,6 +47,7 @@ jobs:
       - name: Run focused unit tests
         run: |
           python -m unittest -v \
+            teste_nixal_display_routes \
             teste_nixal_agent_hub \
             teste_nixal_observabilidade_sistema \
             teste_nixal_capacidade_visual \

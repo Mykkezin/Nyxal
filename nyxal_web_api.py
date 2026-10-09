@@ -29,6 +29,7 @@ from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_vps import VpsNyxOS
 from nixal_amd_developer_cloud import AmdDeveloperCloud
+from nixal_display_routes import resolve_display_file
 from nixal_agent_hub import NyxalAgentHub
 from nixal_observabilidade_sistema import ObservabilidadeSistemaNixOS
 from nixal_integracao_gmail import IntegracaoGmailNixOS
@@ -1287,11 +1288,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(corpo)
             return
 
-        if self.path.startswith("/display/"):
-            relativo = self.path.removeprefix("/display/")
-            caminho = caminho_display(relativo)
+        if parsed_path == "/display" or parsed_path.startswith("/display/"):
+            relativo = parsed_path.removeprefix("/display/") if parsed_path.startswith("/display/") else ""
+            relativo = relativo.lstrip("/") or "index.html"
+            caminho = resolve_display_file(BASE_DIR / "interface" / "display" / "dist", self.path)
             if caminho is None:
-                self._send_json(404, {"estado": "display_arquivo_nao_encontrado"})
+                self._send_json(404, {"estado": "display_arquivo_nao_encontrado", "arquivo": relativo})
                 return
             corpo = caminho.read_bytes()
             tipo = mimetypes.guess_type(str(caminho))[0] or "application/octet-stream"
