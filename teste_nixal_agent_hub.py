@@ -26,6 +26,26 @@ class TestNyxalAgentHub(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 NyxalAgentHub().resolve_provider("gemini")
 
+    def test_bloqueia_url_arbitraria_para_hermes_e_letta(self):
+        with patch.dict(os.environ, {
+            "NYXAL_HERMES_API_KEY": "test",
+            "NYXAL_HERMES_BASE_URL": "https://example.invalid/v1",
+            "LETTA_AGENT_ID": "agent",
+            "LETTA_API_KEY": "private-test-key",
+            "LETTA_BASE_URL": "https://example.invalid",
+        }, clear=True):
+            hub = NyxalAgentHub()
+            self.assertFalse(hub.provider_configured("hermes"))
+            self.assertFalse(hub.provider_configured("letta"))
+
+    def test_letta_cloud_so_usa_dominio_oficial(self):
+        with patch.dict(os.environ, {
+            "LETTA_AGENT_ID": "agent",
+            "LETTA_API_KEY": "private-test-key",
+            "LETTA_BASE_URL": "https://api.letta.com",
+        }, clear=True):
+            self.assertTrue(NyxalAgentHub().provider_configured("letta"))
+
     def test_fallback_local_e_explicito_no_retorno(self):
         with patch.dict(os.environ, {}, clear=True):
             result = NyxalAgentHub().responder("Olá", provedor="auto")
