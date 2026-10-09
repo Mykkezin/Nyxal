@@ -1003,8 +1003,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                         provedor=provedor,
                         contexto_sistema=contexto_sistema,
                     )
-                    self._send_json(200, resposta_agente)
-                    return
+                    if not resposta_agente.get("fallback_local"):
+                        self._send_json(200, resposta_agente)
+                        return
             except ValueError as erro:
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": str(erro)})
                 return
