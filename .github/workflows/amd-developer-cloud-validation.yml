@@ -1,0 +1,40 @@
+name: AMD Developer Cloud Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "nixal_amd_developer_cloud.py"
+      - "nixal_dialogo_qwen.py"
+      - "nyxal_web_api.py"
+      - "teste_nixal_amd_developer_cloud.py"
+      - "teste_dialogo_qwen_56_5_5.py"
+      - ".github/workflows/amd-developer-cloud-validation.yml"
+  push:
+    branches:
+      - feat/amd-developer-cloud-integration
+    paths:
+      - "nixal_amd_developer_cloud.py"
+      - "nixal_dialogo_qwen.py"
+      - "nyxal_web_api.py"
+      - "teste_nixal_amd_developer_cloud.py"
+      - "teste_dialogo_qwen_56_5_5.py"
+      - ".github/workflows/amd-developer-cloud-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-amd-cloud:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile AMD cloud integration
+        run: python -m py_compile nixal_amd_developer_cloud.py nixal_dialogo_qwen.py nyxal_web_api.py teste_nixal_amd_developer_cloud.py
+      - name: Run adapter tests
+        run: python teste_nixal_amd_developer_cloud.py
+      - name: Run existing conversational regression tests
+        run: python teste_dialogo_qwen_56_5_5.py
