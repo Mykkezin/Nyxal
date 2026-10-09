@@ -22,7 +22,7 @@ SCOPES = [
 ]
 CONFIG_DIR = Path(os.environ.get("NYXAL_CONFIG_DIR", str(Path.home() / ".config" / "nyxal"))).expanduser()
 CLIENT_FILE = Path(os.environ.get("NYXAL_GOOGLE_CLIENT_FILE", str(CONFIG_DIR / "google-oauth-client.json"))).expanduser()
-TOKEN_FILE = Path(os.environ.get("NYXAL_GMAIL_TOKEN_FILE", str(CONFIG_DIR / "gmail-token.json"))).expanduser()
+TOKEN_FILE = Path(os.environ.get("NYXAL_GOOGLE_TOKEN_FILE", os.environ.get("NYXAL_GMAIL_TOKEN_FILE", str(CONFIG_DIR / "google-workspace-token.json")))).expanduser()
 
 
 class IntegracaoGmailNixOS:
