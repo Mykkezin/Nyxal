@@ -985,7 +985,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/api/agent/chat":
-            provedor = payload.get("provedor", "auto")
+            provedor = payload.get("provedor", os.environ.get("NYXAL_AGENT_PROVIDER", "auto"))
             if not isinstance(provedor, str):
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": "O campo provedor precisa ser texto."})
                 return
