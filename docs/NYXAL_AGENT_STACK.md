@@ -104,7 +104,7 @@ Endpoints locais:
 - **GET /api/integracoes/google/contatos?limit=25**
 - **GET /api/integracoes/google/drive?limit=25**
 
-Os escopos são exclusivamente **gmail.readonly**, **calendar.readonly**, **contacts.readonly** e **drive.readonly**. Não há envio de e-mail, alteração de agenda/contatos, exclusão de mensagens nem download de conteúdo do Drive. O titular da conta deve aprovar OAuth; APIs e consentimento são configurados em Google Cloud: https://developers.google.com/workspace/gmail/api/auth/web-server
+Os escopos são exclusivamente **gmail.readonly**, **calendar.readonly**, **contacts.readonly** e **drive.metadata.readonly**. Não há envio de e-mail, alteração de agenda/contatos, exclusão de mensagens nem download de conteúdo do Drive. O titular da conta deve aprovar OAuth; APIs e consentimento são configurados em Google Cloud: https://developers.google.com/workspace/gmail/api/auth/web-server
 
 ## 5. WhatsApp
 
