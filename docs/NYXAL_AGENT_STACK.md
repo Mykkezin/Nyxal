@@ -18,7 +18,7 @@ Nyxal Core / NixalAgentHub
     Kokoro TTS — voz feminina brasileira pf_dora
 ```
 
-A camada principal foi adicionada ao Nyxal, mas provedores remotos e contas externas só ficam conectados depois de configurar credenciais e verificar a conexão. A API não deve declarar credenciais válidas apenas porque um arquivo existe.
+A camada principal foi adicionada ao Nyxal, mas provedores remotos e contas externas só ficam conectados depois de configurar credenciais e verificar a conexão. A API não deve declarar credenciais válidas apenas porque um arquivo existe. O modelo visual configurado é **gemini-nano-banana-2.1**, identificado na documentação oficial de modelos do Gemini API.
 
 ## 1. Configurar credenciais locais
 
@@ -35,7 +35,7 @@ O script escreve somente em **~/.config/nyxal/nyxal.env** e **~/.hermes/.env**, 
 systemctl --user restart nyxal-api.service
 ```
 
-A criação/edição visual usa **NYXAL_GEMINI_IMAGE_MODEL=gemini-nano-banana-2.1**. O modelo de texto padrão é **gemini-3.8-flash** (confirme a disponibilidade para sua conta e região na documentação oficial: https://ai.google.dev/gemini-api/docs/models).
+A criação/edição visual usa **NYXAL_GEMINI_IMAGE_MODEL=gemini-nano-banana-2.1**. O modelo de texto padrão é **gemini-3.7-flash** (confirme a disponibilidade para sua conta e região na documentação oficial: https://ai.google.dev/gemini-api/docs/models).
 
 O modo **auto** tenta Hermes, Gemini, Letta e depois o Qwen local. Hermes é o agente com ferramentas. Se Hermes estiver configurado para usar o Gemini, o Gemini será o modelo de raciocínio dentro desse agente; a API direta Gemini também pode ser habilitada como fallback. O roteador só chama provedores que estejam configurados.
 
