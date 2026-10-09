@@ -28,6 +28,7 @@ from nixal_estado_presenca import compor_presenca_efetiva
 from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_vps import VpsNyxOS
+from nixal_amd_developer_cloud import AmdDeveloperCloud
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -59,6 +60,7 @@ COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
     habilitada=False,
 )
 VPS_NYXOS = VpsNyxOS()
+AMD_DEVELOPER_CLOUD = AmdDeveloperCloud()
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -652,6 +654,13 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
+        if self.path == "/api/amd-cloud/check":
+            if not self._authorized():
+                return
+            resultado = AMD_DEVELOPER_CLOUD.verificar_conexao()
+            self._send_json(200 if resultado.get("sucesso") else 503, resultado)
+            return
+
         if self.path in {"/api/vps/action", "/api/vps/provisionar"}:
             try:
                 content_length = int(self.headers.get("Content-Length", "0"))
@@ -1135,6 +1144,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(corpo)
+            return
+
+        if self.path == "/api/amd-cloud/status":
+            self._send_json(200, AMD_DEVELOPER_CLOUD.status())
             return
 
         if self.path == "/api/vps/status":
