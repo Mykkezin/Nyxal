@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
@@ -124,6 +125,17 @@ class NyxalAgentHub:
         self._last_provider = "nyxal"
         self._session_history: dict[str, list[dict[str, str]]] = {}
         self._history_lock = threading.Lock()
+
+    def _system_prompt_base(self) -> str:
+        """Use a identidade versionada para manter Gemini, Hermes e Letta coerentes."""
+        identity_file = Path(__file__).resolve().parent / "deploy" / "agent" / "NYXAL_SOUL.md"
+        try:
+            identity = identity_file.read_text(encoding="utf-8").strip()
+        except OSError:
+            identity = ""
+        if not identity:
+            return self.PROMPT_BASE
+        return identity[:16000] + "\n\nRestrições operacionais adicionais:\n" + self.PROMPT_BASE
 
     def provider_configured(self, provider: str) -> bool:
         if provider == "nyxal":
@@ -307,7 +319,7 @@ class NyxalAgentHub:
         except Exception:
             memory = ""
 
-        system_prompt = self.PROMPT_BASE
+        system_prompt = self._system_prompt_base()
         if memory:
             system_prompt += "\n\nMemória persistente da Nyxal (contexto; pode estar desatualizada):\n" + memory[:12000]
         if contexto_sistema:
