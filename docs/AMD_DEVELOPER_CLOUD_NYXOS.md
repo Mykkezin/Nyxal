@@ -52,6 +52,10 @@ Configure o nome exato de modelo anunciado pelo endpoint:
 
 O servidor iniciado pelo script não configura uma chave de API por padrão. Como o endpoint fica protegido pelo túnel SSH, deixe a variável vazia, salvo se você habilitou autenticação no servidor de inferência. O adaptador rejeita HTTP para hosts remotos; para endpoints remotos sem túnel, use HTTPS. Nunca faça commit do arquivo de ambiente, tokens, chave SSH privada ou credenciais da conta AMD.
 
+Depois de salvar o arquivo, restrinja suas permissões:
+
+    chmod 600 ~/.config/nyxal/nyxal.env
+
 Reinicie o serviço de usuário para carregar as variáveis:
 
     systemctl --user restart nyxal-api.service
