@@ -24,6 +24,28 @@ def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
 
+def _file_env(path: "Path", name: str, default: str = "") -> str:
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            item = line.strip()
+            if not item or item.startswith("#") or "=" not in item:
+                continue
+            key, _, value = item.partition("=")
+            if key.strip() == name:
+                value = value.strip()
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+                    value = value[1:-1]
+                return value.strip()
+    except OSError:
+        pass
+    return default
+
+
+def _hermes_env(name: str, default: str = "") -> str:
+    from pathlib import Path
+    return _file_env(Path.home() / ".hermes" / ".env", name, default)
+
+
 def _json_request(
     url: str,
     *,
@@ -148,9 +170,9 @@ class NyxalAgentHub:
             },
             "whatsapp": {
                 "integracao": "gateway Hermes",
-                "habilitado": _env("WHATSAPP_ENABLED", "false").lower() in {"1", "true", "yes"},
-                "modo": _env("WHATSAPP_MODE", "self-chat"),
-                "allowlist_configurada": bool(_env("WHATSAPP_ALLOWED_USERS")),
+                "habilitado": _hermes_env("WHATSAPP_ENABLED", "false").lower() in {"1", "true", "yes"},
+                "modo": _hermes_env("WHATSAPP_MODE", "self-chat"),
+                "allowlist_configurada": bool(_hermes_env("WHATSAPP_ALLOWED_USERS")),
                 "sessao_pareada": (__import__("pathlib").Path.home() / ".hermes" / "platforms" / "whatsapp" / "session" / "creds.json").is_file(),
                 "estado": (
                     "pareado_verificar_gateway"
