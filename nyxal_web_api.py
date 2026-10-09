@@ -31,6 +31,7 @@ from nixal_residencia import ResidenciaNyxOS
 from nixal_agent_hub import NyxalAgentHub
 from nixal_observabilidade_sistema import ObservabilidadeSistemaNixOS
 from nixal_integracao_gmail import IntegracaoGmailNixOS
+from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
 from urllib.parse import parse_qs, urlsplit
 
 
@@ -67,6 +68,7 @@ RESIDENCIA_NYXOS = ResidenciaNyxOS()
 AGENTE_NYXAL = NyxalAgentHub()
 OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
+CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 
 def _precisa_contexto_sistema(mensagem: str) -> bool:
     texto = mensagem.lower()
@@ -620,6 +622,41 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         if not self._local_ou_autorizado():
             return
 
+        if self.path == "/api/agent/image":
+            try:
+                content_length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                self._send_json(400, {"estado": "entrada_invalida", "motivo": "Content-Length inválido."})
+                return
+            if content_length <= 0 or content_length > 12 * 1024 * 1024:
+                self._send_json(400 if content_length <= 0 else 413, {
+                    "estado": "entrada_visual_invalida",
+                    "motivo": "O pedido precisa conter JSON e não pode exceder 12 MiB.",
+                })
+                return
+            try:
+                payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"estado": "entrada_visual_invalida", "motivo": "O corpo precisa ser JSON UTF-8 válido."})
+                return
+            if not isinstance(payload, dict):
+                self._send_json(400, {"estado": "entrada_visual_invalida", "motivo": "O corpo precisa ser um objeto JSON."})
+                return
+            try:
+                result = CAPACIDADE_VISUAL_NYXOS.gerar_ou_editar(
+                    prompt=payload.get("prompt", ""),
+                    imagem_base64=payload.get("imagem_base64"),
+                    mime_type=payload.get("mime_type"),
+                )
+                self._send_json(200, result)
+            except ValueError as erro:
+                self._send_json(400, {"estado": "entrada_visual_invalida", "motivo": str(erro)})
+            except RuntimeError as erro:
+                self._send_json(503, {"estado": "capacidade_visual_indisponivel", "motivo": str(erro)})
+            except Exception as erro:
+                self._send_json(502, {"estado": "falha_visual", "motivo": f"{type(erro).__name__}: operação visual indisponível."})
+            return
+
         if self.path in {"/api/vps/action", "/api/vps/provisionar"}:
             try:
                 content_length = int(self.headers.get("Content-Length", "0"))
@@ -1165,7 +1202,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         if self.path == "/api/agent/status":
             if not self._local_ou_autorizado():
                 return
-            self._send_json(200, AGENTE_NYXAL.contexto())
+            status_agente = AGENTE_NYXAL.contexto()
+            status_agente["criacao_visual"] = CAPACIDADE_VISUAL_NYXOS.status()
+            self._send_json(200, status_agente)
             return
 
         if self.path == "/api/agent/contexto":
