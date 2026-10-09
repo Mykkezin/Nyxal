@@ -35,6 +35,8 @@ O script escreve somente em **~/.config/nyxal/nyxal.env** e **~/.hermes/.env**, 
 systemctl --user restart nyxal-api.service
 ```
 
+A criação/edição visual usa **NYXAL_GEMINI_IMAGE_MODEL=gemini-3.1-flash-image**. O modelo de texto padrão é **gemini-3.8-flash** (confirme a disponibilidade para sua conta e região na documentação oficial: https://ai.google.dev/gemini-api/docs/models).
+
 O modo **auto** tenta Hermes, Gemini, Letta e depois o Qwen local. Hermes é o agente com ferramentas. Se Hermes estiver configurado para usar o Gemini, o Gemini será o modelo de raciocínio dentro desse agente; a API direta Gemini também pode ser habilitada como fallback. O roteador só chama provedores que estejam configurados.
 
 ## 2. Hermes Agent e Gemini
