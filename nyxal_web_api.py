@@ -103,7 +103,7 @@ TTS_MODEL = Path(
 def _precisa_contexto_sistema(mensagem: str) -> bool:
     texto = mensagem.lower()
     termos = (
-        "sistema", "nyxos", "nyxal", "pc", "cpu", "ram", "memória", "memoria",
+        "sistema", "pc", "cpu", "ram", "memória", "memoria",
         "processo", "serviço", "servico", "serviços", "servicos", "recursos",
         "ocorrendo", "acontecendo", "acontece", "o que está acontecendo",
         "computador", "máquina", "maquina", "notebook", "rodando", "funcionando",
@@ -112,7 +112,12 @@ def _precisa_contexto_sistema(mensagem: str) -> bool:
         "uso da", "uso do", "está ativo", "esta ativo", "problema na máquina",
         "problema no computador",
     )
-    return any(termo in texto for termo in termos)
+    return any(termo in texto for termo in termos) or any(
+        termo in texto for termo in (
+            "estado da nyxal", "status da nyxal", "processos da nyxal",
+            "estado do nyxos", "status do nyxos", "núcleo nyxal", "nucleo nyxal",
+        )
+    )
 
 
 def _precisa_contexto_email(mensagem: str) -> bool:
@@ -128,7 +133,10 @@ def _precisa_contexto_email(mensagem: str) -> bool:
     )
     if contato_por_email and not any(termo in texto for termo in termos_caixa):
         return False
-    return any(termo in texto for termo in termos_caixa)
+    termos_email = ("email", "e-mail", "emails", "e-mails")
+    return any(termo in texto for termo in termos_caixa) or any(
+        termo in texto for termo in termos_email
+    )
 
 
 def _precisa_contexto_agenda(mensagem: str) -> bool:
