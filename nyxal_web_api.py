@@ -1149,6 +1149,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         )
 
     def do_GET(self) -> None:
+        if self.path != "/health" and not self._local_ou_autorizado():
+            return
+
         if self.path == "/":
             caminho = caminho_interface("index.html")
             if caminho is None:
