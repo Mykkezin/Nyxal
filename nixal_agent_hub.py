@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
@@ -83,6 +84,8 @@ class NyxalAgentHub:
 
     def __init__(self) -> None:
         self._last_provider = "nyxal"
+        self._session_history: dict[str, list[dict[str, str]]] = {}
+        self._history_lock = threading.Lock()
 
     def provider_configured(self, provider: str) -> bool:
         if provider == "nyxal":
@@ -216,6 +219,25 @@ class NyxalAgentHub:
             "fallback_local": True,
         }
 
+    def _historico(self, sessao: str | None) -> list[dict[str, str]]:
+        key = sessao or "sessao-local-padrao"
+        with self._history_lock:
+            return [dict(item) for item in self._session_history.get(key, [])[-20:]]
+
+    def _registrar_turno(self, sessao: str | None, user: str, assistant: str) -> None:
+        key = sessao or "sessao-local-padrao"
+        with self._history_lock:
+            history = self._session_history.setdefault(key, [])
+            history.extend([
+                {"role": "user", "content": user[:12000]},
+                {"role": "assistant", "content": assistant[:12000]},
+            ])
+            self._session_history[key] = history[-20:]
+            if len(self._session_history) > 256:
+                oldest = next(iter(self._session_history))
+                if oldest != key:
+                    self._session_history.pop(oldest, None)
+
     def _responder_provedor(
         self,
         mensagem: str,
@@ -223,7 +245,7 @@ class NyxalAgentHub:
         sessao: str | None,
         contexto_sistema: dict[str, Any] | None,
     ) -> dict[str, Any]:
-        # Uma indisponibilidade do servidor de memória não deve bloquear o modelo principal.
+        # A memória Letta indisponível não bloqueia o modelo principal.
         try:
             memory = self._letta_memory_context() if resolved != "letta" else ""
         except Exception:
@@ -238,11 +260,12 @@ class NyxalAgentHub:
                 + json.dumps(contexto_sistema, ensure_ascii=False)[:16000]
             )
 
+        history = self._historico(sessao)
         if resolved == "gemini":
-            answer = self._ask_gemini(mensagem, system_prompt)
+            answer = self._ask_gemini(mensagem, system_prompt, history)
             new_session = sessao
         elif resolved == "hermes":
-            answer, new_session = self._ask_hermes(mensagem, system_prompt, sessao)
+            answer, new_session = self._ask_hermes(mensagem, system_prompt, sessao, history)
         else:
             answer, new_session = self._ask_letta(mensagem, system_prompt, sessao)
 
@@ -250,6 +273,7 @@ class NyxalAgentHub:
             raise RuntimeError(f"O provedor '{resolved}' retornou uma resposta vazia.")
 
         self._last_provider = resolved
+        self._registrar_turno(sessao, mensagem, answer.strip())
         memory_sync = "não solicitado"
         if resolved != "letta" and self._memory_sync_enabled() and self.provider_configured("letta"):
             try:
@@ -267,7 +291,12 @@ class NyxalAgentHub:
             "memoria": memory_sync,
         }
 
-    def _ask_gemini(self, message: str, system_prompt: str) -> str:
+    def _ask_gemini(
+        self,
+        message: str,
+        system_prompt: str,
+        history: list[dict[str, str]] | None = None,
+    ) -> str:
         api_key = _env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
         model = _env("NYXAL_GEMINI_MODEL", "gemini-3.7-flash")
         url = (
@@ -275,9 +304,16 @@ class NyxalAgentHub:
             + quote(model, safe="")
             + ":generateContent"
         )
+        contents = []
+        for item in history or []:
+            role = "model" if item.get("role") == "assistant" else "user"
+            text_value = item.get("content")
+            if isinstance(text_value, str) and text_value.strip():
+                contents.append({"role": role, "parts": [{"text": text_value[:12000]}]})
+        contents.append({"role": "user", "parts": [{"text": message}]})
         payload = {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
-            "contents": [{"role": "user", "parts": [{"text": message}]}],
+            "contents": contents,
             "generationConfig": {"temperature": 0.4},
         }
         result = _json_request(url, method="POST", payload=payload, headers={"x-goog-api-key": api_key}, timeout=60)
@@ -287,7 +323,13 @@ class NyxalAgentHub:
         content = candidates[0].get("content", {})
         return _text_content(content.get("parts", []) if isinstance(content, dict) else "")
 
-    def _ask_hermes(self, message: str, system_prompt: str, session: str | None) -> tuple[str, str | None]:
+    def _ask_hermes(
+        self,
+        message: str,
+        system_prompt: str,
+        session: str | None,
+        history: list[dict[str, str]] | None = None,
+    ) -> tuple[str, str | None]:
         base = _env("NYXAL_HERMES_BASE_URL", "http://127.0.0.1:8642/v1").rstrip("/")
         key = _env("NYXAL_HERMES_API_KEY")
         headers = {"Authorization": f"Bearer {key}"}
@@ -297,6 +339,11 @@ class NyxalAgentHub:
             "model": _env("NYXAL_HERMES_MODEL", "hermes-agent"),
             "messages": [
                 {"role": "system", "content": system_prompt},
+                *[
+                    {"role": item.get("role"), "content": str(item.get("content", ""))[:12000]}
+                    for item in (history or [])
+                    if item.get("role") in {"user", "assistant"} and item.get("content")
+                ],
                 {"role": "user", "content": message},
             ],
         }
