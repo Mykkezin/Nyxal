@@ -49,6 +49,16 @@ class AmdDeveloperCloudTest(unittest.TestCase):
         cloud = AmdDeveloperCloud(base_url="file:///tmp/amd")
         self.assertEqual(cloud.status()["estado"], "configuracao_invalida")
 
+    def test_remote_plain_http_is_rejected(self) -> None:
+        cloud = AmdDeveloperCloud(base_url="http://203.0.113.10:8001/v1")
+        self.assertEqual(cloud.status()["estado"], "configuracao_invalida")
+        self.assertIn("tunel_ssh", cloud.status()["motivo"])
+
+    def test_remote_https_is_allowed(self) -> None:
+        cloud = AmdDeveloperCloud(base_url="https://inference.example.com/v1")
+        self.assertEqual(cloud.base_url, "https://inference.example.com/v1")
+        self.assertEqual(cloud.status()["estado"], "configurado")
+
     def test_cloud_status_selected_from_environment(self) -> None:
         with patch.dict("os.environ", {"NYXAL_LLM_PROVIDER": "amd_cloud"}):
             cloud = AmdDeveloperCloud(base_url="http://127.0.0.1:8000/v1")
