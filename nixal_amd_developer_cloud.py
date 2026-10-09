@@ -195,7 +195,7 @@ class AmdDeveloperCloud:
         if not self.base_url:
             raise RuntimeError("NYXAL_AMD_CLOUD_BASE_URL_nao_configurada")
 
-        nome_modelo = self.model or model
+        nome_modelo = model or self.model
         if not nome_modelo:
             raise RuntimeError("NYXAL_AMD_CLOUD_MODEL_nao_configurado")
 
