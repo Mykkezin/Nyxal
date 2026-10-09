@@ -168,6 +168,7 @@ class NyxalAgentHub:
                 "disponiveis": [
                     "designer", "edicao-de-imagem", "edicao-de-video-audio",
                     "desenvolvimento", "observabilidade-do-sistema", "assistente-de-email",
+                    "operador-nyxos", "mensageria-segura",
                 ],
             },
             "erro_selecao": selection_error,
