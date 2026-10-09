@@ -13,7 +13,7 @@ import os
 import threading
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 
@@ -22,6 +22,22 @@ KNOWN_PROVIDERS = {"auto", "nyxal", "gemini", "hermes", "letta"}
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
+
+
+def _safe_provider_base(value: str, *, allow_letta_cloud: bool = False) -> bool:
+    try:
+        parsed = urlsplit(value.strip())
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+        port = parsed.port
+    except ValueError:
+        return False
+    if parsed.username or parsed.password or parsed.query or parsed.fragment:
+        return False
+    if parsed.scheme == "http" and hostname in {"127.0.0.1", "localhost", "::1"}:
+        return port is None or 1 <= port <= 65535
+    if allow_letta_cloud and parsed.scheme == "https" and hostname == "api.letta.com":
+        return port in {None, 443} and parsed.path in {"", "/"}
+    return False
 
 
 def _file_env(path: "Path", name: str, default: str = "") -> str:
@@ -115,11 +131,14 @@ class NyxalAgentHub:
         if provider == "gemini":
             return bool(_env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY"))
         if provider == "hermes":
-            return bool(_env("NYXAL_HERMES_API_KEY") and _env("NYXAL_HERMES_BASE_URL", "http://127.0.0.1:8642/v1"))
+            base = _env("NYXAL_HERMES_BASE_URL", "http://127.0.0.1:8642/v1")
+            return bool(_env("NYXAL_HERMES_API_KEY") and _safe_provider_base(base))
         if provider == "letta":
-            base = _env("LETTA_BASE_URL", "http://127.0.0.1:8283").lower()
-            local_endpoint = base.startswith(("http://127.0.0.1", "http://localhost", "http://[::1]"))
-            return bool(_env("LETTA_AGENT_ID") and (_env("LETTA_API_KEY") or local_endpoint))
+            base = _env("LETTA_BASE_URL", "http://127.0.0.1:8283")
+            safe_local = _safe_provider_base(base)
+            safe_cloud = _safe_provider_base(base, allow_letta_cloud=True)
+            needs_key = urlsplit(base).hostname == "api.letta.com" if safe_cloud else False
+            return bool(_env("LETTA_AGENT_ID") and (safe_local or (safe_cloud and _env("LETTA_API_KEY"))))
         return False
 
     def resolve_provider(self, requested: str | None = None) -> str:
