@@ -45,7 +45,12 @@ TRILHA_HTTP = RegistroTrilhaHTTP.do_ambiente()
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
-CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
+_LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
+PROXY_MODE = os.environ.get("NYXAL_API_BEHIND_PROXY", "").strip().lower() in {"1", "true", "yes", "on"}
+CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "").strip()
+# Wildcard CORS is deliberately disabled; cross-origin clients must configure one exact origin.
+if CORS_ORIGIN == "*":
+    CORS_ORIGIN = ""
 NUCLEO_CONVERSACIONAL = NucleoConversacionalNixal()
 INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
     transporte=TransporteConversacionalNixal(),
@@ -636,6 +641,15 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self.send_header("X-Content-Type-Options", "nosniff")
         super().end_headers()
 
+    def _send_cors_headers(self) -> None:
+        origem = self.headers.get("Origin", "")
+        if not CORS_ORIGIN or CORS_ORIGIN == "*" or origem != CORS_ORIGIN:
+            return
+        self.send_header("Access-Control-Allow-Origin", CORS_ORIGIN)
+        self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
     def _send_json(
         self,
         status_code: int,
@@ -652,18 +666,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             "Content-Length",
             str(len(body)),
         )
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            CORS_ORIGIN,
-        )
-        self.send_header(
-            "Access-Control-Allow-Headers",
-            "Authorization, Content-Type",
-        )
-        self.send_header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS",
-        )
+        self._send_cors_headers()
         self.end_headers()
 
         self.wfile.write(body)
@@ -736,11 +739,24 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         return True
 
-    def _local_ou_autorizado(self) -> bool:
+    def _authorized_if_networked(self) -> bool:
         endereco = self.client_address[0] if self.client_address else ""
-        if endereco in {"127.0.0.1", "::1"}:
+        origem_proxy = any(
+            self.headers.get(nome)
+            for nome in ("Forwarded", "X-Forwarded-For", "X-Real-IP")
+        )
+        local_direto = (
+            HOST in _LOOPBACK_HOSTS
+            and endereco in {"127.0.0.1", "::1"}
+            and not PROXY_MODE
+            and not origem_proxy
+        )
+        if local_direto:
             return True
         return self._authorized()
+
+    def _local_ou_autorizado(self) -> bool:
+        return self._authorized_if_networked()
 
     def do_OPTIONS(self) -> None:
         self.send_response(204)
@@ -807,6 +823,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if self.path in {"/api/vps/action", "/api/vps/provisionar"}:
+            # Em modo de rede/proxy, mutações de VPS exigem token mesmo se o proxy chegar por loopback.
+            if not self._authorized_if_networked():
+                return
             try:
                 content_length = int(self.headers.get("Content-Length", "0"))
             except ValueError:
@@ -855,6 +874,8 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/api/stt":
+            if not self._authorized_if_networked():
+                return
             try:
                 content_length = int(
                     self.headers.get("Content-Length", "0")
@@ -947,6 +968,8 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/api/tts":
+            if not self._authorized_if_networked():
+                return
             try:
                 content_length = int(
                     self.headers.get("Content-Length", "0")
@@ -1102,6 +1125,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     "estado": "rota_nao_encontrada",
                 },
             )
+            return
+
+        if not self._authorized_if_networked():
             return
 
         try:
@@ -1312,6 +1338,19 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             or parsed_path.startswith("/api/integracoes/google/")
             or parsed_path.startswith("/api/integracoes/gmail/")
         )
+        endpoints_sensiveis = {
+            "/api/amd-cloud/status",
+            "/api/vps/status",
+            "/api/vps/instances",
+            "/api/vps/contexto",
+        }
+        # Endpoints "public" detalhados não são publicáveis na internet por padrão.
+        if (
+            parsed_path in endpoints_sensiveis
+            or (parsed_path.startswith("/api/public/") and parsed_path != "/api/public/status")
+        ) and not self._authorized_if_networked():
+            return
+
         if is_agent_or_workspace and not self._local_ou_autorizado():
             return
 
@@ -1739,6 +1778,11 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    if HOST not in _LOOPBACK_HOSTS and not API_TOKEN:
+        raise SystemExit(
+            "Inicialização recusada: configure NYXAL_API_TOKEN antes de vincular "
+            "a API a um endereço não local."
+        )
     server = ThreadingHTTPServer(
         (HOST, PORT),
         NyxalAPIHandler,
