@@ -1,7 +1,7 @@
 # Arquitetura de Sistema do NyxOS — limites e evolução
 
 **Estado:** RFC de arquitetura para revisão  
-**Base observada:** \`main\`, documentação do habitat M5.1–M5.24 e unidades \`systemd\` atuais  
+**Base observada:** `main`, documentação do habitat M5.1–M5.24 e unidades `systemd` atuais  
 **Objetivo:** evoluir o habitat NyxOS para um sistema operacional distribuível, reproduzível e recuperável sem criar um kernel próprio antes de demonstrar uma necessidade técnica incontornável.
 
 ## 1. Decisão central
@@ -16,33 +16,33 @@
 
 O nome NyxOS pode designar um produto de sistema operacional mesmo mantendo o kernel Linux. Distribuição, userland, configuração, serviços, atualização e experiência de boot já compõem trabalho substancial e verificável; escrever um kernel não é pré-requisito para controlar essas camadas.
 
-Esta RFC **não cria automaticamente M6, AE6, autoridade de integração, execução física automática ou permissão para modificar \`main\`**. Ela propõe decisões para revisão explícita.
+Esta RFC **não cria automaticamente M6, AE6, autoridade de integração, execução física automática ou permissão para modificar `main`**. Ela propõe decisões para revisão explícita.
 
 ## 2. Evidências do estado atual
 
 O repositório já estabelece que:
 
 - O habitat M5.1–M5.24 é persistente, observável e modular sobre o hospedeiro, sem kernel próprio nesta etapa.
-- \`nyxal-api.service\` e \`nyxos-residente.service\` são unidades separadas; \`nyxos.target\` agrupa a residência.
-- As unidades observadas usam o ambiente virtual do projeto e já incluem algumas proteções de serviço, como \`NoNewPrivileges=true\`, \`PrivateTmp=true\` e \`UMask=0077\`.
+- `nyxal-api.service` e `nyxos-residente.service` são unidades separadas; `nyxos.target` agrupa a residência.
+- As unidades observadas usam o ambiente virtual do projeto e já incluem algumas proteções de serviço, como `NoNewPrivileges=true`, `PrivateTmp=true` e `UMask=0077`.
 - O gateway de atuação do host define contratos tipados, allowlist, validação antes do executor, modo dry-run e proibição de shell arbitrário.
 - A engenharia do habitat foi fechada na fase M5.24; a próxima evolução deve vir de uma lacuna operacional real, com objetivo mensurável, contrato, autoridade, reversibilidade, testes, promoção e rollback.
 
 Referências internas:
-- \`M5_HABITAT_NYXOS.md\`
-- \`M5_9_RESIDENCIA_LINUX.md\`
-- \`ORDEM_ENGENHARIA_NYXOS.md\`
-- \`M5_10_GATEWAY_ATUACAO_HOST.md\`
-- \`FECHAMENTO_ENGENHARIA_NYXOS.md\`
-- \`deploy/systemd/nyxos.target\`
-- \`deploy/systemd/nyxal-api.service\`
-- \`deploy/systemd/nyxos-residente.service\`
+- `M5_HABITAT_NYXOS.md`
+- `M5_9_RESIDENCIA_LINUX.md`
+- `ORDEM_ENGENHARIA_NYXOS.md`
+- `M5_10_GATEWAY_ATUACAO_HOST.md`
+- `FECHAMENTO_ENGENHARIA_NYXOS.md`
+- `deploy/systemd/nyxos.target`
+- `deploy/systemd/nyxal-api.service`
+- `deploy/systemd/nyxos-residente.service`
 
 Essas bases são úteis, mas **não comprovam ainda** uma imagem NyxOS inicializável, atualizações transacionais de todo o sistema, recuperação do boot, isolamento de sistema entre domínios de confiança ou uma camada genérica e auditada de acesso a dispositivos. Esses itens devem ser tratados como trabalho futuro, não como recursos concluídos.
 
 ## 3. Arquitetura-alvo e fronteiras
 
-\`\`\`text
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │ ESPAÇO DO USUÁRIO                                             │
 │ NyxOS Display / shell / acessibilidade / configurações        │
@@ -78,7 +78,7 @@ Essas bases são úteis, mas **não comprovam ainda** uma imagem NyxOS inicializ
 │ HARDWARE + FIRMWARE                                           │
 │ CPU · RAM · armazenamento · GPU/NPU · áudio · sensores · fans │
 └──────────────────────────────────────────────────────────────┘
-\`\`\`
+```
 
 O diagrama descreve fronteiras lógicas e de confiança; não exige que cada módulo lógico seja imediatamente um processo independente. Separar contratos primeiro e multiplicar processos depois evita microserviços desnecessários.
 
@@ -92,15 +92,15 @@ O diagrama descreve fronteiras lógicas e de confiança; não exige que cada mó
 ### 3.2 Kernel e drivers
 
 - O kernel Linux permanece a fronteira de privilégio máximo.
-- O NyxOS consome syscalls e interfaces existentes: dispositivos em \`/dev\`, interfaces de sensores, APIs de áudio, rede e gerenciamento de sessão, com permissões mínimas.
+- O NyxOS consome syscalls e interfaces existentes: dispositivos em `/dev`, interfaces de sensores, APIs de áudio, rede e gerenciamento de sessão, com permissões mínimas.
 - Serviços normais nunca carregam módulos de kernel nem recebem acesso irrestrito a dispositivos.
 - Leitura de sensores e escrita em atuadores são capacidades diferentes. A permissão de ler telemetria não concede permissão de comandar ventoinhas, energia ou outros dispositivos.
 - Se surgir uma lacuna, primeiro testar configuração do kernel, driver upstream, módulo externo controlado ou serviço de user space. Desenvolvimento de driver/kernel entra num processo técnico separado, com testes de compatibilidade e recuperação.
 
 ### 3.3 Base do sistema e serviços privilegiados
 
-- \`systemd\` supervisiona ciclo de vida, dependências, reinício, logs e limites dos processos.
-- \`udev\`, \`logind\`, \`PipeWire\` e interfaces de rede continuam sendo mecanismos do sistema operacional, não subsistemas duplicados pelo NyxOS.
+- `systemd` supervisiona ciclo de vida, dependências, reinício, logs e limites dos processos.
+- `udev`, `logind`, `PipeWire` e interfaces de rede continuam sendo mecanismos do sistema operacional, não subsistemas duplicados pelo NyxOS.
 - A administração do host deve passar por um **broker de capacidades** pequeno e independente do runtime de IA, e só existir quando a operação realmente exige privilégio adicional.
 - O broker roda com identidade própria, recebe contratos estruturados, aplica política, limita argumentos, registra resultado e expõe somente operações enumeradas.
 - Se uma ação não está registrada, sua resposta é negar. Configuração ou texto produzido pelo modelo não podem acrescentar executores privilegiados.
@@ -207,7 +207,7 @@ Aceite:
 
 Ações propostas, uma a uma e com testes:
 - limitar caminhos graváveis aos diretórios necessários;
-- usar \`ProtectSystem\`, \`ProtectHome\`, \`PrivateDevices\`, \`RestrictAddressFamilies\`, filtros de syscalls, limites de recursos e políticas equivalentes quando suportados e compatíveis;
+- usar `ProtectSystem`, `ProtectHome`, `PrivateDevices`, `RestrictAddressFamilies`, filtros de syscalls, limites de recursos e políticas equivalentes quando suportados e compatíveis;
 - executar cada unidade com o menor privilégio possível;
 - distinguir serviços do usuário e serviços do sistema; usar um serviço de sistema separado somente para capacidades que realmente exijam privilégio;
 - verificar listeners, CORS, autenticação, exposição remota e credenciais;
@@ -328,12 +328,12 @@ Os números são alvos propostos para as provas iniciais, não afirmações sobr
 - escrever ou substituir o kernel Linux;
 - criar drivers próprios sem necessidade provada;
 - migrar imediatamente a máquina principal para outra distribuição;
-- trocar todas as unidades \`systemd --user\` por serviços globais;
+- trocar todas as unidades `systemd --user` por serviços globais;
 - dividir todo o runtime em microserviços;
 - conceder poderes adicionais ao runtime de IA;
 - habilitar captura contínua, wake word ou atuação física automática;
 - criar M6 ou AE6 automaticamente;
-- integrar esta proposta diretamente em \`main\`.
+- integrar esta proposta diretamente em `main`.
 
 ## 9. Próxima ação recomendada
 
