@@ -1,0 +1,25 @@
+name: Actions Runner Smoke
+
+on:
+  push:
+    branches:
+      - diagnostic/actions-runner-smoke
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Provar que o executor iniciou
+        shell: bash
+        run: |
+          set -eu
+          echo "RUNNER_SMOKE_STARTED"
+          printf 'runner=%s\n' "${RUNNER_NAME:-unknown}"
+          printf 'sha=%s\n' "${GITHUB_SHA:-unknown}"
+          python --version
+          echo "RUNNER_SMOKE_OK"
