@@ -32,6 +32,12 @@ jobs:
       - name: Teste da trilha HTTP privacy-first
         run: python -m unittest teste_nixal_trilha_http.py -v
 
+      - name: Teste HTTP end-to-end da trilha
+        run: python -m unittest teste_api_trilha_http_e2e.py -v
+
+      - name: Teste HTTP de segurança da API
+        run: python -m unittest teste_api_security_auth.py -v
+
       - name: Suite Nível 9
         run: python teste_nivel_9_suite_final.py
 
@@ -96,17 +102,6 @@ jobs:
           assert "experimento_falhou" in SolicitacaoEvolucaoNixal.ESTADOS
           print("REGRAS_NIVEL9_OK")
           PY
-      - name: Empacotar projeto completo
-        run: |
-          mkdir -p /tmp/nyxal-package
-          git archive --format=zip --output="/tmp/nyxal-package/Nyxal-N10-${GITHUB_SHA}.zip" "${GITHUB_SHA}"
-
-      - name: Publicar projeto completo
-        uses: actions/upload-artifact@v4
-        with:
-          name: nyxal-projeto-nivel10
-          path: /tmp/nyxal-package/Nyxal-N10-*.zip
-          if-no-files-found: error
       - name: Teste Auto-Evolution AE1
         run: python teste_auto_evolucao_ae1.py
 
@@ -127,3 +122,15 @@ jobs:
 
       - name: Teste Descoberta Contínua AE5
         run: python teste_descoberta_continua_ae5.py
+
+      - name: Empacotar projeto completo
+        run: |
+          mkdir -p /tmp/nyxal-package
+          git archive --format=zip --output="/tmp/nyxal-package/Nyxal-N10-${GITHUB_SHA}.zip" "${GITHUB_SHA}"
+
+      - name: Publicar projeto completo
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyxal-projeto-nivel10
+          path: /tmp/nyxal-package/Nyxal-N10-*.zip
+          if-no-files-found: error
