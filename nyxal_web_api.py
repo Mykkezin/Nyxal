@@ -6,9 +6,12 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from secrets import compare_digest, token_urlsafe
+
+from nixal_trilha_http import RegistroTrilhaHTTP
 
 from nixal_nucleo_conversacional import (
     NucleoConversacionalNixal,
@@ -38,6 +41,7 @@ from urllib.parse import parse_qs, urlsplit
 
 
 BASE_DIR = Path(__file__).resolve().parent
+TRILHA_HTTP = RegistroTrilhaHTTP.do_ambiente()
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
@@ -594,6 +598,40 @@ def residencia_snapshot() -> dict:
     }
 class NyxalAPIHandler(BaseHTTPRequestHandler):
     server_version = "NyxalAPI/1.0"
+
+    def handle_one_request(self) -> None:
+        inicio = time.perf_counter()
+        self._nyxal_request_id = token_urlsafe(12)
+        self._nyxal_status_code = None
+        erro_tipo = None
+        try:
+            super().handle_one_request()
+        except Exception as erro:
+            erro_tipo = type(erro).__name__
+            raise
+        finally:
+            metodo = getattr(self, "command", None)
+            caminho = getattr(self, "path", "")
+            if metodo and caminho:
+                TRILHA_HTTP.registrar(
+                    request_id=self._nyxal_request_id,
+                    method=metodo,
+                    path=caminho,
+                    status_code=self._nyxal_status_code,
+                    duration_ms=(time.perf_counter() - inicio) * 1000.0,
+                    error_type=erro_tipo,
+                )
+
+    def send_response(self, code: int, message: str | None = None) -> None:
+        self._nyxal_status_code = code
+        super().send_response(code, message)
+
+    def end_headers(self) -> None:
+        request_id = getattr(self, "_nyxal_request_id", None)
+        if request_id:
+            self.send_header("X-Request-ID", request_id)
+            self.send_header("X-Content-Type-Options", "nosniff")
+        super().end_headers()
 
     def _send_json(
         self,
@@ -1687,9 +1725,13 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         format_string: str,
         *args,
     ) -> None:
+        # Do not log request lines verbatim: they may expose query strings.
+        metodo = getattr(self, "command", None) or "HTTP"
+        caminho = urlsplit(getattr(self, "path", "")).path or "/"
+        status = getattr(self, "_nyxal_status_code", None)
         print(
-            "[Nyxal-API]",
-            format_string % args,
+            f"[Nyxal-API] {metodo} {caminho} "
+            f"status={status if status is not None else 'unknown'}"
         )
 
 
