@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 2
     steps:
       - name: Provar que o executor iniciou
