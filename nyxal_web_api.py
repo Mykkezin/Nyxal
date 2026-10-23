@@ -601,6 +601,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
     def handle_one_request(self) -> None:
         inicio = time.perf_counter()
+        # Reset fields: the same handler object may process keep-alive requests.
+        self.command = None
+        self.path = ""
         self._nyxal_request_id = token_urlsafe(12)
         self._nyxal_status_code = None
         erro_tipo = None
