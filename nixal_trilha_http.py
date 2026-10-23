@@ -17,7 +17,7 @@ class RegistroTrilhaHTTP:
 
     VERSAO = 1
     METODOS_PERMITIDOS = {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}
-    MAX_ROUTE_CHARS = 256
+    MAX_ROUTE_CHARS = 128
 
     def __init__(self, caminho: str | Path, *, habilitado: bool = True,
                  max_bytes: int = 2_000_000, backups: int = 2) -> None:
@@ -40,9 +40,13 @@ class RegistroTrilhaHTTP:
             max_bytes = int(os.environ.get("NYXAL_HTTP_TRACE_MAX_BYTES", "2000000"))
         except ValueError:
             max_bytes = 2_000_000
+        if max_bytes < 1024:
+            max_bytes = 2_000_000
         try:
             backups = int(os.environ.get("NYXAL_HTTP_TRACE_BACKUPS", "2"))
         except ValueError:
+            backups = 2
+        if not 0 <= backups <= 5:
             backups = 2
         return cls(caminho, habilitado=habilitado not in {"0", "false", "no", "off"},
                    max_bytes=max_bytes, backups=backups)
