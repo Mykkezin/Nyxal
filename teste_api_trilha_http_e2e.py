@@ -7,6 +7,7 @@ import json
 import sys
 import tempfile
 import threading
+import time
 import types
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -68,16 +69,35 @@ class TestTrilhaHTTPIntegracao(unittest.TestCase):
             if line.strip()
         ]
 
+    def wait_for_record(self, request_id: str, timeout: float = 2.0) -> dict:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            record = next(
+                (item for item in self.records() if item["request_id"] == request_id),
+                None,
+            )
+            if record is not None:
+                return record
+            time.sleep(0.01)
+        self.fail(f"Evento HTTP não foi gravado para request_id={request_id}")
+
+    def wait_for_records(self, request_ids: list[str], timeout: float = 2.0) -> list[dict]:
+        wanted = set(request_ids)
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            found = [item for item in self.records() if item["request_id"] in wanted]
+            if len(found) == len(wanted):
+                return found
+            time.sleep(0.01)
+        self.fail(f"Trilha incompleta: esperados {len(wanted)} eventos, vistos {len(found)}")
+
     def test_resposta_e_evento_compartilham_request_id_e_redigem_segredos(self) -> None:
         status, headers, body = self.request("GET", "/health")
         self.assertEqual(status, 200, body.decode("utf-8"))
         self.assertIn("x-request-id", headers)
         self.assertTrue(headers["x-request-id"])
         self.assertEqual(headers.get("x-content-type-options"), "nosniff")
-        health_event = next(
-            record for record in self.records()
-            if record["request_id"] == headers["x-request-id"]
-        )
+        health_event = self.wait_for_record(headers["x-request-id"])
         self.assertEqual(health_event["route"], "/health")
         self.assertEqual(health_event["status_code"], 200)
 
@@ -103,20 +123,14 @@ class TestTrilhaHTTPIntegracao(unittest.TestCase):
                 },
             )
         self.assertEqual(status, 200, body.decode("utf-8"))
-        chat_event = next(
-            record for record in self.records()
-            if record["request_id"] == headers["x-request-id"]
-        )
+        chat_event = self.wait_for_record(headers["x-request-id"])
         self.assertEqual(chat_event["route"], "/api/chat")
         self.assertEqual(chat_event["status_code"], 200)
 
         query_canary = "TRACE_QUERY_CANARY_d28e"
         status, query_headers, _ = self.request("GET", f"/rota-inexistente?token={query_canary}")
         self.assertEqual(status, 404)
-        query_event = next(
-            record for record in self.records()
-            if record["request_id"] == query_headers["x-request-id"]
-        )
+        query_event = self.wait_for_record(query_headers["x-request-id"])
         self.assertEqual(query_event["route"], "/rota-inexistente")
         raw_trace = self.trace_path.read_text(encoding="utf-8")
         for canary in (body_canary, header_canary, query_canary):
@@ -132,8 +146,7 @@ class TestTrilhaHTTPIntegracao(unittest.TestCase):
             ids = list(executor.map(one_request, range(16)))
         self.assertEqual(len(ids), 16)
         self.assertEqual(len(set(ids)), 16)
-        rows = self.records()
-        selected = [row for row in rows if row["request_id"] in set(ids)]
+        selected = self.wait_for_records(ids)
         self.assertEqual(len(selected), 16)
         self.assertTrue(all(row["status_code"] == 200 for row in selected))
 
