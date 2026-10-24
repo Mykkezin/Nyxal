@@ -27,8 +27,6 @@ def main() -> None:
         assert "Type=simple" in unidade
         assert "WorkingDirectory=%h/Nyxal" in unidade
         assert "EnvironmentFile=-%h/.config/nyxal/nyxal.env" in unidade
-        assert "Restart=on-failure" in unidade
-        assert "RestartSec=3" in unidade
         assert "NoNewPrivileges=true" in unidade
         assert "PrivateTmp=true" in unidade
         assert "UMask=0077" in unidade
@@ -47,6 +45,11 @@ def main() -> None:
         assert "%h/Nyxal/.venv/bin/python" in unidade
         assert "/usr/bin/python3" not in unidade
         assert "--habilitar-auto-experimento" not in unidade
+
+    assert "Restart=always" in api
+    assert "RestartSec=2" in api
+    assert "Restart=on-failure" in residente
+    assert "RestartSec=3" in residente
 
     assert (
         "ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/nyxal_web_api.py"
