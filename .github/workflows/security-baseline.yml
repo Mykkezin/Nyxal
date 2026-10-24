@@ -9,6 +9,9 @@ on:
       - "nyxal_web_api.py"
       - "nixal_seguranca_http.py"
       - "teste_seguranca_api.py"
+      - "deploy/systemd/nyxal-api.service"
+      - "deploy/systemd/nyxos-residente.service"
+      - "teste_m5_9_residencia_linux.py"
       - "docs/SEGURANCA_API_NYXAL.md"
       - ".github/workflows/security-baseline.yml"
   pull_request:
@@ -18,6 +21,9 @@ on:
       - "nyxal_web_api.py"
       - "nixal_seguranca_http.py"
       - "teste_seguranca_api.py"
+      - "deploy/systemd/nyxal-api.service"
+      - "deploy/systemd/nyxos-residente.service"
+      - "teste_m5_9_residencia_linux.py"
       - "docs/SEGURANCA_API_NYXAL.md"
       - ".github/workflows/security-baseline.yml"
 
@@ -36,6 +42,6 @@ jobs:
           python-version: "3.12"
       - name: Compile API security surface
         run: |
-          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py
+          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_m5_9_residencia_linux.py
       - name: Run deterministic security policy tests
         run: python teste_seguranca_api.py
