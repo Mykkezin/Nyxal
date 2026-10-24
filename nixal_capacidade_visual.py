@@ -66,7 +66,7 @@ def _inferir_proporcao(prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL) -> str
     texto = _normalizar_texto(prompt)
     permitidas = MODEL_ASPECT_RATIOS.get(modelo, STANDARD_ASPECT_RATIOS)
 
-    for match in re.finditer(r"(?<!\\d)(\\d{1,4})\\s*:\\s*(\\d{1,4})(?!\\d)", texto):
+    for match in re.finditer(r"(?<!\d)(\d{1,4})\s*:\s*(\d{1,4})(?!\d)", texto):
         proporcao = _normalizar_proporcao(int(match.group(1)), int(match.group(2)))
         if proporcao:
             if proporcao not in permitidas:
@@ -84,12 +84,12 @@ def _inferir_proporcao(prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL) -> str
         "portrait orientation", "portrait format", "vertical format", "imagem vertical",
         "foto vertical", "lock screen",
     )
-    vertical_social = re.search(r"\\b(?:story|stories|reel|reels|tiktok)\\b", texto)
+    vertical_social = re.search(r"\b(?:story|stories|reel|reels|tiktok)\b", texto)
     if any(pista in texto for pista in vertical_phrases) or vertical_social:
         return "9:16" if "9:16" in permitidas else None
 
     quadrado = ("quadrado", "foto de perfil", "profile picture", "profile photo")
-    quadrado_token = re.search(r"\\b(?:square|avatar|icon|icone|sticker)\\b", texto)
+    quadrado_token = re.search(r"\b(?:square|avatar|icon|icone|sticker)\b", texto)
     if any(pista in texto for pista in quadrado) or quadrado_token:
         return "1:1" if "1:1" in permitidas else None
 
@@ -180,12 +180,12 @@ def _extrair_parametros_midjourney(
     proporcao_solicitada = None
     permitidas = MODEL_ASPECT_RATIOS.get(modelo, STANDARD_ASPECT_RATIOS)
 
-    stylize_match = re.search(r"(?i)(?:--stylize|--s)\\s*(\\d{1,4})(?!\\d)", limpo)
+    stylize_match = re.search(r"(?i)(?:--stylize|--s)\s*(\d{1,4})(?!\d)", limpo)
     if stylize_match:
         stylize = min(1000, int(stylize_match.group(1)))
         limpo = limpo[:stylize_match.start()] + limpo[stylize_match.end():]
 
-    ratio_match = re.search(r"(?i)--(?:ar|aspect)\\s*(\\d{1,4})\\s*:\\s*(\\d{1,4})(?!\\d)", limpo)
+    ratio_match = re.search(r"(?i)--(?:ar|aspect)\s*(\d{1,4})\s*:\s*(\d{1,4})(?!\d)", limpo)
     if ratio_match:
         proporcao_solicitada = _normalizar_proporcao(
             int(ratio_match.group(1)), int(ratio_match.group(2))
@@ -202,7 +202,7 @@ def _extrair_parametros_midjourney(
             )
         limpo = limpo[:ratio_match.start()] + limpo[ratio_match.end():]
 
-    return re.sub(r"\\s{2,}", " ", limpo).strip(), stylize, proporcao_solicitada
+    return re.sub(r"\s{2,}", " ", limpo).strip(), stylize, proporcao_solicitada
 
 
 class CapacidadeVisualGeminiNixOS:
