@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import ast
 import json
+import socket
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from secrets import compare_digest
+from threading import BoundedSemaphore
 from types import MethodType
 from urllib.parse import urlsplit
 
@@ -116,6 +118,76 @@ def testar_handler_http(api_source: str) -> None:
     print("HTTP_HANDLER_ISOLATED_AUTH_TESTS: OK")
 
 
+def testar_servidor_com_limite(api_source: str) -> None:
+    """Valida rejeição de conexões acima do limite sem iniciar listeners reais."""
+    tree = ast.parse(api_source)
+    server_node = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+        and node.name == "NyxalThreadingHTTPServer"
+    )
+    isolated_tree = ast.Module(body=[server_node], type_ignores=[])
+    ast.fix_missing_locations(isolated_tree)
+
+    class FakeThreadingHTTPServer:
+        def __init__(self) -> None:
+            self.closed_requests = []
+            self.parent_request = None
+            self.parent_thread_request = None
+
+        def process_request(self, request, client_address) -> None:
+            self.parent_request = (request, client_address)
+
+        def process_request_thread(self, request, client_address) -> None:
+            self.parent_thread_request = (request, client_address)
+
+        def shutdown_request(self, request) -> None:
+            self.closed_requests.append(request)
+
+    namespace = {
+        "ThreadingHTTPServer": FakeThreadingHTTPServer,
+        "socket": socket,
+        "HOST": "127.0.0.1",
+        "BoundedSemaphore": BoundedSemaphore,
+        "MAX_CONCURRENT_HTTP_REQUESTS": 1,
+    }
+    exec(compile(isolated_tree, "nyxal_web_api.py", "exec"), namespace)
+    server_type = namespace["NyxalThreadingHTTPServer"]
+
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent = b""
+
+        def sendall(self, data: bytes) -> None:
+            self.sent += data
+
+    server = server_type.__new__(server_type)
+    FakeThreadingHTTPServer.__init__(server)
+    blocker = server.request_slots
+    assert blocker.acquire(blocking=False) is True
+
+    overloaded = FakeSocket()
+    server.process_request(overloaded, ("127.0.0.1", 12345))
+    assert b"503 Service Unavailable" in overloaded.sent
+    assert b"Connection: close" in overloaded.sent
+    assert b"Retry-After: 1" in overloaded.sent
+    assert server.closed_requests == [overloaded]
+    assert server.parent_request is None
+    blocker.release()
+
+    accepted = FakeSocket()
+    server.process_request(accepted, ("127.0.0.1", 12346))
+    assert server.parent_request == (accepted, ("127.0.0.1", 12346))
+    assert blocker.acquire(blocking=False) is False
+    server.process_request_thread(accepted, ("127.0.0.1", 12346))
+    assert server.parent_thread_request == (accepted, ("127.0.0.1", 12346))
+    assert blocker.acquire(blocking=False) is True
+    blocker.release()
+
+    print("HTTP_SERVER_ISOLATED_LIMIT_TESTS: OK")
+
+
 def main() -> None:
     api_source = (Path(__file__).resolve().parent / "nyxal_web_api.py").read_text(
         encoding="utf-8"
@@ -132,6 +204,13 @@ def main() -> None:
     assert "self._send_security_headers()" in api_source
 
     testar_handler_http(api_source)
+    testar_servidor_com_limite(api_source)
+
+    assert "MAX_CONCURRENT_HTTP_REQUESTS = 8" in api_source
+    assert "HTTP_REQUEST_TIMEOUT_SECONDS = 30" in api_source
+    assert "self.connection.settimeout(HTTP_REQUEST_TIMEOUT_SECONDS)" in api_source
+    assert "request_slots.acquire(blocking=False)" in api_source
+    assert "HTTP/1.1 503 Service Unavailable" in api_source
 
     assert host_loopback("127.0.0.1")
     assert host_loopback("::1")
