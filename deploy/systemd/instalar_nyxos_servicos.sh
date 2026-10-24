@@ -26,7 +26,18 @@ if ! "${PYTHON_BIN}" -c "import nyxal_web_api; import executar_nyxos_residente" 
     exit 1
 fi
 
+# O diretório e o arquivo de segredos não podem ser redirecionados por
+# links simbólicos: valide antes de criar ou modificar permissões.
+if [[ -L "${CONFIG_DIR}" ]]; then
+    echo "ERRO: ${CONFIG_DIR} não pode ser um link simbólico." >&2
+    exit 1
+fi
+
 mkdir -p "${USER_SYSTEMD_DIR}" "${AUTOSTART_DIR}" "${CONFIG_DIR}"
+if [[ ! -d "${CONFIG_DIR}" ]]; then
+    echo "ERRO: ${CONFIG_DIR} precisa ser um diretório." >&2
+    exit 1
+fi
 chmod 700 "${CONFIG_DIR}"
 
 # O arquivo pode conter credenciais da API. Não siga links simbólicos e
