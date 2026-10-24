@@ -145,13 +145,20 @@ def _selecionar_nivel_raciocinio(prompt: str, *, modelo: str) -> str | None:
 
     texto = _normalizar_texto(prompt)
     sinais_de_complexidade = (
-        "texto", "tipografia", "infograf", "diagrama", "mapa", "logotipo", "logo",
-        "rotulo", "layout", "composicao", "arquitetura", "anatomia", "perspectiva",
-        "fotoreal", "fotorreal", "consistencia", "multiplos", "varios sujeitos",
-        "muitas camadas", "detalhado", "detalhada", "precisao", "cartaz", "poster",
-        "capa", "marca", "exatamente", "legivel",
+        "tipografia", "infograf", "diagrama", "mapa", "rotulo", "layout",
+        "composicao", "arquitetura", "anatomia", "perspectiva", "fotoreal",
+        "fotorreal", "consistencia", "multiplos", "varios sujeitos", "muitas camadas",
+        "detalhado", "detalhada", "precisao", "cartaz", "poster", "legivel",
     )
-    complexo = len(prompt) >= 700 or any(sinal in texto for sinal in sinais_de_complexidade)
+    termos_exatos_de_complexidade = re.search(
+        r"\\b(?:texto|textos|logo|logotipo|logomarca|capa|marca|exatamente)\\b",
+        texto,
+    )
+    complexo = (
+        len(prompt) >= 700
+        or bool(termos_exatos_de_complexidade)
+        or any(sinal in texto for sinal in sinais_de_complexidade)
+    )
     return "high" if complexo else MODEL_DEFAULT_THINKING_LEVEL[modelo]
 
 
