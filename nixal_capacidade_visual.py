@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import os
 import re
 import unicodedata
@@ -21,12 +22,23 @@ SUPPORTED_ASPECT_RATIOS = {
     "1:1", "1:4", "1:8", "2:3", "3:2", "3:4", "4:1",
     "4:3", "4:5", "5:4", "8:1", "9:16", "16:9", "21:9",
 }
+STANDARD_ASPECT_RATIOS = {
+    "1:1", "2:3", "3:2", "3:4", "4:3", "4:5",
+    "5:4", "9:16", "16:9", "21:9",
+}
+MODEL_ASPECT_RATIOS = {
+    "gemini-nano-banana-2.1": SUPPORTED_ASPECT_RATIOS,
+    "gemini-3.1-flash-image": SUPPORTED_ASPECT_RATIOS,
+    "gemini-3.1-flash-lite-image": STANDARD_ASPECT_RATIOS,
+    "gemini-3-pro-image": STANDARD_ASPECT_RATIOS,
+    "gemini-2.5-flash-image": STANDARD_ASPECT_RATIOS,
+}
 MODELS_WITH_IMAGE_SIZE = {
     "gemini-nano-banana-2.1",
-    "gemini-3.1-flash-lite-image",
     "gemini-3.1-flash-image",
     "gemini-3-pro-image",
 }
+MODELS_1K_ONLY = {"gemini-3.1-flash-lite-image"}
 MIME_SIGNATURES = {
     "image/png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
     "image/jpeg": lambda data: len(data) >= 3 and data.startswith(b"\xff\xd8\xff"),
@@ -41,12 +53,27 @@ def _normalizar_texto(texto: str) -> str:
     return "".join(char for char in texto if not unicodedata.combining(char))
 
 
-def _inferir_proporcao(prompt: str) -> str | None:
-    """Converte proporções e pistas de enquadramento em opções reais da API."""
+def _normalizar_proporcao(largura: int, altura: int) -> str | None:
+    if largura <= 0 or altura <= 0:
+        return None
+    divisor = math.gcd(largura, altura)
+    proporcao = f"{largura // divisor}:{altura // divisor}"
+    return proporcao if proporcao in SUPPORTED_ASPECT_RATIOS else None
+
+
+def _inferir_proporcao(prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL) -> str | None:
+    """Infere uma proporção e respeita as proporções documentadas para o modelo."""
     texto = _normalizar_texto(prompt)
-    for match in re.finditer(r"(?<!\d)(\d{1,2})\s*:\s*(\d{1,2})(?!\d)", texto):
-        proporcao = f"{int(match.group(1))}:{int(match.group(2))}"
-        if proporcao in SUPPORTED_ASPECT_RATIOS:
+    permitidas = MODEL_ASPECT_RATIOS.get(modelo, STANDARD_ASPECT_RATIOS)
+
+    for match in re.finditer(r"(?<!\\d)(\\d{1,4})\\s*:\\s*(\\d{1,4})(?!\\d)", texto):
+        proporcao = _normalizar_proporcao(int(match.group(1)), int(match.group(2)))
+        if proporcao:
+            if proporcao not in permitidas:
+                raise ValueError(
+                    f"O modelo {modelo} não suporta a proporção {proporcao}. "
+                    "Use uma proporção suportada pelo modelo."
+                )
             return proporcao
 
     # A orientação explícita sempre tem precedência sobre palavras genéricas como wallpaper.
@@ -57,14 +84,14 @@ def _inferir_proporcao(prompt: str) -> str | None:
         "portrait orientation", "portrait format", "vertical format", "imagem vertical",
         "foto vertical", "lock screen",
     )
-    vertical_social = re.search(r"\b(?:story|stories|reel|reels|tiktok)\b", texto)
+    vertical_social = re.search(r"\\b(?:story|stories|reel|reels|tiktok)\\b", texto)
     if any(pista in texto for pista in vertical_phrases) or vertical_social:
-        return "9:16"
+        return "9:16" if "9:16" in permitidas else None
 
     quadrado = ("quadrado", "foto de perfil", "profile picture", "profile photo")
-    quadrado_token = re.search(r"\b(?:square|avatar|icon|icone|sticker)\b", texto)
+    quadrado_token = re.search(r"\\b(?:square|avatar|icon|icone|sticker)\\b", texto)
     if any(pista in texto for pista in quadrado) or quadrado_token:
-        return "1:1"
+        return "1:1" if "1:1" in permitidas else None
 
     horizontal = (
         "horizontal", "landscape orientation", "landscape format", "panoram",
@@ -75,14 +102,14 @@ def _inferir_proporcao(prompt: str) -> str | None:
         "banner", "wide wallpaper",
     )
     if any(pista in texto for pista in horizontal):
-        return "16:9"
+        return "16:9" if "16:9" in permitidas else None
 
     impresso_vertical = (
         "poster", "cartaz", "capa de livro", "book cover", "capa de revista",
         "magazine cover", "folha a4 vertical", "vertical a4",
     )
     if any(pista in texto for pista in impresso_vertical):
-        return "2:3"
+        return "2:3" if "2:3" in permitidas else None
     return None
 
 
@@ -144,24 +171,38 @@ def _assinatura_compativel(dados: bytes, mime_type: str) -> bool:
     return bool(assinatura and assinatura(dados))
 
 
-def _extrair_parametros_midjourney(prompt: str) -> tuple[str, int | None]:
-    """Traduz os parâmetros comuns --ar e --stylize para controles que a API suporta."""
+def _extrair_parametros_midjourney(
+    prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL
+) -> tuple[str, int | None, str | None]:
+    """Traduz --ar/--aspect e --s/--stylize para controles disponíveis na API."""
     limpo = prompt
     stylize = None
+    proporcao_solicitada = None
+    permitidas = MODEL_ASPECT_RATIOS.get(modelo, STANDARD_ASPECT_RATIOS)
 
-    stylize_match = re.search(r"(?i)(?:--stylize|--s)\s*(\d{1,4})(?!\d)", limpo)
+    stylize_match = re.search(r"(?i)(?:--stylize|--s)\\s*(\\d{1,4})(?!\\d)", limpo)
     if stylize_match:
         stylize = min(1000, int(stylize_match.group(1)))
         limpo = limpo[:stylize_match.start()] + limpo[stylize_match.end():]
 
-    # --ar/--aspect é aplicado em response_format; não deve ser apresentado ao modelo como texto.
-    ratio_match = re.search(r"(?i)--(?:ar|aspect)\s*(\d{1,2})\s*:\s*(\d{1,2})", limpo)
+    ratio_match = re.search(r"(?i)--(?:ar|aspect)\\s*(\\d{1,4})\\s*:\\s*(\\d{1,4})(?!\\d)", limpo)
     if ratio_match:
-        ratio = f"{int(ratio_match.group(1))}:{int(ratio_match.group(2))}"
-        if ratio in SUPPORTED_ASPECT_RATIOS:
-            limpo = limpo[:ratio_match.start()] + limpo[ratio_match.end():]
+        proporcao_solicitada = _normalizar_proporcao(
+            int(ratio_match.group(1)), int(ratio_match.group(2))
+        )
+        if proporcao_solicitada is None:
+            raise ValueError(
+                "A proporção --ar solicitada não é suportada. "
+                f"Opções válidas: {', '.join(sorted(permitidas))}."
+            )
+        if proporcao_solicitada not in permitidas:
+            raise ValueError(
+                f"O modelo {modelo} não suporta a proporção {proporcao_solicitada}. "
+                f"Opções válidas para esse modelo: {', '.join(sorted(permitidas))}."
+            )
+        limpo = limpo[:ratio_match.start()] + limpo[ratio_match.end():]
 
-    return re.sub(r"\s{2,}", " ", limpo).strip(), stylize
+    return re.sub(r"\\s{2,}", " ", limpo).strip(), stylize, proporcao_solicitada
 
 
 class CapacidadeVisualGeminiNixOS:
