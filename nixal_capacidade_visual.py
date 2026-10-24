@@ -227,7 +227,11 @@ class CapacidadeVisualGeminiNixOS:
             "salva_upload_no_servidor": False,
             "controles": {
                 "proporcao_automatica": True,
-                "tamanho_nativo": ["1K", "2K", "4K"],
+                "tamanho_nativo": (
+                    ["1K"] if model in MODELS_1K_ONLY
+                    else ["1K", "2K", "4K"] if model in MODELS_WITH_IMAGE_SIZE
+                    else ["definido_pelo_provedor"]
+                ),
                 "edicao_preserva_areas_nao_solicitadas": True,
                 "parametros_midjourney": ["--ar", "--aspect", "--s", "--stylize"],
             },
