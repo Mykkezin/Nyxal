@@ -43,6 +43,7 @@ from nixal_seguranca_http import (
     host_loopback,
     origin_permitida,
     parse_allowed_origins,
+    sanitize_http_log_message,
 )
 
 
@@ -1732,10 +1733,8 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         format_string: str,
         *args,
     ) -> None:
-        print(
-            "[Nyxal-API]",
-            format_string % args,
-        )
+        mensagem = sanitize_http_log_message(format_string % args)
+        print("[Nyxal-API]", mensagem)
 
 
 class NyxalThreadingHTTPServer(ThreadingHTTPServer):
