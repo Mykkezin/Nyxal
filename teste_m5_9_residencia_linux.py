@@ -40,6 +40,10 @@ def main() -> None:
         assert "LockPersonality=true" in unidade
         assert "RestrictRealtime=true" in unidade
         assert "SystemCallArchitectures=native" in unidade
+        assert "CapabilityBoundingSet=" in unidade
+        assert "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6" in unidade
+        assert "ProtectClock=true" in unidade
+        assert "ProtectKernelLogs=true" in unidade
         assert "%h/Nyxal/.venv/bin/python" in unidade
         assert "/usr/bin/python3" not in unidade
         assert "--habilitar-auto-experimento" not in unidade
