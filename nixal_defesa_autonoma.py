@@ -11,6 +11,7 @@ from collections import OrderedDict, deque
 from ipaddress import ip_address
 from math import isfinite
 from time import monotonic
+from threading import Lock
 from typing import Callable, Deque, Any
 
 
@@ -157,6 +158,7 @@ class DefesaAutonoma:
             raise ValueError("limiares inválidos: bloqueio deve exceder rate limit")
         if duracao_bloqueio_segundos < 1:
             raise ValueError("duracao_bloqueio_segundos precisa ser positiva")
+        self._lock = Lock()
         self._relogio = relogio
         self._janela = float(janela_segundos)
         self._limiar_rate_limit = int(limiar_rate_limit)
@@ -202,17 +204,19 @@ class DefesaAutonoma:
         if tipo == "falha_autenticacao":
             severidade = "baixa"
             assert origem_ip is not None  # validado antes desta etapa
-            agora = self._relogio()
-            if origem_ip not in self._falhas:
-                if len(self._falhas) >= MAX_TRACKED_ORIGINS:
-                    self._falhas.popitem(last=False)
-                self._falhas[origem_ip] = deque(maxlen=MAX_FAILURES_PER_ORIGIN)
-            falhas = self._falhas[origem_ip]
-            self._falhas.move_to_end(origem_ip)
-            while falhas and agora - falhas[0] > self._janela:
-                falhas.popleft()
-            falhas.append(agora)
-            quantidade = len(falhas)
+            # A API usa threads concorrentes; proteger a janela deslizante e o LRU.
+            with self._lock:
+                agora = self._relogio()
+                if origem_ip not in self._falhas:
+                    if len(self._falhas) >= MAX_TRACKED_ORIGINS:
+                        self._falhas.popitem(last=False)
+                    self._falhas[origem_ip] = deque(maxlen=MAX_FAILURES_PER_ORIGIN)
+                falhas = self._falhas[origem_ip]
+                self._falhas.move_to_end(origem_ip)
+                while falhas and agora - falhas[0] > self._janela:
+                    falhas.popleft()
+                falhas.append(agora)
+                quantidade = len(falhas)
             motivos.append("falha_autenticacao_observada")
 
             if quantidade >= self._limiar_bloqueio and _origem_remota(origem_ip):
