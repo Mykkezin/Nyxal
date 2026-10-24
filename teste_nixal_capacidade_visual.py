@@ -404,6 +404,52 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
 
         self.assertEqual(base64.b64decode(result["imagem_base64"]), final_image)
 
+    def test_prompt_de_infografico_recebe_direcao_de_legibilidade(self):
+        response = response_with_image()
+        prompt = "Crie um infográfico com três etapas e os títulos exatos Reciclar, Reutilizar e Reduzir."
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        prepared = payload["input"][0]["text"]
+        self.assertIn("Para informação visual", prepared)
+        self.assertIn("não invente métricas", prepared)
+        self.assertIn(prompt, prepared)
+
+    def test_prompt_de_logotipo_evita_mockups_nao_solicitados(self):
+        response = response_with_image()
+        prompt = "Crie um logotipo minimalista para uma marca de café."
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        prepared = payload["input"][0]["text"]
+        self.assertIn("Para a marca", prepared)
+        self.assertIn("mockups de marca sem solicitação", prepared)
+
+    def test_prompt_de_fotografia_de_produto_adiciona_direcao_de_estudio(self):
+        response = response_with_image()
+        prompt = "Fotografia de produto de uma caneca cerâmica azul sobre fundo neutro."
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        prepared = payload["input"][0]["text"]
+        self.assertIn("Para o produto", prepared)
+        self.assertIn("sombras de contato plausíveis", prepared)
+
     def test_status_expoe_controles_sem_revelar_segredos(self):
         with patch.dict(os.environ, {}, clear=True):
             status = CapacidadeVisualGeminiNixOS().status()
