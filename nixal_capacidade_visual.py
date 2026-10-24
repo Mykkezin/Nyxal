@@ -39,6 +39,16 @@ MODELS_WITH_IMAGE_SIZE = {
     "gemini-3-pro-image",
 }
 MODELS_1K_ONLY = {"gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"}
+MODEL_THINKING_LEVELS = {
+    DEFAULT_IMAGE_MODEL: frozenset({"minimal", "medium", "high"}),
+    "gemini-3.1-flash-image": frozenset({"minimal", "high"}),
+    "gemini-3.1-flash-lite-image": frozenset({"minimal", "high"}),
+}
+MODEL_DEFAULT_THINKING_LEVEL = {
+    DEFAULT_IMAGE_MODEL: "medium",
+    "gemini-3.1-flash-image": "minimal",
+    "gemini-3.1-flash-lite-image": "minimal",
+}
 MIME_SIGNATURES = {
     "image/png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
     "image/jpeg": lambda data: len(data) >= 3 and data.startswith(b"\xff\xd8\xff"),
@@ -51,6 +61,40 @@ MIME_SIGNATURES = {
 def _normalizar_texto(texto: str) -> str:
     texto = unicodedata.normalize("NFKD", texto.casefold())
     return "".join(char for char in texto if not unicodedata.combining(char))
+
+
+def _selecionar_nivel_raciocinio(prompt: str, *, modelo: str) -> str | None:
+    """Valida o nível de raciocínio e permite selecionar automaticamente para prompts complexos."""
+    solicitado = os.environ.get("NYXAL_GEMINI_IMAGE_THINKING_LEVEL", "").strip().lower()
+    if not solicitado:
+        return None  # Mantém o padrão e o custo definidos pelo provedor.
+
+    permitidos = MODEL_THINKING_LEVELS.get(modelo)
+    if not permitidos:
+        raise ValueError(
+            f"O modelo {modelo} não possui níveis de raciocínio configuráveis validados. "
+            "Remova NYXAL_GEMINI_IMAGE_THINKING_LEVEL para usar o padrão do provedor."
+        )
+
+    if solicitado != "auto":
+        if solicitado not in permitidos:
+            opcoes = ", ".join(sorted(permitidos))
+            raise ValueError(
+                f"O modelo {modelo} não suporta o nível de raciocínio {solicitado!r}. "
+                f"Opções válidas: {opcoes} ou auto."
+            )
+        return solicitado
+
+    texto = _normalizar_texto(prompt)
+    sinais_de_complexidade = (
+        "texto", "tipografia", "infograf", "diagrama", "mapa", "logotipo", "logo",
+        "rotulo", "layout", "composicao", "arquitetura", "anatomia", "perspectiva",
+        "fotoreal", "fotorreal", "consistencia", "multiplos", "varios sujeitos",
+        "muitas camadas", "detalhado", "detalhada", "precisao", "cartaz", "poster",
+        "capa", "marca", "exatamente", "legivel",
+    )
+    complexo = len(prompt) >= 700 or any(sinal in texto for sinal in sinais_de_complexidade)
+    return "high" if complexo else MODEL_DEFAULT_THINKING_LEVEL[modelo]
 
 
 def _normalizar_proporcao(largura: int, altura: int) -> str | None:
@@ -249,6 +293,11 @@ class CapacidadeVisualGeminiNixOS:
             "versao": self.VERSAO,
             "estado": "configurado" if configured else "configuracao_pendente",
             "modelo": model,
+            "nivel_raciocinio_configurado": (
+                os.environ.get("NYXAL_GEMINI_IMAGE_THINKING_LEVEL", "").strip().lower()
+                or "padrao_do_provedor"
+            ),
+            "niveis_raciocinio_suportados": sorted(MODEL_THINKING_LEVELS.get(model, ())),
             "entrada_max_bytes": MAX_INPUT_BYTES,
             "mime_permitidos": sorted(ALLOWED_MIME),
             "salva_upload_no_servidor": False,
@@ -294,6 +343,7 @@ class CapacidadeVisualGeminiNixOS:
         prompt_limpo, nivel_estilizado, proporcao_solicitada, elementos_excluir = _extrair_parametros_midjourney(
             prompt, modelo=model
         )
+        nivel_raciocinio = _selecionar_nivel_raciocinio(prompt_limpo, modelo=model)
         inputs: list[dict[str, Any]] = [{
             "type": "text",
             "text": _preparar_prompt(
@@ -365,6 +415,8 @@ class CapacidadeVisualGeminiNixOS:
             "response_format": [{"type": "text"}, image_format],
             "store": False,
         }
+        if nivel_raciocinio is not None:
+            payload["generation_config"] = {"thinking_level": nivel_raciocinio}
         request = Request(
             url,
             data=json.dumps(payload).encode("utf-8"),
