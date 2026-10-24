@@ -27,6 +27,18 @@ if ! "${PYTHON_BIN}" -c "import nyxal_web_api; import executar_nyxos_residente" 
 fi
 
 mkdir -p "${USER_SYSTEMD_DIR}" "${AUTOSTART_DIR}" "${CONFIG_DIR}"
+chmod 700 "${CONFIG_DIR}"
+
+# O arquivo pode conter credenciais da API. Não siga links simbólicos e
+# restrinja permissões antes de iniciar qualquer serviço residente.
+ENV_FILE="${CONFIG_DIR}/nyxal.env"
+if [[ -L "${ENV_FILE}" ]]; then
+    echo "ERRO: ${ENV_FILE} não pode ser um link simbólico." >&2
+    exit 1
+fi
+if [[ -f "${ENV_FILE}" ]]; then
+    chmod 600 "${ENV_FILE}"
+fi
 
 if [[ -f "${NYXAL_DIR}/.gitmodules" ]] && command -v npm >/dev/null 2>&1; then
     git -C "${NYXAL_DIR}" submodule update --init --recursive
