@@ -7,6 +7,7 @@ from pathlib import Path
 
 from nixal_seguranca_http import (
     host_loopback,
+    origin_host_loopback,
     origin_permitida,
     parse_allowed_origins,
 )
@@ -32,11 +33,19 @@ def main() -> None:
         and "_local_ou_autorizado()" in api_source
     )
     assert "if not host_loopback(HOST):" in api_source
+    assert "origin_host_loopback(origin)" in api_source
+    assert "reverse proxy" in api_source
     assert "self._send_security_headers()" in api_source
 
     assert host_loopback("127.0.0.1")
     assert host_loopback("::1")
     assert host_loopback("localhost")
+    assert origin_host_loopback("http://localhost:5173")
+    assert origin_host_loopback("http://127.0.0.1:8010")
+    assert origin_host_loopback("https://[::1]:8443")
+    assert not origin_host_loopback("https://nyxal.example")
+    assert not origin_host_loopback("null")
+    assert not origin_host_loopback("https://localhost/path")
     assert not host_loopback("0.0.0.0")
     assert not host_loopback("192.0.2.10")
     assert not host_loopback("nyxal.example")
@@ -66,6 +75,7 @@ def main() -> None:
     print("API_POLICY_WIRING: OK")
     print("TESTE_SEGURANCA_HTTP_OK")
     print("BIND_LOOPBACK: OK")
+    print("REMOTE_ORIGIN_REQUIRES_BEARER: OK")
     print("CORS_EXATO_SEM_CURINGAS: OK")
     print("ORIGEM_NULL_E_ORIGENS_ESTRANHAS: REJEITADAS")
 
