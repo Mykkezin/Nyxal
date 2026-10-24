@@ -44,6 +44,21 @@ def origin_host_loopback(origin: str | None) -> bool:
     )
 
 
+def client_requires_bearer(
+    client_address: str | None,
+    origin: str | None,
+) -> bool:
+    """Aplica autenticação a clientes remotos e a origens web remotas via proxy."""
+    if origin is not None and not origin_host_loopback(origin):
+        return True
+    if not client_address:
+        return True
+    try:
+        return not ip_address(client_address).is_loopback
+    except ValueError:
+        return True
+
+
 def parse_allowed_origins(
     raw_origins: str | None,
     *,
