@@ -74,7 +74,7 @@ def main() -> None:
     assert '[[ -L "${ENV_FILE}" ]]' in instalador
     assert '[[ -e "${ENV_FILE}" && ! -f "${ENV_FILE}" ]]' in instalador
     assert 'chmod 600 "${ENV_FILE}"' in instalador
-    assert "loginctl enable-linger ${USER}" in instalador
+    assert 'loginctl enable-linger "${USER}"' in instalador
     assert "LINGER_STATUS" in instalador
     assert "sudo " not in instalador
     assert "/etc/systemd" not in instalador
