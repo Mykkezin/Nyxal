@@ -9,6 +9,7 @@ Esta etapa reduz a superfície de exposição da API atual. Ela não transforma 
 - **Bind local obrigatório:** `nyxal_web_api.py` recusa iniciar quando `NYXAL_API_HOST` não é `localhost` ou um endereço de loopback. O servidor da biblioteca padrão fala HTTP e não deve ser exposto diretamente à Internet.
 - **CORS por lista de permissão:** a API não emite `Access-Control-Allow-Origin: *`. Por padrão, aceita somente as origens locais da própria porta (`localhost`, `127.0.0.1` e `[::1]`). Origens adicionais precisam ser explícitas.
 - **Rejeição de origem web não autorizada:** pedidos a `/api/*` que tragam um cabeçalho `Origin` não permitido são rejeitados, inclusive preflight `OPTIONS`.
+- **Defesa contra proxy confundido com cliente local:** uma origem web não-loopback, mesmo quando encaminhada por proxy local, também precisa apresentar Bearer. O gateway remoto deve autenticar o usuário e injetar esse segredo apenas server-side.
 - **Autorização de rotas para clientes não locais:** os endpoints `/api/*` passam pela verificação local/Bearer antes do processamento. Rotas que já exigem token continuam exigindo-o também em loopback.
 - **Cabeçalhos defensivos:** respostas JSON e de bytes incluem `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` e `Cache-Control: no-store`. A versão do servidor deixa de anunciar a versão detalhada do Python.
 - **Hardening systemd inicial:** as unidades da API e do residente passam a usar `ProtectSystem=full`, proteção de tunables/módulos/cgroups do kernel, restrição SUID/SGID, `LockPersonality`, `RestrictRealtime` e `SystemCallArchitectures=native`. Não foi ativado `PrivateDevices` nem `ProtectHome` para evitar interromper acesso a dados de hardware, modelos e estado do usuário sem validação no host real.
@@ -36,6 +37,19 @@ NYXAL_API_CORS_ORIGINS="https://nyxal.example,https://painel.nyxal.example"
 ```
 
 A variável legada `NYXAL_API_CORS_ORIGIN` continua aceita para uma única origem, mas `*` e `null` são rejeitados deliberadamente. Remova qualquer configuração antiga com wildcard antes de reiniciar a API.
+
+## Fronteira com proxy reverso
+
+O endereço remoto do navegador não pode ser inferido pelo socket do backend quando existe um proxy: a conexão encaminhada chega de loopback. Por isso, há uma defesa adicional: se uma solicitação `/api/*` contiver um cabeçalho `Origin` não-loopback que esteja na allowlist, a API exige Bearer mesmo quando o socket veio de loopback.
+
+O desenho remoto recomendado é:
+
+1. o navegador autentica-se no proxy/gateway HTTPS;
+2. o gateway autoriza a sessão e aplica a política de acesso do usuário;
+3. somente então o gateway injeta o Bearer interno em server-side para a API local;
+4. o segredo da API permanece no servidor, nunca no JavaScript ou no armazenamento do navegador.
+
+Não configure o proxy para injetar o Bearer em tráfego anônimo. A allowlist CORS, sozinha, não concede acesso. Clientes de automação sem `Origin` continuam sujeitos à autenticação na borda se passarem pelo proxy; o backend não consegue distinguir um proxy confiável de outro processo local apenas olhando o endereço loopback.
 
 ## Acesso remoto seguro
 
