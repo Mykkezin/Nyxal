@@ -151,7 +151,7 @@ def _selecionar_nivel_raciocinio(prompt: str, *, modelo: str) -> str | None:
         "detalhado", "detalhada", "precisao", "cartaz", "poster", "legivel",
     )
     termos_exatos_de_complexidade = re.search(
-        r"\\b(?:texto|textos|logo|logotipo|logomarca|capa|marca|exatamente)\\b",
+        r"\b(?:texto|textos|logo|logotipo|logomarca|capa|marca|exatamente)\b",
         texto,
     )
     complexo = (
