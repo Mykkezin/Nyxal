@@ -27,6 +27,30 @@ class FakeResponse:
     def read(self, size=-1):
         return self.data if size < 0 else self.data[:size]
 
+    def close(self):
+        pass
+
+
+class FakeConnection:
+    def __init__(self, response):
+        self.response = response
+        self.request_info = None
+        self.closed = False
+
+    def request(self, method, target, body=None, headers=None):
+        self.request_info = {
+            "method": method,
+            "target": target,
+            "body": body,
+            "headers": dict(headers or {}),
+        }
+
+    def getresponse(self):
+        return self.response
+
+    def close(self):
+        self.closed = True
+
 
 class TesteAutoavaliacaoLocal(unittest.TestCase):
     def test_url_permanece_em_loopback(self):
@@ -52,36 +76,49 @@ class TesteAutoavaliacaoLocal(unittest.TestCase):
         with self.assertRaises(ValueError):
             ferramenta.extrair_resposta({"sucesso": True, "estado": "ok"})
 
-    def test_requisicao_envia_provedor_nyxal_e_sessao_sem_mudar_host(self):
+    def test_requisicao_e_socket_sao_fixados_em_loopback(self):
         fake = FakeResponse({
             "sucesso": True,
             "estado": "conversa_processada",
             "resposta": "Nyxal responde",
             "sessao": "sessao-retornada",
         })
-        with patch.object(ferramenta, "urlopen", return_value=fake) as chamada:
-            resultado = ferramenta.chamar_nyxal(
-                "Qual é o principal problema?",
-                sessao="sessao-local",
-                port=8010,
-                timeout=5,
-            )
-        request = chamada.call_args.args[0]
-        body = json.loads(request.data.decode("utf-8"))
-        self.assertEqual(request.full_url, "http://127.0.0.1:8010/api/agent/chat")
+        connection = FakeConnection(fake)
+        with patch.dict(os.environ, {
+            "HTTP_PROXY": "http://proxy-malicioso.invalid:8080",
+            "http_proxy": "http://proxy-malicioso.invalid:8080",
+            "NO_PROXY": "",
+            "no_proxy": "",
+        }):
+            with patch.object(ferramenta, "HTTPConnection", return_value=connection) as chamada:
+                resultado = ferramenta.chamar_nyxal(
+                    "Qual é o principal problema?",
+                    sessao="sessao-local",
+                    port=8010,
+                    timeout=5,
+                )
+
+        chamada.assert_called_once_with("127.0.0.1", 8010, timeout=5)
+        self.assertEqual(connection.request_info["method"], "POST")
+        self.assertEqual(connection.request_info["target"], "/api/agent/chat")
+        body = json.loads(connection.request_info["body"].decode("utf-8"))
         self.assertEqual(body["provedor"], "nyxal")
         self.assertEqual(body["sessao"], "sessao-local")
         self.assertEqual(resultado["resposta"], "Nyxal responde")
         self.assertEqual(resultado["sessao"], "sessao-retornada")
+        self.assertTrue(connection.closed)
 
     def test_token_e_enviado_apenas_no_cabecalho(self):
         fake = FakeResponse({"resposta": "ok", "sessao": "s"})
+        connection = FakeConnection(fake)
         with patch.dict(os.environ, {"NYXAL_API_TOKEN": "segredo-de-teste"}):
-            with patch.object(ferramenta, "urlopen", return_value=fake) as chamada:
+            with patch.object(ferramenta, "HTTPConnection", return_value=connection):
                 ferramenta.chamar_nyxal("teste", sessao="s", port=8010, timeout=5)
-        request = chamada.call_args.args[0]
-        self.assertEqual(request.get_header("Authorization"), "Bearer segredo-de-teste")
-        self.assertNotIn("segredo-de-teste", request.data.decode("utf-8"))
+
+        headers = connection.request_info["headers"]
+        self.assertEqual(headers["Authorization"], "Bearer segredo-de-teste")
+        self.assertNotIn("segredo-de-teste", connection.request_info["body"].decode("utf-8"))
+        self.assertTrue(connection.closed)
 
     def test_envelope_de_erro_da_api_nao_vira_opiniao_da_nyxal(self):
         fake = FakeResponse({
@@ -89,7 +126,7 @@ class TesteAutoavaliacaoLocal(unittest.TestCase):
             "estado": "erro_ao_processar_conversa",
             "resposta": "A Nyxal não conseguiu processar a mensagem.",
         })
-        with patch.object(ferramenta, "urlopen", return_value=fake):
+        with patch.object(ferramenta, "HTTPConnection", return_value=FakeConnection(fake)):
             with self.assertRaisesRegex(RuntimeError, "api_nyxal_reportou_falha"):
                 ferramenta.chamar_nyxal("autoavaliação", sessao="s", port=8010, timeout=5)
 
@@ -97,9 +134,23 @@ class TesteAutoavaliacaoLocal(unittest.TestCase):
         raw = b"x" * (ferramenta.MAX_RESPONSE_BYTES + 1)
         fake = FakeResponse({})
         fake.data = raw
-        with patch.object(ferramenta, "urlopen", return_value=fake):
+        connection = FakeConnection(fake)
+        with patch.object(ferramenta, "HTTPConnection", return_value=connection):
             with self.assertRaisesRegex(RuntimeError, "excede_limite"):
                 ferramenta.chamar_nyxal("teste", sessao="s", port=8010, timeout=5)
+        self.assertTrue(connection.closed)
+
+    def test_redirecionamento_http_e_rejeitado_sem_seguir_location(self):
+        fake = FakeResponse({}, status=302)
+        fake.headers = {"Location": "https://example.invalid/collect"}
+        connection = FakeConnection(fake)
+        with patch.object(ferramenta, "HTTPConnection", return_value=connection) as chamada:
+            with self.assertRaisesRegex(RuntimeError, "api_nyxal_http_302"):
+                ferramenta.chamar_nyxal("teste", sessao="s", port=8010, timeout=5)
+
+        chamada.assert_called_once_with("127.0.0.1", 8010, timeout=5)
+        self.assertEqual(connection.request_info["target"], "/api/agent/chat")
+        self.assertTrue(connection.closed)
 
     def test_saida_e_criada_com_permissao_restrita_e_sem_sobrescrever(self):
         with tempfile.TemporaryDirectory() as directory:
