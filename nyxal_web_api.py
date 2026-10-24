@@ -1295,7 +1295,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         parsed_path = urlsplit(self.path).path
         if not self._origem_api_permitida():
             return
-        if parsed_path.startswith("/api/") and not self._local_ou_autorizado():
+        if (
+            parsed_path.startswith("/api/")
+            and not self._local_ou_autorizado()
+        ):
             return
         is_agent_or_workspace = (
             parsed_path in {"/api/agent/status", "/api/agent/contexto", "/api/integracoes/google/status", "/api/integracoes/gmail/status"}
