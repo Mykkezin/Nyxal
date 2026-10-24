@@ -62,6 +62,10 @@ def main() -> None:
     assert 'PYTHON_BIN="${NYXAL_DIR}/.venv/bin/python"' in instalador
     assert '[[ ! -x "${PYTHON_BIN}" ]]' in instalador
     assert 'import nyxal_web_api; import executar_nyxos_residente' in instalador
+    assert 'chmod 700 "${CONFIG_DIR}"' in instalador
+    assert 'ENV_FILE="${CONFIG_DIR}/nyxal.env"' in instalador
+    assert '[[ -L "${ENV_FILE}" ]]' in instalador
+    assert 'chmod 600 "${ENV_FILE}"' in instalador
     assert "loginctl enable-linger ${USER}" in instalador
     assert "LINGER_STATUS" in instalador
     assert "sudo " not in instalador
