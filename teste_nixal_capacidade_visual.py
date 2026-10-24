@@ -123,6 +123,23 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertIn("interpretação artística mais ousada", prepared_prompt)
         self.assertIn(prompt.split(" --ar")[0], prepared_prompt)
 
+    def test_nao_confunde_history_com_story_vertical(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Create an editorial illustration about the history of architecture."
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertNotIn("aspect_ratio", payload["response_format"][1])
+
     def test_edicao_preserva_areas_nao_solicitadas_e_nao_forca_tamanho(self):
         response = response_with_image()
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
