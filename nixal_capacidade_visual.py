@@ -129,7 +129,10 @@ def _inferir_tamanho_imagem(prompt: str, *, padrao: str | None) -> str | None:
     return padrao
 
 
-def _preparar_prompt(\n    prompt: str, *, edicao: bool, nivel_estilizado: int | None = None,\n    elementos_excluir: str | None = None,\n) -> str:
+def _preparar_prompt(
+    prompt: str, *, edicao: bool, nivel_estilizado: int | None = None,
+    elementos_excluir: str | None = None,
+) -> str:
     """Acrescenta direção visual sem reescrever ou substituir a intenção do usuário."""
     if edicao:
         direcao = (
@@ -194,20 +197,20 @@ def _extrair_parametros_midjourney(
 
     # --no é uma exclusão textual em Midjourney; converte-a em linguagem natural.
     negative_match = re.search(
-        r"(?is)(?:^|\\s)--no\\s+(.+?)(?=\\s+--(?:ar|aspect|s|stylize)\\b|$)",
+        r"(?is)(?:^|\s)--no\s+(.+?)(?=\s+--(?:ar|aspect|s|stylize)\b|$)",
         limpo,
     )
     if negative_match:
         elementos_excluir = negative_match.group(1).strip(" ,;")
         limpo = limpo[:negative_match.start()] + " " + limpo[negative_match.end():]
 
-    stylize_match = re.search(r"(?i)(?:--stylize|--s)\\s*(\\d{1,4})(?!\\d)", limpo)
+    stylize_match = re.search(r"(?i)(?:--stylize|--s)\s*(\d{1,4})(?!\d)", limpo)
     if stylize_match:
         stylize = min(1000, int(stylize_match.group(1)))
         limpo = limpo[:stylize_match.start()] + limpo[stylize_match.end():]
 
     ratio_match = re.search(
-        r"(?i)--(?:ar|aspect)\\s*(\\d{1,4})\\s*:\\s*(\\d{1,4})(?!\\d)",
+        r"(?i)--(?:ar|aspect)\s*(\d{1,4})\s*:\s*(\d{1,4})(?!\d)",
         limpo,
     )
     if ratio_match:
@@ -226,7 +229,7 @@ def _extrair_parametros_midjourney(
             )
         limpo = limpo[:ratio_match.start()] + limpo[ratio_match.end():]
 
-    return re.sub(r"\\s{2,}", " ", limpo).strip(), stylize, proporcao_solicitada, elementos_excluir
+    return re.sub(r"\s{2,}", " ", limpo).strip(), stylize, proporcao_solicitada, elementos_excluir
 
 
 class CapacidadeVisualGeminiNixOS:
