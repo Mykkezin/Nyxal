@@ -115,7 +115,45 @@ def testar_handler_http(api_source: str) -> None:
     assert allowed._origem_api_permitida() is True
     assert allowed_responses == []
 
+    captured_allowed_headers: list[tuple[str, str]] = []
+    allowed.send_header = MethodType(
+        lambda _self, key, value: captured_allowed_headers.append((key, value)),
+        allowed,
+    )
+    allowed._send_security_headers()
+    assert (
+        "Access-Control-Allow-Origin",
+        "https://nyxal.example",
+    ) in captured_allowed_headers
+    assert ("X-Content-Type-Options", "nosniff") in captured_allowed_headers
+    assert ("Referrer-Policy", "no-referrer") in captured_allowed_headers
+    assert ("Cache-Control", "no-store") in captured_allowed_headers
+
+    captured_disallowed_headers: list[tuple[str, str]] = []
+    disallowed.send_header = MethodType(
+        lambda _self, key, value: captured_disallowed_headers.append((key, value)),
+        disallowed,
+    )
+    disallowed._send_security_headers()
+    assert not any(
+        key == "Access-Control-Allow-Origin"
+        for key, _value in captured_disallowed_headers
+    )
+
+    no_origin, _ = create_handler("127.0.0.1", {})
+    captured_no_origin_headers: list[tuple[str, str]] = []
+    no_origin.send_header = MethodType(
+        lambda _self, key, value: captured_no_origin_headers.append((key, value)),
+        no_origin,
+    )
+    no_origin._send_security_headers()
+    assert not any(
+        key == "Access-Control-Allow-Origin"
+        for key, _value in captured_no_origin_headers
+    )
+
     print("HTTP_HANDLER_ISOLATED_AUTH_TESTS: OK")
+    print("HTTP_SECURITY_HEADERS_TESTS: OK")
 
 
 def testar_servidor_com_limite(api_source: str) -> None:
