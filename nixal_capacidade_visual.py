@@ -259,12 +259,18 @@ class CapacidadeVisualGeminiNixOS:
             raise RuntimeError("Gemini não configurado. Adicione NYXAL_GEMINI_API_KEY à configuração local.")
 
         imagem_presente = bool(imagem_base64)
-        inputs: list[dict[str, Any]] = []
-        prompt_limpo, nivel_estilizado = _extrair_parametros_midjourney(prompt)
-        inputs.append({
+        model = os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "").strip() or DEFAULT_IMAGE_MODEL
+        prompt_limpo, nivel_estilizado, proporcao_solicitada = _extrair_parametros_midjourney(
+            prompt, modelo=model
+        )
+        inputs: list[dict[str, Any]] = [{
             "type": "text",
-            "text": _preparar_prompt(prompt_limpo, edicao=imagem_presente, nivel_estilizado=nivel_estilizado),
-        })
+            "text": _preparar_prompt(
+                prompt_limpo,
+                edicao=imagem_presente,
+                nivel_estilizado=nivel_estilizado,
+            ),
+        }]
 
         if imagem_presente:
             mime = mime_type.lower().strip() if isinstance(mime_type, str) else ""
@@ -290,15 +296,22 @@ class CapacidadeVisualGeminiNixOS:
                 "data": base64.b64encode(binary).decode("ascii"),
             })
 
-        model = os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "").strip() or DEFAULT_IMAGE_MODEL
         image_format: dict[str, Any] = {"type": "image", "mime_type": "image/png"}
-        aspect_ratio = _inferir_proporcao(prompt)
+        aspect_ratio = proporcao_solicitada or _inferir_proporcao(prompt_limpo, modelo=model)
         if aspect_ratio:
             image_format["aspect_ratio"] = aspect_ratio
 
-        if model in MODELS_WITH_IMAGE_SIZE:
-            # 2K é o padrão para novas imagens; edições mantêm o tamanho de origem,
-            # salvo quando a pessoa pede explicitamente uma resolução.
+        if model in MODELS_1K_ONLY:
+            requested_size = _inferir_tamanho_imagem(prompt, padrao=None)
+            if requested_size in {"2K", "4K"}:
+                raise ValueError(
+                    f"O modelo {model} só gera imagens em 1K. "
+                    "Use gemini-nano-banana-2.1 para solicitar 2K ou 4K."
+                )
+            if requested_size == "1K":
+                image_format["image_size"] = "1K"
+        elif model in MODELS_WITH_IMAGE_SIZE:
+            # Evita forçar resolução nas edições; o provedor decide a saída a partir da entrada.
             default_size = None if imagem_presente else "2K"
             image_size = _inferir_tamanho_imagem(prompt, padrao=default_size)
             if image_size:
