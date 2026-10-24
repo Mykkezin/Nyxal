@@ -66,6 +66,23 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
                     mime_type="image/svg+xml",
                 )
 
+    def test_redirecionamento_nao_e_seguido_ao_conter_chave_gemini(self):
+        request = visual.Request(
+            "https://generativelanguage.googleapis.com/v1beta/interactions",
+            headers={"x-goog-api-key": "segredo-de-teste"},
+        )
+        handler = visual._RejectRedirects()
+        redirected = handler.redirect_request(
+            request,
+            None,
+            302,
+            "Found",
+            {"Location": "https://attacker.example/collect"},
+            "https://attacker.example/collect",
+        )
+        self.assertIsNone(redirected)
+        self.assertEqual(request.get_header("X-goog-api-key"), "segredo-de-teste")
+
     def test_recusa_conteudo_que_nao_corresponde_ao_mime(self):
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with self.assertRaisesRegex(ValueError, "não corresponde"):
@@ -82,7 +99,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 result = CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
@@ -110,7 +127,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "high",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma imagem simples.")
@@ -126,7 +143,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(
@@ -145,7 +162,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(
@@ -163,7 +180,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(
@@ -181,7 +198,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(
@@ -198,7 +215,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-lite-image",
             "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "medium",
         }, clear=True):
-            with patch("nixal_capacidade_visual.urlopen") as mocked:
+            with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
                 with self.assertRaisesRegex(ValueError, "não suporta o nível de raciocínio"):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
         mocked.assert_not_called()
@@ -209,7 +226,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-image",
             "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
         }, clear=True):
-            with patch("nixal_capacidade_visual.urlopen") as mocked:
+            with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
                 with self.assertRaisesRegex(ValueError, "não possui níveis de raciocínio configuráveis validados"):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma imagem complexa.")
         mocked.assert_not_called()
@@ -222,7 +239,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
@@ -245,7 +262,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
@@ -261,7 +278,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-lite-image",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar("Wallpaper vertical para celular.")
@@ -276,7 +293,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_API_KEY": "test-key",
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-lite-image",
         }, clear=True):
-            with patch("nixal_capacidade_visual.urlopen") as mocked:
+            with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
                 with self.assertRaisesRegex(ValueError, "só gera imagens em 1K"):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie um wallpaper em 4K.")
         mocked.assert_not_called()
@@ -286,7 +303,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_API_KEY": "test-key",
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3-pro-image",
         }, clear=True):
-            with patch("nixal_capacidade_visual.urlopen") as mocked:
+            with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
                 with self.assertRaisesRegex(ValueError, "não suporta a proporção 1:4"):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Cartaz técnico --ar 1:4.")
         mocked.assert_not_called()
@@ -299,7 +316,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
@@ -316,7 +333,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_API_KEY": "test-key",
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
         }, clear=True):
-            with patch("nixal_capacidade_visual.urlopen") as mocked:
+            with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
                 with self.assertRaisesRegex(ValueError, "não oferece saída nativa em 8K"):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie um wallpaper 8K.")
         mocked.assert_not_called()
@@ -328,7 +345,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
         }, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(
@@ -342,7 +359,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         response = response_with_image()
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 result = CapacidadeVisualGeminiNixOS().gerar_ou_editar(
@@ -369,7 +386,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         }
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ):
                 with self.assertRaisesRegex(RuntimeError, "dados de imagem inválidos"):
@@ -384,7 +401,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         }
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ):
                 result = CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
@@ -415,7 +432,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         }
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ):
                 result = CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
@@ -427,7 +444,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         prompt = "Crie um infográfico com três etapas e os títulos exatos Reciclar, Reutilizar e Reduzir."
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
@@ -443,7 +460,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         prompt = "Crie um logotipo minimalista para uma marca de café."
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
@@ -458,7 +475,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         prompt = "Fotografia de produto de uma caneca cerâmica azul sobre fundo neutro."
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with patch(
-                "nixal_capacidade_visual.urlopen",
+                "nixal_capacidade_visual._urlopen_no_redirect",
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
