@@ -157,12 +157,23 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
     def test_recusa_nivel_de_raciocinio_nao_suportado_antes_da_chamada(self):
         with patch.dict(os.environ, {
             "NYXAL_GEMINI_API_KEY": "test-key",
-            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-image",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-lite-image",
             "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "medium",
         }, clear=True):
             with patch("nixal_capacidade_visual.urlopen") as mocked:
                 with self.assertRaisesRegex(ValueError, "não suporta o nível de raciocínio"):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
+        mocked.assert_not_called()
+
+    def test_auto_e_rejeitado_para_modelo_sem_niveis_publicados(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-image",
+            "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
+        }, clear=True):
+            with patch("nixal_capacidade_visual.urlopen") as mocked:
+                with self.assertRaisesRegex(ValueError, "não possui níveis de raciocínio configuráveis validados"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma imagem complexa.")
         mocked.assert_not_called()
 
     def test_traduz_parametros_midjourney_em_controles_da_api(self):
@@ -380,6 +391,9 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertTrue(status["controles"]["proporcao_automatica"])
         self.assertEqual(status["nivel_raciocinio_configurado"], "padrao_do_provedor")
         self.assertIn("high", status["niveis_raciocinio_suportados"])
+        self.assertNotIn("gemini-3.1-flash-image", __import__("nixal_capacidade_visual").MODEL_THINKING_LEVELS)
+        lite_levels = __import__("nixal_capacidade_visual").MODEL_THINKING_LEVELS["gemini-3.1-flash-lite-image"]
+        self.assertEqual(lite_levels, frozenset({"minimal", "high"}))
         self.assertNotIn("api_key", json.dumps(status).lower())
 
 
