@@ -13,8 +13,7 @@ import sys
 import uuid
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from http.client import HTTPConnection, HTTPException
 
 
 MAX_RESPONSE_BYTES = 1_000_000
@@ -70,11 +69,16 @@ PROMPT_VERIFICACAO = """Faça uma auditoria de resolução baseada SOMENTE nas e
 
 Classifique cada problema como resolvido, parcialmente mitigado ou ainda não resolvido. Para cada classificação, cite a evidência exigida. Em particular, não diga que o runner privado foi corrigido só porque o runner público funciona ou porque os testes locais passaram. Termine com o próximo teste objetivo mínimo e os critérios para poder declarar a resolução."""
 
-def loopback_url(port: int) -> str:
-    """Build the only supported API URL; remote destinations are never accepted."""
+def _validar_porta_loopback(port: int) -> int:
+    """Validate the port used by the fixed loopback socket."""
     if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
         raise ValueError("porta_api_invalida")
-    return f"http://127.0.0.1:{port}/api/agent/chat"
+    return port
+
+
+def loopback_url(port: int) -> str:
+    """Return the documented local endpoint; callers must not follow redirects."""
+    return f"http://127.0.0.1:{_validar_porta_loopback(port)}/api/agent/chat"
 
 
 def extrair_resposta(payload: Any) -> str:
@@ -98,8 +102,8 @@ def extrair_resposta(payload: Any) -> str:
 
 
 def chamar_nyxal(mensagem: str, *, sessao: str, port: int, timeout: int) -> dict[str, Any]:
-    """Send one conversation turn to the local Nyxal API only."""
-    endpoint = loopback_url(port)
+    """Send one HTTP request directly to loopback; proxies and redirects are impossible."""
+    port = _validar_porta_loopback(port)
     body = json.dumps({
         "mensagem": mensagem,
         "provedor": "nyxal",
@@ -109,26 +113,33 @@ def chamar_nyxal(mensagem: str, *, sessao: str, port: int, timeout: int) -> dict
     token = os.environ.get("NYXAL_API_TOKEN", "")
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    request = Request(endpoint, data=body, headers=headers, method="POST")
+
+    connection: HTTPConnection | None = None
     try:
-        with urlopen(request, timeout=timeout) as response:
-            raw = response.read(MAX_RESPONSE_BYTES + 1)
-            status = getattr(response, "status", 200)
-    except HTTPError as error:
-        # Do not echo a response body that might contain sensitive runtime detail.
-        raise RuntimeError(f"api_nyxal_http_{error.code}") from None
-    except URLError as error:
-        reason = getattr(error, "reason", None)
-        if isinstance(reason, OSError):
-            reason_code = getattr(reason, "errno", None)
-            detail = f"api_local_indisponivel_errno_{reason_code}" if reason_code is not None else "api_local_indisponivel"
-        else:
-            detail = "api_local_indisponivel"
-        raise RuntimeError(detail) from None
+        # A raw HTTPConnection pins the socket to 127.0.0.1. Unlike urllib,
+        # it never consults HTTP(S)_PROXY and never follows a Location header.
+        connection = HTTPConnection("127.0.0.1", port, timeout=timeout)
+        connection.request("POST", "/api/agent/chat", body=body, headers=headers)
+        response = connection.getresponse()
+        status = response.status
+        raw = response.read(MAX_RESPONSE_BYTES + 1)
+        response.close()
     except TimeoutError:
         raise RuntimeError("api_nyxal_timeout") from None
+    except (OSError, HTTPException) as error:
+        reason_code = getattr(error, "errno", None)
+        detail = (
+            f"api_local_indisponivel_errno_{reason_code}"
+            if reason_code is not None
+            else "api_local_indisponivel"
+        )
+        raise RuntimeError(detail) from None
+    finally:
+        if connection is not None:
+            connection.close()
 
     if status < 200 or status >= 300:
+        # Do not echo a response body that might contain sensitive runtime detail.
         raise RuntimeError(f"api_nyxal_http_{status}")
     if len(raw) > MAX_RESPONSE_BYTES:
         raise RuntimeError("resposta_api_excede_limite")
@@ -147,7 +158,6 @@ def chamar_nyxal(mensagem: str, *, sessao: str, port: int, timeout: int) -> dict
         "estado_api": payload.get("estado") if isinstance(payload, dict) else None,
         "sucesso_api": payload.get("sucesso") if isinstance(payload, dict) else None,
     }
-
 
 def salvar_saida(caminho: str, dados: dict[str, Any]) -> None:
     """Write only when explicitly requested; exclusive create and mode 0600."""
