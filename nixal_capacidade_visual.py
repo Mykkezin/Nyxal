@@ -116,7 +116,7 @@ def _inferir_proporcao(prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL) -> str
 def _inferir_tamanho_imagem(prompt: str, *, padrao: str | None) -> str | None:
     """Escolhe apenas tamanhos nativos conhecidos do modelo; nunca promete 8K."""
     texto = _normalizar_texto(prompt)
-    if re.search(r"(?<![a-z0-9])(?:4k|uhd|ultra[\s-]*hd)(?![a-z0-9])|4096\s*(?:px|pixels?)?", texto):
+    if re.search(r"(?:(?<![a-z0-9])(?:4k|uhd|ultra[\s-]*hd)(?![a-z0-9])|(?<!\d)4096\s*(?:px|pixels?)?(?!\d))", texto):
         return "4K"
     if re.search(r"(?<![a-z0-9])(?:2k|1440p)(?![a-z0-9])", texto):
         return "2K"
