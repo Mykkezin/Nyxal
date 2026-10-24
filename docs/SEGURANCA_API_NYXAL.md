@@ -12,6 +12,7 @@ Esta etapa reduz a superfície de exposição da API atual. Ela não transforma 
 - **Autorização de rotas para clientes não locais:** os endpoints `/api/*` passam pela verificação local/Bearer antes do processamento. Rotas que já exigem token continuam exigindo-o também em loopback.
 - **Cabeçalhos defensivos:** respostas JSON e de bytes incluem `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` e `Cache-Control: no-store`. A versão do servidor deixa de anunciar a versão detalhada do Python.
 - **Hardening systemd inicial:** as unidades da API e do residente passam a usar `ProtectSystem=full`, proteção de tunables/módulos/cgroups do kernel, restrição SUID/SGID, `LockPersonality`, `RestrictRealtime` e `SystemCallArchitectures=native`. Não foi ativado `PrivateDevices` nem `ProtectHome` para evitar interromper acesso a dados de hardware, modelos e estado do usuário sem validação no host real.
+- **Permissões de segredos locais:** o instalador aplica modo `0700` ao diretório `~/.config/nyxal`, modo `0600` ao arquivo `nyxal.env` existente e falha se esse arquivo for um link simbólico.
 - **Testes reproduzíveis:** `teste_seguranca_api.py` valida loopback e a política de origens sem precisar subir serviços externos.
 
 ## Mapeamento dos seis princípios arquiteturais
@@ -54,7 +55,7 @@ Não configure o proxy para injetar o Bearer em tráfego anônimo. A allowlist C
 
 Mantenha a API ligada em loopback. Para acesso remoto, exponha somente uma **VPN** ou um **proxy reverso HTTPS com autenticação e controle de acesso próprios**. O proxy deve ser tratado como fronteira de segurança: as conexões encaminhadas ao servidor local aparecem como loopback e, portanto, o proxy precisa autenticar os usuários antes de encaminhar pedidos. Não encaminhe a porta HTTP da Nyxal diretamente à Internet.
 
-`NYXAL_API_TOKEN` continua necessário para endpoints que já exigem Bearer. CORS não é autenticação e não substitui uma camada de acesso remoto.
+`NYXAL_API_TOKEN` continua necessário para endpoints que já exigem Bearer. O instalador do systemd restringe o diretório de configuração a `0700` e o arquivo `nyxal.env` a `0600`; links simbólicos para esse arquivo são recusados. CORS não é autenticação e não substitui uma camada de acesso remoto.
 
 ## Riscos ainda abertos
 
