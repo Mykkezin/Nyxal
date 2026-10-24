@@ -300,10 +300,10 @@ def main() -> None:
     assert sanitize_http_log_message(linha_log) == (
         '"GET /api/integracoes/gmail/mensagem HTTP/1.1" 200 -'
     )
-    linha_injetada = 'GET /rota?consulta=x\\r\\nINTRUSO HTTP/1.1'
+    linha_injetada = 'GET /rota?consulta=x\r\nINTRUSO HTTP/1.1'
     limpa = sanitize_http_log_message(linha_injetada)
-    assert "\\r" not in limpa and "\\n" not in limpa
-    assert "\\r\\nINTRUSO" not in limpa
+    assert "\r" not in limpa and "\n" not in limpa
+    assert "\r\nINTRUSO" not in limpa
     assert len(sanitize_http_log_message("x" * 100, max_length=12)) == 12
 
     print("API_POLICY_WIRING: OK")
