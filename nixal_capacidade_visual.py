@@ -51,24 +51,28 @@ def _inferir_proporcao(prompt: str) -> str | None:
 
     # A orientação explícita sempre tem precedência sobre palavras genéricas como wallpaper.
     vertical_phrases = (
-        "vertical", "9:16", "celular", "smartphone", "tela de bloqueio",
-        "wallpaper para telefone", "wallpaper para celular", "phone wallpaper",
-        "mobile wallpaper", "portrait orientation", "vertical format", "lock screen",
+        "vertical", "9:16", "tela de bloqueio", "wallpaper para telefone",
+        "wallpaper para celular", "fundo de tela do celular", "para celular",
+        "para smartphone", "phone wallpaper", "mobile wallpaper", "smartphone wallpaper",
+        "portrait orientation", "portrait format", "vertical format", "imagem vertical",
+        "foto vertical", "lock screen",
     )
     vertical_social = re.search(r"\b(?:story|stories|reel|reels|tiktok)\b", texto)
     if any(pista in texto for pista in vertical_phrases) or vertical_social:
         return "9:16"
 
-    quadrado = ("quadrado", "square", "foto de perfil", "profile picture", "profile photo", "icone", "sticker")
-    quadrado_token = re.search(r"\b(?:avatar|icon|icone|sticker)\b", texto)
+    quadrado = ("quadrado", "foto de perfil", "profile picture", "profile photo")
+    quadrado_token = re.search(r"\b(?:square|avatar|icon|icone|sticker)\b", texto)
     if any(pista in texto for pista in quadrado) or quadrado_token:
         return "1:1"
 
     horizontal = (
         "horizontal", "landscape orientation", "landscape format", "panoram",
-        "widescreen", "cinematic", "paisagem ampla", "wallpaper", "papel de parede",
-        "desktop", "monitor", "tela de pc", "capa do youtube", "thumbnail do youtube",
-        "youtube thumbnail", "banner", "wide wallpaper",
+        "widescreen", "paisagem ampla", "wallpaper", "papel de parede",
+        "desktop wallpaper", "desktop background", "monitor wallpaper", "wallpaper para pc",
+        "papel de parede para computador", "wallpaper para monitor", "fundo de tela do pc",
+        "tela de pc", "capa do youtube", "thumbnail do youtube", "youtube thumbnail",
+        "banner", "wide wallpaper",
     )
     if any(pista in texto for pista in horizontal):
         return "16:9"
