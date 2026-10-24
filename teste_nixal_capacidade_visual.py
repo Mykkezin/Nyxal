@@ -155,6 +155,24 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
         self.assertEqual(payload["generation_config"], {"thinking_level": "medium"})
 
+    def test_auto_nao_confunde_contexto_ou_dialogo_com_palavras_de_complexidade(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+            "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Crie uma ilustração do diálogo entre duas pessoas em um contexto urbano."
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["generation_config"], {"thinking_level": "medium"})
+
     def test_auto_usa_high_para_flash_image_quando_prompt_e_complexo(self):
         response = response_with_image()
         with patch.dict(os.environ, {
