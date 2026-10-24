@@ -37,6 +37,19 @@ NYXAL_API_CORS_ORIGINS="https://nyxal.example,https://painel.nyxal.example"
 
 A variável legada `NYXAL_API_CORS_ORIGIN` continua aceita para uma única origem, mas `*` e `null` são rejeitados deliberadamente. Remova qualquer configuração antiga com wildcard antes de reiniciar a API.
 
+## Fronteira com proxy reverso
+
+O endereço remoto do navegador não pode ser inferido pelo socket do backend quando existe um proxy: a conexão encaminhada chega de loopback. Por isso, se uma solicitação `/api/*` contiver um cabeçalho `Origin` não-loopback permitido pela allowlist, a API também exige Bearer mesmo que o socket tenha vindo de loopback.
+
+O desenho remoto recomendado é:
+
+1. o navegador autentica-se no proxy/gateway HTTPS;
+2. o gateway autoriza a sessão e aplica a política de acesso;
+3. somente depois, o gateway injeta o Bearer interno no pedido à API local;
+4. o segredo da API permanece server-side, nunca no JavaScript ou no armazenamento do navegador.
+
+Não configure o proxy para injetar o Bearer em tráfego anônimo. A allowlist CORS, sozinha, não concede acesso. Clientes sem `Origin` continuam sujeitos à autenticação na borda se passarem pelo proxy; o backend não consegue distinguir um proxy confiável de outro processo local apenas olhando o endereço loopback.
+
 ## Acesso remoto seguro
 
 Mantenha a API ligada em loopback. Para acesso remoto, exponha somente uma **VPN** ou um **proxy reverso HTTPS com autenticação e controle de acesso próprios**. O proxy deve ser tratado como fronteira de segurança: as conexões encaminhadas ao servidor local aparecem como loopback e, portanto, o proxy precisa autenticar os usuários antes de encaminhar pedidos. Não encaminhe a porta HTTP da Nyxal diretamente à Internet.
