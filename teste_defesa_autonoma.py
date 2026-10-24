@@ -68,6 +68,22 @@ class TesteDefesaAutonoma(unittest.TestCase):
         self.assertEqual(decisao["motivos"], ["evidencia_id_obrigatorio"])
         self.assertEqual(decisao["recomendacoes"], [])
 
+    def test_origens_ip_especiais_sao_rejeitadas(self):
+        for origem in (
+            "0.0.0.0",
+            "0.0.0.1",
+            "255.255.255.255",
+            "224.0.0.1",
+            "fe80::1%eth0",
+        ):
+            with self.subTest(origem=origem):
+                decisao = self.motor.avaliar(self.evento(
+                    "falha_autenticacao", origem_ip=origem,
+                ))
+                self.assertEqual(decisao["estado"], "evento_rejeitado")
+                self.assertEqual(decisao["motivos"], ["origem_ip_invalida"])
+                self.assertEqual(decisao["recomendacoes"], [])
+
     def test_falhas_isoladas_nao_bloqueiam_origem(self):
         primeira = self.avaliar_falha()
         segunda = self.avaliar_falha()
@@ -82,6 +98,11 @@ class TesteDefesaAutonoma(unittest.TestCase):
         decisao = self.avaliar_falha()
         self.assertIn("limitar_taxa_origem", self.tipos(decisao))
         self.assertNotIn("bloqueio_temporario_origem", self.tipos(decisao))
+        limitacao = next(
+            item for item in decisao["recomendacoes"]
+            if item["tipo"] == "limitar_taxa_origem"
+        )
+        self.assertTrue(limitacao["exige_aprovacao_humana"])
         self.assertEqual(decisao["severidade"], "media")
 
     def test_oito_falhas_recomendam_bloqueio_curto_e_reversivel(self):
@@ -94,6 +115,7 @@ class TesteDefesaAutonoma(unittest.TestCase):
         ]
         self.assertEqual(len(bloqueios), 1)
         self.assertEqual(bloqueios[0]["duracao_segundos"], 300)
+        self.assertTrue(bloqueios[0]["exige_aprovacao_humana"])
         self.assertFalse(bloqueios[0]["efeito_executado"])
         self.assertEqual(decisao["severidade"], "alta")
 
@@ -111,8 +133,9 @@ class TesteDefesaAutonoma(unittest.TestCase):
             decisao = self.avaliar_falha("127.0.0.1")
         self.assertIsNotNone(decisao)
         self.assertNotIn("bloqueio_temporario_origem", self.tipos(decisao))
+        self.assertNotIn("limitar_taxa_origem", self.tipos(decisao))
         self.assertIn(
-            "origem_loopback_nao_bloqueada_automaticamente",
+            "origem_loopback_sem_contencao_automatica",
             decisao["motivos"],
         )
 
@@ -123,6 +146,11 @@ class TesteDefesaAutonoma(unittest.TestCase):
         ))
         self.assertIn("limitar_taxa_origem", self.tipos(decisao))
         self.assertNotIn("bloqueio_temporario_origem", self.tipos(decisao))
+        limitacao = next(
+            item for item in decisao["recomendacoes"]
+            if item["tipo"] == "limitar_taxa_origem"
+        )
+        self.assertTrue(limitacao["exige_aprovacao_humana"])
         self.assertEqual(decisao["evento"]["evidencia_id"], "evt-123")
 
     def test_exploracao_com_confianca_alta_recomenda_bloqueio_temporario(self):
@@ -131,6 +159,11 @@ class TesteDefesaAutonoma(unittest.TestCase):
             evidencia_id="ids-exploit-1",
         ))
         self.assertIn("bloqueio_temporario_origem", self.tipos(decisao))
+        bloqueio = next(
+            item for item in decisao["recomendacoes"]
+            if item["tipo"] == "bloqueio_temporario_origem"
+        )
+        self.assertTrue(bloqueio["exige_aprovacao_humana"])
         self.assertNotIn("encaminhar_para_enganacao_isolada", self.tipos(decisao))
 
     def test_enganacao_so_e_recomendada_com_confianca_muito_alta_e_aprovacao(self):
@@ -226,7 +259,7 @@ class TesteDefesaAutonoma(unittest.TestCase):
         self.assertTrue(decisao["recomendacoes"][0]["exige_aprovacao_humana"])
 
     def test_confianca_invalida_e_rejeitada(self):
-        for valor in (True, -0.1, 1.1, math.nan, math.inf, "alta"):
+        for valor in (True, -0.1, 1.1, math.nan, math.inf, "alta", int("9" * 400)):
             with self.subTest(confianca=valor):
                 decisao = self.motor.avaliar(self.evento(
                     "origem_suspeita",
@@ -299,13 +332,73 @@ class TesteDefesaAutonoma(unittest.TestCase):
         self.assertNotIn("bloqueio_temporario_origem", self.tipos(decisao))
         self.assertNotIn("encaminhar_para_enganacao_isolada", self.tipos(decisao))
 
+    def test_nenhum_evento_autoriza_executor_ou_executa_efeitos(self):
+        eventos = (
+            self.evento("falha_autenticacao", origem_ip="203.0.113.10"),
+            self.evento("origem_suspeita", origem_ip="198.51.100.3",
+                        confianca=0.8, evidencia_id="evt-suspeito"),
+            self.evento("tentativa_exploracao", origem_ip="198.51.100.4",
+                        confianca=0.99, evidencia_id="evt-exploit"),
+            self.evento("violacao_integridade", servico="nyxal-api",
+                        evidencia_id="evt-integridade"),
+            self.evento("credencial_comprometida", servico="gateway-atuacao",
+                        credencial_id="cred-1", evidencia_id="evt-cred"),
+            self.evento("malware_detectado", artefato_id="sha256:abc",
+                        evidencia_id="evt-malware"),
+            self.evento("servico_indisponivel", servico="inferencia-local",
+                        evidencia_id="evt-saude"),
+            self.evento("recuperacao_verificada", evidencia_id="evt-recuperacao"),
+        )
+        for evento in eventos:
+            with self.subTest(tipo=evento["tipo"]):
+                decisao = self.motor.avaliar(evento)
+                self.assertIn(decisao["estado"], {"avaliado", "evento_rejeitado"})
+                self.assertFalse(decisao["efeito_executado"])
+                for recomendacao in decisao["recomendacoes"]:
+                    self.assertFalse(recomendacao["executor_autorizado"])
+                    self.assertFalse(recomendacao["efeito_executado"])
+                    if recomendacao["tipo"] in {
+                        "limitar_taxa_origem",
+                        "bloqueio_temporario_origem",
+                        "isolar_servico",
+                        "propor_reinicio_controlado",
+                        "revogar_credencial",
+                        "quarentenar_artefato",
+                        "encaminhar_para_enganacao_isolada",
+                    }:
+                        self.assertTrue(recomendacao["exige_aprovacao_humana"])
+
+    def test_recomendacao_desconhecida_exige_aprovacao_por_padrao(self):
+        recomendacao = defesa._recomendacao(
+            "acao_futura", "escopo-interno", "teste fail-closed",
+        )
+        self.assertTrue(recomendacao["exige_aprovacao_humana"])
+        self.assertFalse(recomendacao["executor_autorizado"])
+        self.assertFalse(recomendacao["efeito_executado"])
+
     def test_construtor_rejeita_limites_inconsistentes(self):
         with self.assertRaises(ValueError):
             defesa.DefesaAutonoma(janela_segundos=0)
         with self.assertRaises(ValueError):
+            defesa.DefesaAutonoma(janela_segundos="60")
+        with self.assertRaises(ValueError):
+            defesa.DefesaAutonoma(janela_segundos=int("9" * 400))
+        with self.assertRaises(ValueError):
             defesa.DefesaAutonoma(limiar_rate_limit=4, limiar_bloqueio=4)
         with self.assertRaises(ValueError):
+            defesa.DefesaAutonoma(limiar_rate_limit=True)
+        with self.assertRaises(ValueError):
             defesa.DefesaAutonoma(duracao_bloqueio_segundos=0)
+        with self.assertRaises(ValueError):
+            defesa.DefesaAutonoma(duracao_bloqueio_segundos=5.5)
+        with self.assertRaises(ValueError):
+            defesa.DefesaAutonoma(janela_segundos=defesa.MAX_WINDOW_SECONDS + 1)
+        with self.assertRaises(ValueError):
+            defesa.DefesaAutonoma(limiar_bloqueio=defesa.MAX_THRESHOLD + 1)
+        with self.assertRaises(ValueError):
+            defesa.DefesaAutonoma(duracao_bloqueio_segundos=defesa.MAX_BLOCK_SECONDS + 1)
+        with self.assertRaises(ValueError):
+            defesa.DefesaAutonoma(relogio=42)
 
 
 if __name__ == "__main__":

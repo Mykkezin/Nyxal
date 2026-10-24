@@ -20,6 +20,9 @@ DEFAULT_WINDOW_SECONDS = 60.0
 DEFAULT_RATE_LIMIT_THRESHOLD = 3
 DEFAULT_BLOCK_THRESHOLD = 8
 DEFAULT_BLOCK_SECONDS = 300
+MAX_WINDOW_SECONDS = 3600
+MAX_BLOCK_SECONDS = 3600
+MAX_THRESHOLD = 1_000_000
 MAX_TRACKED_ORIGINS = 2048
 MAX_FAILURES_PER_ORIGIN = 128
 
@@ -90,12 +93,19 @@ def _identificador_seguro(valor: Any) -> str | None:
 def _ip_canonico(valor: Any) -> str | None:
     if not isinstance(valor, str) or not 1 <= len(valor) <= 64:
         return None
+    raw = valor.strip()
+    if not raw or "%" in raw:
+        return None
     try:
-        address = ip_address(valor.strip())
+        address = ip_address(raw)
         if getattr(address, "ipv4_mapped", None) is not None:
             address = address.ipv4_mapped
         if address.is_unspecified or address.is_multicast:
             return None
+        if address.version == 4:
+            numeric_ip = int(address)
+            if numeric_ip >> 24 == 0 or numeric_ip == 0xFFFFFFFF:
+                return None
         return str(address)
     except ValueError:
         return None
@@ -120,7 +130,7 @@ def _recomendacao(
     motivo: str,
     *,
     duracao_segundos: int | None = None,
-    exige_aprovacao_humana: bool = False,
+    exige_aprovacao_humana: bool = True,
 ) -> dict[str, Any]:
     """Gera uma recomendação limitada, reversível quando aplicável e sem execução."""
     item: dict[str, Any] = {
@@ -152,18 +162,36 @@ class DefesaAutonoma:
         limiar_bloqueio: int = DEFAULT_BLOCK_THRESHOLD,
         duracao_bloqueio_segundos: int = DEFAULT_BLOCK_SECONDS,
     ) -> None:
-        if not isfinite(janela_segundos) or janela_segundos <= 0:
-            raise ValueError("janela_segundos precisa ser positiva e finita")
-        if limiar_rate_limit < 1 or limiar_bloqueio <= limiar_rate_limit:
-            raise ValueError("limiares inválidos: bloqueio deve exceder rate limit")
-        if duracao_bloqueio_segundos < 1:
-            raise ValueError("duracao_bloqueio_segundos precisa ser positiva")
+        if isinstance(janela_segundos, bool) or not isinstance(janela_segundos, (int, float)):
+            raise ValueError("janela_segundos precisa ser um número real")
+        try:
+            janela_normalizada = float(janela_segundos)
+        except (OverflowError, ValueError):
+            raise ValueError("janela_segundos precisa ser positiva e finita") from None
+        if not isfinite(janela_normalizada) or not 0 < janela_normalizada <= MAX_WINDOW_SECONDS:
+            raise ValueError("janela_segundos precisa estar entre 0 e MAX_WINDOW_SECONDS")
+        if any(
+            isinstance(valor, bool) or not isinstance(valor, int)
+            for valor in (limiar_rate_limit, limiar_bloqueio, duracao_bloqueio_segundos)
+        ):
+            raise ValueError("limiares e duração precisam ser inteiros")
+        if (
+            limiar_rate_limit < 1
+            or limiar_rate_limit > MAX_THRESHOLD
+            or limiar_bloqueio <= limiar_rate_limit
+            or limiar_bloqueio > MAX_THRESHOLD
+        ):
+            raise ValueError("limiares fora dos limites ou ordem inválida")
+        if not 1 <= duracao_bloqueio_segundos <= MAX_BLOCK_SECONDS:
+            raise ValueError("duracao_bloqueio_segundos excede o limite permitido")
+        if not callable(relogio):
+            raise ValueError("relogio precisa ser uma função chamável")
         self._lock = Lock()
         self._relogio = relogio
-        self._janela = float(janela_segundos)
-        self._limiar_rate_limit = int(limiar_rate_limit)
-        self._limiar_bloqueio = int(limiar_bloqueio)
-        self._duracao_bloqueio = int(duracao_bloqueio_segundos)
+        self._janela = janela_normalizada
+        self._limiar_rate_limit = limiar_rate_limit
+        self._limiar_bloqueio = limiar_bloqueio
+        self._duracao_bloqueio = duracao_bloqueio_segundos
         # Capacidade limitada: endereços não confiáveis não podem crescer sem limite.
         self._falhas: OrderedDict[str, Deque[float]] = OrderedDict()
 
@@ -199,6 +227,7 @@ class DefesaAutonoma:
                 "alertar_operador",
                 servico or "defesa-nyxal",
                 codigo,
+                exige_aprovacao_humana=False,
             ))
 
         if tipo == "falha_autenticacao":
@@ -219,37 +248,38 @@ class DefesaAutonoma:
                 quantidade = len(falhas)
             motivos.append("falha_autenticacao_observada")
 
-            if quantidade >= self._limiar_bloqueio and _origem_remota(origem_ip):
-                severidade = "alta"
-                recomendacoes.append(_recomendacao(
-                    "bloqueio_temporario_origem",
-                    origem_ip,
-                    "Limiar de falhas de autenticação na janela deslizante atingido.",
-                    duracao_segundos=self._duracao_bloqueio,
-                ))
-                motivos.append("limiar_bloqueio_atingido")
-                preservar_e_alertar("Pico sustentado de falhas de autenticação; revisar evidências.")
-            elif quantidade >= self._limiar_rate_limit:
-                severidade = "media"
-                recomendacoes.append(_recomendacao(
-                    "limitar_taxa_origem",
-                    origem_ip,
-                    "Múltiplas falhas de autenticação dentro da janela deslizante.",
-                    duracao_segundos=int(self._janela),
-                ))
-                motivos.append("limiar_rate_limit_atingido")
-                preservar_e_alertar("Repetição de falhas de autenticação.")
-            elif quantidade == 1:
-                recomendacoes.append(_recomendacao(
-                    "registrar_contador_local",
-                    "contador-em-memoria",
-                    "Registrar apenas o contador necessário para a janela de detecção.",
-                    duracao_segundos=int(self._janela),
-                ))
-
-            # Uma origem loopback jamais é bloqueada automaticamente por este motor.
-            if not _origem_remota(origem_ip) and quantidade >= self._limiar_rate_limit:
-                motivos.append("origem_loopback_nao_bloqueada_automaticamente")
+            if _origem_remota(origem_ip):
+                if quantidade >= self._limiar_bloqueio:
+                    severidade = "alta"
+                    recomendacoes.append(_recomendacao(
+                        "bloqueio_temporario_origem",
+                        origem_ip,
+                        "Limiar de falhas de autenticação na janela deslizante atingido.",
+                        duracao_segundos=self._duracao_bloqueio,
+                        exige_aprovacao_humana=True,
+                    ))
+                    motivos.append("limiar_bloqueio_atingido")
+                    preservar_e_alertar("Pico sustentado de falhas de autenticação; revisar evidências.")
+                elif quantidade >= self._limiar_rate_limit:
+                    severidade = "media"
+                    recomendacoes.append(_recomendacao(
+                        "limitar_taxa_origem",
+                        origem_ip,
+                        "Múltiplas falhas de autenticação dentro da janela deslizante.",
+                        duracao_segundos=int(self._janela),
+                        exige_aprovacao_humana=True,
+                    ))
+                    motivos.append("limiar_rate_limit_atingido")
+                    preservar_e_alertar("Repetição de falhas de autenticação.")
+            else:
+                # Não limitar nem bloquear automaticamente loopback: evitar lockout
+                # da própria Nyxal. Repetição local gera alerta, não contenção.
+                motivos.append("origem_loopback_sem_contencao_automatica")
+                if quantidade >= self._limiar_rate_limit:
+                    severidade = "media"
+                    preservar_e_alertar(
+                        "Falhas repetidas em loopback; investigar a origem local sem bloqueá-la."
+                    )
 
         elif tipo == "origem_suspeita":
             severidade = "media" if confianca >= 0.7 else "baixa"
@@ -261,6 +291,7 @@ class DefesaAutonoma:
                     origem_ip,
                     "Contenção temporária enquanto a origem é investigada.",
                     duracao_segundos=60,
+                    exige_aprovacao_humana=True,
                 ))
 
         elif tipo == "tentativa_exploracao":
@@ -273,6 +304,7 @@ class DefesaAutonoma:
                     origem_ip,
                     "Indicador de alta confiança; bloqueio curto e reversível para revisão.",
                     duracao_segundos=self._duracao_bloqueio,
+                    exige_aprovacao_humana=True,
                 ))
             if confianca >= 0.95 and evidencia_id and origem_ip and _origem_remota(origem_ip):
                 recomendacoes.append(_recomendacao(
@@ -397,7 +429,13 @@ class DefesaAutonoma:
         confianca = evento.get("confianca", 0.5)
         if isinstance(confianca, bool) or not isinstance(confianca, (int, float)):
             return {"erro": "confianca_invalida"}
-        if not isfinite(float(confianca)) or not 0.0 <= float(confianca) <= 1.0:
+        try:
+            confianca_normalizada = float(confianca)
+        except (OverflowError, ValueError):
+            return {"erro": "confianca_invalida"}
+        if not isfinite(confianca_normalizada):
+            return {"erro": "confianca_invalida"}
+        if not 0.0 <= confianca_normalizada <= 1.0:
             return {"erro": "confianca_fora_do_intervalo"}
 
         result: dict[str, Any] = {
@@ -405,7 +443,7 @@ class DefesaAutonoma:
             "fonte_sinal": fonte_sinal,
             "origem_ip": origem_ip,
             "servico": servico,
-            "confianca": float(confianca),
+            "confianca": confianca_normalizada,
         }
         for campo in ("evidencia_id", "credencial_id", "artefato_id"):
             valor = evento.get(campo)
