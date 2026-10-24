@@ -20,6 +20,7 @@ DEFAULT_RATE_LIMIT_THRESHOLD = 3
 DEFAULT_BLOCK_THRESHOLD = 8
 DEFAULT_BLOCK_SECONDS = 300
 MAX_TRACKED_ORIGINS = 2048
+MAX_FAILURES_PER_ORIGIN = 128
 
 SERVICOS_CONTROLADOS = frozenset({
     "nyxal-api",
@@ -205,7 +206,7 @@ class DefesaAutonoma:
             if origem_ip not in self._falhas:
                 if len(self._falhas) >= MAX_TRACKED_ORIGINS:
                     self._falhas.popitem(last=False)
-                self._falhas[origem_ip] = deque()
+                self._falhas[origem_ip] = deque(maxlen=MAX_FAILURES_PER_ORIGIN)
             falhas = self._falhas[origem_ip]
             self._falhas.move_to_end(origem_ip)
             while falhas and agora - falhas[0] > self._janela:
