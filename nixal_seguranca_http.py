@@ -21,6 +21,29 @@ def host_loopback(host: str) -> bool:
         return False
 
 
+def origin_host_loopback(origin: str | None) -> bool:
+    """Reconhece somente origens HTTP(S) com hostname loopback."""
+    if not origin:
+        return False
+    try:
+        parsed = urlsplit(origin)
+        hostname = parsed.hostname
+        _ = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme.lower() in {"http", "https"}
+        and parsed.netloc != ""
+        and hostname is not None
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.path == ""
+        and parsed.query == ""
+        and parsed.fragment == ""
+        and host_loopback(hostname)
+    )
+
+
 def parse_allowed_origins(
     raw_origins: str | None,
     *,
