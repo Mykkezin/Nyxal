@@ -123,6 +123,60 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertIn("interpretação artística mais ousada", prepared_prompt)
         self.assertIn(prompt.split(" --ar")[0], prepared_prompt)
 
+    def test_normaliza_proporcao_midjourney_com_resolucao_original(self):
+        response = response_with_image()
+        prompt = "A cinematic wallpaper --ar 1920:1080"
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["response_format"][1]["aspect_ratio"], "16:9")
+        self.assertNotIn("--ar", payload["input"][0]["text"])
+
+    def test_modelo_lite_usa_1k_por_padrao(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-lite-image",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar("Wallpaper vertical para celular.")
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        image_format = payload["response_format"][1]
+        self.assertEqual(image_format["aspect_ratio"], "9:16")
+        self.assertNotIn("image_size", image_format)
+
+    def test_modelo_lite_rejeita_resolucao_4k_nao_suportada(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-lite-image",
+        }, clear=True):
+            with patch("nixal_capacidade_visual.urlopen") as mocked:
+                with self.assertRaisesRegex(ValueError, "só gera imagens em 1K"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie um wallpaper em 4K.")
+        mocked.assert_not_called()
+
+    def test_modelo_pro_recusa_proporcao_extrema_nao_suportada(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3-pro-image",
+        }, clear=True):
+            with patch("nixal_capacidade_visual.urlopen") as mocked:
+                with self.assertRaisesRegex(ValueError, "não suporta a proporção 1:4"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar("Cartaz técnico --ar 1:4.")
+        mocked.assert_not_called()
+
     def test_nao_confunde_history_com_story_vertical(self):
         response = response_with_image()
         with patch.dict(os.environ, {
