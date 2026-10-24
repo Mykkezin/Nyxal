@@ -68,6 +68,9 @@ def main() -> None:
     assert "systemctl --user enable --now nyxos.target" in instalador
     assert 'PYTHON_BIN="${NYXAL_DIR}/.venv/bin/python"' in instalador
     assert '[[ ! -x "${PYTHON_BIN}" ]]' in instalador
+    assert 'if [[ -L "${CONFIG_DIR}" ]]; then' in instalador
+    assert instalador.index('if [[ -L "${CONFIG_DIR}" ]]') < instalador.index('mkdir -p')
+    assert '[[ ! -d "${CONFIG_DIR}" ]]' in instalador
     assert 'import nyxal_web_api; import executar_nyxos_residente' in instalador
     assert 'chmod 700 "${CONFIG_DIR}"' in instalador
     assert 'ENV_FILE="${CONFIG_DIR}/nyxal.env"' in instalador
