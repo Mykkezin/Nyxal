@@ -122,9 +122,10 @@ def _inferir_tamanho_imagem(prompt: str, *, padrao: str | None) -> str | None:
         return "2K"
     if re.search(r"(?<![a-z0-9])(?:1k|1024p)(?![a-z0-9])", texto):
         return "1K"
-    # Uma solicitação de 8K não é um modo suportado: usa a maior saída disponível.
+    # A solicitação é mantida explícita para que o chamador rejeite 8K
+    # com uma mensagem compatível com as capacidades do modelo selecionado.
     if re.search(r"(?<![a-z0-9])8k(?![a-z0-9])", texto):
-        return "4K"
+        return "8K"
     return padrao
 
 
@@ -312,7 +313,7 @@ class CapacidadeVisualGeminiNixOS:
 
         if model in MODELS_1K_ONLY:
             requested_size = _inferir_tamanho_imagem(prompt, padrao=None)
-            if requested_size in {"2K", "4K"}:
+            if requested_size in {"2K", "4K", "8K"}:
                 raise ValueError(
                     f"O modelo {model} só gera imagens em 1K. "
                     "Use gemini-nano-banana-2.1 para solicitar 2K ou 4K."
@@ -323,8 +324,17 @@ class CapacidadeVisualGeminiNixOS:
             # Evita forçar resolução nas edições; o provedor decide a saída a partir da entrada.
             default_size = None if imagem_presente else "2K"
             image_size = _inferir_tamanho_imagem(prompt, padrao=default_size)
+            if image_size == "8K":
+                raise ValueError(
+                    f"O modelo {model} não oferece saída nativa em 8K; a resolução máxima é 4K."
+                )
             if image_size:
                 image_format["image_size"] = image_size
+        elif _inferir_tamanho_imagem(prompt, padrao=None) == "8K":
+            raise ValueError(
+                f"Não foi possível confirmar saída nativa em 8K para o modelo {model}. "
+                "Selecione um modelo compatível com a resolução desejada."
+            )
 
         url = "https://generativelanguage.googleapis.com/v1beta/interactions"
         payload = {
