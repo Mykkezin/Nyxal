@@ -6,8 +6,20 @@ externas nem efeitos colaterais.
 
 from __future__ import annotations
 
+import re
 from ipaddress import ip_address
 from urllib.parse import urlsplit
+
+
+def sanitize_http_log_message(message: str, max_length: int = 512) -> str:
+    """Remove query strings, control characters and oversized data from HTTP logs."""
+    if max_length < 1:
+        raise ValueError("max_length precisa ser positivo")
+    printable = "".join(char if char.isprintable() else " " for char in str(message))
+    # BaseHTTPRequestHandler logs a quoted request line; strip any target query
+    # so message IDs, searches and accidental query credentials never hit stdout.
+    without_queries = re.sub(r'([^\\s"]+)\\?[^\\s"]*', r"\\1", printable)
+    return without_queries[:max_length]
 
 
 def host_loopback(host: str) -> bool:
