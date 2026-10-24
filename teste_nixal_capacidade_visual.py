@@ -10,6 +10,10 @@ from unittest.mock import patch
 from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
 
 
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 24)
+JPEG_BYTES = b"\xff\xd8\xff" + (b"\x00" * 24)
+
+
 class FakeResponse:
     def __init__(self, data: bytes):
         self.data = data
@@ -22,6 +26,23 @@ class FakeResponse:
 
     def read(self, size=-1):
         return self.data if size < 0 else self.data[:size]
+
+
+def response_with_image(image_bytes: bytes = PNG_BYTES, mime_type: str = "image/png") -> dict:
+    return {
+        "steps": [{
+            "type": "model_output",
+            "content": [
+                {"type": "text", "text": "Imagem concluída."},
+                {
+                    "type": "image",
+                    "mime_type": mime_type,
+                    "data": base64.b64encode(image_bytes).decode("ascii"),
+                },
+            ],
+        }],
+        "status": "completed",
+    }
 
 
 class TestCapacidadeVisualGemini(unittest.TestCase):
@@ -39,60 +60,112 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with self.assertRaises(ValueError):
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(
-                    "editar", imagem_base64=base64.b64encode(b"x").decode(), mime_type="image/svg+xml"
+                    "editar",
+                    imagem_base64=base64.b64encode(b"<svg/>").decode("ascii"),
+                    mime_type="image/svg+xml",
                 )
 
-    def test_retorna_imagem_sem_guardar_upload(self):
-        response = {
-            "steps": [{
-                "type": "model_output",
-                "content": [
-                    {"type": "text", "text": "Imagem concluída."},
-                    {"type": "image", "mime_type": "image/png", "data": base64.b64encode(b"png").decode()},
-                ],
-            }],
-            "status": "completed",
-        }
+    def test_recusa_conteudo_que_nao_corresponde_ao_mime(self):
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "não corresponde"):
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Editar a imagem",
+                    imagem_base64=base64.b64encode(JPEG_BYTES).decode("ascii"),
+                    mime_type="image/png",
+                )
+
+    def test_retorna_imagem_sem_guardar_upload_e_define_resolucao_padrao(self):
+        response = response_with_image()
         with patch.dict(os.environ, {
             "NYXAL_GEMINI_API_KEY": "test-key",
             "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
         }, clear=True):
-            with patch("nixal_capacidade_visual.urlopen", return_value=FakeResponse(json.dumps(response).encode())) as mocked:
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
                 result = CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
+
         self.assertTrue(result["sucesso"])
         self.assertEqual(result["estado"], "imagem_gerada")
         self.assertEqual(result["mime_type"], "image/png")
-        self.assertEqual(base64.b64decode(result["imagem_base64"]), b"png")
+        self.assertEqual(base64.b64decode(result["imagem_base64"]), PNG_BYTES)
         self.assertFalse(result["upload_salvo_no_servidor"])
         request = mocked.call_args.args[0]
         self.assertIn("x-goog-api-key", {key.lower() for key in request.headers})
         request_payload = json.loads(request.data.decode("utf-8"))
         self.assertFalse(request_payload["store"])
         self.assertEqual(request_payload["model"], "gemini-nano-banana-2.1")
+        self.assertEqual(request_payload["response_format"][1]["image_size"], "2K")
+        self.assertIn("hierarquia visual clara", request_payload["input"][0]["text"])
+        self.assertIn("Crie uma paisagem.", request_payload["input"][0]["text"])
 
-    def test_edicao_envia_texto_antes_da_imagem_sem_armazenar_interacao(self):
-        response = {
-            "steps": [{
-                "type": "model_output",
-                "content": [{"type": "image", "mime_type": "image/png", "data": base64.b64encode(b"out").decode()}],
-            }],
-        }
+    def test_traduz_parametros_midjourney_em_controles_da_api(self):
+        response = response_with_image()
+        prompt = "Wallpaper vertical para celular --ar 9:16 --stylize 700 4K"
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(prompt)
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        image_format = payload["response_format"][1]
+        self.assertEqual(image_format["aspect_ratio"], "9:16")
+        self.assertEqual(image_format["image_size"], "4K")
+        prepared_prompt = payload["input"][0]["text"]
+        self.assertNotIn("--ar", prepared_prompt)
+        self.assertNotIn("--stylize", prepared_prompt)
+        self.assertIn("interpretação artística mais ousada", prepared_prompt)
+        self.assertIn(prompt.split(" --ar")[0], prepared_prompt)
+
+    def test_edicao_preserva_areas_nao_solicitadas_e_nao_forca_tamanho(self):
+        response = response_with_image()
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
-            with patch("nixal_capacidade_visual.urlopen", return_value=FakeResponse(json.dumps(response).encode())) as mocked:
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
                 result = CapacidadeVisualGeminiNixOS().gerar_ou_editar(
                     "Remova o fundo",
-                    imagem_base64=base64.b64encode(b"source").decode(),
+                    imagem_base64=base64.b64encode(PNG_BYTES).decode("ascii"),
                     mime_type="image/png",
                 )
+
         payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
         self.assertEqual(payload["input"][0]["type"], "text")
         self.assertEqual(payload["input"][1]["type"], "image")
         self.assertFalse(payload["store"])
+        self.assertNotIn("image_size", payload["response_format"][1])
+        self.assertIn("aplique somente as mudanças pedidas", payload["input"][0]["text"])
+        self.assertIn("Remova o fundo", payload["input"][0]["text"])
         self.assertEqual(result["estado"], "imagem_editada")
 
-    def test_status_nao_confunde_configuracao_com_chave(self):
+    def test_rejeita_imagem_de_resposta_com_base64_invalido(self):
+        response = {
+            "steps": [{
+                "type": "model_output",
+                "content": [{"type": "image", "mime_type": "image/png", "data": "not base64%%%"}],
+            }],
+        }
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "dados de imagem inválidos"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
+
+    def test_status_expoe_controles_sem_revelar_segredos(self):
         with patch.dict(os.environ, {}, clear=True):
-            self.assertEqual(CapacidadeVisualGeminiNixOS().status()["estado"], "configuracao_pendente")
+            status = CapacidadeVisualGeminiNixOS().status()
+        self.assertEqual(status["estado"], "configuracao_pendente")
+        self.assertTrue(status["controles"]["proporcao_automatica"])
+        self.assertNotIn("api_key", json.dumps(status).lower())
 
 
 if __name__ == "__main__":
