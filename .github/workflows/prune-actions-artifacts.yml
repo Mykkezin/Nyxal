@@ -1,0 +1,48 @@
+name: Nyxal Actions Artifact Janitor
+
+on:
+  schedule:
+    - cron: "17 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: nyxal-actions-artifact-janitor
+  cancel-in-progress: false
+
+jobs:
+  prune-project-snapshots:
+    name: Limpar snapshots redundantes do projeto
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Remover apenas pacotes completos com mais de três dias
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cutoff_epoch="$(date -u -d '3 days ago' +%s)"
+          removed=0
+
+          while IFS=$'\t' read -r artifact_id created_at; do
+            [[ -n "$artifact_id" && -n "$created_at" ]] || continue
+
+            created_epoch="$(date -u -d "$created_at" +%s)"
+            if [[ "$created_epoch" -lt "$cutoff_epoch" ]]; then
+              gh api --method DELETE \
+                "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+              echo "Removido snapshot redundante: ${artifact_id} (${created_at})"
+              removed=$((removed + 1))
+            fi
+          done < <(
+            gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+              --jq '.artifacts[] | select(.name == "nyxal-projeto-nivel10" and .expired == false) | [.id, .created_at] | @tsv'
+          )
+
+          echo "Total de snapshots antigos removidos: ${removed}"

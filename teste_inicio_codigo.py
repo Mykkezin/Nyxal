@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Regressões para a inicialização NyxOS totalmente renderizada por código."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+
+
+def main() -> None:
+    splash_path = ROOT / "interface" / "startup.html"
+    assert splash_path.is_file(), "interface/startup.html ausente"
+    splash = splash_path.read_text(encoding="utf-8").lower()
+    video_path = ROOT / "interface" / "assets" / "nyxos-startup.mp4"
+    assert not video_path.exists(), "o vídeo de inicialização foi reintroduzido"
+
+    # A animação deve ser autônoma: nada de vídeo, fontes ou bibliotecas remotas.
+    assert "<video" not in splash
+    assert ".mp4" not in splash
+    assert "<script src=" not in splash
+    assert "https://" not in splash
+    assert "prefers-reduced-motion: reduce" in splash
+    assert "location.replace(next)" in splash
+    assert 'id="progress"' in splash
+    assert 'id="stars"' in splash
+
+    for nome in (
+        "deploy/systemd/iniciar_nyxos_shell.sh",
+        "deploy/systemd/iniciar_nyxos_interface.sh",
+    ):
+        script = (ROOT / nome).read_text(encoding="utf-8")
+        assert "startup.html" in script, f"{nome} não usa a animação em código"
+        assert ".mp4" not in script, f"{nome} ainda depende do vídeo"
+        assert "mpv" not in script, f"{nome} ainda invoca mpv"
+
+    print("NYXOS_STARTUP_CODE_ONLY_OK")
+    print("NYXOS_STARTUP_NO_EXTERNAL_ASSETS_OK")
+    print("NYXOS_STARTUP_REDUCED_MOTION_OK")
+
+
+if __name__ == "__main__":
+    main()
