@@ -1,4 +1,5 @@
 name: Actions Runner Smoke
+# Commit diagnóstico: forçar uma execução observável do runner.
 
 on:
   push:
