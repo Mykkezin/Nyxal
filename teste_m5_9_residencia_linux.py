@@ -32,6 +32,14 @@ def main() -> None:
         assert "NoNewPrivileges=true" in unidade
         assert "PrivateTmp=true" in unidade
         assert "UMask=0077" in unidade
+        assert "ProtectSystem=full" in unidade
+        assert "ProtectKernelTunables=true" in unidade
+        assert "ProtectKernelModules=true" in unidade
+        assert "ProtectControlGroups=true" in unidade
+        assert "RestrictSUIDSGID=true" in unidade
+        assert "LockPersonality=true" in unidade
+        assert "RestrictRealtime=true" in unidade
+        assert "SystemCallArchitectures=native" in unidade
         assert "%h/Nyxal/.venv/bin/python" in unidade
         assert "/usr/bin/python3" not in unidade
         assert "--habilitar-auto-experimento" not in unidade
