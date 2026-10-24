@@ -11,6 +11,14 @@ EnvironmentFile=-%h/.config/nyxal/nyxal.env
 Restart=always
 RestartSec=2
 NoNewPrivileges=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
 PrivateTmp=true
 UMask=0077
 
