@@ -55,12 +55,12 @@ def _inferir_proporcao(prompt: str) -> str | None:
         "wallpaper para telefone", "wallpaper para celular", "phone wallpaper",
         "mobile wallpaper", "portrait orientation", "vertical format", "lock screen",
     )
-    vertical_social = re.search(r"\\b(?:story|stories|reel|reels|tiktok)\\b", texto)
+    vertical_social = re.search(r"\b(?:story|stories|reel|reels|tiktok)\b", texto)
     if any(pista in texto for pista in vertical_phrases) or vertical_social:
         return "9:16"
 
     quadrado = ("quadrado", "square", "foto de perfil", "profile picture", "profile photo", "icone", "sticker")
-    quadrado_token = re.search(r"\\b(?:avatar|icon|icone|sticker)\\b", texto)
+    quadrado_token = re.search(r"\b(?:avatar|icon|icone|sticker)\b", texto)
     if any(pista in texto for pista in quadrado) or quadrado_token:
         return "1:1"
 
