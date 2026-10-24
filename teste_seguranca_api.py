@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from nixal_seguranca_http import (
+    client_requires_bearer,
     host_loopback,
     origin_host_loopback,
     origin_permitida,
@@ -44,6 +45,13 @@ def main() -> None:
     assert origin_host_loopback("http://127.0.0.1:8010")
     assert origin_host_loopback("https://[::1]:8443")
     assert not origin_host_loopback("https://nyxal.example")
+    assert not client_requires_bearer("127.0.0.1", None)
+    assert not client_requires_bearer("::1", "http://localhost:8010")
+    assert client_requires_bearer("127.0.0.1", "https://nyxal.example")
+    assert client_requires_bearer("192.0.2.20", "http://localhost:8010")
+    assert client_requires_bearer("192.0.2.20", None)
+    assert client_requires_bearer(None, None)
+    assert client_requires_bearer("not-an-ip", None)
     assert not origin_host_loopback("null")
     assert not origin_host_loopback("https://localhost/path")
     assert not host_loopback("0.0.0.0")
@@ -76,6 +84,7 @@ def main() -> None:
     print("TESTE_SEGURANCA_HTTP_OK")
     print("BIND_LOOPBACK: OK")
     print("REMOTE_ORIGIN_REQUIRES_BEARER: OK")
+    print("PROXY_LOOPBACK_SPOOFING_POLICY: OK")
     print("CORS_EXATO_SEM_CURINGAS: OK")
     print("ORIGEM_NULL_E_ORIGENS_ESTRANHAS: REJEITADAS")
 
