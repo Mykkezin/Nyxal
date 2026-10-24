@@ -387,6 +387,7 @@ class CapacidadeVisualGeminiNixOS:
             raise RuntimeError(f"Falha ao comunicar com Gemini Image ({type(exc).__name__}).") from exc
 
         image = None
+        output_image_found = False
         text_parts: list[str] = []
         if isinstance(result, dict):
             output_text = result.get("output_text")
@@ -397,6 +398,7 @@ class CapacidadeVisualGeminiNixOS:
                 mime = output_image.get("mime_type") or "image/png"
                 if isinstance(mime, str) and mime.lower() in ALLOWED_MIME:
                     image = {"mime_type": mime.lower(), "base64": output_image["data"]}
+                    output_image_found = True
         steps = result.get("steps", []) if isinstance(result, dict) else []
         for step in steps if isinstance(steps, list) else []:
             if not isinstance(step, dict) or step.get("type") != "model_output":
@@ -410,13 +412,15 @@ class CapacidadeVisualGeminiNixOS:
                     text_value = item.get("text")
                     if isinstance(text_value, str) and text_value.strip():
                         text_parts.append(text_value.strip())
-                elif block_type == "image" and isinstance(item.get("data"), str):
+                elif (
+                    block_type == "image"
+                    and isinstance(item.get("data"), str)
+                    and not output_image_found
+                ):
                     mime = item.get("mime_type") or "image/png"
                     if isinstance(mime, str) and mime.lower() in ALLOWED_MIME:
+                        # Quando a resposta contém múltiplas imagens, a última é a saída final.
                         image = {"mime_type": mime.lower(), "base64": item["data"]}
-                        break
-            if image:
-                break
 
         # Compatibilidade defensiva com respostas antigas do endpoint Gemini.
         if image is None:
