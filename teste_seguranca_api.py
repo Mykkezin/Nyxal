@@ -19,6 +19,7 @@ from nixal_seguranca_http import (
     origin_host_loopback,
     origin_permitida,
     parse_allowed_origins,
+    sanitize_http_log_message,
 )
 
 
@@ -240,6 +241,7 @@ def main() -> None:
     assert "if not host_loopback(HOST):" in api_source
     assert "client_requires_bearer(endereco, origem)" in api_source
     assert "self._send_security_headers()" in api_source
+    assert "sanitize_http_log_message(format_string % args)" in api_source
 
     testar_handler_http(api_source)
     testar_servidor_com_limite(api_source)
@@ -294,7 +296,18 @@ def main() -> None:
     assert not origin_permitida("https://atacante.example", permitidas)
     assert not origin_permitida("null", permitidas)
 
+    linha_log = '"GET /api/integracoes/gmail/mensagem?id=segredo HTTP/1.1" 200 -'
+    assert sanitize_http_log_message(linha_log) == (
+        '"GET /api/integracoes/gmail/mensagem HTTP/1.1" 200 -'
+    )
+    linha_injetada = 'GET /rota?consulta=x\\r\\nINTRUSO HTTP/1.1'
+    limpa = sanitize_http_log_message(linha_injetada)
+    assert "\\r" not in limpa and "\\n" not in limpa
+    assert "\\r\\nINTRUSO" not in limpa
+    assert len(sanitize_http_log_message("x" * 100, max_length=12)) == 12
+
     print("API_POLICY_WIRING: OK")
+    print("HTTP_LOG_QUERY_REDACTION: OK")
     print("TESTE_SEGURANCA_HTTP_OK")
     print("BIND_LOOPBACK: OK")
     print("REMOTE_ORIGIN_REQUIRES_BEARER: OK")
