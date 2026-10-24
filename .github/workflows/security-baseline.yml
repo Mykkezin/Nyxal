@@ -1,0 +1,41 @@
+name: Nyxal API Security Baseline
+
+on:
+  push:
+    branches:
+      - main
+      - security/api-hardening-2026-10
+    paths:
+      - "nyxal_web_api.py"
+      - "nixal_seguranca_http.py"
+      - "teste_seguranca_api.py"
+      - "docs/SEGURANCA_API_NYXAL.md"
+      - ".github/workflows/security-baseline.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "nyxal_web_api.py"
+      - "nixal_seguranca_http.py"
+      - "teste_seguranca_api.py"
+      - "docs/SEGURANCA_API_NYXAL.md"
+      - ".github/workflows/security-baseline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  security-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile API security surface
+        run: |
+          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py
+      - name: Run deterministic security policy tests
+        run: python teste_seguranca_api.py
