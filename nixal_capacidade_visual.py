@@ -10,7 +10,7 @@ import re
 import unicodedata
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 MAX_INPUT_BYTES = 8 * 1024 * 1024
@@ -50,6 +50,18 @@ MODEL_DEFAULT_THINKING_LEVEL = {
     "gemini-3.1-flash-image": "minimal",
     "gemini-3.1-flash-lite-image": "minimal",
 }
+class _RejectRedirects(HTTPRedirectHandler):
+    """Never forward API-key-bearing requests to a redirected destination."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _urlopen_no_redirect(request: Request, *, timeout: int):
+    """Open a Gemini request while preserving proxy support but refusing redirects."""
+    return build_opener(_RejectRedirects()).open(request, timeout=timeout)
+
+
 MIME_SIGNATURES = {
     "image/png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
     "image/jpeg": lambda data: len(data) >= 3 and data.startswith(b"\xff\xd8\xff"),
@@ -497,7 +509,7 @@ class CapacidadeVisualGeminiNixOS:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=120) as response:
+            with _urlopen_no_redirect(request, timeout=120) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
             if len(raw) > MAX_RESPONSE_BYTES:
                 raise RuntimeError("A resposta visual excedeu 40 MiB.")
