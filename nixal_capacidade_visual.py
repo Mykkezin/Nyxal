@@ -38,7 +38,7 @@ MODELS_WITH_IMAGE_SIZE = {
     "gemini-3.1-flash-image",
     "gemini-3-pro-image",
 }
-MODELS_1K_ONLY = {"gemini-3.1-flash-lite-image"}
+MODELS_1K_ONLY = {"gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"}
 MIME_SIGNATURES = {
     "image/png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
     "image/jpeg": lambda data: len(data) >= 3 and data.startswith(b"\xff\xd8\xff"),
@@ -153,7 +153,12 @@ def _preparar_prompt(prompt: str, *, edicao: bool, nivel_estilizado: int | None 
     if nivel_estilizado is not None:
         if nivel_estilizado <= 100:
             direcao += " Prefira interpretação literal e mínima invenção artística."
-        elif nivel_estilizado >= 500:
+        elif nivel_estilizado < 500:
+            direcao += (
+                " Equilibre fidelidade ao briefing e interpretação artística, sem inventar "
+                "detalhes que contradigam os requisitos explícitos."
+            )
+        else:
             direcao += (
                 " Permita uma interpretação artística mais ousada, sem contradizer o briefing "
                 "nem alterar os requisitos explícitos."
