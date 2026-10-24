@@ -69,28 +69,28 @@ def _direcao_visual_especifica(prompt: str) -> str:
     texto = _normalizar_texto(prompt)
     regras: list[str] = []
 
-    if re.search(r"\\b(?:infograf(?:ico|ica)?|diagrama|fluxograma|tabela|chart|diagram|infographic)\\b", texto):
+    if re.search(r"\b(?:infograf(?:ico|ica)?|diagrama|fluxograma|tabela|chart|diagram|infographic)\b", texto):
         regras.append(
             "Para informação visual: organize os elementos em uma grade clara, com hierarquia, "
             "espaçamento e contraste legíveis. Reproduza textos e dados fornecidos exatamente; "
             "não invente métricas, rótulos ou legendas e evite sobreposição."
         )
 
-    if re.search(r"\\b(?:logo|logotipo|logomarca)\\b|identidade visual", texto):
+    if re.search(r"\b(?:logo|logotipo|logomarca)\b|identidade visual", texto):
         regras.append(
             "Para a marca: priorize uma silhueta distintiva, formas simples, espaço negativo "
             "intencional e legibilidade em tamanho pequeno. Não acrescente slogans, palavras, "
             "apresentações 3D ou mockups de marca sem solicitação."
         )
 
-    if re.search(r"\\b(?:interface|dashboard|painel|ux|ui)\\b|tela de login|mockup de aplicativo", texto):
+    if re.search(r"\b(?:interface|dashboard|painel|ux|ui)\b|tela de login|mockup de aplicativo", texto):
         regras.append(
             "Para a interface: mantenha grade, alinhamento, espaçamento, tipografia e estados "
             "visuais consistentes. Garanta contraste e legibilidade; não sobreponha controles "
             "nem invente métricas ou textos pequenos que não foram fornecidos."
         )
 
-    if re.search(r"\\b(?:produto|packshot|e-commerce|comercial)\\b|fotografia de produto|foto de produto", texto):
+    if re.search(r"\b(?:produto|packshot|e-commerce|comercial)\b|fotografia de produto|foto de produto", texto):
         regras.append(
             "Para o produto: trate o objeto principal como protagonista, mantendo forma, cor, "
             "material e marcações coerentes. Use iluminação e sombras de contato plausíveis; "
@@ -104,14 +104,14 @@ def _direcao_visual_especifica(prompt: str) -> str:
             "molduras ou margens."
         )
 
-    if re.search(r"\\b(?:retrato|portrait|headshot)\\b|foto de rosto|close[- ]up de rosto", texto):
+    if re.search(r"\b(?:retrato|portrait|headshot)\b|foto de rosto|close[- ]up de rosto", texto):
         regras.append(
             "Para o retrato: priorize estrutura facial coerente, textura natural da pele, luz "
             "consistente e anatomia plausível. Se houver imagem de referência, preserve a identidade "
             "e não altere traços pessoais sem pedido."
         )
 
-    if re.search(r"\\b(?:fotorealista|fotorrealista|fotorealismo|fotorrealismo|photorealistic|realismo fotografico)\\b", texto):
+    if re.search(r"\b(?:fotorealista|fotorrealista|fotorealismo|fotorrealismo|photorealistic|realismo fotografico)\b", texto):
         regras.append(
             "Para o realismo fotográfico: use perspectiva, escala, direção da luz, sombras e "
             "materiais fisicamente plausíveis; evite aparência de pintura ou render artificial "
