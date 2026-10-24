@@ -3,6 +3,7 @@
 import json
 import mimetypes
 import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -1723,6 +1724,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         )
 
 
+class NyxalThreadingHTTPServer(ThreadingHTTPServer):
+    """Servidor HTTP com família de endereços compatível com bind local IPv4/IPv6."""
+
+    address_family = socket.AF_INET6 if ":" in HOST else socket.AF_INET
+
+
 def main() -> None:
     if not host_loopback(HOST):
         raise RuntimeError(
@@ -1731,7 +1738,7 @@ def main() -> None:
             "use uma VPN ou proxy reverso com TLS e autenticação na borda."
         )
 
-    server = ThreadingHTTPServer(
+    server = NyxalThreadingHTTPServer(
         (HOST, PORT),
         NyxalAPIHandler,
     )
