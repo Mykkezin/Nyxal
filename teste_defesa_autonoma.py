@@ -260,6 +260,15 @@ class TesteDefesaAutonoma(unittest.TestCase):
             len(self.motor._falhas), defesa.MAX_TRACKED_ORIGINS,
         )
 
+    def test_historico_de_falhas_por_origem_tem_limite(self):
+        for _ in range(defesa.MAX_FAILURES_PER_ORIGIN * 4):
+            decisao = self.avaliar_falha()
+        self.assertLessEqual(
+            len(self.motor._falhas["203.0.113.10"]),
+            defesa.MAX_FAILURES_PER_ORIGIN,
+        )
+        self.assertIn("bloqueio_temporario_origem", self.tipos(decisao))
+
     def test_ipv4_mapped_loopback_nao_pode_ser_classificado_como_remoto(self):
         decisao = self.motor.avaliar(self.evento(
             "tentativa_exploracao",
