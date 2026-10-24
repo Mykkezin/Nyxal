@@ -1,5 +1,4 @@
 name: Actions Runner Smoke
-# Commit diagnóstico: forçar uma execução observável do runner.
 
 on:
   push:
@@ -11,9 +10,9 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
+  smoke-and-defense-tests:
     runs-on: ubuntu-slim
-    timeout-minutes: 2
+    timeout-minutes: 5
     steps:
       - name: Provar que o executor iniciou
         shell: bash
@@ -22,5 +21,23 @@ jobs:
           echo "RUNNER_SMOKE_STARTED"
           printf 'runner=%s\n' "${RUNNER_NAME:-unknown}"
           printf 'sha=%s\n' "${GITHUB_SHA:-unknown}"
-          python --version
+
+      - name: Checkout diagnóstico isolado
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compilar política e testes
+        run: python -m py_compile nixal_defesa_autonoma.py teste_defesa_autonoma.py
+
+      - name: Executar testes da política de defesa
+        run: python -m unittest teste_defesa_autonoma.py -v
+
+      - name: Confirmar conclusão do runner
+        shell: bash
+        run: |
+          set -eu
           echo "RUNNER_SMOKE_OK"
