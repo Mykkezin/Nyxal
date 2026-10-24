@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from nixal_seguranca_http import (
     host_loopback,
     origin_permitida,
@@ -19,6 +21,16 @@ def deve_rejeitar_origem(valor: str) -> None:
 
 
 def main() -> None:
+    api_source = (Path(__file__).resolve().parent / "nyxal_web_api.py").read_text(
+        encoding="utf-8"
+    )
+    assert "CORS_ORIGIN," not in api_source
+    assert "parse_allowed_origins(" in api_source
+    assert "if not self._origem_api_permitida():" in api_source
+    assert "parsed_path.startswith" in api_source and "_local_ou_autorizado()" in api_source
+    assert "if not host_loopback(HOST):" in api_source
+    assert "self._send_security_headers()" in api_source
+
     assert host_loopback("127.0.0.1")
     assert host_loopback("::1")
     assert host_loopback("localhost")
@@ -48,6 +60,7 @@ def main() -> None:
     assert not origin_permitida("https://atacante.example", permitidas)
     assert not origin_permitida("null", permitidas)
 
+    print("API_POLICY_WIRING: OK")
     print("TESTE_SEGURANCA_HTTP_OK")
     print("BIND_LOOPBACK: OK")
     print("CORS_EXATO_SEM_CURINGAS: OK")
