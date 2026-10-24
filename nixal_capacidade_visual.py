@@ -42,10 +42,12 @@ MODELS_1K_ONLY = {"gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"}
 # These explicit levels are limited to models whose official model pages publish them.
 MODEL_THINKING_LEVELS = {
     DEFAULT_IMAGE_MODEL: frozenset({"minimal", "medium", "high"}),
+    "gemini-3.1-flash-image": frozenset({"minimal", "high"}),
     "gemini-3.1-flash-lite-image": frozenset({"minimal", "high"}),
 }
 MODEL_DEFAULT_THINKING_LEVEL = {
     DEFAULT_IMAGE_MODEL: "medium",
+    "gemini-3.1-flash-image": "minimal",
     "gemini-3.1-flash-lite-image": "minimal",
 }
 MIME_SIGNATURES = {
