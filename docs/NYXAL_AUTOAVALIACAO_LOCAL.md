@@ -16,6 +16,10 @@ Este cliente deve ser executado na própria máquina da Nyxal. Ele envia três t
 - Não lê o repositório, não executa comandos, não aplica alterações sugeridas, não abre PR, não faz merge e não autoriza integração.
 - A conversa não é salva automaticamente. Para guardá-la, informe `--saida` com um caminho novo; o arquivo é criado com permissão `0600` e não é sobrescrito.
 - A resposta da Nyxal é uma hipótese de modelo, não evidência por si só. A auditoria deve exigir logs, resultados de testes e critérios de aceitação.
+
+## Atualidade das evidências
+
+Os fatos de CI e validação incluídos nos prompts são uma fotografia histórica registrada em **2026-10-24T04:26:07Z**. Esta ferramenta não consulta o GitHub, workflows, Billing nem configurações de Actions; ela só conversa com a API local `127.0.0.1`. Portanto, a fotografia não representa necessariamente o estado atual. O prompt de auditoria pede que a Nyxal marque o estado atual como **não verificado** quando não houver evidência mais recente. Antes de atualizar a fotografia, verifique os links e as execuções reais, registre a hora UTC e preserve a distinção entre teste local, execução pública e CI do repositório privado.
 - Esta ferramenta verifica propostas conversacionais; não executa um experimento AE2 real. O experimento real deve passar pelas solicitações formais existentes e pelos gates AE2/AE3/AE4/LLC.
 - Caso a API não esteja ativa, a ferramenta termina com uma mensagem de erro sem fingir que a Nyxal respondeu.
 
@@ -45,7 +49,7 @@ Não use o arquivo de saída se a conversa contiver informação confidencial, a
 
 Uma boa resposta da Nyxal deverá identificar uma H1 falsificável, evidência atual, baseline, experiência mínima e critério de rejeição. Depois, a correção precisa ser aplicada por um caminho autorizado e testada de forma reproduzível.
 
-No problema atual de GitHub Actions, a distinção é explícita:
+Para o snapshot registrado em 2026-10-24T04:26:07Z, a distinção era:
 - o runner padrão do repositório público conseguiu executar um workflow mínimo;
 - o job privado da Nyxal parou antes da primeira etapa, sem runner atribuído;
 - 29 testes da política defensiva foram executados localmente em Python 3.13, mas isso não valida o workflow privado em Python 3.12;
