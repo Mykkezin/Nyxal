@@ -13,6 +13,19 @@ Esta etapa reduz a superfície de exposição da API atual. Ela não transforma 
 - **Cabeçalhos defensivos:** respostas JSON e de bytes incluem `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` e `Cache-Control: no-store`. A versão do servidor deixa de anunciar a versão detalhada do Python.
 - **Testes reproduzíveis:** `teste_seguranca_api.py` valida loopback e a política de origens sem precisar subir serviços externos.
 
+## Mapeamento dos seis princípios arquiteturais
+
+| Princípio-alvo | Situação verificada nesta etapa | Próxima camada necessária |
+|---|---|---|
+| Microkernel e verificação formal | A Nyxal é atualmente uma aplicação de espaço de usuário sobre Linux; não há kernel próprio verificado formalmente. | Definir especificação mínima do kernel e modelo de ameaças; avaliar uma base como seL4 antes de qualquer promessa de prova. |
+| Segurança de memória | A pilha atual é majoritariamente Python e depende de bibliotecas nativas; isso não equivale a segurança de memória garantida. | Manter componentes privilegiados mínimos e implementar novos componentes críticos em linguagem com segurança de memória; verificar compatibilidade de CPU antes de depender de tagging. |
+| Micro-VMs e isolamento absoluto | Os serviços usam unidades systemd, mas o sandbox ainda não foi endurecido nesta PR. Os processos não rodam em uma micro-VM por aplicação. | Aplicar hardening systemd por serviço com testes de compatibilidade; só depois avaliar micro-VMs para componentes que executam código não confiável. |
+| Segurança baseada em capacidades | O gateway de atuação existente restringe ações registradas e exige autorização explícita no nível da aplicação. Isso não é uma capacidade inforjável imposta pelo kernel. | Separar identidades/contas de serviço, limitar recursos acessíveis por componente e criar concessões específicas e revogáveis para cada operação. |
+| Armazenamento imutável e proteção de chaves | A aplicação ainda mantém estado mutável em arquivos locais. Esta etapa não adiciona imagem-base imutável, TPM ou criptografia pós-quântica. | Separar imagem de sistema e dados graváveis; assinar artefatos, usar atualizações transacionais e definir um modelo de chaves com suporte de hardware real. |
+| Zero Trust de rede | A API deixa de aceitar bind público direto e não aceita CORS wildcard. Não existe ainda uma política global de firewall default-drop nem identidade criptográfica por processo. | Expor por VPN ou proxy HTTPS autenticado, restringir egress por serviço e definir identidades/autorizações para cada integração. |
+
+A ordem importa: primeiro fechar a superfície de exposição e medir o comportamento; depois endurecer cada serviço sem quebrar observabilidade, inferência ou integrações; por fim avaliar substituições arquiteturais maiores com critérios verificáveis.
+
 ## Configuração CORS
 
 Use uma lista de origens exatas separadas por vírgula, sem caminhos ou barras finais:
