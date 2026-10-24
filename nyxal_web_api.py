@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import ipaddress
 import json
 import mimetypes
 import os
@@ -39,8 +38,8 @@ from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
 from urllib.parse import parse_qs, urlsplit
 
 from nixal_seguranca_http import (
+    client_requires_bearer,
     host_loopback,
-    origin_host_loopback,
     origin_permitida,
     parse_allowed_origins,
 )
@@ -729,20 +728,13 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         return True
 
     def _local_ou_autorizado(self) -> bool:
-        # Um reverse proxy local vê o cliente remoto como loopback. Quando
-        # o navegador declara uma origem não-local, exigimos Bearer também;
-        # o proxy deve autenticar o usuário e injetar a credencial server-side.
-        origin = self.headers.get("Origin")
-        if origin is not None and not origin_host_loopback(origin):
+        # Um reverse proxy local vê o cliente remoto como loopback. A decisão
+        # também considera a Origin: frontends remotos exigem Bearer server-side.
+        endereco = self.client_address[0] if self.client_address else None
+        origem = self.headers.get("Origin")
+        if client_requires_bearer(endereco, origem):
             return self._authorized()
-
-        endereco = self.client_address[0] if self.client_address else ""
-        try:
-            if endereco and ipaddress.ip_address(endereco).is_loopback:
-                return True
-        except ValueError:
-            pass
-        return self._authorized()
+        return True
 
     def do_OPTIONS(self) -> None:
         if not self._origem_api_permitida():
