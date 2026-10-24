@@ -154,6 +154,25 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
         self.assertEqual(payload["generation_config"], {"thinking_level": "medium"})
 
+    def test_auto_usa_high_para_flash_image_quando_prompt_e_complexo(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-image",
+            "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Crie um infográfico de arquitetura com tipografia legível e texto exato."
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["generation_config"], {"thinking_level": "high"})
+        self.assertEqual(payload["model"], "gemini-3.1-flash-image")
+
     def test_recusa_nivel_de_raciocinio_nao_suportado_antes_da_chamada(self):
         with patch.dict(os.environ, {
             "NYXAL_GEMINI_API_KEY": "test-key",
