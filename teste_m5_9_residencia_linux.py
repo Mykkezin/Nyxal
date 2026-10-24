@@ -27,8 +27,6 @@ def main() -> None:
         assert "Type=simple" in unidade
         assert "WorkingDirectory=%h/Nyxal" in unidade
         assert "EnvironmentFile=-%h/.config/nyxal/nyxal.env" in unidade
-        assert "Restart=on-failure" in unidade
-        assert "RestartSec=3" in unidade
         assert "NoNewPrivileges=true" in unidade
         assert "PrivateTmp=true" in unidade
         assert "UMask=0077" in unidade
@@ -40,9 +38,18 @@ def main() -> None:
         assert "LockPersonality=true" in unidade
         assert "RestrictRealtime=true" in unidade
         assert "SystemCallArchitectures=native" in unidade
+        assert "CapabilityBoundingSet=" in unidade
+        assert "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6" in unidade
+        assert "ProtectClock=true" in unidade
+        assert "ProtectKernelLogs=true" in unidade
         assert "%h/Nyxal/.venv/bin/python" in unidade
         assert "/usr/bin/python3" not in unidade
         assert "--habilitar-auto-experimento" not in unidade
+
+    assert "Restart=always" in api
+    assert "RestartSec=2" in api
+    assert "Restart=on-failure" in residente
+    assert "RestartSec=3" in residente
 
     assert (
         "ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/nyxal_web_api.py"
@@ -62,7 +69,14 @@ def main() -> None:
     assert 'PYTHON_BIN="${NYXAL_DIR}/.venv/bin/python"' in instalador
     assert '[[ ! -x "${PYTHON_BIN}" ]]' in instalador
     assert 'import nyxal_web_api; import executar_nyxos_residente' in instalador
-    assert "loginctl enable-linger ${USER}" in instalador
+    assert 'if [[ -L "${CONFIG_DIR}" ]]; then' in instalador
+    assert instalador.index('if [[ -L "${CONFIG_DIR}" ]]') < instalador.index("mkdir -p")
+    assert 'chmod 700 "${CONFIG_DIR}"' in instalador
+    assert 'ENV_FILE="${CONFIG_DIR}/nyxal.env"' in instalador
+    assert '[[ -L "${ENV_FILE}" ]]' in instalador
+    assert '[[ -e "${ENV_FILE}" && ! -f "${ENV_FILE}" ]]' in instalador
+    assert 'chmod 600 "${ENV_FILE}"' in instalador
+    assert 'loginctl enable-linger "${USER}"' in instalador
     assert "LINGER_STATUS" in instalador
     assert "sudo " not in instalador
     assert "/etc/systemd" not in instalador

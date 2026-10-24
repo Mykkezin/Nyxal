@@ -26,7 +26,31 @@ if ! "${PYTHON_BIN}" -c "import nyxal_web_api; import executar_nyxos_residente" 
     exit 1
 fi
 
+# Não siga links simbólicos ao ajustar permissões de credenciais.
+if [[ -L "${CONFIG_DIR}" ]]; then
+    echo "ERRO: ${CONFIG_DIR} não pode ser um link simbólico." >&2
+    exit 1
+fi
+
 mkdir -p "${USER_SYSTEMD_DIR}" "${AUTOSTART_DIR}" "${CONFIG_DIR}"
+if [[ ! -d "${CONFIG_DIR}" ]]; then
+    echo "ERRO: ${CONFIG_DIR} precisa ser um diretório." >&2
+    exit 1
+fi
+chmod 700 "${CONFIG_DIR}"
+
+ENV_FILE="${CONFIG_DIR}/nyxal.env"
+if [[ -L "${ENV_FILE}" ]]; then
+    echo "ERRO: ${ENV_FILE} não pode ser um link simbólico." >&2
+    exit 1
+fi
+if [[ -e "${ENV_FILE}" && ! -f "${ENV_FILE}" ]]; then
+    echo "ERRO: ${ENV_FILE} precisa ser um arquivo regular." >&2
+    exit 1
+fi
+if [[ -f "${ENV_FILE}" ]]; then
+    chmod 600 "${ENV_FILE}"
+fi
 
 if [[ -f "${NYXAL_DIR}/.gitmodules" ]] && command -v npm >/dev/null 2>&1; then
     git -C "${NYXAL_DIR}" submodule update --init --recursive

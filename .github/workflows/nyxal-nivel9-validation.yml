@@ -26,8 +26,21 @@ jobs:
           python-version: "3.12"
 
       - name: Compilar módulos
+        id: compile_main
         run: |
-          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nixal_delta.py             nixal_recursos_habitat.py             nixal_ciclo_residente.py             nixal_auto_experimento_ae2.py             nixal_auto_avaliacao_ae3.py             nixal_ciclo_evolucao_ae4.py             nixal_descoberta_continua_ae5.py             nyxal_web_api.py
+          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nixal_delta.py             nixal_recursos_habitat.py             nixal_ciclo_residente.py             nixal_auto_experimento_ae2.py             nixal_auto_avaliacao_ae3.py             nixal_ciclo_evolucao_ae4.py             nixal_descoberta_continua_ae5.py             nyxal_web_api.py nixal_decisao_autonoma_ci.py
+
+      - name: Testes HTTP de segurança da API
+        id: api_http_security
+        run: python -m unittest teste_api_security_auth.py -v
+
+      - name: Testes da política de segurança API
+        id: api_policy
+        run: python teste_seguranca_api.py
+
+      - name: Decisão autônoma governada para bloqueios de CI
+        id: decision_policy
+        run: python teste_decisao_autonoma_ci.py
 
       - name: Suite Nível 9
         run: python teste_nivel_9_suite_final.py
@@ -45,6 +58,7 @@ jobs:
         run: python teste_nucleo_conversacional.py
 
       - name: Smoke test API de chat sem voz
+        id: chat_smoke
         run: python teste_api_chat_sem_voz.py
 
       - name: Teste Voz Contínua 56.5.6
@@ -124,3 +138,59 @@ jobs:
 
       - name: Teste Descoberta Contínua AE5
         run: python teste_descoberta_continua_ae5.py
+
+      - name: Avaliar evidências e escolher próximo passo governado
+        if: always()
+        env:
+          HEAD_SHA: ${{ github.sha }}
+          JOB_OUTCOME: ${{ job.status }}
+          COMPILE_OUTCOME: ${{ steps.compile_main.outcome }}
+          POLICY_OUTCOME: ${{ steps.api_policy.outcome }}
+          HTTP_OUTCOME: ${{ steps.api_http_security.outcome }}
+          DECISION_OUTCOME: ${{ steps.decision_policy.outcome }}
+          CHAT_OUTCOME: ${{ steps.chat_smoke.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          raw = {
+              "compilacao": os.getenv("COMPILE_OUTCOME", "unknown"),
+              "politica_origem": os.getenv("POLICY_OUTCOME", "unknown"),
+              "integracao_http": os.getenv("HTTP_OUTCOME", "unknown"),
+              "decisor": os.getenv("DECISION_OUTCOME", "unknown"),
+              "chat_smoke": os.getenv("CHAT_OUTCOME", "unknown"),
+          }
+          def estado(value):
+              return {"success": "passed", "failure": "failed", "skipped": "not_run"}.get(value, "unknown")
+          job_outcome = os.getenv("JOB_OUTCOME", "unknown")
+          executed = any(v in {"success", "failure"} for v in raw.values())
+          failed = job_outcome == "failure" or any(v == "failure" for v in raw.values())
+          passed = job_outcome == "success" and all(v == "success" for v in raw.values())
+          resultado = "failed" if failed and executed else "passed" if passed else "unknown"
+          states = {key: estado(value) for key, value in raw.items()}
+          evidence = {
+              "head_sha": os.getenv("HEAD_SHA", ""),
+              "ci": {
+                  "jobs": [{
+                      "conclusion": job_outcome,
+                      "steps": [{"name": key, "outcome": value} for key, value in raw.items()],
+                      "logs_available": True,
+                  }],
+                  "repeticoes_pre_runner": 0,
+                  "testes_executados": executed,
+                  "resultado_testes": resultado,
+              },
+              "validacao_local": {
+                  "compilacao": states["compilacao"],
+                  "politica_origem": states["politica_origem"],
+                  "integracao_http": states["integracao_http"],
+                  "regressoes": estado(job_outcome),
+              },
+          }
+          Path("/tmp/nyxal-ci-evidence.json").write_text(
+              json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8"
+          )
+          PY
+          python nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json

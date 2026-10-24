@@ -11,8 +11,13 @@ on:
       - "teste_seguranca_api.py"
       - "deploy/systemd/nyxal-api.service"
       - "deploy/systemd/nyxos-residente.service"
+      - "deploy/systemd/instalar_nyxos_servicos.sh"
       - "teste_m5_9_residencia_linux.py"
       - "docs/SEGURANCA_API_NYXAL.md"
+      - "teste_api_security_auth.py"
+      - "nixal_decisao_autonoma_ci.py"
+      - "teste_decisao_autonoma_ci.py"
+      - ".github/workflows/nyxal-nivel9-validation.yml"
       - ".github/workflows/security-baseline.yml"
   pull_request:
     branches:
@@ -23,8 +28,13 @@ on:
       - "teste_seguranca_api.py"
       - "deploy/systemd/nyxal-api.service"
       - "deploy/systemd/nyxos-residente.service"
+      - "deploy/systemd/instalar_nyxos_servicos.sh"
       - "teste_m5_9_residencia_linux.py"
       - "docs/SEGURANCA_API_NYXAL.md"
+      - "teste_api_security_auth.py"
+      - "nixal_decisao_autonoma_ci.py"
+      - "teste_decisao_autonoma_ci.py"
+      - ".github/workflows/nyxal-nivel9-validation.yml"
       - ".github/workflows/security-baseline.yml"
 
 permissions:
@@ -41,7 +51,83 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile API security surface
+        id: compile_api
         run: |
-          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_m5_9_residencia_linux.py
+          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_api_security_auth.py teste_decisao_autonoma_ci.py nixal_decisao_autonoma_ci.py teste_m5_9_residencia_linux.py
       - name: Run deterministic security policy tests
+        id: policy_tests
         run: python teste_seguranca_api.py
+
+      - name: Run HTTP API security integration tests
+        id: http_security
+        run: python -m unittest teste_api_security_auth.py -v
+
+      - name: Run governed autonomous CI decision tests
+        id: decision_policy
+        run: python teste_decisao_autonoma_ci.py
+
+      - name: Validate shell installer syntax
+        id: shell_syntax
+        run: bash -n deploy/systemd/instalar_nyxos_servicos.sh
+
+      - name: Run Linux residence structural regression
+        id: residence_regression
+        run: python teste_m5_9_residencia_linux.py
+
+      - name: Evaluate validation evidence with Nyxal decision policy
+        if: always()
+        env:
+          HEAD_SHA: ${{ github.sha }}
+          JOB_OUTCOME: ${{ job.status }}
+          COMPILE_OUTCOME: ${{ steps.compile_api.outcome }}
+          POLICY_OUTCOME: ${{ steps.policy_tests.outcome }}
+          HTTP_OUTCOME: ${{ steps.http_security.outcome }}
+          DECISION_OUTCOME: ${{ steps.decision_policy.outcome }}
+          SHELL_OUTCOME: ${{ steps.shell_syntax.outcome }}
+          RESIDENCE_OUTCOME: ${{ steps.residence_regression.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          raw = {
+              "compilacao": os.getenv("COMPILE_OUTCOME", "unknown"),
+              "politica_origem": os.getenv("POLICY_OUTCOME", "unknown"),
+              "integracao_http": os.getenv("HTTP_OUTCOME", "unknown"),
+              "decisor": os.getenv("DECISION_OUTCOME", "unknown"),
+              "shell_syntax": os.getenv("SHELL_OUTCOME", "unknown"),
+              "regressoes": os.getenv("RESIDENCE_OUTCOME", "unknown"),
+          }
+          def estado(value):
+              return {"success": "passed", "failure": "failed", "skipped": "not_run"}.get(value, "unknown")
+          job_outcome = os.getenv("JOB_OUTCOME", "unknown")
+          executed = any(v in {"success", "failure"} for v in raw.values())
+          failed = job_outcome == "failure" or any(v == "failure" for v in raw.values())
+          passed = job_outcome == "success" and all(v == "success" for v in raw.values())
+          resultado = "failed" if failed and executed else "passed" if passed else "unknown"
+          states = {key: estado(value) for key, value in raw.items()}
+          evidence = {
+              "head_sha": os.getenv("HEAD_SHA", ""),
+              "ci": {
+                  "jobs": [{
+                      "conclusion": job_outcome,
+                      "steps": [{"name": key, "outcome": value} for key, value in raw.items()],
+                      "logs_available": True,
+                  }],
+                  "repeticoes_pre_runner": 0,
+                  "testes_executados": executed,
+                  "resultado_testes": resultado,
+              },
+              "validacao_local": {
+                  "compilacao": states["compilacao"],
+                  "politica_origem": states["politica_origem"],
+                  "integracao_http": states["integracao_http"],
+                  "regressoes": states["regressoes"],
+              },
+          }
+          Path("/tmp/nyxal-ci-evidence.json").write_text(
+              json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8"
+          )
+          PY
+          python nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
