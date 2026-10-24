@@ -129,7 +129,7 @@ def _inferir_tamanho_imagem(prompt: str, *, padrao: str | None) -> str | None:
     return padrao
 
 
-def _preparar_prompt(prompt: str, *, edicao: bool, nivel_estilizado: int | None = None) -> str:
+def _preparar_prompt(\n    prompt: str, *, edicao: bool, nivel_estilizado: int | None = None,\n    elementos_excluir: str | None = None,\n) -> str:
     """Acrescenta direção visual sem reescrever ou substituir a intenção do usuário."""
     if edicao:
         direcao = (
@@ -164,6 +164,11 @@ def _preparar_prompt(prompt: str, *, edicao: bool, nivel_estilizado: int | None 
                 " Permita uma interpretação artística mais ousada, sem contradizer o briefing "
                 "nem alterar os requisitos explícitos."
             )
+    if elementos_excluir:
+        direcao += (
+            " Exclusões explícitas do usuário: não inclua "
+            f"{elementos_excluir}. Trate essas exclusões como restrições prioritárias."
+        )
 
     return (
         f"{direcao}\n\n"
@@ -179,19 +184,32 @@ def _assinatura_compativel(dados: bytes, mime_type: str) -> bool:
 
 def _extrair_parametros_midjourney(
     prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL
-) -> tuple[str, int | None, str | None]:
-    """Traduz --ar/--aspect e --s/--stylize para controles disponíveis na API."""
+) -> tuple[str, int | None, str | None, str | None]:
+    """Traduz --ar/--aspect, --s/--stylize e --no para instruções compatíveis."""
     limpo = prompt
     stylize = None
     proporcao_solicitada = None
+    elementos_excluir = None
     permitidas = MODEL_ASPECT_RATIOS.get(modelo, STANDARD_ASPECT_RATIOS)
 
-    stylize_match = re.search(r"(?i)(?:--stylize|--s)\s*(\d{1,4})(?!\d)", limpo)
+    # --no é uma exclusão textual em Midjourney; converte-a em linguagem natural.
+    negative_match = re.search(
+        r"(?is)(?:^|\\s)--no\\s+(.+?)(?=\\s+--(?:ar|aspect|s|stylize)\\b|$)",
+        limpo,
+    )
+    if negative_match:
+        elementos_excluir = negative_match.group(1).strip(" ,;")
+        limpo = limpo[:negative_match.start()] + " " + limpo[negative_match.end():]
+
+    stylize_match = re.search(r"(?i)(?:--stylize|--s)\\s*(\\d{1,4})(?!\\d)", limpo)
     if stylize_match:
         stylize = min(1000, int(stylize_match.group(1)))
         limpo = limpo[:stylize_match.start()] + limpo[stylize_match.end():]
 
-    ratio_match = re.search(r"(?i)--(?:ar|aspect)\s*(\d{1,4})\s*:\s*(\d{1,4})(?!\d)", limpo)
+    ratio_match = re.search(
+        r"(?i)--(?:ar|aspect)\\s*(\\d{1,4})\\s*:\\s*(\\d{1,4})(?!\\d)",
+        limpo,
+    )
     if ratio_match:
         proporcao_solicitada = _normalizar_proporcao(
             int(ratio_match.group(1)), int(ratio_match.group(2))
@@ -208,7 +226,7 @@ def _extrair_parametros_midjourney(
             )
         limpo = limpo[:ratio_match.start()] + limpo[ratio_match.end():]
 
-    return re.sub(r"\s{2,}", " ", limpo).strip(), stylize, proporcao_solicitada
+    return re.sub(r"\\s{2,}", " ", limpo).strip(), stylize, proporcao_solicitada, elementos_excluir
 
 
 class CapacidadeVisualGeminiNixOS:
@@ -239,7 +257,7 @@ class CapacidadeVisualGeminiNixOS:
                     else ["definido_pelo_provedor"]
                 ),
                 "edicao_preserva_areas_nao_solicitadas": True,
-                "parametros_midjourney": ["--ar", "--aspect", "--s", "--stylize"],
+                "parametros_midjourney": ["--ar", "--aspect", "--s", "--stylize", "--no"],
             },
         }
 
@@ -270,7 +288,7 @@ class CapacidadeVisualGeminiNixOS:
 
         imagem_presente = bool(imagem_base64)
         model = os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "").strip() or DEFAULT_IMAGE_MODEL
-        prompt_limpo, nivel_estilizado, proporcao_solicitada = _extrair_parametros_midjourney(
+        prompt_limpo, nivel_estilizado, proporcao_solicitada, elementos_excluir = _extrair_parametros_midjourney(
             prompt, modelo=model
         )
         inputs: list[dict[str, Any]] = [{
@@ -279,6 +297,7 @@ class CapacidadeVisualGeminiNixOS:
                 prompt_limpo,
                 edicao=imagem_presente,
                 nivel_estilizado=nivel_estilizado,
+                elementos_excluir=elementos_excluir,
             ),
         }]
 
