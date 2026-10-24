@@ -38,6 +38,7 @@ from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
 from urllib.parse import parse_qs, urlsplit
 
 from nixal_seguranca_http import (
+    client_requires_bearer,
     host_loopback,
     origin_permitida,
     parse_allowed_origins,
@@ -727,10 +728,13 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         return True
 
     def _local_ou_autorizado(self) -> bool:
-        endereco = self.client_address[0] if self.client_address else ""
-        if endereco in {"127.0.0.1", "::1"}:
-            return True
-        return self._authorized()
+        # O socket de um reverse proxy local parece loopback; a origem do
+        # navegador remoto também deve exigir Bearer injetado server-side.
+        endereco = self.client_address[0] if self.client_address else None
+        origem = self.headers.get("Origin")
+        if client_requires_bearer(endereco, origem):
+            return self._authorized()
+        return True
 
     def do_OPTIONS(self) -> None:
         if not self._origem_api_permitida():
