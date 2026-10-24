@@ -261,6 +261,53 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "dados de imagem inválidos"):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
 
+    def test_prioriza_output_image_final_sobre_imagens_intermediarias(self):
+        final_image = b"\x89PNG\r\n\x1a\n" + (b"F" * 24)
+        response = response_with_image()
+        response["output_image"] = {
+            "mime_type": "image/png",
+            "data": base64.b64encode(final_image).decode("ascii"),
+        }
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ):
+                result = CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
+
+        self.assertEqual(base64.b64decode(result["imagem_base64"]), final_image)
+
+    def test_sem_output_image_seleciona_ultima_imagem_dos_steps(self):
+        final_image = b"\x89PNG\r\n\x1a\n" + (b"L" * 24)
+        response = {
+            "steps": [
+                {
+                    "type": "model_output",
+                    "content": [{
+                        "type": "image",
+                        "mime_type": "image/png",
+                        "data": base64.b64encode(PNG_BYTES).decode("ascii"),
+                    }],
+                },
+                {
+                    "type": "model_output",
+                    "content": [{
+                        "type": "image",
+                        "mime_type": "image/png",
+                        "data": base64.b64encode(final_image).decode("ascii"),
+                    }],
+                },
+            ],
+        }
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ):
+                result = CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
+
+        self.assertEqual(base64.b64decode(result["imagem_base64"]), final_image)
+
     def test_status_expoe_controles_sem_revelar_segredos(self):
         with patch.dict(os.environ, {}, clear=True):
             status = CapacidadeVisualGeminiNixOS().status()
