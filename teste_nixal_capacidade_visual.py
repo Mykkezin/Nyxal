@@ -96,9 +96,74 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         request_payload = json.loads(request.data.decode("utf-8"))
         self.assertFalse(request_payload["store"])
         self.assertEqual(request_payload["model"], "gemini-nano-banana-2.1")
+        self.assertNotIn("generation_config", request_payload)
         self.assertEqual(request_payload["response_format"][1]["image_size"], "2K")
         self.assertIn("hierarquia visual clara", request_payload["input"][0]["text"])
         self.assertIn("Crie uma paisagem.", request_payload["input"][0]["text"])
+
+    def test_nivel_explicito_high_e_enviado_na_configuracao_oficial(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+            "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "high",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma imagem simples.")
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["generation_config"], {"thinking_level": "high"})
+
+    def test_auto_escolhe_high_para_prompt_com_texto_e_layout(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+            "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Crie um infográfico de arquitetura com tipografia legível, texto exato "
+                    "NYXAL e uma hierarquia visual clara."
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["generation_config"], {"thinking_level": "high"})
+
+    def test_auto_preserva_nivel_padrao_para_prompt_simples(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+            "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "auto",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual.urlopen",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Uma flor amarela sobre fundo branco."
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["generation_config"], {"thinking_level": "medium"})
+
+    def test_recusa_nivel_de_raciocinio_nao_suportado_antes_da_chamada(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-image",
+            "NYXAL_GEMINI_IMAGE_THINKING_LEVEL": "medium",
+        }, clear=True):
+            with patch("nixal_capacidade_visual.urlopen") as mocked:
+                with self.assertRaisesRegex(ValueError, "não suporta o nível de raciocínio"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
+        mocked.assert_not_called()
 
     def test_traduz_parametros_midjourney_em_controles_da_api(self):
         response = response_with_image()
@@ -313,6 +378,8 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             status = CapacidadeVisualGeminiNixOS().status()
         self.assertEqual(status["estado"], "configuracao_pendente")
         self.assertTrue(status["controles"]["proporcao_automatica"])
+        self.assertEqual(status["nivel_raciocinio_configurado"], "padrao_do_provedor")
+        self.assertIn("high", status["niveis_raciocinio_suportados"])
         self.assertNotIn("api_key", json.dumps(status).lower())
 
 
