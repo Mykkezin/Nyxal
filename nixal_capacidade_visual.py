@@ -50,28 +50,35 @@ def _inferir_proporcao(prompt: str) -> str | None:
             return proporcao
 
     # A orientação explícita sempre tem precedência sobre palavras genéricas como wallpaper.
-    vertical = (
-        "vertical", "9:16", "story", "stories", "reels", "tiktok",
-        "celular", "smartphone", "tela de bloqueio", "wallpaper para telefone",
+    vertical_phrases = (
+        "vertical", "9:16", "celular", "smartphone", "tela de bloqueio",
+        "wallpaper para telefone", "wallpaper para celular", "phone wallpaper",
+        "mobile wallpaper", "portrait orientation", "vertical format", "lock screen",
     )
-    if any(pista in texto for pista in vertical):
+    vertical_social = re.search(r"\\b(?:story|stories|reel|reels|tiktok)\\b", texto)
+    if any(pista in texto for pista in vertical_phrases) or vertical_social:
         return "9:16"
 
-    quadrado = ("quadrado", "avatar", "foto de perfil", "icone", "logotipo", "logo", "sticker")
-    if any(pista in texto for pista in quadrado):
+    quadrado = ("quadrado", "square", "foto de perfil", "profile picture", "profile photo", "icone", "sticker")
+    quadrado_token = re.search(r"\\b(?:avatar|icon|icone|sticker)\\b", texto)
+    if any(pista in texto for pista in quadrado) or quadrado_token:
         return "1:1"
 
-    impresso_vertical = ("poster", "cartaz", "capa de livro", "capa de revista", "folha a4 vertical")
-    if any(pista in texto for pista in impresso_vertical):
-        return "2:3"
-
     horizontal = (
-        "horizontal", "panoram", "widescreen", "cinematic", "paisagem ampla",
-        "wallpaper", "papel de parede", "desktop", "monitor", "tela de pc",
-        "capa do youtube", "thumbnail do youtube", "banner",
+        "horizontal", "landscape orientation", "landscape format", "panoram",
+        "widescreen", "cinematic", "paisagem ampla", "wallpaper", "papel de parede",
+        "desktop", "monitor", "tela de pc", "capa do youtube", "thumbnail do youtube",
+        "youtube thumbnail", "banner", "wide wallpaper",
     )
     if any(pista in texto for pista in horizontal):
         return "16:9"
+
+    impresso_vertical = (
+        "poster", "cartaz", "capa de livro", "book cover", "capa de revista",
+        "magazine cover", "folha a4 vertical", "vertical a4",
+    )
+    if any(pista in texto for pista in impresso_vertical):
+        return "2:3"
     return None
 
 
