@@ -57,6 +57,21 @@ Mantenha a API ligada em loopback. Para acesso remoto, exponha somente uma **VPN
 
 `NYXAL_API_TOKEN` continua necessário para endpoints que já exigem Bearer. O instalador do systemd restringe o diretório de configuração a `0700` e o arquivo `nyxal.env` a `0600`; links simbólicos e caminhos não regulares são recusados. CORS não é autenticação e não substitui uma camada de acesso remoto.
 
+## Classificação de rotas para exposição remota
+
+O prefixo `/api/public/` indica uma rota sem token no fluxo local legado; **não significa que a rota seja segura para publicação irrestrita na Internet**. O servidor continua vinculado a loopback, mas um proxy decide quais caminhos ficam externamente acessíveis.
+
+| Classe | Rotas ou famílias | Política recomendada para gateway remoto |
+|---|---|---|
+| Saúde mínima | `GET /health` | Pode ser exposta somente se necessário para monitoramento; não retorna detalhes internos. |
+| Estado para interface | `GET /api/public/status` | Expor apenas atrás de autenticação do gateway; retorna presença, habitat e outros dados operacionais. |
+| Diagnóstico interno | `/api/public/nyxos/contexto`, `/api/public/residencia`, `/api/public/recursos`, `/api/public/operacional`, `/api/public/gateway`, `/api/public/presenca`, `/api/public/ae5`, `/api/public/dataset`, `/api/public/delta` | Não publicar diretamente; contêm estado interno, detalhes de serviços, contexto de governança, dataset ou eventos. |
+| Dados pessoais e telemetria | `/api/integracoes/google/*`, `/api/integracoes/gmail/*`, `/api/agent/contexto`, `/api/agent/status` | Acesso autenticado e restrito; podem revelar e-mails, contatos, agenda, processos, serviços, modelos ou integrações. |
+| Controle e efeitos | `/api/vps/*`, `/api/agent/image`, `/api/amd-cloud/check`, `/api/ae5/*`, `POST /api/chat`, `POST /api/agent/chat` | Somente atrás de autenticação do gateway e autorização de aplicação; não publicar para visitantes anônimos. |
+| Consumo de recursos | `POST /api/stt`, `POST /api/tts` | Autenticar, limitar taxa e monitorar consumo; os limites de payload não evitam todos os ataques de esgotamento. |
+
+Para uma instalação remota, aplique autenticação no **gateway inteiro por padrão** e libere somente as rotas necessárias. Não dependa apenas dos nomes de rota, CORS ou do token injetado por proxy. O gateway deve verificar a identidade da sessão antes de encaminhar cada requisição; a API ainda não implementa papéis multiusuário nem capacidades de acesso por recurso.
+
 ## Riscos ainda abertos
 
 1. O servidor HTTP é baseado em `http.server`, não em um servidor de produção com TLS, limites operacionais e gestão de conexões.
