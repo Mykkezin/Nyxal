@@ -36,6 +36,10 @@ if [[ -L "${ENV_FILE}" ]]; then
     echo "ERRO: ${ENV_FILE} não pode ser um link simbólico." >&2
     exit 1
 fi
+if [[ -e "${ENV_FILE}" && ! -f "${ENV_FILE}" ]]; then
+    echo "ERRO: ${ENV_FILE} precisa ser um arquivo regular." >&2
+    exit 1
+fi
 if [[ -f "${ENV_FILE}" ]]; then
     chmod 600 "${ENV_FILE}"
 fi
