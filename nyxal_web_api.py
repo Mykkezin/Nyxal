@@ -9,6 +9,7 @@ import sys
 import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import BoundedSemaphore
 from secrets import compare_digest, token_urlsafe
 
 from nixal_nucleo_conversacional import (
@@ -48,6 +49,8 @@ from nixal_seguranca_http import (
 BASE_DIR = Path(__file__).resolve().parent
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
+MAX_CONCURRENT_HTTP_REQUESTS = 8
+HTTP_REQUEST_TIMEOUT_SECONDS = 30
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
 CORS_ORIGINS = parse_allowed_origins(
     os.environ.get(
@@ -613,6 +616,10 @@ def residencia_snapshot() -> dict:
 class NyxalAPIHandler(BaseHTTPRequestHandler):
     server_version = "NyxalAPI"
     sys_version = ""
+
+    def setup(self) -> None:
+        super().setup()
+        self.connection.settimeout(HTTP_REQUEST_TIMEOUT_SECONDS)
 
     def _send_security_headers(self) -> None:
         """Emite cabeçalhos defensivos e CORS apenas para origens permitidas."""
@@ -1732,9 +1739,40 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
 
 class NyxalThreadingHTTPServer(ThreadingHTTPServer):
-    """Servidor HTTP com família de endereços compatível com bind local IPv4/IPv6."""
+    """Servidor HTTP local com timeout e limite de clientes concorrentes."""
 
     address_family = socket.AF_INET6 if ":" in HOST else socket.AF_INET
+    daemon_threads = True
+    block_on_close = False
+    request_slots = BoundedSemaphore(MAX_CONCURRENT_HTTP_REQUESTS)
+
+    def process_request(self, request, client_address) -> None:
+        if not self.request_slots.acquire(blocking=False):
+            response = (
+                b"HTTP/1.1 503 Service Unavailable\\r\\n"
+                b"Content-Length: 0\\r\\n"
+                b"Connection: close\\r\\n"
+                b"Retry-After: 1\\r\\n"
+                b"Cache-Control: no-store\\r\\n\\r\\n"
+            )
+            try:
+                request.sendall(response)
+            except OSError:
+                pass
+            self.shutdown_request(request)
+            return
+
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self.request_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self.request_slots.release()
 
 
 def main() -> None:
