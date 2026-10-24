@@ -69,6 +69,7 @@ def main() -> None:
     assert 'chmod 700 "${CONFIG_DIR}"' in instalador
     assert 'ENV_FILE="${CONFIG_DIR}/nyxal.env"' in instalador
     assert '[[ -L "${ENV_FILE}" ]]' in instalador
+    assert '[[ -e "${ENV_FILE}" && ! -f "${ENV_FILE}" ]]' in instalador
     assert 'chmod 600 "${ENV_FILE}"' in instalador
     assert "loginctl enable-linger ${USER}" in instalador
     assert "LINGER_STATUS" in instalador
