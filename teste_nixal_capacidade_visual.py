@@ -7,6 +7,7 @@ import os
 import unittest
 from unittest.mock import patch
 
+import nixal_capacidade_visual as visual
 from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
 
 
@@ -410,8 +411,8 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertTrue(status["controles"]["proporcao_automatica"])
         self.assertEqual(status["nivel_raciocinio_configurado"], "padrao_do_provedor")
         self.assertIn("high", status["niveis_raciocinio_suportados"])
-        self.assertNotIn("gemini-3.1-flash-image", __import__("nixal_capacidade_visual").MODEL_THINKING_LEVELS)
-        lite_levels = __import__("nixal_capacidade_visual").MODEL_THINKING_LEVELS["gemini-3.1-flash-lite-image"]
+        self.assertNotIn("gemini-3.1-flash-image", visual.MODEL_THINKING_LEVELS)
+        lite_levels = visual.MODEL_THINKING_LEVELS["gemini-3.1-flash-lite-image"]
         self.assertEqual(lite_levels, frozenset({"minimal", "high"}))
         self.assertNotIn("api_key", json.dumps(status).lower())
 
