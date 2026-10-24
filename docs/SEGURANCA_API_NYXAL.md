@@ -13,7 +13,8 @@ Esta etapa reduz a superfície de exposição da API atual. Ela não transforma 
 - **Cabeçalhos defensivos:** respostas JSON e de bytes incluem `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` e `Cache-Control: no-store`. A versão do servidor deixa de anunciar a versão detalhada do Python.
 - **Hardening systemd:** as unidades da API e do residente usam `ProtectSystem=full`, proteção de tunables/módulos/cgroups do kernel, restrições SUID/SGID, `LockPersonality`, `RestrictRealtime`, `SystemCallArchitectures=native`, conjunto vazio de capacidades Linux, famílias de endereço limitadas a Unix/IPv4/IPv6, `ProtectClock` e `ProtectKernelLogs`. Não foi ativado `PrivateDevices` nem `ProtectHome` para evitar interromper acesso a hardware, modelos e estado do usuário sem validação no host real.
 - **Permissões de segredos locais:** o instalador aplica modo `0700` ao diretório `~/.config/nyxal`, modo `0600` ao arquivo `nyxal.env` existente e falha se esse arquivo for um link simbólico.
-- **Testes reproduzíveis:** `teste_seguranca_api.py` valida loopback e a política de origens sem precisar subir serviços externos.
+- **Resistência inicial à exaustão de conexões:** a API limita o processamento a oito requisições HTTP simultâneas, define timeout de socket de 30 segundos e devolve `503 Service Unavailable` com `Retry-After` quando os slots estão cheios. Isso limita a criação ilimitada de threads, mas não substitui rate limiting no proxy nem garante resistência a todo DoS.
+- **Testes reproduzíveis:** `teste_seguranca_api.py` valida as políticas de origem, testa o `NyxalAPIHandler` isolado, simula saturação do servidor HTTP e confirma a presença das proteções no código sem carregar modelos externos.
 
 ## Mapeamento dos seis princípios arquiteturais
 
@@ -74,10 +75,10 @@ Para uma instalação remota, aplique autenticação no **gateway inteiro por pa
 
 ## Riscos ainda abertos
 
-1. O servidor HTTP é baseado em `http.server`, não em um servidor de produção com TLS, limites operacionais e gestão de conexões.
+1. O servidor HTTP é baseado em `http.server`, não em um servidor de produção com TLS, rate limiting, gestão avançada de conexões e proteção completa contra DoS. O limite local de oito threads e o timeout de socket são defesas iniciais.
 2. O acesso vindo de processos locais ainda é confiado como loopback; origens do navegador mitigam pedidos cross-site, mas não defendem contra malware/processos locais.
 3. Os endpoints de diagnóstico marcados como públicos podem revelar informação operacional a qualquer cliente local. A publicação externa deve aplicar autenticação na borda e uma allowlist de rotas.
-4. Ainda é necessária uma auditoria específica dos limites de payload, timeouts, tratamento de erros, logs, sessão, tokens, OAuth/Gmail, gateway de atuação, provisionamento VPS, dependências e permissões systemd.
+4. Ainda é necessária uma auditoria específica dos limites de payload, rate limiting, tratamento de erros, logs, sessão, tokens, OAuth/Gmail, gateway de atuação, provisionamento VPS, dependências e permissões systemd.
 5. Não há ainda microkernel seL4, prova formal do kernel NyxOS, micro-VM por aplicação, capacidades criptográficas por recurso, sistema base imutável, TPM que mantenha chaves fora da RAM ou criptografia pós-quântica integrada. Esses itens são metas arquiteturais futuras, não controles presentes.
 
 ## Próxima sequência recomendada
