@@ -36,12 +36,28 @@ from nixal_integracao_gmail import IntegracaoGmailNixOS
 from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
 from urllib.parse import parse_qs, urlsplit
 
+from nixal_seguranca_http import (
+    host_loopback,
+    origin_permitida,
+    parse_allowed_origins,
+)
+
 
 BASE_DIR = Path(__file__).resolve().parent
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
-CORS_ORIGIN = os.environ.get("NYXAL_API_CORS_ORIGIN", "*")
+CORS_ORIGINS = parse_allowed_origins(
+    os.environ.get(
+        "NYXAL_API_CORS_ORIGINS",
+        os.environ.get("NYXAL_API_CORS_ORIGIN"),
+    ),
+    default_origins={
+        f"http://127.0.0.1:{PORT}",
+        f"http://localhost:{PORT}",
+        f"http://[::1]:{PORT}",
+    },
+)
 NUCLEO_CONVERSACIONAL = NucleoConversacionalNixal()
 INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
     transporte=TransporteConversacionalNixal(),
@@ -593,7 +609,43 @@ def residencia_snapshot() -> dict:
         "modo": "somente_leitura",
     }
 class NyxalAPIHandler(BaseHTTPRequestHandler):
-    server_version = "NyxalAPI/1.0"
+    server_version = "NyxalAPI"
+    sys_version = ""
+
+    def _send_security_headers(self) -> None:
+        """Emite cabeçalhos defensivos e CORS apenas para origens permitidas."""
+        origin = self.headers.get("Origin")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Cache-Control", "no-store")
+        if origin is not None and origin_permitida(origin, CORS_ORIGINS):
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header(
+                "Access-Control-Allow-Headers",
+                "Authorization, Content-Type",
+            )
+            self.send_header(
+                "Access-Control-Allow-Methods",
+                "GET, POST, OPTIONS",
+            )
+
+    def _origem_api_permitida(self) -> bool:
+        """Bloqueia origens web não autorizadas antes de acessar dados locais."""
+        parsed_path = urlsplit(self.path).path
+        origin = self.headers.get("Origin")
+        if not parsed_path.startswith("/api/") or origin is None:
+            return True
+        if origin_permitida(origin, CORS_ORIGINS):
+            return True
+        self._send_json(
+            403,
+            {
+                "estado": "origem_nao_permitida",
+                "motivo": "A origem web não está na lista de origens autorizadas.",
+            },
+        )
+        return False
 
     def _send_json(
         self,
@@ -611,18 +663,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             "Content-Length",
             str(len(body)),
         )
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            CORS_ORIGIN,
-        )
-        self.send_header(
-            "Access-Control-Allow-Headers",
-            "Authorization, Content-Type",
-        )
-        self.send_header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS",
-        )
+        self._send_security_headers()
         self.end_headers()
 
         self.wfile.write(body)
@@ -642,18 +683,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             "Content-Length",
             str(len(body)),
         )
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            CORS_ORIGIN,
-        )
-        self.send_header(
-            "Access-Control-Allow-Headers",
-            "Authorization, Content-Type",
-        )
-        self.send_header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS",
-        )
+        self._send_security_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -702,23 +732,19 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         return self._authorized()
 
     def do_OPTIONS(self) -> None:
+        if not self._origem_api_permitida():
+            return
         self.send_response(204)
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            CORS_ORIGIN,
-        )
-        self.send_header(
-            "Access-Control-Allow-Headers",
-            "Authorization, Content-Type",
-        )
-        self.send_header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS",
-        )
+        self._send_security_headers()
         self.end_headers()
 
     def do_POST(self) -> None:
-        if self.path == "/api/agent/chat" and not self._local_ou_autorizado():
+        if not self._origem_api_permitida():
+            return
+        if (
+            urlsplit(self.path).path.startswith("/api/")
+            and not self._local_ou_autorizado()
+        ):
             return
 
         if self.path == "/api/agent/image":
@@ -1266,6 +1292,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed_path = urlsplit(self.path).path
+        if not self._origem_api_permitida():
+            return
+        if parsed_path.startswith("/api/") and not self._local_ou_autorizado():
+            return
         is_agent_or_workspace = (
             parsed_path in {"/api/agent/status", "/api/agent/contexto", "/api/integracoes/google/status", "/api/integracoes/gmail/status"}
             or parsed_path.startswith("/api/integracoes/google/")
@@ -1694,6 +1724,13 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    if not host_loopback(HOST):
+        raise RuntimeError(
+            "A API HTTP da Nyxal só pode escutar em loopback. "
+            "Para acesso remoto, mantenha NYXAL_API_HOST=127.0.0.1 e "
+            "use uma VPN ou proxy reverso com TLS e autenticação na borda."
+        )
+
     server = ThreadingHTTPServer(
         (HOST, PORT),
         NyxalAPIHandler,
