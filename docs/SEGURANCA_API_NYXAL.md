@@ -55,7 +55,7 @@ Não configure o proxy para injetar o Bearer em tráfego anônimo. A allowlist C
 
 Mantenha a API ligada em loopback. Para acesso remoto, exponha somente uma **VPN** ou um **proxy reverso HTTPS com autenticação e controle de acesso próprios**. O proxy deve ser tratado como fronteira de segurança: as conexões encaminhadas ao servidor local aparecem como loopback e, portanto, o proxy precisa autenticar os usuários antes de encaminhar pedidos. Não encaminhe a porta HTTP da Nyxal diretamente à Internet.
 
-`NYXAL_API_TOKEN` continua necessário para endpoints que já exigem Bearer. O instalador do systemd restringe o diretório de configuração a `0700` e o arquivo `nyxal.env` a `0600`; links simbólicos para esse arquivo são recusados. CORS não é autenticação e não substitui uma camada de acesso remoto.
+`NYXAL_API_TOKEN` continua necessário para endpoints que já exigem Bearer. O instalador do systemd restringe o diretório de configuração a `0700` e o arquivo `nyxal.env` a `0600`; links simbólicos e caminhos não regulares são recusados. CORS não é autenticação e não substitui uma camada de acesso remoto.
 
 ## Riscos ainda abertos
 
