@@ -126,6 +126,8 @@ class TesteAutoavaliacaoLocal(unittest.TestCase):
         self.assertEqual(call.call_count, 3)
         self.assertEqual(call.call_args_list[0].args[0], ferramenta.PROMPT_AUTOAVALIACAO)
         self.assertIn("Problema: runner privado não inicia.", call.call_args_list[1].args[0])
+        self.assertIn(ferramenta.EVIDENCE_SNAPSHOT_UTC, call.call_args_list[1].args[0])
+        self.assertIn(ferramenta.EVIDENCE_SNAPSHOT_UTC, call.call_args_list[2].args[0])
         self.assertIn("H1: verificar configuração e uso.", call.call_args_list[2].args[0])
         self.assertEqual(call.call_args_list[0].kwargs["port"], 8010)
         self.assertEqual(call.call_args_list[1].kwargs["sessao"], "s1")
@@ -145,6 +147,10 @@ class TesteAutoavaliacaoLocal(unittest.TestCase):
         self.assertIn("H1", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
         self.assertIn("não execute ações", ferramenta.PROMPT_AUTOAPERFEICOAMENTO.lower())
         self.assertIn("não diga que o runner privado foi corrigido", ferramenta.PROMPT_VERIFICACAO.lower())
+        self.assertIn("{timestamp}", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
+        self.assertIn("{timestamp}", ferramenta.PROMPT_VERIFICACAO)
+        self.assertIn("estado atual não verificado", ferramenta.PROMPT_VERIFICACAO.lower())
+        self.assertEqual(ferramenta.EVIDENCE_SNAPSHOT_UTC, "2026-10-24T04:26:07Z")
 
 
 if __name__ == "__main__":
