@@ -11,7 +11,7 @@ Esta etapa reduz a superfície de exposição da API atual. Ela não transforma 
 - **Rejeição de origem web não autorizada:** pedidos a `/api/*` que tragam um cabeçalho `Origin` não permitido são rejeitados, inclusive preflight `OPTIONS`.
 - **Autorização de rotas para clientes não locais:** os endpoints `/api/*` passam pela verificação local/Bearer antes do processamento. Rotas que já exigem token continuam exigindo-o também em loopback.
 - **Cabeçalhos defensivos:** respostas JSON e de bytes incluem `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` e `Cache-Control: no-store`. A versão do servidor deixa de anunciar a versão detalhada do Python.
-- **Hardening systemd inicial:** as unidades da API e do residente passam a usar `ProtectSystem=full`, proteção de tunables/módulos/cgroups do kernel, restrição SUID/SGID, `LockPersonality`, `RestrictRealtime` e `SystemCallArchitectures=native`. Não foi ativado `PrivateDevices` nem `ProtectHome` para evitar interromper acesso a dados de hardware, modelos e estado do usuário sem validação no host real.
+- **Hardening systemd:** as unidades da API e do residente usam `ProtectSystem=full`, proteção de tunables/módulos/cgroups do kernel, restrições SUID/SGID, `LockPersonality`, `RestrictRealtime`, `SystemCallArchitectures=native`, conjunto vazio de capacidades Linux, famílias de endereço limitadas a Unix/IPv4/IPv6, `ProtectClock` e `ProtectKernelLogs`. Não foi ativado `PrivateDevices` nem `ProtectHome` para evitar interromper acesso a hardware, modelos e estado do usuário sem validação no host real.
 - **Permissões de segredos locais:** o instalador aplica modo `0700` ao diretório `~/.config/nyxal`, modo `0600` ao arquivo `nyxal.env` existente e falha se esse arquivo for um link simbólico.
 - **Testes reproduzíveis:** `teste_seguranca_api.py` valida loopback e a política de origens sem precisar subir serviços externos.
 
@@ -69,6 +69,6 @@ Mantenha a API ligada em loopback. Para acesso remoto, exponha somente uma **VPN
 
 1. Auditar rotas e classificar publicamente cada endpoint como público, local, autenticado ou privilegiado.
 2. Adicionar testes HTTP end-to-end para CORS, autenticação, payloads inválidos e rejeição de bind externo.
-3. Aplicar sandboxing real aos serviços residentes (unidades systemd com `ProtectSystem`, `ProtectHome`, `PrivateDevices`, `RestrictAddressFamilies` e capacidades mínimas), validando cada serviço antes de ativar as restrições.
+3. Validar no host real o perfil systemd ampliado nesta etapa; avaliar `ProtectHome`, `PrivateDevices` e `ReadWritePaths` separadamente, somente após testes de compatibilidade com modelos, dispositivos e arquivos de estado.
 4. Separar API conversacional de rotas privilegiadas (VPS, Gmail e atuação no host), com autorização explícita por operação e logs de auditoria sem segredos.
 5. Definir uma trilha de verificação formal e proteção em hardware apenas quando houver plataforma/arquitetura compatível e critérios de prova verificáveis.
