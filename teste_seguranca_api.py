@@ -27,7 +27,10 @@ def main() -> None:
     assert "CORS_ORIGIN," not in api_source
     assert "parse_allowed_origins(" in api_source
     assert "if not self._origem_api_permitida():" in api_source
-    assert "parsed_path.startswith" in api_source and "_local_ou_autorizado()" in api_source
+    assert (
+        "parsed_path.startswith" in api_source
+        and "_local_ou_autorizado()" in api_source
+    )
     assert "if not host_loopback(HOST):" in api_source
     assert "self._send_security_headers()" in api_source
 
