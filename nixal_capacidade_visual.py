@@ -14,6 +14,8 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 MAX_INPUT_BYTES = 8 * 1024 * 1024
+MAX_TOTAL_INPUT_BYTES = 8 * 1024 * 1024
+MAX_REFERENCE_IMAGES = 14
 MAX_OUTPUT_IMAGE_BYTES = 28 * 1024 * 1024
 MAX_RESPONSE_BYTES = 40 * 1024 * 1024
 ALLOWED_MIME = {"image/png", "image/jpeg", "image/webp"}
@@ -408,6 +410,8 @@ class CapacidadeVisualGeminiNixOS:
             ),
             "niveis_raciocinio_suportados": sorted(MODEL_THINKING_LEVELS.get(model, ())),
             "entrada_max_bytes": MAX_INPUT_BYTES,
+            "entrada_total_max_bytes": MAX_TOTAL_INPUT_BYTES,
+            "referencias_max": MAX_REFERENCE_IMAGES,
             "mime_permitidos": sorted(ALLOWED_MIME),
             "salva_upload_no_servidor": False,
             "controles": {
@@ -429,6 +433,7 @@ class CapacidadeVisualGeminiNixOS:
         *,
         imagem_base64: str | None = None,
         mime_type: str | None = None,
+        imagens_referencia: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         prompt = prompt.strip() if isinstance(prompt, str) else ""
         if not prompt:
@@ -439,6 +444,14 @@ class CapacidadeVisualGeminiNixOS:
             raise ValueError("A imagem precisa ser enviada como Base64.")
         if mime_type is not None and not isinstance(mime_type, str):
             raise ValueError("O tipo MIME da imagem é inválido.")
+        if imagens_referencia is not None and not isinstance(imagens_referencia, list):
+            raise ValueError("As imagens de referência precisam ser enviadas como uma lista.")
+        if imagens_referencia and imagem_base64:
+            raise ValueError(
+                "Envie a imagem legada ou a lista imagens_referencia, não ambos no mesmo pedido."
+            )
+        if imagens_referencia is not None and len(imagens_referencia) > MAX_REFERENCE_IMAGES:
+            raise ValueError(f"São permitidas no máximo {MAX_REFERENCE_IMAGES} imagens de referência.")
 
         api_key = (
             os.environ.get("NYXAL_GEMINI_API_KEY", "").strip()
@@ -448,44 +461,84 @@ class CapacidadeVisualGeminiNixOS:
         if not api_key:
             raise RuntimeError("Gemini não configurado. Adicione NYXAL_GEMINI_API_KEY à configuração local.")
 
-        imagem_presente = bool(imagem_base64)
+        referencias_cruas: list[dict[str, Any]] = []
+        if imagem_base64:
+            referencias_cruas.append({
+                "imagem_base64": imagem_base64,
+                "mime_type": mime_type,
+            })
+        elif imagens_referencia:
+            referencias_cruas = imagens_referencia
+
+        # A API suporta múltiplas referências; limitamos bytes totais, não apenas cada arquivo.
+        max_encoded_total = 4 * ((MAX_TOTAL_INPUT_BYTES + 2 * len(referencias_cruas)) // 3)
+        if sum(
+            len(item.get("imagem_base64", ""))
+            for item in referencias_cruas
+            if isinstance(item, dict) and isinstance(item.get("imagem_base64"), str)
+        ) > max_encoded_total:
+            raise ValueError("As imagens de referência excedem o limite total de 8 MiB.")
+
+        referencias_validadas: list[dict[str, str]] = []
+        bytes_referencia_total = 0
+        max_encoded_single = 4 * ((MAX_INPUT_BYTES + 2) // 3)
+        for indice, referencia in enumerate(referencias_cruas, start=1):
+            if not isinstance(referencia, dict):
+                raise ValueError(f"A referência {indice} precisa ser um objeto JSON.")
+            imagem_ref = referencia.get("imagem_base64")
+            mime_ref = referencia.get("mime_type")
+            if not isinstance(imagem_ref, str) or not imagem_ref:
+                raise ValueError(f"A referência {indice} não contém imagem Base64.")
+            if not isinstance(mime_ref, str) or mime_ref.lower().strip() not in ALLOWED_MIME:
+                raise ValueError(f"A referência {indice} precisa ser PNG, JPEG ou WebP.")
+            mime_ref = mime_ref.lower().strip()
+            if len(imagem_ref) > max_encoded_single:
+                raise ValueError(f"A referência {indice} excede o limite por imagem de 8 MiB.")
+            try:
+                binary = base64.b64decode(imagem_ref, validate=True)
+            except (ValueError, base64.binascii.Error) as exc:
+                raise ValueError(f"A referência {indice} não contém Base64 válido.") from exc
+            if not binary:
+                raise ValueError(f"A referência {indice} está vazia.")
+            if len(binary) > MAX_INPUT_BYTES:
+                raise ValueError(f"A referência {indice} excede o limite por imagem de 8 MiB.")
+            bytes_referencia_total += len(binary)
+            if bytes_referencia_total > MAX_TOTAL_INPUT_BYTES:
+                raise ValueError("As imagens de referência excedem o limite total de 8 MiB.")
+            if not _assinatura_compativel(binary, mime_ref):
+                raise ValueError(
+                    f"O conteúdo da referência {indice} não corresponde ao tipo MIME informado."
+                )
+            referencias_validadas.append({
+                "mime_type": mime_ref,
+                "data": base64.b64encode(binary).decode("ascii"),
+            })
+
+        imagem_presente = bool(referencias_validadas)
         model = os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "").strip() or DEFAULT_IMAGE_MODEL
         prompt_limpo, nivel_estilizado, proporcao_solicitada, elementos_excluir = _extrair_parametros_midjourney(
             prompt, modelo=model
         )
         nivel_raciocinio = _selecionar_nivel_raciocinio(prompt_limpo, modelo=model)
-        inputs: list[dict[str, Any]] = [{
-            "type": "text",
-            "text": _preparar_prompt(
-                prompt_limpo,
-                edicao=imagem_presente,
-                nivel_estilizado=nivel_estilizado,
-                elementos_excluir=elementos_excluir,
-            ),
-        }]
-
-        if imagem_presente:
-            mime = mime_type.lower().strip() if isinstance(mime_type, str) else ""
-            if mime not in ALLOWED_MIME:
-                raise ValueError("Formato de imagem não permitido. Use PNG, JPEG ou WebP.")
-            # Rejeita strings enormes antes da alocação causada pela decodificação Base64.
-            max_encoded_bytes = 4 * ((MAX_INPUT_BYTES + 2) // 3)
-            if len(imagem_base64) > max_encoded_bytes:
-                raise ValueError("A imagem excede o limite de 8 MiB.")
-            try:
-                binary = base64.b64decode(imagem_base64, validate=True)
-            except (ValueError, base64.binascii.Error) as exc:
-                raise ValueError("A imagem enviada não contém Base64 válido.") from exc
-            if not binary:
-                raise ValueError("O arquivo de imagem está vazio.")
-            if len(binary) > MAX_INPUT_BYTES:
-                raise ValueError("A imagem excede o limite de 8 MiB.")
-            if not _assinatura_compativel(binary, mime):
-                raise ValueError("O conteúdo da imagem não corresponde ao tipo MIME informado.")
+        prompt_preparado = _preparar_prompt(
+            prompt_limpo,
+            edicao=imagem_presente,
+            nivel_estilizado=nivel_estilizado,
+            elementos_excluir=elementos_excluir,
+        )
+        if len(referencias_validadas) > 1:
+            prompt_preparado += (
+                f" Use as {len(referencias_validadas)} imagens de referência em conjunto. "
+                "Combine somente os elementos coerentes com o pedido; preserve a identidade e os "
+                "detalhes distintivos de cada referência, sem duplicar sujeitos/objetos nem inventar "
+                "conteúdo incompatível entre as imagens."
+            )
+        inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt_preparado}]
+        for referencia in referencias_validadas:
             inputs.append({
                 "type": "image",
-                "mime_type": mime,
-                "data": base64.b64encode(binary).decode("ascii"),
+                "mime_type": referencia["mime_type"],
+                "data": referencia["data"],
             })
 
         requested_size = _inferir_tamanho_imagem(prompt, padrao=None)
@@ -650,6 +703,8 @@ class CapacidadeVisualGeminiNixOS:
 __all__ = [
     "CapacidadeVisualGeminiNixOS",
     "MAX_INPUT_BYTES",
+    "MAX_TOTAL_INPUT_BYTES",
+    "MAX_REFERENCE_IMAGES",
     "MAX_OUTPUT_IMAGE_BYTES",
     "ALLOWED_MIME",
 ]
