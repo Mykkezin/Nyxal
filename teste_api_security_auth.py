@@ -387,6 +387,23 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
                     body=b'{"mensagem":"teste","provedor":"auto"}',
                     headers={**auth, "Content-Type": "application/json"},
                 )
+
+        with patch.object(api, "generate_kokoro_audio", side_effect=RuntimeError(detalhe_interno)):
+            with patch.object(api.Path, "exists", return_value=True):
+                with patch.object(
+                    api.subprocess,
+                    "run",
+                    return_value=types.SimpleNamespace(returncode=1, stderr=detalhe_interno),
+                ):
+                    status, body = self.request(
+                        "POST", "/api/tts",
+                        body=b'{"texto":"teste"}',
+                        headers={**auth, "Content-Type": "application/json"},
+                    )
+        self.assertEqual(status, 500)
+        self.assertIn("O Piper não conseguiu gerar o áudio.", body)
+        self.assertNotIn("SEGREDO_INTERNO", body)
+        self.assertNotIn("/root/nyxal.env", body)
         self.assertEqual(status, 503)
         self.assertIn("O provedor selecionado não está disponível.", body)
         self.assertNotIn("SEGREDO_INTERNO", body)
