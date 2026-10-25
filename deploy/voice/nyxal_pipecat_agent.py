@@ -244,13 +244,12 @@ async def main() -> None:
     barge_in = BargeInProcessor(turn_state)
 
     stt = WhisperSTTService(
-        model=model,
         device="cpu",
         compute_type="int8",
-        language=Language.PT,
         settings=WhisperSTTService.Settings(
             model=model,
             language=Language.PT,
+            no_speech_prob=0.6,
             hotwords="Nyxal NyxOS Ollama Kokoro Qwen",
             initial_prompt="Conversa natural em português brasileiro sobre a assistente Nyxal e o sistema NyxOS.",
         ),
