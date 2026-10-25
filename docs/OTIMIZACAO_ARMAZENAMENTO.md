@@ -40,10 +40,10 @@ quadro a quadro do vídeo original, pois essa equivalência não foi verificada.
 
 ## Limites de medição
 
-A árvore da `main` verificada antes desta série de limpeza somava 12,58 MiB de
-blobs. A árvore atual na branch de otimização soma aproximadamente **3,70 MiB**,
-incluindo a nova página de inicialização, uma redução estimada de **8,88 MiB
-(70,6%)**. A API do GitHub informava aproximadamente 15.930 KB para o repositório
+A árvore da `main` verificada antes desta série de limpeza somava 12,61 MiB de
+blobs (494 arquivos). A árvore atual na branch de otimização soma **3,73 MiB**
+(496 arquivos), incluindo a nova página de inicialização, uma redução estimada de
+**8,88 MiB (70,4%)**. A API do GitHub informava aproximadamente 15.930 KB para o repositório
 na última consulta à `main`. O número global continua incluindo os objetos
 históricos: remover arquivos da árvore atual reduz checkouts e pacotes futuros,
 mas não apaga os blobs dos commits antigos. Reescrever o histórico Git para
