@@ -114,6 +114,8 @@ def testar_falha_de_compilacao_nao_e_rotulada_como_falha_de_teste() -> None:
     assert ci["testes_executados"] is False
     assert ci["resultado_testes"] == "not_run"
     assert [item["name"] for item in ci["jobs"][0]["steps"]] == ["compilacao"]
+    assert ci["jobs"][0]["step_outcomes_available"] is True
+    assert ci["jobs"][0]["logs_available"] is False
     decision = DecisaoAutonomaCI.decidir(evidence)
     assert decision["acao_escolhida"] == "investigar_falha_de_compilacao"
     assert "não classificar isso como falha de teste" in decision["motivo"].lower()
