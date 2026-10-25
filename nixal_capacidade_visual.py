@@ -464,14 +464,20 @@ class CapacidadeVisualGeminiNixOS:
                 "data": base64.b64encode(binary).decode("ascii"),
             })
 
+        requested_size = _inferir_tamanho_imagem(prompt, padrao=None)
+        if requested_size == "512px" and model not in MODELS_WITH_512PX:
+            raise ValueError(
+                f"O modelo {model} não suporta saída em 512px (0.5K). "
+                "Use gemini-3.1-flash-image para essa resolução."
+            )
+
         image_format: dict[str, Any] = {"type": "image", "mime_type": "image/png"}
         aspect_ratio = proporcao_solicitada or _inferir_proporcao(prompt_limpo, modelo=model)
         if aspect_ratio:
             image_format["aspect_ratio"] = aspect_ratio
 
         if model in MODELS_1K_ONLY:
-            requested_size = _inferir_tamanho_imagem(prompt, padrao=None)
-            if requested_size in {"512px", "2K", "4K", "8K"}:
+            if requested_size in {"2K", "4K", "8K"}:
                 raise ValueError(
                     f"O modelo {model} só gera imagens em 1K. "
                     "Use gemini-nano-banana-2.1 para solicitar 2K ou 4K."
@@ -480,7 +486,7 @@ class CapacidadeVisualGeminiNixOS:
                 image_format["image_size"] = "1K"
         elif model in MODELS_WITH_512PX:
             default_size = None if imagem_presente else "2K"
-            image_size = _inferir_tamanho_imagem(prompt, padrao=default_size)
+            image_size = requested_size or default_size
             if image_size == "8K":
                 raise ValueError(
                     f"O modelo {model} não oferece saída nativa em 8K; a resolução máxima é 4K."
