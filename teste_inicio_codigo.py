@@ -23,6 +23,12 @@ def main() -> None:
     assert "https://" not in splash
     assert "prefers-reduced-motion: reduce" in splash
     assert "location.replace(next)" in splash
+    assert "new url(requestednext)" in splash
+    assert 'destination.protocol === "http:"' in splash
+    assert 'destination.protocol === "https:"' in splash
+    assert "destination.username" in splash
+    assert "destination.password" in splash
+    assert "fallbacknext" in splash
     assert 'id="progress"' in splash
     assert 'id="stars"' in splash
 
