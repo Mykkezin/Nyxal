@@ -112,3 +112,12 @@ jobs:
           )
           PY
           python nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
+
+      - name: Archive structured CI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyxal-ci-evidence-${{ github.run_id }}
+          path: /tmp/nyxal-ci-evidence.json
+          if-no-files-found: warn
+          retention-days: 3
