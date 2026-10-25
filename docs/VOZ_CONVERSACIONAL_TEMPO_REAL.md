@@ -47,6 +47,14 @@ O processador de interrupção também incrementa um identificador de geração.
 - Nenhuma unidade systemd é instalada, ativada ou substituída pelo instalador experimental.
 
 ## Como testar manualmente
+Antes do teste de microfone, valide o contrato sem iniciar a captura:
+
+```bash
+~/.local/share/nyxal-voice-pipecat/venv/bin/python deploy/voice/verificar_contrato_pipecat.py
+```
+
+Esse verificador é executado manualmente dentro do ambiente opcional; não é coletado pela suíte base de testes da Nyxal.
+
 
 Faça os testes em branch experimental e não rode dois ouvintes de microfone em paralelo.
 
