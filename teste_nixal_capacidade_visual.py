@@ -478,6 +478,24 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertFalse(result["upload_salvo_no_servidor"])
         self.assertFalse(payload["store"])
 
+    def test_aceita_limite_de_14_referencias(self):
+        response = response_with_image()
+        encoded = base64.b64encode(PNG_BYTES).decode("ascii")
+        references = [{"imagem_base64": encoded, "mime_type": "image/png"} for _ in range(14)]
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual._urlopen_no_redirect",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Mantenha consistência entre todas as referências.",
+                    imagens_referencia=references,
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(len(payload["input"]), 15)
+        self.assertEqual(sum(item["type"] == "image" for item in payload["input"]), 14)
+
     def test_rejeita_mais_de_14_imagens_de_referencia_antes_da_chamada(self):
         encoded = base64.b64encode(PNG_BYTES).decode("ascii")
         references = [{"imagem_base64": encoded, "mime_type": "image/png"} for _ in range(15)]
