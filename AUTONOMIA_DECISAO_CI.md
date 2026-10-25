@@ -40,7 +40,7 @@ O módulo lê o JSON e imprime uma decisão estruturada com motivo, evidência, 
 
 ## Integração
 
-A saída inclui um envelope de handoff ao ciclo AE/N9/LLC existente. A saída da execução CI é consumida pelo próprio workflow para escolher uma ação recomendada. A ligação automática com AE4/LLC dentro do ciclo residente continua dependendo do chamador e não deve ser considerada integrada enquanto não houver teste de ponta a ponta. Este componente não substitui nem duplica esses mecanismos.
+A saída inclui um envelope de handoff ao ciclo AE/N9/LLC existente. A saída da execução CI é consumida pelo próprio workflow para escolher uma ação recomendada. A ligação automática com AE4/LLC dentro do ciclo residente continua dependendo do chamador e não deve ser considerada integrada enquanto não houver teste de ponta a ponta. Este componente não substitui nem duplica esses mecanismos. O workflow também tenta arquivar `/tmp/nyxal-ci-evidence.json` como artefato de Actions por três dias, depois da etapa de decisão. Esse artefato só pode ser produzido se um runner iniciar; falhas pré-runner não geram evidência de execução nem artefato.
 
 ## Limites de autoridade
 
