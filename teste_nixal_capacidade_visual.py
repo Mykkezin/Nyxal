@@ -287,6 +287,23 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertEqual(payload["response_format"][1]["aspect_ratio"], "16:9")
         self.assertNotIn("--ar", payload["input"][0]["text"])
 
+    def test_cartaz_vertical_prefere_proporcao_de_impressao(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual._urlopen_no_redirect",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Crie um cartaz vertical para um festival de cinema."
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["response_format"][1]["aspect_ratio"], "2:3")
+
     def test_modelo_lite_usa_1k_por_padrao(self):
         response = response_with_image()
         with patch.dict(os.environ, {
