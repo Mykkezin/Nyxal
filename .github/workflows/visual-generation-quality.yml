@@ -7,6 +7,8 @@ on:
     paths:
       - "nixal_capacidade_visual.py"
       - "teste_nixal_capacidade_visual.py"
+      - "nyxal_web_api.py"
+      - "docs/NYXAL_AGENT_STACK.md"
       - ".github/workflows/visual-generation-quality.yml"
   pull_request:
     branches:
@@ -32,6 +34,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile visual module and tests
-        run: python -m py_compile nixal_capacidade_visual.py teste_nixal_capacidade_visual.py
+        run: python -m py_compile nixal_capacidade_visual.py teste_nixal_capacidade_visual.py nyxal_web_api.py
       - name: Run deterministic visual quality tests
         run: python teste_nixal_capacidade_visual.py
