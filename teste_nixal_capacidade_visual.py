@@ -645,6 +645,13 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertIn("Para o produto", prepared)
         self.assertIn("sombras de contato plausíveis", prepared)
 
+    def test_status_expone_limites_de_referencias_visuais(self):
+        with patch.dict(os.environ, {}, clear=True):
+            status = CapacidadeVisualGeminiNixOS().status()
+        self.assertEqual(status["referencias_max"], 14)
+        self.assertEqual(status["entrada_total_max_bytes"], 8 * 1024 * 1024)
+        self.assertEqual(status["mime_permitidos"], ["image/jpeg", "image/png", "image/webp"])
+
     def test_api_encaminha_imagens_referencia_no_endpoint_existente(self):
         api_path = Path(__file__).resolve().with_name("nyxal_web_api.py")
         tree = ast.parse(api_path.read_text(encoding="utf-8"))
