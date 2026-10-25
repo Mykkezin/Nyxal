@@ -16,6 +16,7 @@ on:
       - "docs/SEGURANCA_API_NYXAL.md"
       - "teste_api_security_auth.py"
       - "nixal_decisao_autonoma_ci.py"
+      - "nixal_evidencia_ci.py"
       - "teste_decisao_autonoma_ci.py"
       - ".github/workflows/nyxal-nivel9-validation.yml"
       - ".github/workflows/security-baseline.yml"
@@ -33,6 +34,7 @@ on:
       - "docs/SEGURANCA_API_NYXAL.md"
       - "teste_api_security_auth.py"
       - "nixal_decisao_autonoma_ci.py"
+      - "nixal_evidencia_ci.py"
       - "teste_decisao_autonoma_ci.py"
       - ".github/workflows/nyxal-nivel9-validation.yml"
       - ".github/workflows/security-baseline.yml"
@@ -53,7 +55,7 @@ jobs:
       - name: Compile API security surface
         id: compile_api
         run: |
-          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_api_security_auth.py teste_decisao_autonoma_ci.py nixal_decisao_autonoma_ci.py teste_m5_9_residencia_linux.py
+          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_api_security_auth.py teste_decisao_autonoma_ci.py nixal_decisao_autonoma_ci.py nixal_evidencia_ci.py teste_m5_9_residencia_linux.py
       - name: Run deterministic security policy tests
         id: policy_tests
         run: python teste_seguranca_api.py
@@ -90,7 +92,7 @@ jobs:
           import json
           import os
           from pathlib import Path
-          from nixal_decisao_autonoma_ci import DecisaoAutonomaCI
+          from nixal_evidencia_ci import construir_evidencia_ci
 
           outcomes = {
               "compilacao": os.getenv("COMPILE_OUTCOME", "unknown"),
@@ -100,7 +102,7 @@ jobs:
               "shell_syntax": os.getenv("SHELL_OUTCOME", "unknown"),
               "regressoes": os.getenv("RESIDENCE_OUTCOME", "unknown"),
           }
-          evidence = DecisaoAutonomaCI.construir_evidencia_ci(
+          evidence = construir_evidencia_ci(
               head_sha=os.getenv("HEAD_SHA", ""),
               job_outcome=os.getenv("JOB_OUTCOME", "unknown"),
               step_outcomes=outcomes,
