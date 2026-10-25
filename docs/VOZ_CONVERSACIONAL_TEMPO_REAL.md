@@ -61,6 +61,14 @@ Antes de testar o microfone, valide também a API real sem iniciar áudio:
 python3 deploy/voice/verificar_api_nyxal.py
 ```
 
+Para inventariar serviços/modelos locais sem parar nada nem exibir argumentos completos de processos ou tokens, use o diagnóstico somente de leitura:
+
+```bash
+bash deploy/voice/diagnosticar_runtime_local.sh
+```
+
+Ele lista serviços relevantes em execução, modelos Ollama carregados/instalados, portas TCP em escuta e as opções de provedor/modelo conversacional permitidas. Revise a saída antes de compartilhá-la; ela contém nomes de serviços, processos, portas e hostname, mas não deve imprimir argumentos completos ou tokens.
+
 O smoke test envia duas mensagens fixas ao `/api/chat`, sem imprimir o conteúdo da conversa. Ele confirma se a primeira chamada cria uma sessão válida e se a segunda reutiliza o ID devolvido. Se falhar, resolva esse problema antes de avaliar o agente de voz: reconhecimento e síntese de áudio podem funcionar mesmo quando o núcleo rejeita a sessão.
 
 
