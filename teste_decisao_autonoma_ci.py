@@ -31,6 +31,12 @@ def testar_pre_runner_decide_validacao_local_sem_edicao() -> None:
     assert r["evidencia"]["classificacao_ci"] == "falha_pre_runner_confirmada"
     assert r["governanca"]["merge_automatico"] is False
     assert r["governanca"]["implantacao_automatica"] is False
+    proximos_passos = "\\n".join(r["proximos_passos"])
+    assert "nixal_seguranca_http.py" in proximos_passos
+    assert "teste_seguranca_api.py" in proximos_passos
+    assert "teste_api_security_auth.py" in proximos_passos
+    assert "nixal_http_security.py" not in proximos_passos
+    assert "teste_nixal_http_security.py" not in proximos_passos
 
 
 def testar_validacao_local_passou_e_pre_runner_escala_infra() -> None:
