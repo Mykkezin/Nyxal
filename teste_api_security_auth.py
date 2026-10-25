@@ -340,6 +340,35 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertEqual(status, 200, body)
         action_validada.assert_called_once_with(nome="vm-remota", acao="status")
 
+    def test_limites_de_corpo_sao_aplicados_antes_da_leitura(self) -> None:
+        # Os corpos não são enviados intencionalmente: se uma rota tentar lê-los
+        # antes de rejeitar o Content-Length, o teste estoura o timeout HTTP.
+        api.PROXY_MODE = False
+        casos = (
+            ("/api/agent/image", 12 * 1024 * 1024 + 1),
+            ("/api/vps/action", 32 * 1024 + 1),
+            ("/api/stt", 15 * 1024 * 1024 + 1),
+            ("/api/tts", 16 * 1024 + 1),
+            ("/api/agent/chat", 64 * 1024 + 1),
+        )
+        for rota, tamanho in casos:
+            with self.subTest(rota=rota, tamanho=tamanho):
+                connection = http.client.HTTPConnection(
+                    self.host, self.port, timeout=3
+                )
+                try:
+                    connection.putrequest("POST", rota)
+                    connection.putheader("Host", f"{self.host}:{self.port}")
+                    connection.putheader("Content-Type", "application/json")
+                    connection.putheader("Content-Length", str(tamanho))
+                    connection.putheader("Connection", "close")
+                    connection.endheaders()
+                    response = connection.getresponse()
+                    body = response.read().decode("utf-8", errors="replace")
+                    self.assertEqual(response.status, 413, body)
+                finally:
+                    connection.close()
+
     def test_http_rejeita_enquadramento_ambiguo_antes_da_rota(self) -> None:
         casos = (
             (("Transfer-Encoding", "chunked"),),
