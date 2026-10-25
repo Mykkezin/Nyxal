@@ -413,6 +413,17 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Cartaz técnico --ar 1:4.")
         mocked.assert_not_called()
 
+    def test_rejeita_flags_midjourney_sem_equivalente_sem_chamar_api(self):
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            for parametro in ("--seed 42", "--chaos 100", "--sref referencia"):
+                with self.subTest(parametro=parametro):
+                    with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
+                        with self.assertRaisesRegex(ValueError, "sem equivalente fiel"):
+                            CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                                f"Crie uma composição {parametro}."
+                            )
+                    mocked.assert_not_called()
+
     def test_traduz_parametro_no_em_exclusoes_explicitas(self):
         response = response_with_image()
         prompt = "Crie uma foto de produto --no texto, marca-d'agua --ar 1:1"
