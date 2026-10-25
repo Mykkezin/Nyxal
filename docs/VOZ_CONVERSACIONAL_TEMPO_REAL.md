@@ -11,7 +11,7 @@ O protótipo é experimental. Não substitui o núcleo conversacional, a memóri
 - A API já oferece `POST /api/stt` com Faster-Whisper local e `POST /api/tts` com Kokoro local.
 - O endpoint de TTS usa `NYXAL_KOKORO_VOICE`, cujo padrão documentado é `pf_dora` (voz feminina pt-BR).
 - O orbe atual instalado localmente usa uma rotina de áudio própria e `espeak-ng`; isso explica a voz diferente. A geração/reprodução sequencial bloqueante também não oferece por si só barge-in.
-- `POST /api/chat` aceita `mensagem` e `sessao`; o protótipo reutiliza esse contrato para que capacidades e memória conversacional do núcleo Nyxal continuem sendo a autoridade. Não cria um segundo histórico de chat.
+- `POST /api/chat` aceita `mensagem` e `sessao`; a primeira chamada deve omitir `sessao` para a API criar uma sessão válida. O protótipo adota o ID retornado e o reutiliza nos turnos seguintes, mantendo as capacidades e a memória conversacional do núcleo Nyxal como autoridade. Não cria um segundo histórico de chat.
 
 ## Componentes avaliados
 
@@ -31,7 +31,7 @@ Microfone / PyAudio
   → Silero VAD
   → evento de nova fala / InterruptionFrame
   → Faster-Whisper local (pt)
-  → POST 127.0.0.1:8010/api/chat com ID de sessão estável
+  → POST 127.0.0.1:8010/api/chat (primeiro turno cria a sessão; próximos reutilizam o ID retornado)
   → Kokoro ONNX local, voice pf_dora, áudio em frames
   → saída de áudio local
 ```
