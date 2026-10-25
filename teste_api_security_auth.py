@@ -340,6 +340,30 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertEqual(status, 200, body)
         action_validada.assert_called_once_with(nome="vm-remota", acao="status")
 
+    def test_erro_interno_vps_nao_vaza_detalhes_para_cliente(self) -> None:
+        api.PROXY_MODE = True
+        api.API_TOKEN = "token-de-teste"
+        detalhe_interno = "SEGREDO_INTERNO /root/nyxal.env token=nao-retornar"
+
+        with patch.object(api.VPS_NYXOS, "action", side_effect=RuntimeError(detalhe_interno)) as action:
+            status, body = self.request(
+                "POST",
+                "/api/vps/action",
+                body=b'{"nome":"vm-teste","acao":"start"}',
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer token-de-teste",
+                },
+            )
+
+        self.assertEqual(status, 500)
+        self.assertIn("erro_vps", body)
+        self.assertIn("A operação de VPS não pôde ser concluída.", body)
+        self.assertNotIn("SEGREDO_INTERNO", body)
+        self.assertNotIn("/root/nyxal.env", body)
+        self.assertNotIn("nao-retornar", body)
+        action.assert_called_once()
+
     def test_limites_de_corpo_sao_aplicados_antes_da_leitura(self) -> None:
         # Os corpos não são enviados intencionalmente: se uma rota tentar lê-los
         # antes de rejeitar o Content-Length, o teste estoura o timeout HTTP.
