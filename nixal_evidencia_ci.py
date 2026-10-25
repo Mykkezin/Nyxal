@@ -83,7 +83,10 @@ def construir_evidencia_ci(
             "jobs": [{
                 "conclusion": job_status,
                 "steps": executed_steps,
-                "logs_available": bool(executed_steps),
+                # Step outcomes supplied by the running workflow are not the same
+                # as downloadable job logs; this builder does not fetch GitHub logs.
+                "step_outcomes_available": bool(executed_steps),
+                "logs_available": False,
             }],
             # The running job cannot discover the cumulative history of other runs.
             # This zero is scoped to the current run, not a claim about past attempts.
