@@ -929,9 +929,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     )
                 self._send_json(200 if resultado.get("sucesso") else 422, resultado)
             except (TypeError, ValueError, FileNotFoundError, FileExistsError) as erro:
-                self._send_json(400, {"estado": "entrada_vps_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_vps_invalida", "motivo": "A solicitação VPS é inválida."})
             except Exception as erro:
-                self._send_json(500, {"estado": "erro_vps", "motivo": str(erro)})
+                self._send_json(500, {"estado": "erro_vps", "motivo": "A operação de VPS não pôde ser concluída."})
             return
 
         if self.path == "/api/stt":
@@ -1021,7 +1021,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     500,
                     {
                         "estado": "erro_ao_transcrever",
-                        "motivo": str(erro),
+                        "motivo": "A transcrição do áudio não pôde ser concluída.",
                     },
                 )
             return
@@ -1101,10 +1101,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     "audio/wav",
                 )
             except Exception as kokoro_erro:
-                print(
-                    "[Nyxal-API] Kokoro falhou; usando Piper:",
-                    kokoro_erro,
-                )
+                print("[Nyxal-API] Kokoro falhou; tentando o fallback Piper.")
 
                 if not PIPER_BIN.exists() or not TTS_MODEL.exists():
                     self._send_json(
@@ -1141,10 +1138,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                                 500,
                                 {
                                     "estado": "erro_ao_gerar_audio",
-                                    "motivo": (
-                                        processo.stderr.strip()
-                                        or "O Piper não conseguiu gerar o áudio."
-                                    ),
+                                    "motivo": "O Piper não conseguiu gerar o áudio.",
                                 },
                             )
                             return
@@ -1170,7 +1164,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                         500,
                         {
                             "estado": "erro_ao_gerar_audio",
-                            "motivo": str(erro),
+                            "motivo": "O mecanismo de áudio local não pôde ser iniciado.",
                         },
                     )
             return
@@ -1326,7 +1320,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": str(erro)})
                 return
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "provedor_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "provedor_indisponivel", "motivo": "O provedor selecionado não está disponível."})
                 return
             except Exception as erro:
                 self._send_json(502, {"estado": "falha_no_agente", "motivo": f"{type(erro).__name__}: integração indisponível."})
@@ -1345,7 +1339,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 500,
                 {
                     "estado": "erro_ao_processar_conversa",
-                    "motivo": str(erro),
+                    "motivo": "Não foi possível processar a conversa.",
                 },
             )
             return
@@ -1479,9 +1473,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     dias=int(query.get("days", ["14"])[0]),
                 ))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": "Os parâmetros da consulta Google são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": "O serviço Google Workspace não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
@@ -1493,9 +1487,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     limite=int(query.get("limit", ["25"])[0]),
                 ))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": "Os parâmetros da consulta Google são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": "O serviço Google Workspace não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
@@ -1507,9 +1501,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     limite=int(query.get("limit", ["25"])[0]),
                 ))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": "Os parâmetros da consulta Google são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": "O serviço Google Workspace não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
@@ -1526,9 +1520,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     limite=int(query.get("limit", ["10"])[0]),
                 ))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": "Os parâmetros da consulta Gmail são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": "O serviço Gmail não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "falha_gmail", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
@@ -1538,9 +1532,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             try:
                 self._send_json(200, GMAIL_NYXOS.obter_mensagem(query.get("id", [""])[0]))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": "Os parâmetros da consulta Gmail são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": "O serviço Gmail não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "falha_gmail", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
