@@ -19,7 +19,7 @@ Este cliente deve ser executado na própria máquina da Nyxal. Ele envia três t
 
 ## Atualidade das evidências
 
-Os fatos de CI e validação incluídos nos prompts são uma fotografia histórica registrada em **2026-10-24T14:54:56Z**. Esta ferramenta não consulta o GitHub, workflows, Billing nem configurações de Actions; ela só conversa com a API local `127.0.0.1`. Portanto, a fotografia não representa necessariamente o estado atual. O prompt de auditoria pede que a Nyxal marque o estado atual como **não verificado** quando não houver evidência mais recente. Antes de atualizar a fotografia, verifique os links e as execuções reais, registre a hora UTC e preserve a distinção entre teste local, execução pública e CI do repositório privado.
+Os fatos de CI e validação incluídos nos prompts são uma fotografia histórica registrada em **2026-10-25T03:49:00Z**. Esta ferramenta não consulta o GitHub, workflows, Billing nem configurações de Actions; ela só conversa com a API local `127.0.0.1`. Portanto, a fotografia não representa necessariamente o estado atual. O prompt de auditoria pede que a Nyxal marque o estado atual como **não verificado** quando não houver evidência mais recente. Antes de atualizar a fotografia, verifique os links e as execuções reais, registre a hora UTC e preserve a distinção entre teste local, execução pública e CI do repositório privado.
 - Esta ferramenta verifica propostas conversacionais; não executa um experimento AE2 real. O experimento real deve passar pelas solicitações formais existentes e pelos gates AE2/AE3/AE4/LLC.
 - Caso a API não esteja ativa, a ferramenta termina com uma mensagem de erro sem fingir que a Nyxal respondeu.
 
@@ -49,9 +49,9 @@ Não use o arquivo de saída se a conversa contiver informação confidencial, a
 
 Uma boa resposta da Nyxal deverá identificar uma H1 falsificável, evidência atual, baseline, experiência mínima e critério de rejeição. Depois, a correção precisa ser aplicada por um caminho autorizado e testada de forma reproduzível.
 
-Para o snapshot registrado em 2026-10-24T14:54:56Z, a distinção era:
+Para o snapshot registrado em 2026-10-25T03:49:00Z, a distinção era:
 - o runner padrão do repositório público conseguiu executar um workflow mínimo;
-- os jobs privados [40104571590](https://github.com/Mykkezin/Nyxal/actions/runs/40104571590) e [40104469444](https://github.com/Mykkezin/Nyxal/actions/runs/40104469444) terminaram sem etapas (`steps=null`) e sem logs recuperáveis; não há evidência de que os testes de código tenham executado;
+- os jobs privados [40159568785](https://github.com/Mykkezin/Nyxal/actions/runs/40159568785) e [40104649537](https://github.com/Mykkezin/Nyxal/actions/runs/40104649537) terminaram sem etapas (`steps=null`) e sem logs recuperáveis; não há evidência de que os testes de código tenham executado;
 - 29 testes da política defensiva foram executados localmente em Python 3.13, mas isso não valida o workflow privado em Python 3.12;
 - o estado do runner privado só será considerado resolvido quando o job privado obtiver um runner real, os passos de checkout/compilação/teste forem executados e houver logs e códigos de saída.
 
