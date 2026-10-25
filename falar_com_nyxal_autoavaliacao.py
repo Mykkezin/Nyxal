@@ -19,7 +19,7 @@ from http.client import HTTPConnection, HTTPException
 MAX_RESPONSE_BYTES = 1_000_000
 MAX_SELF_ASSESSMENT_CHARS = 8_000
 DEFAULT_TIMEOUT_SECONDS = 90
-EVIDENCE_SNAPSHOT_UTC = "2026-10-24T14:54:56Z"
+EVIDENCE_SNAPSHOT_UTC = "2026-10-25T03:49:00Z"
 
 PROMPT_AUTOAVALIACAO = """Faça uma autoavaliação honesta do estado atual da Nyxal e do seu próprio ciclo de melhoria.
 
@@ -46,7 +46,7 @@ Fotografia de evidências registrada em {timestamp} UTC. Os fatos abaixo são hi
 
 Evidências externas registradas na consulta:
 - O workflow mínimo de diagnóstico no repositório público Nyxal---DISPLAY passou com runner real e executou etapas Python. Isso não prova que os runners do repositório privado estão saudáveis.
-- As execuções privadas recentes dos workflows Nyxal Visual Generation Quality ([run 40104571590](https://github.com/Mykkezin/Nyxal/actions/runs/40104571590), job 120902649200) e Nyxal Local Self-Assessment Client ([run 40104469444](https://github.com/Mykkezin/Nyxal/actions/runs/40104469444), job 120903084940) terminaram com `conclusion=failure`, `steps=null` e sem logs recuperáveis. O padrão indica que os testes não chegaram a executar; não prova falha do código.
+- As execuções privadas recentes dos workflows Nyxal Visual Generation Quality ([run 40159568785](https://github.com/Mykkezin/Nyxal/actions/runs/40159568785), job 121068101166) e Nyxal Local Self-Assessment Client ([run 40104649537](https://github.com/Mykkezin/Nyxal/actions/runs/40104649537), job 120903704018) terminaram com `conclusion=failure`, `steps=null` e sem logs recuperáveis. O padrão indica que os testes não chegaram a executar; não prova falha do código.
 - A suíte da política defensiva da PR #102 foi executada anteriormente em ambiente local isolado com CPython 3.13: py_compile passou e os 29 testes passaram. Isso não é CI verde e não valida Python 3.12.
 - A avaliação determinística AE3 existente foi testada com fixtures sintéticas; isso não demonstra que AE2 realizou um experimento real.
 - A causa do runner privado não foi confirmada. Não trate cobrança, permissões ou quota como fato sem evidência.
@@ -68,7 +68,7 @@ Fotografia registrada em {timestamp} UTC. Ela é histórica. Se você não puder
 - Diagnóstico mínimo público: na fotografia, passou e recebeu runner_id real.
 - Teste local isolado da política defensiva: na fotografia, 29/29 passou em Python 3.13.
 - Testes sintéticos do avaliador AE3: passaram na fotografia.
-- CI privado da Nyxal: na consulta, as execuções 40104571590 e 40104469444 terminaram antes de mostrar steps (`steps=null`) e sem logs recuperáveis; isso deixa a execução de testes não demonstrada.
+- CI privado da Nyxal: na consulta, as execuções 40159568785 e 40104649537 terminaram antes de mostrar steps (`steps=null`) e sem logs recuperáveis; isso deixa a execução de testes não demonstrada.
 - Na fotografia, nenhuma mudança tinha sido feita nas configurações de Actions/Billing nem no ambiente do runner. Não infira o estado atual destas configurações.
 - Nenhuma execução conversacional da autoavaliação, por si só, prova que AE2 ocorreu ou que houve alteração de código.
 
