@@ -66,6 +66,13 @@ def _urlopen_no_redirect(request: Request, *, timeout: int):
     return build_opener(_RejectRedirects()).open(request, timeout=timeout)
 
 
+UNSUPPORTED_MIDJOURNEY_FLAGS = (
+    "--seed", "--chaos", "--quality", "--q", "--tile", "--weird",
+    "--version", "--v", "--niji", "--style", "--personalize", "--p",
+    "--repeat", "--r", "--stop", "--sref", "--sw", "--cref", "--cw",
+    "--oref", "--ow", "--iw",
+)
+
 MIME_SIGNATURES = {
     "image/png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
     "image/jpeg": lambda data: len(data) >= 3 and data.startswith(b"\xff\xd8\xff"),
@@ -355,6 +362,19 @@ def _extrair_parametros_midjourney(
     elementos_excluir = None
     permitidas = MODEL_ASPECT_RATIOS.get(modelo, STANDARD_ASPECT_RATIOS)
 
+    unsupported_pattern = re.compile(
+        r"(?i)(?:^|\\s)("
+        + "|".join(re.escape(flag) for flag in sorted(UNSUPPORTED_MIDJOURNEY_FLAGS, key=len, reverse=True))
+        + r")(?=\\s|$|=)"
+    )
+    unsupported = sorted({match.group(1).lower() for match in unsupported_pattern.finditer(limpo)})
+    if unsupported:
+        flags = ", ".join(unsupported)
+        raise ValueError(
+            f"Parâmetros Midjourney sem equivalente fiel nesta integração: {flags}. "
+            "Remova esses parâmetros; os suportados são --ar/--aspect, --s/--stylize e --no."
+        )
+
     # --no é uma exclusão textual em Midjourney; converte-a em linguagem natural.
     negative_match = re.search(
         r"(?is)(?:^|\s)--no\s+(.+?)(?=\s+--(?:ar|aspect|s|stylize)\b|$)",
@@ -434,6 +454,7 @@ class CapacidadeVisualGeminiNixOS:
                 ),
                 "edicao_preserva_areas_nao_solicitadas": True,
                 "parametros_midjourney": ["--ar", "--aspect", "--s", "--stylize", "--no"],
+                "parametros_midjourney_sem_equivalente": list(UNSUPPORTED_MIDJOURNEY_FLAGS),
             },
         }
 
