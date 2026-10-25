@@ -20,8 +20,6 @@ from dotenv import load_dotenv
 from loguru import logger
 
 # Load user-local settings without overriding values injected by systemd/shell.
-load_dotenv(Path.home() / ".config" / "nyxal" / "nyxal.env", override=False)
-
 import aiohttp
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import TranscriptionFrame, TTSSpeakFrame, VADUserStartedSpeakingFrame
@@ -45,6 +43,10 @@ from pipecat.transports.local.audio import (
     LocalAudioTransportParams,
 )
 from pipecat.workers.runner import WorkerRunner
+
+
+# Load user-local settings without overriding values injected by systemd/shell.
+load_dotenv(Path.home() / ".config" / "nyxal" / "nyxal.env", override=False)
 
 
 def _clamped_float(name: str, default: float, low: float, high: float) -> float:
