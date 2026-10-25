@@ -271,8 +271,27 @@ def _inferir_proporcao(prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL) -> str
 
 
 def _inferir_tamanho_imagem(prompt: str, *, padrao: str | None) -> str | None:
-    """Escolhe apenas tamanhos nativos conhecidos do modelo; nunca promete 8K."""
+    """Infere uma classe de resolução nativa; não promete dimensões exatas em pixels."""
     texto = _normalizar_texto(prompt)
+
+    # Reconhece dimensões explícitas antes dos rótulos genéricos. Caso contrário,
+    # "7680x4320" caía silenciosamente no padrão de 2K, embora seja 8K UHD.
+    dimensoes = {
+        tuple(sorted((int(match.group(1)), int(match.group(2)))))
+        for match in re.finditer(r"(?<!\d)(\d{3,5})\s*[x×]\s*(\d{3,5})(?!\d)", texto)
+    }
+    dimensoes_8k = {(4320, 7680), (4320, 8192)}
+    dimensoes_4k = {(2160, 3840), (2160, 4096)}
+    dimensoes_2k = {(1080, 2048), (1440, 2560)}
+
+    # Pedido explícito de 8K deve ser reconhecido antes de qualquer fallback
+    # para que o chamador possa rejeitá-lo em modelos que não oferecem 8K.
+    if dimensoes & dimensoes_8k or re.search(r"(?<![a-z0-9])8k(?![a-z0-9])", texto):
+        return "8K"
+    if dimensoes & dimensoes_4k:
+        return "4K"
+    if dimensoes & dimensoes_2k:
+        return "2K"
     if re.search(r"(?<![a-z0-9])(?:512\s*(?:px|pixels?)|0\.5\s*k)(?![a-z0-9])", texto):
         return "512px"
     if re.search(r"(?:(?<![a-z0-9])(?:4k|uhd|ultra[\s-]*hd)(?![a-z0-9])|(?<!\d)4096\s*(?:px|pixels?)?(?!\d))", texto):
@@ -281,10 +300,6 @@ def _inferir_tamanho_imagem(prompt: str, *, padrao: str | None) -> str | None:
         return "2K"
     if re.search(r"(?<![a-z0-9])(?:1k|1024p)(?![a-z0-9])", texto):
         return "1K"
-    # A solicitação é mantida explícita para que o chamador rejeite 8K
-    # com uma mensagem compatível com as capacidades do modelo selecionado.
-    if re.search(r"(?<![a-z0-9])8k(?![a-z0-9])", texto):
-        return "8K"
     return padrao
 
 
