@@ -14,7 +14,7 @@ O chamador deve fornecer evidências para:
 - compilação de `nyxal_web_api.py` e `nixal_seguranca_http.py`;
 - os testes de política HTTP em `teste_seguranca_api.py`;
 - os 23 testes HTTP reais de `teste_api_security_auth.py`;
-- os 8 cenários de `teste_decisao_autonoma_ci.py`;
+- os 11 cenários de `teste_decisao_autonoma_ci.py`;
 - `teste_api_chat_sem_voz.py` e regressões principais.
 
 Cada evidência deve identificar o SHA testado, comando, código de saída e logs. A política não finge executar esses comandos.
