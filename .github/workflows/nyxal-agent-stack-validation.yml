@@ -23,6 +23,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build passive Nyxal Display
+        working-directory: interface/display
+        run: |
+          npm install --no-audit --no-fund
+          npm run lint
+          npm run build
       - name: Compile integrations
         run: |
           python -m compileall -q \
