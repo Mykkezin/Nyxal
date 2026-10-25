@@ -17,10 +17,16 @@ if sys.version_info < (3, 11):
 print(f"Python compatível: {sys.version.split()[0]}")
 PY
 
+if [[ ! -f /usr/include/portaudio.h && ! -f /usr/local/include/portaudio.h ]]; then
+  echo "ERRO: falta o cabeçalho de desenvolvimento portaudio.h; o PyAudio não pode compilar." >&2
+  echo "Instale a dependência do sistema e execute este instalador novamente:" >&2
+  echo "  sudo apt update && sudo apt install -y portaudio19-dev python3-dev build-essential" >&2
+  exit 1
+fi
 if ! ldconfig -p 2>/dev/null | grep -q 'libportaudio'; then
-  echo "AVISO: libportaudio não apareceu no cache do linker."
-  echo "Se PyAudio falhar, instale as dependências do sistema:"
-  echo "  sudo apt install portaudio19-dev python3-dev build-essential"
+  echo "ERRO: a biblioteca PortAudio ainda não aparece no linker." >&2
+  echo "Execute: sudo apt install -y portaudio19-dev" >&2
+  exit 1
 fi
 
 mkdir -p "$(dirname "$VENV")"
