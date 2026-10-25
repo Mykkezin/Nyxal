@@ -1079,23 +1079,17 @@ class GerenciadorCapacidades:
         if ARQUIVO_LOG.exists():
 
             try:
+                # Limita também a leitura do histórico legado. Um log antigo
+                # maior que o teto não pode consumir memória antes da nova gravação.
+                with ARQUIVO_LOG.open("rb") as f:
+                    conteudo_existente = f.read(MAX_TAMANHO_ARQUIVO + 1)
 
-                with ARQUIVO_LOG.open(
-                    "r",
-                    encoding="utf-8",
-                ) as f:
-
-                    dados = json.load(f)
-
-                if isinstance(
-                    dados,
-                    list,
-                ):
-
-                    historico = dados
+                if len(conteudo_existente) <= MAX_TAMANHO_ARQUIVO:
+                    dados = json.loads(conteudo_existente.decode("utf-8"))
+                    if isinstance(dados, list):
+                        historico = dados
 
             except Exception:
-
                 historico = []
 
         try:
