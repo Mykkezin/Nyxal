@@ -518,6 +518,35 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertFalse(result["upload_salvo_no_servidor"])
         self.assertFalse(payload["store"])
 
+    def test_modelo_25_flash_avisa_quando_recebe_mais_de_tres_referencias(self):
+        response = response_with_image()
+        encoded = base64.b64encode(PNG_BYTES).decode("ascii")
+        references = [{"imagem_base64": encoded, "mime_type": "image/png"} for _ in range(4)]
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-2.5-flash-image",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual._urlopen_no_redirect",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ):
+                result = CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Combine as referências em uma composição.",
+                    imagens_referencia=references,
+                )
+
+        self.assertTrue(result["sucesso"])
+        self.assertTrue(result["avisos"])
+        self.assertIn("até 3 imagens", result["avisos"][0])
+
+    def test_status_informa_recomendacao_de_referencias_por_modelo(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-2.5-flash-image",
+        }, clear=True):
+            status = CapacidadeVisualGeminiNixOS().status()
+        self.assertEqual(status["referencias_max"], 14)
+        self.assertEqual(status["referencias_recomendadas_max"], 3)
+
     def test_aceita_limite_de_14_referencias(self):
         response = response_with_image()
         encoded = base64.b64encode(PNG_BYTES).decode("ascii")
@@ -687,6 +716,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             status = CapacidadeVisualGeminiNixOS().status()
         self.assertEqual(status["referencias_max"], 14)
+        self.assertEqual(status["referencias_recomendadas_max"], 14)
         self.assertEqual(status["entrada_total_max_bytes"], 8 * 1024 * 1024)
         self.assertEqual(status["mime_permitidos"], ["image/jpeg", "image/png", "image/webp"])
 
