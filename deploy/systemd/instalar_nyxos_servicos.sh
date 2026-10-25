@@ -26,13 +26,27 @@ if ! "${PYTHON_BIN}" -c "import nyxal_web_api; import executar_nyxos_residente" 
     exit 1
 fi
 
-# Não siga links simbólicos ao ajustar permissões de credenciais.
-if [[ -L "${CONFIG_DIR}" ]]; then
-    echo "ERRO: ${CONFIG_DIR} não pode ser um link simbólico." >&2
+# Não atravesse links simbólicos em diretórios de configuração: o instalador
+# ajusta permissões, instala unidades e remove um autostart legado abaixo deles.
+validar_diretorios_sem_links() {
+    local caminho
+    for caminho in "${HOME}/.config" "${HOME}/.config/systemd" "${USER_SYSTEMD_DIR}" "${AUTOSTART_DIR}" "${CONFIG_DIR}"; do
+        if [[ -L "${caminho}" ]]; then
+            echo "ERRO: ${caminho} não pode ser um link simbólico." >&2
+            return 1
+        fi
+    done
+}
+
+if ! validar_diretorios_sem_links; then
     exit 1
 fi
 
 mkdir -p "${USER_SYSTEMD_DIR}" "${AUTOSTART_DIR}" "${CONFIG_DIR}"
+# Revalida após a criação para evitar continuar se algum caminho apareceu como link.
+if ! validar_diretorios_sem_links; then
+    exit 1
+fi
 if [[ ! -d "${CONFIG_DIR}" ]]; then
     echo "ERRO: ${CONFIG_DIR} precisa ser um diretório." >&2
     exit 1
