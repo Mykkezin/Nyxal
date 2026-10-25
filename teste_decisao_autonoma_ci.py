@@ -2,6 +2,7 @@
 """Testes determinísticos para a decisão governada da CI."""
 from __future__ import annotations
 from nixal_decisao_autonoma_ci import DecisaoAutonomaCI
+from nixal_evidencia_ci import construir_evidencia_ci
 
 
 def base() -> dict:
@@ -90,7 +91,7 @@ def testar_id_decisao_deterministico() -> None:
 
 
 def testar_falha_de_compilacao_nao_e_rotulada_como_falha_de_teste() -> None:
-    evidence = DecisaoAutonomaCI.construir_evidencia_ci(
+    evidence = construir_evidencia_ci(
         head_sha="abc123",
         job_outcome="failure",
         step_outcomes={
@@ -113,7 +114,7 @@ def testar_falha_de_compilacao_nao_e_rotulada_como_falha_de_teste() -> None:
 
 
 def testar_falha_de_suite_e_separada_do_pipeline() -> None:
-    evidence = DecisaoAutonomaCI.construir_evidencia_ci(
+    evidence = construir_evidencia_ci(
         head_sha="def456",
         job_outcome="failure",
         step_outcomes={
@@ -135,7 +136,7 @@ def testar_falha_de_suite_e_separada_do_pipeline() -> None:
 
 
 def testar_tests_passam_mas_shell_falha() -> None:
-    evidence = DecisaoAutonomaCI.construir_evidencia_ci(
+    evidence = construir_evidencia_ci(
         head_sha="ghi789",
         job_outcome="failure",
         step_outcomes={
