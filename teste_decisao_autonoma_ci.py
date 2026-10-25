@@ -110,7 +110,7 @@ def testar_falha_de_compilacao_nao_e_rotulada_como_falha_de_teste() -> None:
     assert [item["name"] for item in ci["jobs"][0]["steps"]] == ["compilacao"]
     decision = DecisaoAutonomaCI.decidir(evidence)
     assert decision["acao_escolhida"] == "investigar_falha_de_compilacao"
-    assert "não classificar isso como falha de teste" in decision["motivo"]
+    assert "não classificar isso como falha de teste" in decision["motivo"].lower()
 
 
 def testar_falha_de_suite_e_separada_do_pipeline() -> None:
@@ -132,7 +132,7 @@ def testar_falha_de_suite_e_separada_do_pipeline() -> None:
     assert ci["resultado_testes"] == "failed"
     decision = DecisaoAutonomaCI.decidir(evidence)
     assert decision["acao_escolhida"] == "investigar_falha_real_de_validacao"
-    assert "suíte de teste executada com falha" in decision["motivo"]
+    assert "há evidência de falha em uma suíte de teste executada" in decision["motivo"].lower()
 
 
 def testar_tests_passam_mas_shell_falha() -> None:
