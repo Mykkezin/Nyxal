@@ -775,6 +775,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     prompt=payload.get("prompt", ""),
                     imagem_base64=payload.get("imagem_base64"),
                     mime_type=payload.get("mime_type"),
+                    imagens_referencia=payload.get("imagens_referencia"),
                 )
                 self._send_json(200, result)
             except ValueError as erro:
