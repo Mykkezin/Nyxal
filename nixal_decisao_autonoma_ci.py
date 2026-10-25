@@ -38,6 +38,97 @@ class DecisaoAutonomaCI:
         "executar_comando_arbitrario",
     )
 
+    @classmethod
+    def construir_evidencia_ci(
+        cls,
+        *,
+        head_sha: str,
+        job_outcome: str,
+        step_outcomes: dict[str, str],
+    ) -> dict[str, Any]:
+        """Build truthful CI evidence, separating pipeline outcome from test outcome.
+
+        A compiler or shell failure can fail the workflow before any test runs.
+        In that case, resultado_testes remains "not_run"; it is never inferred from
+        the overall job conclusion alone.
+        """
+        etapas = (
+            "compilacao",
+            "politica_origem",
+            "integracao_http",
+            "decisor",
+            "shell_syntax",
+            "regressoes",
+        )
+        etapas_de_teste = (
+            "politica_origem",
+            "integracao_http",
+            "decisor",
+            "regressoes",
+        )
+        estados_validos = {"success", "failure", "skipped", "cancelled"}
+        normalized: dict[str, str] = {}
+        for etapa in etapas:
+            valor = step_outcomes.get(etapa, "unknown")
+            normalized[etapa] = valor if valor in estados_validos else "unknown"
+
+        test_steps = {nome: normalized[nome] for nome in etapas_de_teste}
+        tests_executed = any(v in {"success", "failure"} for v in test_steps.values())
+        if any(v == "failure" for v in test_steps.values()):
+            test_result = "failed"
+        elif all(v == "success" for v in test_steps.values()):
+            test_result = "passed"
+        elif not tests_executed:
+            test_result = "not_run"
+        else:
+            test_result = "unknown"
+
+        job_status = job_outcome if job_outcome in {"success", "failure", "cancelled"} else "unknown"
+        if job_status == "failure" or any(v == "failure" for v in normalized.values()):
+            pipeline_result = "failed"
+        elif job_status == "success" and all(v == "success" for v in normalized.values()):
+            pipeline_result = "passed"
+        else:
+            pipeline_result = "unknown"
+
+        estados = {
+            "success": "passed",
+            "failure": "failed",
+            "skipped": "not_run",
+            "cancelled": "not_run",
+            "unknown": "unknown",
+        }
+        # Only include steps with a reported terminal outcome; skipped steps
+        # must not imply that a test was executed.
+        executed_steps = [
+            {"name": key, "outcome": value}
+            for key, value in normalized.items()
+            if value in {"success", "failure"}
+        ]
+        return {
+            "head_sha": cls._texto(head_sha) or "",
+            "ci": {
+                "jobs": [{
+                    "conclusion": job_status,
+                    "steps": executed_steps,
+                    "logs_available": bool(executed_steps),
+                }],
+                # Historical retries are not discoverable from inside this job.
+                # This value is scoped to the current run, not a claim about prior runs.
+                "repeticoes_pre_runner": 0,
+                "repeticoes_pre_runner_escopo": "execucao_atual_apenas",
+                "testes_executados": tests_executed,
+                "resultado_testes": test_result,
+                "resultado_pipeline": pipeline_result,
+            },
+            "validacao_local": {
+                "compilacao": estados[normalized["compilacao"]],
+                "politica_origem": estados[normalized["politica_origem"]],
+                "integracao_http": estados[normalized["integracao_http"]],
+                "regressoes": estados[normalized["regressoes"]],
+            },
+        }
+
     @staticmethod
     def _texto(valor: Any) -> str | None:
         return valor.strip() if isinstance(valor, str) and valor.strip() else None
@@ -160,7 +251,11 @@ class DecisaoAutonomaCI:
         testes_executados = bool(
             ci.get("testes_executados") is True and ci_executou_etapas and not pre_runner
         )
-        local_falhou = any(v == "failed" for v in estados_locais.values())
+        local_compilacao_falhou = estados_locais.get("compilacao") == "failed"
+        local_teste_falhou = any(
+            estados_locais.get(nome) == "failed"
+            for nome in ("politica_origem", "integracao_http", "regressoes")
+        )
         ci_falhou_com_execucao = testes_executados and resultado_ci == "failed"
         local_completo = all(v == "passed" for v in estados_locais.values())
         local_tem_evidencia = any(v in {"passed", "failed"} for v in estados_locais.values())
@@ -201,20 +296,30 @@ class DecisaoAutonomaCI:
                 False, "qualquer alteração de código ou promoção até evidência suficiente", evidencia,
             )
 
-        if local_falhou or ci_falhou_com_execucao:
+        if ci_falhou_com_execucao or local_teste_falhou:
             logs = any(j["logs_disponiveis"] for j in status_jobs)
             passos = (
                 ["Preservar o resultado e os logs da execução real.",
                  "Identificar o primeiro erro reproduzível e propor a menor correção na branch.",
                  "Reexecutar os testes afetados e as regressões."]
-                if logs or local_falhou else
-                ["Obter os logs de uma execução real antes de atribuir falha ao código.",
-                 "Não fazer commit corretivo baseado apenas num estado failure sem etapas/logs."]
+                if logs else
+                ["Obter logs de uma execução real antes de atribuir a falha ao código.",
+                 "Distinguir testes falhos de etapas do pipeline que nem chegaram a iniciar."]
             )
             return cls._resposta(
                 base, "investigar_falha_real_de_validacao",
-                "Há evidência explícita de teste executado com falha; investigar o erro concreto antes de alterar o código.",
+                "Há evidência de falha em uma suíte de teste executada; investigar o erro concreto antes de alterar o código.",
                 passos, False, "merge e deploy até todos os testes obrigatórios passarem", evidencia,
+            )
+
+        if local_compilacao_falhou:
+            return cls._resposta(
+                base, "investigar_falha_de_compilacao",
+                "A compilação falhou; os testes que dependem dela podem ter sido ignorados. Não classificar isso como falha de teste.",
+                ["Guardar a saída da etapa de compilação e identificar o erro sintático/import afetado.",
+                 "Corrigir a compilação na branch de trabalho.",
+                 "Executar novamente compilação e todas as suítes obrigatórias antes da revisão."],
+                False, "merge e deploy até compilação e suítes obrigatórias passarem", evidencia,
             )
 
         if pre_runner and not local_completo:
