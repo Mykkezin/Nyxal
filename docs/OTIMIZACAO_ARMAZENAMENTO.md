@@ -24,7 +24,7 @@ suficiente para recuperação recente sem acumular indefinidamente ZIPs completo
 Os resultados do laboratório remoto mantêm a retenção de 7 dias já configurada.
 Uma rotina diária remove os ZIPs completos antigos com o nome exato
 `nyxal-projeto-nivel10`, pois a nova regra de retenção não se aplica
-retroativamente aos artefatos já existentes. Outros artefatos não são apagados.
+retroativamente aos artefatos já existentes. Outros artefatos não são apagados. A consulta à lista de artefatos falha fechada: se `gh api --paginate` retornar erro, o job encerra antes de tentar exclusões. A suíte de armazenamento contém uma regressão estática para manter essa garantia e o filtro de nome/idade.
 
 ## Animação de inicialização sem vídeo
 
