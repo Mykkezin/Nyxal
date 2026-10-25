@@ -62,6 +62,8 @@ O instalador da residência rejeita links simbólicos no diretório `~/.config/n
 A API também limita a oito conexões em processamento simultâneo e aplica timeout de socket de 30 segundos. Ao atingir o limite, responde `503 Service Unavailable` com `Retry-After: 1`. Isso não substitui rate limiting, autenticação na borda nem proteção contra todo tipo de DoS.
 Antes do roteamento, rejeita `Transfer-Encoding` e cabeçalhos `Content-Length` duplicados, não ASCII ou não numéricos. O servidor não implementa corpos chunked; recusar enquadramento ambíguo reduz diferenças de interpretação entre proxy e backend. A regressão HTTP envia cabeçalhos desse tipo e confirma a rejeição antes da rota.
 
+As rotas VPS, STT/TTS, chat e integrações Google/Gmail devolvem mensagens genéricas para exceções internas, sem refletir `str(erro)` nem `stderr` de processos externos na resposta HTTP. Os erros de validação de entrada continuam a usar estados HTTP e mensagens de validação próprias. A regressão VPS injeta um marcador secreto numa exceção e verifica que o marcador não chega ao cliente; detalhes de depuração não devem ser adicionados às respostas públicas.
+
 ## Classificação de rotas para exposição remota
 
 O prefixo `/api/public/` indica uma rota sem token no fluxo local legado; **não significa que os dados sejam apropriados para exposição irrestrita à Internet**. Para uma implantação remota, autentique no gateway por padrão e libere somente as rotas necessárias.
