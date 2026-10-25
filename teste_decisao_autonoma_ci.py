@@ -89,6 +89,70 @@ def testar_id_decisao_deterministico() -> None:
     assert DecisaoAutonomaCI.decidir(obs)["decisao_id"] == DecisaoAutonomaCI.decidir(obs)["decisao_id"]
 
 
+def testar_falha_de_compilacao_nao_e_rotulada_como_falha_de_teste() -> None:
+    evidence = DecisaoAutonomaCI.construir_evidencia_ci(
+        head_sha="abc123",
+        job_outcome="failure",
+        step_outcomes={
+            "compilacao": "failure",
+            "politica_origem": "skipped",
+            "integracao_http": "skipped",
+            "decisor": "skipped",
+            "shell_syntax": "skipped",
+            "regressoes": "skipped",
+        },
+    )
+    ci = evidence["ci"]
+    assert ci["resultado_pipeline"] == "failed"
+    assert ci["testes_executados"] is False
+    assert ci["resultado_testes"] == "not_run"
+    assert [item["name"] for item in ci["jobs"][0]["steps"]] == ["compilacao"]
+    decision = DecisaoAutonomaCI.decidir(evidence)
+    assert decision["acao_escolhida"] == "investigar_falha_de_compilacao"
+    assert "não classificar isso como falha de teste" in decision["motivo"]
+
+
+def testar_falha_de_suite_e_separada_do_pipeline() -> None:
+    evidence = DecisaoAutonomaCI.construir_evidencia_ci(
+        head_sha="def456",
+        job_outcome="failure",
+        step_outcomes={
+            "compilacao": "success",
+            "politica_origem": "success",
+            "integracao_http": "failure",
+            "decisor": "skipped",
+            "shell_syntax": "skipped",
+            "regressoes": "skipped",
+        },
+    )
+    ci = evidence["ci"]
+    assert ci["resultado_pipeline"] == "failed"
+    assert ci["testes_executados"] is True
+    assert ci["resultado_testes"] == "failed"
+    decision = DecisaoAutonomaCI.decidir(evidence)
+    assert decision["acao_escolhida"] == "investigar_falha_real_de_validacao"
+    assert "suíte de teste executada com falha" in decision["motivo"]
+
+
+def testar_tests_passam_mas_shell_falha() -> None:
+    evidence = DecisaoAutonomaCI.construir_evidencia_ci(
+        head_sha="ghi789",
+        job_outcome="failure",
+        step_outcomes={
+            "compilacao": "success",
+            "politica_origem": "success",
+            "integracao_http": "success",
+            "decisor": "success",
+            "shell_syntax": "failure",
+            "regressoes": "success",
+        },
+    )
+    ci = evidence["ci"]
+    assert ci["resultado_pipeline"] == "failed"
+    assert ci["testes_executados"] is True
+    assert ci["resultado_testes"] == "passed"
+
+
 def main() -> int:
     testar_pre_runner_decide_validacao_local_sem_edicao()
     testar_validacao_local_passou_e_pre_runner_escala_infra()
@@ -98,6 +162,9 @@ def main() -> int:
     testar_evidencia_invalida_falha_fechada()
     testar_runner_id_ausente_nao_prova_pre_runner()
     testar_id_decisao_deterministico()
+    testar_falha_de_compilacao_nao_e_rotulada_como_falha_de_teste()
+    testar_falha_de_suite_e_separada_do_pipeline()
+    testar_tests_passam_mas_shell_falha()
     print("TESTE_DECISAO_AUTONOMA_CI_OK")
     return 0
 
