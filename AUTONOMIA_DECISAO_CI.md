@@ -28,6 +28,8 @@ O workflow usa `nixal_evidencia_ci.py`, separado da política de decisão, para 
 - `resultado_pipeline`: o estado geral do job e de todas as etapas;
 - `resultado_testes`: o resultado das suítes de teste que realmente executaram (`passed`, `failed`, `not_run` ou `unknown`).
 
+Também distingue `step_outcomes_available` de `logs_available`: o builder registra os resultados das etapas fornecidos pelo workflow, mas não baixa os logs brutos do GitHub; por isso não infere `logs_available=true` apenas porque há etapas observadas. Disponibilidade de logs baixáveis deve ser comprovada separadamente.
+
 Falha de compilação ou de sintaxe do shell pode encerrar o pipeline e fazer com que as suítes seguintes sejam ignoradas. Nessa situação, o pipeline fica `failed`, mas os testes permanecem `not_run`; o decisor recomenda investigar a compilação em vez de afirmar que os testes falharam. Um erro em uma suíte que executou é registrado separadamente como falha real de teste. A contagem de tentativas anteriores de runner não é inferida pelo job atual.
 
 ## Interface
