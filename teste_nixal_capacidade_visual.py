@@ -272,6 +272,33 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertIn("interpretação artística mais ousada", prepared_prompt)
         self.assertIn(prompt.split(" --ar")[0], prepared_prompt)
 
+    def test_stylize_100_segue_o_padrao_equilibrado_do_midjourney(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual._urlopen_no_redirect",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Crie um logotipo elegante --stylize 100."
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        prepared = payload["input"][0]["text"]
+        self.assertIn("Equilibre fidelidade ao briefing e interpretação artística", prepared)
+        self.assertNotIn("interpretação literal e mínima invenção artística", prepared)
+
+    def test_rejeita_stylize_fora_do_intervalo_sem_chamar_api(self):
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            for parametro in ("--stylize 1001", "--stylize -1"):
+                with self.subTest(parametro=parametro):
+                    with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
+                        with self.assertRaisesRegex(ValueError, "entre 0 e 1000"):
+                            CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                                f"Crie uma imagem {parametro}."
+                            )
+                    mocked.assert_not_called()
+
     def test_normaliza_proporcao_midjourney_com_resolucao_original(self):
         response = response_with_image()
         prompt = "A cinematic wallpaper --ar 1920:1080"
