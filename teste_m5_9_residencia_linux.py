@@ -69,8 +69,15 @@ def main() -> None:
     assert 'PYTHON_BIN="${NYXAL_DIR}/.venv/bin/python"' in instalador
     assert '[[ ! -x "${PYTHON_BIN}" ]]' in instalador
     assert 'import nyxal_web_api; import executar_nyxos_residente' in instalador
-    assert 'if [[ -L "${CONFIG_DIR}" ]]; then' in instalador
-    assert instalador.index('if [[ -L "${CONFIG_DIR}" ]]') < instalador.index("mkdir -p")
+    assert "validar_diretorios_sem_links() {" in instalador
+    assert (
+        'for caminho in "${HOME}/.config" "${HOME}/.config/systemd" '
+        '"${USER_SYSTEMD_DIR}" "${AUTOSTART_DIR}" "${CONFIG_DIR}";'
+        in instalador
+    )
+    assert instalador.index("if ! validar_diretorios_sem_links; then") < instalador.index("mkdir -p")
+    assert instalador.index("mkdir -p") < instalador.index("# Revalida após a criação")
+    assert instalador.count("if ! validar_diretorios_sem_links; then") == 2
     assert 'chmod 700 "${CONFIG_DIR}"' in instalador
     assert 'ENV_FILE="${CONFIG_DIR}/nyxal.env"' in instalador
     assert '[[ -L "${ENV_FILE}" ]]' in instalador
