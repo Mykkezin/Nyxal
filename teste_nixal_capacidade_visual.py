@@ -319,8 +319,23 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
                 )
 
         payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
-        self.assertEqual(payload["response_format"][1]["image_size"], "512px")
+        self.assertEqual(payload["response_format"][1]["image_size"], "512")
         self.assertEqual(payload["response_format"][1]["aspect_ratio"], "1:1")
+
+    def test_flash_image_normaliza_05k_para_enum_rest_512(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-3.1-flash-image",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual._urlopen_no_redirect",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma imagem de perfil em 0.5K.")
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["response_format"][1]["image_size"], "512")
 
     def test_nano_banana_21_rejeita_512px_nao_suportado(self):
         with patch.dict(os.environ, {
