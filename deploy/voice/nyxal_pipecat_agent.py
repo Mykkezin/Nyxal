@@ -12,7 +12,6 @@ import asyncio
 import os
 import re
 import sys
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -95,6 +94,22 @@ def _extract_reply(payload: Any) -> str:
     return ""
 
 
+def _chat_payload(utterance: str, session_id: str | None) -> dict[str, str]:
+    """Build a request compatible with the API's server-owned session lifecycle."""
+    request = {"mensagem": utterance}
+    if isinstance(session_id, str) and session_id.strip():
+        request["sessao"] = session_id
+    return request
+
+
+def _returned_session_id(payload: Any, current: str | None) -> str | None:
+    """Adopt the session ID created/returned by Nyxal; keep a valid current ID otherwise."""
+    candidate = payload.get("sessao") if isinstance(payload, dict) else None
+    if isinstance(candidate, str) and candidate.strip():
+        return candidate
+    return current
+
+
 class TurnState:
     """Shared generation counter used to discard answers made stale by barge-in."""
 
@@ -127,10 +142,16 @@ class BargeInProcessor(FrameProcessor):
 class NyxalChatProcessor(FrameProcessor):
     """Bridge final local transcriptions to Nyxal's existing conversational API."""
 
-    def __init__(self, api_base: str, session_id: str, turn_state: TurnState) -> None:
+    def __init__(
+        self,
+        api_base: str,
+        turn_state: TurnState,
+        session_id: str | None = None,
+    ) -> None:
         super().__init__()
         self._api_base = api_base.rstrip("/")
-        self._session_id = session_id
+        # A session must be created by /api/chat before the agent can reuse it.
+        self._session_id: str | None = session_id
         self._turn_state = turn_state
         self._http: aiohttp.ClientSession | None = None
 
@@ -150,17 +171,36 @@ class NyxalChatProcessor(FrameProcessor):
 
         async with self._http.post(
             f"{self._api_base}/api/chat",
-            json={"mensagem": utterance, "sessao": self._session_id},
+            json=_chat_payload(utterance, self._session_id),
             headers={"Accept": "application/json"},
         ) as response:
             if response.status < 200 or response.status >= 300:
-                # Do not log the transcript or the response body.
-                raise RuntimeError(f"Nyxal API returned HTTP {response.status}")
+                # Read only a non-sensitive state label; never log the transcript/body.
+                try:
+                    error_payload = await response.json(content_type=None)
+                except (aiohttp.ClientError, asyncio.TimeoutError, ValueError):
+                    error_payload = {}
+                state = (
+                    error_payload.get("estado")
+                    if isinstance(error_payload, dict)
+                    else None
+                )
+                suffix = f", estado={state}" if isinstance(state, str) and state else ""
+                raise RuntimeError(
+                    f"Nyxal API returned HTTP {response.status}{suffix}"
+                )
             payload = await response.json(content_type=None)
 
         reply = _extract_reply(payload)
         if not reply:
-            raise RuntimeError("Nyxal API returned no usable response text")
+            state = payload.get("estado") if isinstance(payload, dict) else None
+            suffix = f" (estado={state})" if isinstance(state, str) and state else ""
+            raise RuntimeError("Nyxal API returned no usable response text" + suffix)
+
+        session_id = _returned_session_id(payload, self._session_id)
+        if not session_id:
+            raise RuntimeError("Nyxal API returned a reply without a usable session ID")
+        self._session_id = session_id
         return reply
 
     async def process_frame(self, frame, direction: FrameDirection) -> None:
@@ -176,9 +216,10 @@ class NyxalChatProcessor(FrameProcessor):
             try:
                 reply = await self._ask_nyxal(utterance)
             except (aiohttp.ClientError, asyncio.TimeoutError, RuntimeError, ValueError) as error:
+                detail = str(error).strip()
                 logger.error(
-                    "[nyxal-voz] falha ao obter resposta da API ({})",
-                    type(error).__name__,
+                    "[nyxal-voz] falha ao acessar o núcleo: {}",
+                    detail[:240] if detail else type(error).__name__,
                 )
                 reply = "Não consegui acessar o núcleo da Nyxal agora. Tente falar novamente."
 
@@ -229,8 +270,8 @@ async def main() -> None:
     logger.info("[nyxal-voz] STT local Whisper model={} · TTS local Kokoro voice={}", model, voice)
     logger.info("[nyxal-voz] modelos ficam no cache local; não são incluídos no Git")
 
-    # Use the same existing Nyxal conversation session for all turns in this run.
-    session_id = "desktop-voice-" + uuid.uuid4().hex
+    # Nyxal creates the first session in /api/chat and returns its real ID.
+    # The processor adopts it and reuses it on later turns in this run.
     turn_state = TurnState()
 
     transport = LocalAudioTransport(
@@ -256,7 +297,7 @@ async def main() -> None:
             initial_prompt="Conversa natural em português brasileiro sobre a assistente Nyxal e o sistema NyxOS.",
         ),
     )
-    chat = NyxalChatProcessor(api_base, session_id, turn_state)
+    chat = NyxalChatProcessor(api_base, turn_state)
     tts = KokoroTTSService(
         settings=KokoroTTSService.Settings(
             voice=voice,
