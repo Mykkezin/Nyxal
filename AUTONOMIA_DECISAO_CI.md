@@ -21,6 +21,15 @@ Cada evidência deve identificar o SHA testado, comando, código de saída e log
 
 Se as verificações locais passarem e a CI continuar falhando antes de alocar runner em tentativas repetidas, a próxima decisão será `escalar_bloqueio_de_infraestrutura_ci`. Isso não afirma que billing ou cota é a causa. Se algum teste realmente executar e falhar, a decisão será `investigar_falha_real_de_validacao`. Se a CI executar os testes e tudo passar, a próxima fronteira será revisão humana.
 
+## Evidência de execução e distinção entre pipeline e testes
+
+O workflow usa `nixal_evidencia_ci.py`, separado da política de decisão, para produzir evidências a partir dos resultados reais de cada etapa. O documento registra dois campos independentes:
+
+- `resultado_pipeline`: o estado geral do job e de todas as etapas;
+- `resultado_testes`: o resultado das suítes de teste que realmente executaram (`passed`, `failed`, `not_run` ou `unknown`).
+
+Falha de compilação ou de sintaxe do shell pode encerrar o pipeline e fazer com que as suítes seguintes sejam ignoradas. Nessa situação, o pipeline fica `failed`, mas os testes permanecem `not_run`; o decisor recomenda investigar a compilação em vez de afirmar que os testes falharam. Um erro em uma suíte que executou é registrado separadamente como falha real de teste. A contagem de tentativas anteriores de runner não é inferida pelo job atual.
+
 ## Interface
 
 O chamador fornece JSON com `head_sha`, jobs observados, estado dos steps/logs, contagem de repetições pré-runner, se os testes foram realmente executados e estados locais (`not_run`, `passed`, `failed`, `unknown`).
@@ -43,4 +52,4 @@ A saída inclui um envelope de handoff ao ciclo AE/N9/LLC existente. A saída da
 
 ## Validação
 
-`teste_decisao_autonoma_ci.py` contém oito cenários determinísticos para pré-runner, escalada após validação local, falha de teste real, CI aprovada, steps vazias, entrada inválida, runner ausente e ID de decisão estável. O teste só conta como aprovado depois de execução real e código de saída zero.
+`teste_decisao_autonoma_ci.py` contém 11 cenários determinísticos, cobrindo pré-runner, escalada após validação local, falha de teste real, CI aprovada, steps vazias, entrada inválida, runner ausente, ID estável e separação entre falha de compilação, falha de suíte e falha de outra etapa do pipeline. `nixal_evidencia_ci.py` gera `resultado_testes` separadamente de `resultado_pipeline`; compilação falha com suítes ignoradas resulta em `testes_executados=false` e `resultado_testes=not_run`, não em falha de teste. O teste só conta como aprovado depois de execução real e código de saída zero.
