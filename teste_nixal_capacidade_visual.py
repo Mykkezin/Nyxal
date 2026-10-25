@@ -453,6 +453,70 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertIn("Remova o fundo", payload["input"][0]["text"])
         self.assertEqual(result["estado"], "imagem_editada")
 
+    def test_aceita_multiplas_imagens_de_referencia_na_ordem_enviada(self):
+        response = response_with_image()
+        img1 = base64.b64encode(PNG_BYTES).decode("ascii")
+        img2 = base64.b64encode(JPEG_BYTES).decode("ascii")
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual._urlopen_no_redirect",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                result = CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Crie uma composição coerente a partir das referências.",
+                    imagens_referencia=[
+                        {"imagem_base64": img1, "mime_type": "image/png"},
+                        {"imagem_base64": img2, "mime_type": "image/jpeg"},
+                    ],
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual([item["type"] for item in payload["input"]], ["text", "image", "image"])
+        self.assertEqual([item["mime_type"] for item in payload["input"][1:]], ["image/png", "image/jpeg"])
+        self.assertIn("Use as 2 imagens de referência em conjunto", payload["input"][0]["text"])
+        self.assertEqual(result["estado"], "imagem_editada")
+        self.assertFalse(result["upload_salvo_no_servidor"])
+        self.assertFalse(payload["store"])
+
+    def test_rejeita_mais_de_14_imagens_de_referencia_antes_da_chamada(self):
+        encoded = base64.b64encode(PNG_BYTES).decode("ascii")
+        references = [{"imagem_base64": encoded, "mime_type": "image/png"} for _ in range(15)]
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
+                with self.assertRaisesRegex(ValueError, "no máximo 14"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                        "Combine as referências.", imagens_referencia=references
+                    )
+        mocked.assert_not_called()
+
+    def test_rejeita_referencias_que_ultrapassam_limite_total(self):
+        encoded = base64.b64encode(PNG_BYTES).decode("ascii")
+        references = [
+            {"imagem_base64": encoded, "mime_type": "image/png"},
+            {"imagem_base64": encoded, "mime_type": "image/png"},
+        ]
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch.object(visual, "MAX_TOTAL_INPUT_BYTES", 48):
+                with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
+                    with self.assertRaisesRegex(ValueError, "limite total"):
+                        CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                            "Combine as referências.", imagens_referencia=references
+                        )
+        mocked.assert_not_called()
+
+    def test_rejeita_imagem_legada_e_lista_de_referencias_juntas(self):
+        encoded = base64.b64encode(PNG_BYTES).decode("ascii")
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
+                with self.assertRaisesRegex(ValueError, "não ambos"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                        "Combine referências.",
+                        imagem_base64=encoded,
+                        mime_type="image/png",
+                        imagens_referencia=[{"imagem_base64": encoded, "mime_type": "image/png"}],
+                    )
+        mocked.assert_not_called()
+
     def test_rejeita_imagem_de_resposta_com_base64_invalido(self):
         response = {
             "steps": [{
