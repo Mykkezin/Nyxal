@@ -454,6 +454,17 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie um wallpaper 8K.")
         mocked.assert_not_called()
 
+    def test_infere_proporcao_de_dimensoes_explicitas(self):
+        self.assertEqual(visual._inferir_proporcao("Wallpaper 3840x2160"), "16:9")
+        self.assertEqual(visual._inferir_proporcao("Wallpaper 2160 × 3840"), "9:16")
+        self.assertEqual(
+            visual._inferir_proporcao(
+                "Dimensões 3840x2160",
+                modelo="gemini-3.1-flash-lite-image",
+            ),
+            "16:9",
+        )
+
     def test_rejeita_8k_pelas_dimensoes_explicitas_sem_chamar_api(self):
         with patch.dict(os.environ, {
             "NYXAL_GEMINI_API_KEY": "test-key",
