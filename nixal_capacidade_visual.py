@@ -363,9 +363,9 @@ def _extrair_parametros_midjourney(
     permitidas = MODEL_ASPECT_RATIOS.get(modelo, STANDARD_ASPECT_RATIOS)
 
     unsupported_pattern = re.compile(
-        r"(?i)(?:^|\\s)("
+        r"(?i)(?:^|\s)("
         + "|".join(re.escape(flag) for flag in sorted(UNSUPPORTED_MIDJOURNEY_FLAGS, key=len, reverse=True))
-        + r")(?=\\s|$|=)"
+        + r")(?=\s|$|=)"
     )
     unsupported = sorted({match.group(1).lower() for match in unsupported_pattern.finditer(limpo)})
     if unsupported:
