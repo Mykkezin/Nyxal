@@ -510,7 +510,8 @@ class CapacidadeVisualGeminiNixOS:
                     f"O modelo {model} não oferece saída nativa em 8K; a resolução máxima é 4K."
                 )
             if image_size:
-                image_format["image_size"] = image_size
+                # A documentação chama isso de 512px/0.5K, mas o enum REST é literalmente "512".
+                image_format["image_size"] = "512" if image_size == "512px" else image_size
         elif model in MODELS_WITH_IMAGE_SIZE:
             # Evita forçar resolução nas edições; o provedor decide a saída a partir da entrada.
             default_size = None if imagem_presente else "2K"
