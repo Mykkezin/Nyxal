@@ -81,8 +81,19 @@ class TestLimitesArmazenamento(unittest.TestCase):
     def test_log_capacidades_descarta_historico_preexistente_acima_do_teto(self) -> None:
         with tempfile.TemporaryDirectory() as diretorio:
             caminho_log = Path(diretorio) / "log_capacidades_nixal.json"
+            registro_antigo = {
+                "sucesso": True,
+                "capacidade": "registro_antigo",
+                "resultado": {"ok": True},
+                "erro": None,
+                "timestamp": 1.0,
+                "duracao_ms": 1.0,
+            }
+            json_antigo = json.dumps([registro_antigo], separators=(",", ":")).encode("utf-8")
             caminho_log.write_bytes(
-                b"[" + b" " * (nixal_capacidades.MAX_TAMANHO_ARQUIVO + 64) + b"]"
+                json_antigo[:-1]
+                + b" " * (nixal_capacidades.MAX_TAMANHO_ARQUIVO + 64)
+                + b"]"
             )
             with patch.object(nixal_capacidades, "ARQUIVO_LOG", caminho_log):
                 gerenciador = GerenciadorCapacidades()
@@ -107,8 +118,19 @@ class TestLimitesArmazenamento(unittest.TestCase):
     def test_log_runtime_descarta_historico_preexistente_acima_do_teto(self) -> None:
         with tempfile.TemporaryDirectory() as diretorio:
             caminho_log = Path(diretorio) / "log_nyxal_runtime.json"
+            registro_antigo = {
+                "sucesso": True,
+                "estado": "ciclo_antigo",
+                "origem": "teste",
+                "versao_runtime": "teste",
+                "ciclo_id": "ciclo-antigo",
+                "valor": {"ok": True},
+            }
+            json_antigo = json.dumps([registro_antigo], separators=(",", ":")).encode("utf-8")
             caminho_log.write_bytes(
-                b"[" + b" " * (nixal_runtime.MAX_TAMANHO_LOG_RUNTIME + 64) + b"]"
+                json_antigo[:-1]
+                + b" " * (nixal_runtime.MAX_TAMANHO_LOG_RUNTIME + 64)
+                + b"]"
             )
             runtime = object.__new__(nixal_runtime.NyxalRuntime)
             runtime.arquivo_log = caminho_log
