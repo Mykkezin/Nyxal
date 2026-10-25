@@ -253,8 +253,8 @@ class DecisaoAutonomaCI:
             return cls._resposta(
                 base, "executar_validacao_local_sem_editar_codigo",
                 "Os jobs falharam antes do runner e não há logs; isso não demonstra regressão no código. A ação que melhor reduz a incerteza é validar localmente, congelando novas mudanças de código até haver resultados.",
-                ["Executar py_compile em nixal_http_security.py e nyxal_web_api.py.",
-                 "Executar teste_nixal_http_security.py.",
+                ["Executar py_compile em nixal_seguranca_http.py e nyxal_web_api.py.",
+                 "Executar teste_seguranca_api.py.",
                  "Executar teste_api_security_auth.py (23 métodos HTTP).",
                  "Executar teste_api_chat_sem_voz.py e as regressões principais.",
                  "Anexar SHA, comandos, códigos de saída e logs como evidência."],
