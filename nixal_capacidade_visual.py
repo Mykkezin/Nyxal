@@ -158,20 +158,38 @@ def _selecionar_nivel_raciocinio(prompt: str, *, modelo: str) -> str | None:
         return solicitado
 
     texto = _normalizar_texto(prompt)
-    sinais_de_complexidade = (
-        "tipografia", "infograf", "diagrama", "mapa", "rotulo", "layout",
-        "composicao", "arquitetura", "anatomia", "perspectiva", "fotoreal",
-        "fotorreal", "consistencia", "multiplos", "varios sujeitos", "muitas camadas",
-        "detalhado", "detalhada", "precisao", "cartaz", "poster", "legivel",
+    # Word-boundary patterns avoid false positives such as "marca" inside
+    # "marcação" or "logo" inside unrelated words. Prefixes allow inflections.
+    padroes_de_complexidade = (
+        r"\btipografia\w*\b",
+        r"\binfograf\w*\b",
+        r"\bdiagram\w*\b",
+        r"\bmapas?\b",
+        r"\brotul\w*\b",
+        r"\blayouts?\b",
+        r"\bcomposi\w*\b",
+        r"\barquitetura\w*\b",
+        r"\banatomia\w*\b",
+        r"\bperspectiva\w*\b",
+        r"\bfotoreal\w*\b",
+        r"\bfotorreal\w*\b",
+        r"\bconsistencia\w*\b",
+        r"\bmultiplos\b",
+        r"\bvarios\s+sujeitos\b",
+        r"\bmuitas\s+camadas\b",
+        r"\bdetalhad\w*\b",
+        r"\bprecisao\w*\b",
+        r"\bcartaz\w*\b",
+        r"\bposter\w*\b",
+        r"\blegivel\w*\b",
+        r"\btextos?\b",
+        r"\blog(?:o|otipo|omarca)\b",
+        r"\bcapa\b",
+        r"\bmarcas?\b",
+        r"\bexatamente\b",
     )
-    termos_exatos_de_complexidade = re.search(
-        r"\b(?:texto|textos|logo|logotipo|logomarca|capa|marca|exatamente)\b",
-        texto,
-    )
-    complexo = (
-        len(prompt) >= 700
-        or bool(termos_exatos_de_complexidade)
-        or any(sinal in texto for sinal in sinais_de_complexidade)
+    complexo = len(prompt) >= 700 or any(
+        re.search(padrao, texto) for padrao in padroes_de_complexidade
     )
     return "high" if complexo else MODEL_DEFAULT_THINKING_LEVEL[modelo]
 
