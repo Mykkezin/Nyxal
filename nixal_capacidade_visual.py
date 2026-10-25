@@ -40,15 +40,15 @@ MODELS_WITH_IMAGE_SIZE = {
 }
 MODELS_1K_ONLY = {"gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"}
 # These explicit levels are limited to models whose official model pages publish them.
-# The official model pages explicitly list these levels for Nano Banana 2.1 and Lite Image.
-# Flash Image documents thinking availability, but not its accepted level values; leave it
-# on the provider default until the exact setting is verified against the live API.
+# Thinking levels verified against Google's official image-generation model table.
 MODEL_THINKING_LEVELS = {
     DEFAULT_IMAGE_MODEL: frozenset({"minimal", "medium", "high"}),
+    "gemini-3.1-flash-image": frozenset({"minimal", "high"}),
     "gemini-3.1-flash-lite-image": frozenset({"minimal", "high"}),
 }
 MODEL_DEFAULT_THINKING_LEVEL = {
     DEFAULT_IMAGE_MODEL: "medium",
+    "gemini-3.1-flash-image": "minimal",
     "gemini-3.1-flash-lite-image": "minimal",
 }
 class _RejectRedirects(HTTPRedirectHandler):
