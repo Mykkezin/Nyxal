@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import ast
 import base64
 import json
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import nixal_capacidade_visual as visual
@@ -642,6 +644,23 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         prepared = payload["input"][0]["text"]
         self.assertIn("Para o produto", prepared)
         self.assertIn("sombras de contato plausíveis", prepared)
+
+    def test_api_encaminha_imagens_referencia_no_endpoint_existente(self):
+        api_path = Path(__file__).resolve().with_name("nyxal_web_api.py")
+        tree = ast.parse(api_path.read_text(encoding="utf-8"))
+        visual_calls = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "gerar_ou_editar"
+        ]
+        self.assertTrue(visual_calls, "a API deve manter chamada para gerar_ou_editar")
+        keyword_sets = [{keyword.arg for keyword in call.keywords} for call in visual_calls]
+        self.assertTrue(
+            any({"imagem_base64", "mime_type", "imagens_referencia"} <= names for names in keyword_sets),
+            "a rota HTTP precisa encaminhar os campos legado e múltiplas referências",
+        )
 
     def test_status_expoe_controles_sem_revelar_segredos(self):
         with patch.dict(os.environ, {}, clear=True):
