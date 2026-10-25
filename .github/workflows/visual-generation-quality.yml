@@ -16,6 +16,8 @@ on:
     paths:
       - "nixal_capacidade_visual.py"
       - "teste_nixal_capacidade_visual.py"
+      - "nyxal_web_api.py"
+      - "docs/NYXAL_AGENT_STACK.md"
       - ".github/workflows/visual-generation-quality.yml"
   workflow_dispatch:
 
