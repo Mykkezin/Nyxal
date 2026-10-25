@@ -364,6 +364,43 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("nao-retornar", body)
         action.assert_called_once()
 
+    def test_erros_internos_audio_chat_google_nao_sao_refletidos(self) -> None:
+        api.PROXY_MODE = True
+        api.API_TOKEN = "token-de-teste"
+        detalhe_interno = "SEGREDO_INTERNO /root/nyxal.env token=nao-retornar"
+        auth = {"Authorization": "Bearer token-de-teste"}
+
+        with patch.object(api, "transcribe_audio", side_effect=RuntimeError(detalhe_interno)):
+            status, body = self.request(
+                "POST", "/api/stt", body=b"audio-de-teste",
+                headers={**auth, "Content-Type": "audio/webm"},
+            )
+        self.assertEqual(status, 500)
+        self.assertIn("A transcrição do áudio não pôde ser concluída.", body)
+        self.assertNotIn("SEGREDO_INTERNO", body)
+        self.assertNotIn("/root/nyxal.env", body)
+
+        with patch.object(api.AGENTE_NYXAL, "responder", side_effect=RuntimeError(detalhe_interno)):
+            status, body = self.request(
+                "POST", "/api/agent/chat",
+                body=b'{"mensagem":"teste","provedor":"auto"}',
+                headers={**auth, "Content-Type": "application/json"},
+            )
+        self.assertEqual(status, 503)
+        self.assertIn("O provedor selecionado não está disponível.", body)
+        self.assertNotIn("SEGREDO_INTERNO", body)
+        self.assertNotIn("nao-retornar", body)
+
+        with patch.object(api.GMAIL_NYXOS, "listar_eventos", side_effect=RuntimeError(detalhe_interno)):
+            status, body = self.request(
+                "GET", "/api/integracoes/google/agenda?limit=20&days=14",
+                headers=auth,
+            )
+        self.assertEqual(status, 503)
+        self.assertIn("O serviço Google Workspace não está disponível.", body)
+        self.assertNotIn("SEGREDO_INTERNO", body)
+        self.assertNotIn("/root/nyxal.env", body)
+
     def test_limites_de_corpo_sao_aplicados_antes_da_leitura(self) -> None:
         # Os corpos não são enviados intencionalmente: se uma rota tentar lê-los
         # antes de rejeitar o Content-Length, o teste estoura o timeout HTTP.
