@@ -209,7 +209,21 @@
   <script>
     (() => {
       const params = new URLSearchParams(window.location.search);
-      const next = params.get("next") || "http://127.0.0.1:8010/";
+      const fallbackNext = "http://127.0.0.1:8010/";
+      let next = fallbackNext;
+      try {
+        const requestedNext = params.get("next");
+        if (requestedNext) {
+          const destination = new URL(requestedNext);
+          const protocolAllowed =
+            destination.protocol === "http:" || destination.protocol === "https:";
+          if (protocolAllowed && !destination.username && !destination.password) {
+            next = destination.href;
+          }
+        }
+      } catch (_) {
+        // Malformed or executable destinations fall back to the local interface.
+      }
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const duration = reduced ? 1000 : 5600;
       const started = performance.now();
