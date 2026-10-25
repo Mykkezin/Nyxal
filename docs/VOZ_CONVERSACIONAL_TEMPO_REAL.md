@@ -55,6 +55,14 @@ Antes do teste de microfone, valide o contrato sem iniciar a captura:
 
 Esse verificador é executado manualmente dentro do ambiente opcional; não é coletado pela suíte base de testes da Nyxal.
 
+Antes de testar o microfone, valide também a API real sem iniciar áudio:
+
+```bash
+python3 deploy/voice/verificar_api_nyxal.py
+```
+
+O smoke test envia duas mensagens fixas ao `/api/chat`, sem imprimir o conteúdo da conversa. Ele confirma se a primeira chamada cria uma sessão válida e se a segunda reutiliza o ID devolvido. Se falhar, resolva esse problema antes de avaliar o agente de voz: reconhecimento e síntese de áudio podem funcionar mesmo quando o núcleo rejeita a sessão.
+
 
 Faça os testes em branch experimental e não rode dois ouvintes de microfone em paralelo.
 
