@@ -310,12 +310,17 @@ def _preparar_prompt(
         direcao += " " + direcao_especifica
 
     if nivel_estilizado is not None:
-        if nivel_estilizado <= 100:
+        if nivel_estilizado <= 50:
             direcao += " Prefira interpretação literal e mínima invenção artística."
-        elif nivel_estilizado < 500:
+        elif nivel_estilizado <= 200:
             direcao += (
                 " Equilibre fidelidade ao briefing e interpretação artística, sem inventar "
                 "detalhes que contradigam os requisitos explícitos."
+            )
+        elif nivel_estilizado < 500:
+            direcao += (
+                " Permita uma interpretação mais expressiva, mantendo fidelidade ao tema, "
+                "à composição solicitada e aos detalhes explícitos."
             )
         else:
             direcao += (
@@ -359,9 +364,14 @@ def _extrair_parametros_midjourney(
         elementos_excluir = negative_match.group(1).strip(" ,;")
         limpo = limpo[:negative_match.start()] + " " + limpo[negative_match.end():]
 
+    stylize_flag = re.search(r"(?i)(?:^|\s)--(?:stylize|s)(?=\s|$)", limpo)
     stylize_match = re.search(r"(?i)(?:--stylize|--s)\s*(\d{1,4})(?!\d)", limpo)
+    if stylize_flag and not stylize_match:
+        raise ValueError("O parâmetro --stylize precisa ser um inteiro entre 0 e 1000.")
     if stylize_match:
-        stylize = min(1000, int(stylize_match.group(1)))
+        stylize = int(stylize_match.group(1))
+        if stylize > 1000:
+            raise ValueError("O parâmetro --stylize precisa estar entre 0 e 1000.")
         limpo = limpo[:stylize_match.start()] + limpo[stylize_match.end():]
 
     ratio_match = re.search(
