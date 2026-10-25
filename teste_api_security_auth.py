@@ -380,12 +380,13 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("/root/nyxal.env", body)
 
-        with patch.object(api.AGENTE_NYXAL, "responder", side_effect=RuntimeError(detalhe_interno)):
-            status, body = self.request(
-                "POST", "/api/agent/chat",
-                body=b'{"mensagem":"teste","provedor":"auto"}',
-                headers={**auth, "Content-Type": "application/json"},
-            )
+        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="gemini"):
+            with patch.object(api.AGENTE_NYXAL, "responder", side_effect=RuntimeError(detalhe_interno)):
+                status, body = self.request(
+                    "POST", "/api/agent/chat",
+                    body=b'{"mensagem":"teste","provedor":"auto"}',
+                    headers={**auth, "Content-Type": "application/json"},
+                )
         self.assertEqual(status, 503)
         self.assertIn("O provedor selecionado não está disponível.", body)
         self.assertNotIn("SEGREDO_INTERNO", body)
