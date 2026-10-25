@@ -217,22 +217,35 @@ def _inferir_proporcao(prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL) -> str
                 )
             return proporcao
 
-    # A orientação explícita sempre tem precedência sobre palavras genéricas como wallpaper.
-    vertical_phrases = (
-        "vertical", "9:16", "tela de bloqueio", "wallpaper para telefone",
+    # Contextos específicos devem prevalecer sobre a palavra genérica "vertical".
+    vertical_mobile_phrases = (
+        "9:16", "tela de bloqueio", "wallpaper para telefone",
         "wallpaper para celular", "fundo de tela do celular", "para celular",
         "para smartphone", "phone wallpaper", "mobile wallpaper", "smartphone wallpaper",
-        "portrait orientation", "portrait format", "vertical format", "imagem vertical",
-        "foto vertical", "lock screen",
+        "lock screen",
     )
     vertical_social = re.search(r"\b(?:story|stories|reel|reels|tiktok)\b", texto)
-    if any(pista in texto for pista in vertical_phrases) or vertical_social:
+    if any(pista in texto for pista in vertical_mobile_phrases) or vertical_social:
         return "9:16" if "9:16" in permitidas else None
+
+    impresso_vertical = (
+        "poster", "cartaz", "capa de livro", "book cover", "capa de revista",
+        "magazine cover", "folha a4 vertical", "vertical a4",
+    )
+    if any(pista in texto for pista in impresso_vertical):
+        return "2:3" if "2:3" in permitidas else None
 
     quadrado = ("quadrado", "foto de perfil", "profile picture", "profile photo")
     quadrado_token = re.search(r"\b(?:square|avatar|icon|icone|sticker)\b", texto)
     if any(pista in texto for pista in quadrado) or quadrado_token:
         return "1:1" if "1:1" in permitidas else None
+
+    vertical_phrases = (
+        "vertical", "portrait orientation", "portrait format", "vertical format",
+        "imagem vertical", "foto vertical",
+    )
+    if any(pista in texto for pista in vertical_phrases):
+        return "9:16" if "9:16" in permitidas else None
 
     horizontal = (
         "horizontal", "landscape orientation", "landscape format", "panoram",
@@ -244,13 +257,6 @@ def _inferir_proporcao(prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL) -> str
     )
     if any(pista in texto for pista in horizontal):
         return "16:9" if "16:9" in permitidas else None
-
-    impresso_vertical = (
-        "poster", "cartaz", "capa de livro", "book cover", "capa de revista",
-        "magazine cover", "folha a4 vertical", "vertical a4",
-    )
-    if any(pista in texto for pista in impresso_vertical):
-        return "2:3" if "2:3" in permitidas else None
     return None
 
 
