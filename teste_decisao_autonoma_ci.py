@@ -152,6 +152,11 @@ def testar_tests_passam_mas_shell_falha() -> None:
     assert ci["resultado_pipeline"] == "failed"
     assert ci["testes_executados"] is True
     assert ci["resultado_testes"] == "passed"
+    decision = DecisaoAutonomaCI.decidir(evidence)
+    assert decision["acao_escolhida"] == "investigar_falha_de_etapa_do_pipeline"
+    assert decision["evidencia"]["resultado_pipeline_ci"] == "failed"
+    assert decision["evidencia"]["resultado_testes_ci"] == "passed"
+    assert "não há evidência de falha numa suíte de testes executada" in decision["motivo"].lower()
 
 
 def main() -> int:
