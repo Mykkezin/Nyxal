@@ -227,6 +227,17 @@ def _inferir_proporcao(prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL) -> str
                 )
             return proporcao
 
+    # Dimensões explícitas como 3840x2160 também comunicam a proporção.
+    for match in re.finditer(r"(?<!\d)(\d{3,5})\s*[x×]\s*(\d{3,5})(?!\d)", texto):
+        proporcao = _normalizar_proporcao(int(match.group(1)), int(match.group(2)))
+        if proporcao:
+            if proporcao not in permitidas:
+                raise ValueError(
+                    f"O modelo {modelo} não suporta a proporção {proporcao}. "
+                    "Use uma proporção suportada pelo modelo."
+                )
+            return proporcao
+
     # Contextos específicos devem prevalecer sobre a palavra genérica "vertical".
     vertical_mobile_phrases = (
         "9:16", "tela de bloqueio", "wallpaper para telefone",
