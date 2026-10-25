@@ -223,7 +223,7 @@ class DecisaoAutonomaCI:
                 "Os jobs falharam antes do runner e não há logs; isso não demonstra regressão no código. A ação que melhor reduz a incerteza é validar localmente, congelando novas mudanças de código até haver resultados.",
                 ["Executar py_compile em nixal_http_security.py e nyxal_web_api.py.",
                  "Executar teste_nixal_http_security.py.",
-                 "Executar teste_api_security_auth.py (22 métodos HTTP).",
+                 "Executar teste_api_security_auth.py (23 métodos HTTP).",
                  "Executar teste_api_chat_sem_voz.py e as regressões principais.",
                  "Anexar SHA, comandos, códigos de saída e logs como evidência."],
                 True, "não alterar mais o módulo de segurança até os testes locais produzirem evidência; sem merge/deploy", evidencia,
