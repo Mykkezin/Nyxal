@@ -39,6 +39,7 @@ MODELS_WITH_IMAGE_SIZE = {
     "gemini-3-pro-image",
 }
 MODELS_1K_ONLY = {"gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"}
+MODELS_WITH_512PX = {"gemini-3.1-flash-image"}
 # These explicit levels are limited to models whose official model pages publish them.
 # Thinking levels verified against Google's official image-generation model table.
 MODEL_THINKING_LEVELS = {
@@ -238,6 +239,8 @@ def _inferir_proporcao(prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL) -> str
 def _inferir_tamanho_imagem(prompt: str, *, padrao: str | None) -> str | None:
     """Escolhe apenas tamanhos nativos conhecidos do modelo; nunca promete 8K."""
     texto = _normalizar_texto(prompt)
+    if re.search(r"(?<![a-z0-9])(?:512\s*(?:px|pixels?)|0\.5\s*k)(?![a-z0-9])", texto):
+        return "512px"
     if re.search(r"(?:(?<![a-z0-9])(?:4k|uhd|ultra[\s-]*hd)(?![a-z0-9])|(?<!\d)4096\s*(?:px|pixels?)?(?!\d))", texto):
         return "4K"
     if re.search(r"(?<![a-z0-9])(?:2k|1440p)(?![a-z0-9])", texto):
@@ -387,6 +390,7 @@ class CapacidadeVisualGeminiNixOS:
                 "proporcao_automatica": True,
                 "tamanho_nativo": (
                     ["1K"] if model in MODELS_1K_ONLY
+                    else ["512px", "1K", "2K", "4K"] if model in MODELS_WITH_512PX
                     else ["1K", "2K", "4K"] if model in MODELS_WITH_IMAGE_SIZE
                     else ["definido_pelo_provedor"]
                 ),
@@ -467,13 +471,22 @@ class CapacidadeVisualGeminiNixOS:
 
         if model in MODELS_1K_ONLY:
             requested_size = _inferir_tamanho_imagem(prompt, padrao=None)
-            if requested_size in {"2K", "4K", "8K"}:
+            if requested_size in {"512px", "2K", "4K", "8K"}:
                 raise ValueError(
                     f"O modelo {model} só gera imagens em 1K. "
                     "Use gemini-nano-banana-2.1 para solicitar 2K ou 4K."
                 )
             if requested_size == "1K":
                 image_format["image_size"] = "1K"
+        elif model in MODELS_WITH_512PX:
+            default_size = None if imagem_presente else "2K"
+            image_size = _inferir_tamanho_imagem(prompt, padrao=default_size)
+            if image_size == "8K":
+                raise ValueError(
+                    f"O modelo {model} não oferece saída nativa em 8K; a resolução máxima é 4K."
+                )
+            if image_size:
+                image_format["image_size"] = image_size
         elif model in MODELS_WITH_IMAGE_SIZE:
             # Evita forçar resolução nas edições; o provedor decide a saída a partir da entrada.
             default_size = None if imagem_presente else "2K"
