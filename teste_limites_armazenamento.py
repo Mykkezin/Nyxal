@@ -78,6 +78,62 @@ class TestLimitesArmazenamento(unittest.TestCase):
             self.assertTrue(dados[-1]["valor"]["resumo_truncado"])
 
 
+    def test_log_capacidades_descarta_historico_preexistente_acima_do_teto(self) -> None:
+        with tempfile.TemporaryDirectory() as diretorio:
+            caminho_log = Path(diretorio) / "log_capacidades_nixal.json"
+            caminho_log.write_bytes(
+                b"[" + b" " * (nixal_capacidades.MAX_TAMANHO_ARQUIVO + 64) + b"]"
+            )
+            with patch.object(nixal_capacidades, "ARQUIVO_LOG", caminho_log):
+                gerenciador = GerenciadorCapacidades()
+                gerenciador._registrar_execucao(
+                    ResultadoCapacidade(
+                        sucesso=True,
+                        capacidade="novo_registro",
+                        resultado={"ok": True},
+                        timestamp=2.0,
+                        duracao_ms=1.0,
+                    )
+                )
+
+            self.assertLessEqual(
+                caminho_log.stat().st_size,
+                nixal_capacidades.MAX_TAMANHO_ARQUIVO,
+            )
+            dados = json.loads(caminho_log.read_text(encoding="utf-8"))
+            self.assertEqual(len(dados), 1)
+            self.assertEqual(dados[0]["capacidade"], "novo_registro")
+
+    def test_log_runtime_descarta_historico_preexistente_acima_do_teto(self) -> None:
+        with tempfile.TemporaryDirectory() as diretorio:
+            caminho_log = Path(diretorio) / "log_nyxal_runtime.json"
+            caminho_log.write_bytes(
+                b"[" + b" " * (nixal_runtime.MAX_TAMANHO_LOG_RUNTIME + 64) + b"]"
+            )
+            runtime = object.__new__(nixal_runtime.NyxalRuntime)
+            runtime.arquivo_log = caminho_log
+            ciclo = {
+                "sucesso": True,
+                "estado": "ciclo_concluido",
+                "origem": "teste",
+                "versao_runtime": "teste",
+                "ciclo_id": "novo-ciclo",
+                "iniciado_em": "inicio",
+                "concluido_em": "fim",
+                "valor": {"ok": True},
+                "erro": None,
+            }
+
+            runtime._registrar_log(ciclo)
+
+            self.assertLessEqual(
+                caminho_log.stat().st_size,
+                nixal_runtime.MAX_TAMANHO_LOG_RUNTIME,
+            )
+            dados = json.loads(caminho_log.read_text(encoding="utf-8"))
+            self.assertEqual(len(dados), 1)
+            self.assertEqual(dados[0]["ciclo_id"], "novo-ciclo")
+
     def test_janitor_falha_fechado_quando_a_listagem_de_artefatos_falha(self) -> None:
         workflow_path = Path(".github/workflows/prune-actions-artifacts.yml")
         workflow = workflow_path.read_text(encoding="utf-8")
