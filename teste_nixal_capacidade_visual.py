@@ -184,7 +184,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
                 return_value=FakeResponse(json.dumps(response).encode()),
             ) as mocked:
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(
-                    "Crie uma ilustração do diálogo entre duas pessoas em um contexto urbano."
+                    "Crie uma ilustração do diálogo entre duas pessoas em um contexto urbano, com marcação de coordenadas."
                 )
 
         payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
