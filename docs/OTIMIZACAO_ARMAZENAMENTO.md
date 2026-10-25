@@ -33,7 +33,7 @@ removido da árvore atual. A abertura usa `interface/startup.html`, uma animaç�
 local em HTML/CSS/canvas com núcleo luminoso, órbitas, satélites, scanlines,
 estrelas e barra de progresso. Ela não depende de bibliotecas ou mídia remotas,
 respeita `prefers-reduced-motion` e segue para a interface local após a sequência.
-Os dois launchers usam a página local; não precisam de um reprodutor de vídeo.
+Os dois launchers usam a página local; não precisam de um reprodutor de vídeo. O parâmetro de destino só aceita URLs absolutas HTTP/HTTPS sem credenciais; esquemas executáveis ou valores malformados voltam à interface local.
 
 A animação segue a identidade visual do NyxOS, mas não é declarada uma reprodução
 quadro a quadro do vídeo original, pois essa equivalência não foi verificada.
