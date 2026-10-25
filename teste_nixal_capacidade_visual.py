@@ -454,6 +454,40 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
                     CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie um wallpaper 8K.")
         mocked.assert_not_called()
 
+    def test_rejeita_8k_pelas_dimensoes_explicitas_sem_chamar_api(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+        }, clear=True):
+            with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
+                with self.assertRaisesRegex(ValueError, "não oferece saída nativa em 8K"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                        "Crie um wallpaper de 7680x4320 pixels."
+                    )
+        mocked.assert_not_called()
+
+    def test_inferir_tamanhos_de_dimensoes_comuns(self):
+        self.assertEqual(visual._inferir_tamanho_imagem("8192 × 4320", padrao="2K"), "8K")
+        self.assertEqual(visual._inferir_tamanho_imagem("4096x2160", padrao=None), "4K")
+        self.assertEqual(visual._inferir_tamanho_imagem("2560x1440", padrao=None), "2K")
+
+    def test_mapeia_dimensoes_4k_para_enum_nativo(self):
+        response = response_with_image()
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_GEMINI_IMAGE_MODEL": "gemini-nano-banana-2.1",
+        }, clear=True):
+            with patch(
+                "nixal_capacidade_visual._urlopen_no_redirect",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ) as mocked:
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "Crie um wallpaper com dimensões 3840 × 2160."
+                )
+
+        payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
+        self.assertEqual(payload["response_format"][1]["image_size"], "4K")
+
     def test_nao_confunde_history_com_story_vertical(self):
         response = response_with_image()
         with patch.dict(os.environ, {
