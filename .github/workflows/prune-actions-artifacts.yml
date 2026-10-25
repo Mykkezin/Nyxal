@@ -29,6 +29,13 @@ jobs:
           cutoff_epoch="$(date -u -d '3 days ago' +%s)"
           removed=0
 
+          if ! artifact_rows="$(gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name == "nyxal-projeto-nivel10" and .expired == false) | [.id, .created_at] | @tsv')"; then
+            echo "Falha ao listar artefatos; nenhuma remoção foi tentada." >&2
+            exit 1
+          fi
+
           while IFS=$'\t' read -r artifact_id created_at; do
             [[ -n "$artifact_id" && -n "$created_at" ]] || continue
 
@@ -39,10 +46,6 @@ jobs:
               echo "Removido snapshot redundante: ${artifact_id} (${created_at})"
               removed=$((removed + 1))
             fi
-          done < <(
-            gh api --paginate \
-              "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
-              --jq '.artifacts[] | select(.name == "nyxal-projeto-nivel10" and .expired == false) | [.id, .created_at] | @tsv'
-          )
+          done <<< "$artifact_rows"
 
           echo "Total de snapshots antigos removidos: ${removed}"
