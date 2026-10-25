@@ -2047,12 +2047,17 @@ class NyxalRuntime:
 
         if self.arquivo_log.exists():
             try:
-                carregado = json.loads(
-                    self.arquivo_log.read_text(encoding="utf-8")
-                )
-                if isinstance(carregado, list):
-                    dados = carregado
-            except (OSError, json.JSONDecodeError):
+                # Lê no máximo o orçamento mais um byte, evitando carregar um
+                # log legado descontrolado antes de aplicar o limite de escrita.
+                with self.arquivo_log.open("rb") as arquivo_existente:
+                    conteudo_existente = arquivo_existente.read(
+                        MAX_TAMANHO_LOG_RUNTIME + 1
+                    )
+                if len(conteudo_existente) <= MAX_TAMANHO_LOG_RUNTIME:
+                    carregado = json.loads(conteudo_existente.decode("utf-8"))
+                    if isinstance(carregado, list):
+                        dados = carregado
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 dados = []
 
         registro = deepcopy(ciclo)
