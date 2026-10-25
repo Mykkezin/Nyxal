@@ -78,5 +78,26 @@ class TestLimitesArmazenamento(unittest.TestCase):
             self.assertTrue(dados[-1]["valor"]["resumo_truncado"])
 
 
+    def test_janitor_falha_fechado_quando_a_listagem_de_artefatos_falha(self) -> None:
+        workflow_path = Path(".github/workflows/prune-actions-artifacts.yml")
+        workflow = workflow_path.read_text(encoding="utf-8")
+
+        # Uma falha do gh api precisa falhar o step, não parecer "zero artefatos".
+        self.assertIn('if ! artifact_rows="$(gh api --paginate', workflow)
+        self.assertIn('done <<< "$artifact_rows"', workflow)
+        self.assertNotIn("done < <(", workflow)
+
+        # A exclusão fica restrita ao nome exato e ao limite de idade explícito.
+        self.assertIn(
+            'select(.name == "nyxal-projeto-nivel10" and .expired == false)',
+            workflow,
+        )
+        self.assertIn('if [[ "$created_epoch" -lt "$cutoff_epoch" ]]; then', workflow)
+        self.assertIn(
+            '"repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"',
+            workflow,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
