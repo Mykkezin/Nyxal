@@ -201,9 +201,9 @@ class TesteAutoavaliacaoLocal(unittest.TestCase):
         self.assertIn("{timestamp}", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
         self.assertIn("{timestamp}", ferramenta.PROMPT_VERIFICACAO)
         self.assertIn("estado atual não verificado", ferramenta.PROMPT_VERIFICACAO.lower())
-        self.assertIn("40104571590", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
-        self.assertIn("40104469444", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
-        self.assertEqual(ferramenta.EVIDENCE_SNAPSHOT_UTC, "2026-10-24T14:54:56Z")
+        self.assertIn("40159568785", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
+        self.assertIn("40104649537", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
+        self.assertEqual(ferramenta.EVIDENCE_SNAPSHOT_UTC, "2026-10-25T03:49:00Z")
 
 
 if __name__ == "__main__":
