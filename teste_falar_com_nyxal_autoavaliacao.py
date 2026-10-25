@@ -204,8 +204,9 @@ class TesteAutoavaliacaoLocal(unittest.TestCase):
         self.assertIn("40244222366", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
         self.assertIn("40244353899", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
         self.assertIn("40244550568", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
-        self.assertIn("40159602571", ferramenta.PROMPT_VERIFICACAO)
-        self.assertEqual(ferramenta.EVIDENCE_SNAPSHOT_UTC, "2026-10-25T23:24:00Z")
+        self.assertIn("40244692628", ferramenta.PROMPT_AUTOAPERFEICOAMENTO)
+        self.assertIn("40244692628", ferramenta.PROMPT_VERIFICACAO)
+        self.assertEqual(ferramenta.EVIDENCE_SNAPSHOT_UTC, "2026-10-25T23:25:25Z")
 
 
 if __name__ == "__main__":
