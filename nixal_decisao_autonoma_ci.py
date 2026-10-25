@@ -127,6 +127,11 @@ class DecisaoAutonomaCI:
             resultado_ci = "unknown"
             erro = erro or "resultado_testes_ci_invalido"
 
+        resultado_pipeline = ci.get("resultado_pipeline", "unknown")
+        if resultado_pipeline not in cls.ESTADOS_VALIDACAO:
+            resultado_pipeline = "unknown"
+            erro = erro or "resultado_pipeline_ci_invalido"
+
         estados_locais: dict[str, str] = {}
         for nome in cls.VALIDACOES_OBRIGATORIAS:
             estado = local.get(nome, "not_run")
@@ -179,6 +184,8 @@ class DecisaoAutonomaCI:
             classificacao = "testes_falharam_apos_execucao"
         elif ci_passou:
             classificacao = "ci_passou_com_execucao_de_testes"
+        elif resultado_pipeline == "failed":
+            classificacao = "pipeline_falhou_sem_falha_de_teste_confirmada"
         else:
             classificacao = "execucao_ci_nao_confirmada"
 
@@ -189,6 +196,7 @@ class DecisaoAutonomaCI:
             "repeticoes_pre_runner": repeticoes,
             "testes_ci_executados": testes_executados,
             "resultado_testes_ci": resultado_ci,
+            "resultado_pipeline_ci": resultado_pipeline,
             "validacao_local": estados_locais,
             "validacao_local_completa": local_completo,
             "head_sha_presente": head_sha is not None,
@@ -229,6 +237,16 @@ class DecisaoAutonomaCI:
                  "Corrigir a compilação na branch de trabalho.",
                  "Executar novamente compilação e todas as suítes obrigatórias antes da revisão."],
                 False, "merge e deploy até compilação e suítes obrigatórias passarem", evidencia,
+            )
+
+        if resultado_pipeline == "failed" and resultado_ci != "failed":
+            return cls._resposta(
+                base, "investigar_falha_de_etapa_do_pipeline",
+                "O pipeline falhou, mas não há evidência de falha numa suíte de testes executada. Investigar a etapa não relacionada aos testes sem relabelar o resultado das suítes.",
+                ["Identificar qual etapa não relacionada aos testes falhou (por exemplo, sintaxe do shell).",
+                 "Preservar logs e códigos de saída dessa etapa.",
+                 "Reexecutar o pipeline completo após a menor correção e confirmar todos os gates."],
+                False, "merge e deploy até o pipeline inteiro passar", evidencia,
             )
 
         if pre_runner and not local_completo:
