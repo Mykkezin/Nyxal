@@ -42,6 +42,7 @@ MODELS_WITH_IMAGE_SIZE = {
 }
 MODELS_1K_ONLY = {"gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"}
 MODELS_WITH_512PX = {"gemini-3.1-flash-image"}
+MODEL_REFERENCE_RECOMMENDED_MAX = {"gemini-2.5-flash-image": 3}
 # These explicit levels are limited to models whose official model pages publish them.
 # Thinking levels verified against Google's official image-generation model table.
 MODEL_THINKING_LEVELS = {
@@ -442,6 +443,7 @@ class CapacidadeVisualGeminiNixOS:
             "entrada_max_bytes": MAX_INPUT_BYTES,
             "entrada_total_max_bytes": MAX_TOTAL_INPUT_BYTES,
             "referencias_max": MAX_REFERENCE_IMAGES,
+            "referencias_recomendadas_max": MODEL_REFERENCE_RECOMMENDED_MAX.get(model, MAX_REFERENCE_IMAGES),
             "mime_permitidos": sorted(ALLOWED_MIME),
             "salva_upload_no_servidor": False,
             "controles": {
@@ -492,6 +494,7 @@ class CapacidadeVisualGeminiNixOS:
         if not api_key:
             raise RuntimeError("Gemini não configurado. Adicione NYXAL_GEMINI_API_KEY à configuração local.")
 
+        model = os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "").strip() or DEFAULT_IMAGE_MODEL
         referencias_cruas: list[dict[str, Any]] = []
         if imagem_base64:
             referencias_cruas.append({
@@ -546,11 +549,18 @@ class CapacidadeVisualGeminiNixOS:
             })
 
         imagem_presente = bool(referencias_validadas)
-        model = os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "").strip() or DEFAULT_IMAGE_MODEL
         prompt_limpo, nivel_estilizado, proporcao_solicitada, elementos_excluir = _extrair_parametros_midjourney(
             prompt, modelo=model
         )
         nivel_raciocinio = _selecionar_nivel_raciocinio(prompt_limpo, modelo=model)
+        avisos: list[str] = []
+        recomendado = MODEL_REFERENCE_RECOMMENDED_MAX.get(model)
+        if recomendado and len(referencias_validadas) > recomendado:
+            avisos.append(
+                f"O modelo {model} tende a funcionar melhor com até {recomendado} imagens de entrada; "
+                f"este pedido contém {len(referencias_validadas)} referências. A geração continuará, "
+                "mas o resultado pode dar menos atenção a algumas referências."
+            )
         prompt_preparado = _preparar_prompt(
             prompt_limpo,
             edicao=imagem_presente,
@@ -727,6 +737,7 @@ class CapacidadeVisualGeminiNixOS:
             "mime_type": image["mime_type"],
             "imagem_base64": base64.b64encode(image_bytes).decode("ascii"),
             "mensagem": "\n".join(text_parts)[:2000],
+            "avisos": avisos,
             "upload_salvo_no_servidor": False,
         }
 
@@ -736,6 +747,7 @@ __all__ = [
     "MAX_INPUT_BYTES",
     "MAX_TOTAL_INPUT_BYTES",
     "MAX_REFERENCE_IMAGES",
+    "MODEL_REFERENCE_RECOMMENDED_MAX",
     "MAX_OUTPUT_IMAGE_BYTES",
     "ALLOWED_MIME",
 ]
