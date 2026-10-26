@@ -10,6 +10,11 @@ from unittest.mock import patch
 from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
 
 
+PNG_SAMPLE = b"\\x89PNG\\r\\n\\x1a\\n" + b"sample-png-data"
+JPEG_SAMPLE = b"\\xff\\xd8\\xff" + b"sample-jpeg-data"
+WEBP_SAMPLE = b"RIFF\\x04\\x00\\x00\\x00WEBP" + b"sample-webp-data"
+
+
 class FakeResponse:
     def __init__(self, data: bytes):
         self.data = data
@@ -39,8 +44,35 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with self.assertRaises(ValueError):
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar(
-                    "editar", imagem_base64=base64.b64encode(b"x").decode(), mime_type="image/svg+xml"
+                    "editar", imagem_base64=base64.b64encode(PNG_SAMPLE).decode(), mime_type="image/svg+xml"
                 )
+
+    def test_recusa_conteudo_que_nao_corresponde_ao_mime(self):
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "não correspondem ao MIME"):
+                CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                    "editar", imagem_base64=base64.b64encode(b"isto-nao-e-png").decode(), mime_type="image/png"
+                )
+
+    def test_rejeita_base64_invalido_na_resposta_do_modelo(self):
+        response = {"steps": [{"type": "model_output", "content": [
+            {"type": "image", "mime_type": "image/png", "data": "%%%not-base64%%%"}
+        ]}]}
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch("nixal_capacidade_visual.urlopen", return_value=FakeResponse(json.dumps(response).encode())):
+                with self.assertRaisesRegex(RuntimeError, "respondeu sem imagem"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
+
+    def test_limita_tamanho_da_imagem_de_saida(self):
+        from unittest.mock import patch as mock_patch
+        response = {"steps": [{"type": "model_output", "content": [
+            {"type": "image", "mime_type": "image/png", "data": base64.b64encode(PNG_SAMPLE).decode()}
+        ]}]}
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with mock_patch("nixal_capacidade_visual.MAX_OUTPUT_BYTES", 8):
+                with patch("nixal_capacidade_visual.urlopen", return_value=FakeResponse(json.dumps(response).encode())):
+                    with self.assertRaisesRegex(RuntimeError, "respondeu sem imagem"):
+                        CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
 
     def test_retorna_imagem_sem_guardar_upload(self):
         response = {
@@ -48,7 +80,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
                 "type": "model_output",
                 "content": [
                     {"type": "text", "text": "Imagem concluída."},
-                    {"type": "image", "mime_type": "image/png", "data": base64.b64encode(b"png").decode()},
+                    {"type": "image", "mime_type": "image/png", "data": base64.b64encode(PNG_SAMPLE).decode()},
                 ],
             }],
             "status": "completed",
@@ -62,7 +94,7 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertTrue(result["sucesso"])
         self.assertEqual(result["estado"], "imagem_gerada")
         self.assertEqual(result["mime_type"], "image/png")
-        self.assertEqual(base64.b64decode(result["imagem_base64"]), b"png")
+        self.assertEqual(base64.b64decode(result["imagem_base64"]), PNG_SAMPLE)
         self.assertFalse(result["upload_salvo_no_servidor"])
         request = mocked.call_args.args[0]
         self.assertIn("x-goog-api-key", {key.lower() for key in request.headers})
@@ -74,14 +106,14 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         response = {
             "steps": [{
                 "type": "model_output",
-                "content": [{"type": "image", "mime_type": "image/png", "data": base64.b64encode(b"out").decode()}],
+                "content": [{"type": "image", "mime_type": "image/png", "data": base64.b64encode(PNG_SAMPLE).decode()}],
             }],
         }
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with patch("nixal_capacidade_visual.urlopen", return_value=FakeResponse(json.dumps(response).encode())) as mocked:
                 result = CapacidadeVisualGeminiNixOS().gerar_ou_editar(
                     "Remova o fundo",
-                    imagem_base64=base64.b64encode(b"source").decode(),
+                    imagem_base64=base64.b64encode(PNG_SAMPLE).decode(),
                     mime_type="image/png",
                 )
         payload = json.loads(mocked.call_args.args[0].data.decode("utf-8"))
@@ -89,6 +121,8 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
         self.assertEqual(payload["input"][1]["type"], "image")
         self.assertFalse(payload["store"])
         self.assertEqual(result["estado"], "imagem_editada")
+        self.assertEqual(result["mime_type"], "image/png")
+        self.assertEqual(base64.b64decode(result["imagem_base64"]), PNG_SAMPLE)
 
     def test_status_nao_confunde_configuracao_com_chave(self):
         with patch.dict(os.environ, {}, clear=True):
