@@ -26,6 +26,7 @@ on:
       - "teste_nixal_display_routes.py"
       - "teste_nixal_agent_hub.py"
       - "teste_nixal_dialogo_router.py"
+      - "teste_api_security_auth.py"
       - "teste_nixal_observabilidade_sistema.py"
       - "teste_nixal_capacidade_visual.py"
       - "teste_nixal_integracao_google.py"
@@ -174,6 +175,7 @@ jobs:
             nixal_memoria_conhecimento.py \
             nixal_dialogo_qwen.py \
             teste_nixal_dialogo_router.py \
+            teste_api_security_auth.py \
             teste_nucleo_contexto_persistente.py \
             teste_nucleo_conversacional.py \
             teste_contexto_conversacional_56_5_5.py \
@@ -209,6 +211,7 @@ jobs:
             teste_nucleo_contexto_persistente \
             teste_memorias_persistencia_segura
           python3 teste_nucleo_conversacional.py
+          python3 -m unittest -v teste_api_security_auth.py
           python3 teste_contexto_conversacional_56_5_5.py
           python3 teste_contexto_historico_relevante_56_4_21.py
           python3 teste_preparacao_investigacao_56_4_22.py
