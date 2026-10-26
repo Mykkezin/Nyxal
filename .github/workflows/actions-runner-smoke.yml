@@ -3,15 +3,20 @@ name: Actions Runner Smoke
 on:
   push:
     branches:
-      - diagnostic/actions-runner-smoke
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: actions-runner-smoke
+  cancel-in-progress: true
+
 jobs:
   smoke:
-    runs-on: ubuntu-slim
+    # Este job é propositalmente mínimo. Não executar scripts do projeto aqui.
+    runs-on: self-hosted
     timeout-minutes: 2
     steps:
       - name: Provar que o executor iniciou
@@ -20,6 +25,8 @@ jobs:
           set -eu
           echo "RUNNER_SMOKE_STARTED"
           printf 'runner=%s\n' "${RUNNER_NAME:-unknown}"
+          printf 'os=%s\n' "${RUNNER_OS:-unknown}"
+          printf 'arch=%s\n' "${RUNNER_ARCH:-unknown}"
           printf 'sha=%s\n' "${GITHUB_SHA:-unknown}"
-          python --version
+          python3 --version
           echo "RUNNER_SMOKE_OK"
