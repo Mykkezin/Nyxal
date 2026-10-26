@@ -18,6 +18,14 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('/interface/js/nyxal-voice-console.js', self.html)
         self.assertIn('get("modo") === "voz"', self.html)
 
+    def test_autonomous_avatar_replaces_video_and_intercepts_image_requests(self):
+        self.assertIn('id="nyxalCharacterSvg"', self.html)
+        self.assertNotIn("<video", self.html.lower())
+        self.assertNotIn('id="nyxalVideoUpload"', self.html)
+        image_handler = self.html.index("window.nyxalHandleImageIntent(msg)")
+        chat_request = self.html.index("nyxalApiPost('/api/chat'", image_handler)
+        self.assertLess(image_handler, chat_request)
+
     def test_console_uses_existing_real_telemetry(self):
         self.assertIn('"/api/agent/contexto"', self.console)
         self.assertIn('"/api/public/status"', self.console)
