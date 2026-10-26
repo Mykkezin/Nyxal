@@ -141,6 +141,21 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertIn("x-content-type-options", headers)
         self.assertEqual(headers.get("cache-control"), "no-store")
 
+    def test_modo_proxy_exige_bearer_ate_para_loopback_direto(self) -> None:
+        with patch.object(api, "PROXY_MODE", True), patch.object(
+            api, "API_TOKEN", "token-de-proxy"
+        ):
+            with patch.object(api.NUCLEO_CONVERSACIONAL, "processar") as processar:
+                status, body = self.request(
+                    "POST",
+                    "/api/chat",
+                    body=b'{"mensagem":"teste"}',
+                    headers={"Content-Type": "application/json"},
+                )
+        self.assertEqual(status, 401)
+        self.assertIn("nao_autorizado", body)
+        processar.assert_not_called()
+
     def test_cabecalho_de_proxy_forca_autenticacao_mesmo_em_loopback(self) -> None:
         api.PROXY_MODE = False
         headers_de_proxy = (
