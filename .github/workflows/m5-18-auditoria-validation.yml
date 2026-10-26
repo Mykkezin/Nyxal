@@ -3,12 +3,14 @@ name: M5.18 Auditoria de Atuação
 on:
   push:
     branches:
+      - main
       - feat/m5-18-auditoria-atuacao
     paths:
       - "nixal_auditoria_atuacao.py"
       - "nixal_gateway_atuacao.py"
       - "nixal_adaptador_sandbox_fisico.py"
       - "teste_m5_18_auditoria_atuacao.py"
+      - ".github/workflows/m5-18-auditoria-validation.yml"
   pull_request:
     branches:
       - main
