@@ -1442,7 +1442,14 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if parsed_path == "/":
-            caminho = caminho_display("index.html") or caminho_interface("index.html")
+            # O modo de voz usa a interface principal que contém a captura contínua,
+            # STT, conversa e TTS. Não deixe um dist antigo do Display interceptá-lo.
+            modo_voz = parse_qs(urlsplit(self.path).query).get("modo", [""])[0] == "voz"
+            caminho = (
+                caminho_interface("index.html")
+                if modo_voz
+                else (caminho_display("index.html") or caminho_interface("index.html"))
+            )
             if caminho is None:
                 self._send_json(404, {"estado": "interface_indisponivel"})
                 return
