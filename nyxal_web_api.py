@@ -815,8 +815,13 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         return True
 
     def _local_ou_autorizado(self) -> bool:
-        # Uma origem web não-local exige Bearer mesmo se a conexão chegar por
-        # loopback; Origin não autentica o usuário, apenas evita confiar no socket.
+        # Proxy reverso é uma fronteira de autenticação: até pedidos feitos
+        # diretamente por loopback precisam de Bearer quando esse modo está ativo.
+        if PROXY_MODE:
+            return self._authorized()
+
+        # Fora do modo proxy, uma origem web não-local exige Bearer mesmo se
+        # a conexão chegar por loopback; Origin não autentica o usuário.
         origem = self.headers.get("Origin")
         if origem is not None and not origin_host_loopback(origem):
             return self._authorized()
