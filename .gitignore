@@ -3,3 +3,11 @@ __pycache__/
 *.pyc
 .env
 .env.*
+
+# Runtime-only persistent memory stores and their local write locks/atomic temp files.
+/memoria_investigacao_nixal.json
+/memoria_investigacao_nixal.json.lock
+/memoria_conhecimento_nixal.json
+/memoria_conhecimento_nixal.json.lock
+/.memoria_investigacao_nixal.json.*.tmp
+/.memoria_conhecimento_nixal.json.*.tmp

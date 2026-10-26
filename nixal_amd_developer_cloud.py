@@ -23,7 +23,7 @@ class AmdDeveloperCloud:
     ENV_API_KEY = "NYXAL_AMD_CLOUD_API_KEY"
     ENV_MODEL = "NYXAL_AMD_CLOUD_MODEL"
     ENV_PROVIDER = "NYXAL_LLM_PROVIDER"
-    MODELO_PADRAO = "Qwen/Qwen2.5-7B-Instruct"
+    MODELO_PADRAO = "Qwen/Qwen3.5-35B-A3B"
 
     def __init__(
         self,
@@ -56,6 +56,11 @@ class AmdDeveloperCloud:
         parsed = urlparse(valor)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             raise ValueError("amd_cloud_url_deve_usar_http_ou_https")
+        host = (parsed.hostname or "").lower()
+        if parsed.scheme == "http" and host not in {"localhost", "127.0.0.1", "::1"}:
+            raise ValueError(
+                "amd_cloud_http_remoto_inseguro_use_https_ou_tunel_ssh"
+            )
         if parsed.username or parsed.password:
             raise ValueError("amd_cloud_url_nao_pode_conter_credenciais")
         if parsed.query or parsed.fragment:

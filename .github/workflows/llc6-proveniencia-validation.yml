@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - feat/llc-evidence-provenance
-  pull_request:
-    branches:
-      - feat/llc-learning-loop
-      - main
 
 jobs:
   llc6:
