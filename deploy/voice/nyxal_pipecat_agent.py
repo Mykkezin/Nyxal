@@ -14,9 +14,12 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 from loguru import logger
+
+from nixal_seguranca_http import host_loopback
 
 # Load user-local settings without overriding values injected by systemd/shell.
 import aiohttp
@@ -110,6 +113,35 @@ def _returned_session_id(payload: Any, current: str | None) -> str | None:
     return current
 
 
+def _api_request_headers(api_base: str) -> dict[str, str]:
+    """Build chat headers and never send the local API token to a remote host."""
+    try:
+        parsed = urlsplit(api_base)
+        _ = parsed.port
+    except ValueError as exc:
+        raise ValueError("NYXAL_API_BASE não é uma URL válida.") from exc
+
+    if (
+        parsed.scheme.lower() not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError("NYXAL_API_BASE precisa ser uma URL HTTP(S) sem credenciais, query ou fragmento.")
+
+    headers = {"Accept": "application/json"}
+    token = os.environ.get("NYXAL_API_TOKEN", "").strip()
+    if token:
+        if not host_loopback(parsed.hostname):
+            raise RuntimeError(
+                "Por segurança, NYXAL_API_TOKEN só pode ser enviado ao endpoint local da Nyxal."
+            )
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 class TurnState:
     """Shared generation counter used to discard answers made stale by barge-in."""
 
@@ -172,7 +204,7 @@ class NyxalChatProcessor(FrameProcessor):
         async with self._http.post(
             f"{self._api_base}/api/chat",
             json=_chat_payload(utterance, self._session_id),
-            headers={"Accept": "application/json"},
+            headers=_api_request_headers(self._api_base),
         ) as response:
             if response.status < 200 or response.status >= 300:
                 # Read only a non-sensitive state label; never log the transcript/body.
