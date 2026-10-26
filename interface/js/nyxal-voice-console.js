@@ -352,7 +352,9 @@
     }).catch(function (error) {
       ["nvcCpu", "nvcRam", "nvcDisk", "nvcGpu", "nvcTemp"].forEach(function (id) {
         var node = document.getElementById(id);
-        if (node && node.textContent === "--") node.textContent = "offline";
+        if (!node) return;
+        node.textContent = "offline";
+        node.title = "Falha ao consultar a observabilidade; leitura anterior descartada.";
       });
       console.warn("Nyxal console: métricas indisponíveis", error);
     });
