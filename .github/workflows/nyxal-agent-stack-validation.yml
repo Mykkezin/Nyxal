@@ -11,6 +11,7 @@ on:
       - "nixal_agent_hub.py"
       - "nixal_intent_router.py"
       - "nixal_responses_api.py"
+      - "teste_nixal_responses_api.py"
       - "nixal_observabilidade_sistema.py"
       - "nixal_integracao_gmail.py"
       - "nixal_integracao_google.py"
@@ -154,6 +155,7 @@ jobs:
             nixal_agent_hub.py \
             nixal_intent_router.py \
             nixal_responses_api.py \
+            teste_nixal_responses_api.py \
             nixal_observabilidade_sistema.py \
             nixal_integracao_gmail.py \
             nixal_capacidade_visual.py \
@@ -190,6 +192,7 @@ jobs:
           python3 -m unittest -v \
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
+            teste_nixal_responses_api \
             teste_nixal_dialogo_router \
             teste_nixal_observabilidade_sistema \
             teste_nixal_capacidade_visual \
