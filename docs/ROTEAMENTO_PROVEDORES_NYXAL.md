@@ -18,10 +18,11 @@ Arquivo privado de ambiente, por exemplo ~/.config/nyxal/nyxal.env (defina permi
 
 \`\`\`dotenv
 NYXAL_AGENT_PROVIDER=auto
-NYXAL_OPENAI_API_KEY=COLOQUE_A_CHAVE_LOCALMENTE
-NYXAL_OPENAI_MODEL=ID_DE_MODELO_DISPONIVEL_NA_SUA_CONTA
-NYXAL_GROK_API_KEY=COLOQUE_A_CHAVE_LOCALMENTE
-NYXAL_GROK_MODEL=ID_DE_MODELO_DISPONIVEL_NA_SUA_CONTA
+# Descomente e preencha apenas quando decidir usar cada provedor.
+# NYXAL_OPENAI_API_KEY=SUA_CHAVE_OPENAI
+# NYXAL_OPENAI_MODEL=ID_DE_MODELO_DISPONIVEL_NA_SUA_CONTA
+# NYXAL_GROK_API_KEY=SUA_CHAVE_XAI
+# NYXAL_GROK_MODEL=ID_DE_MODELO_DISPONIVEL_NA_SUA_CONTA
 \`\`\`
 
 Também são aceitos OPENAI_API_KEY e XAI_API_KEY. A configuração opcional de URL-base é restringida a https://api.openai.com/v1 para OpenAI e https://api.x.ai/v1 para Grok. Sem chave ou modelo, os dois provedores permanecem desativados.
