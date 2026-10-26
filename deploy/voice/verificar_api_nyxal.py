@@ -16,6 +16,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
 from nixal_seguranca_http import host_loopback
 
 
@@ -71,6 +75,19 @@ def _request_headers(api_base: str) -> dict[str, str]:
 
     if not host_loopback(parsed.hostname):
         raise RuntimeError("O smoke test só pode acessar a API local em localhost/loopback.")
+
+    try:
+        expected_port = int(_setting("NYXAL_API_PORT", "8010"))
+    except ValueError as error:
+        raise RuntimeError("NYXAL_API_PORT precisa ser uma porta numérica válida.") from error
+    if not 1 <= expected_port <= 65535:
+        raise RuntimeError("NYXAL_API_PORT precisa estar entre 1 e 65535.")
+    actual_port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+    if actual_port != expected_port:
+        raise RuntimeError(
+            f"NYXAL_API_BASE usa a porta {actual_port}, mas NYXAL_API_PORT={expected_port}; "
+            "nenhuma requisição foi enviada."
+        )
 
     headers = {"Accept": "application/json"}
     token = _setting("NYXAL_API_TOKEN")
