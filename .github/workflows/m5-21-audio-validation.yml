@@ -8,6 +8,10 @@ on:
     branches:
       - main
       - feat/m5-21-audio-nyxos
+    paths:
+      - "nixal_audio_nyxos.py"
+      - "teste_m5_21_audio_nyxos.py"
+      - ".github/workflows/m5-21-audio-validation.yml"
 
 jobs:
   validate-m5-21:
