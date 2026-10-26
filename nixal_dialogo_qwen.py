@@ -87,8 +87,10 @@ class DialogoQwenNixal:
         else:
             self.cliente = ollama
 
-        # Injetado pelo runtime/API; o diálogo continua disponível standalone.
+        # O runtime pode injetar o hub compartilhado; se não o fizer,
+        # a descoberta tardia mantém a conversa integrada a provedores opt-in.
         self.agent_hub: Any | None = None
+        self._agent_hub_autodiscovery_done = False
 
     def responder(
         self,
@@ -163,6 +165,24 @@ class DialogoQwenNixal:
         hub = self.agent_hub
         provider_setting = os.environ.get("NYXAL_AGENT_PROVIDER", "auto").strip().lower() or "auto"
         remote_providers = ("hermes", "openai", "gemini", "grok", "letta")
+
+        # A conversa também consegue descobrir o mesmo hub existente quando o
+        # endpoint de API não injetou uma instância. Sem provedores opt-in, o
+        # Qwen local continua sendo o caminho padrão, sem tráfego externo.
+        if hub is None and not self._agent_hub_autodiscovery_done and provider_setting != "nyxal":
+            self._agent_hub_autodiscovery_done = True
+            try:
+                from nixal_agent_hub import NyxalAgentHub
+
+                candidate = NyxalAgentHub()
+                if provider_setting != "auto" or any(
+                    candidate.provider_configured(name) for name in remote_providers
+                ):
+                    self.agent_hub = candidate
+                    hub = candidate
+            except Exception:
+                hub = None
+
         should_try_hub = hub is not None and provider_setting != "nyxal"
         if should_try_hub and provider_setting == "auto":
             try:
