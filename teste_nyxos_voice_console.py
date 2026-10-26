@@ -34,6 +34,8 @@ class TestNyxalVoiceConsole(unittest.TestCase):
 
     def test_image_generation_uses_existing_visual_endpoint(self):
         self.assertIn('"/api/agent/image"', self.console)
+        self.assertIn("nyxalHandleImageIntent", self.console)
+        self.assertIn("window.nyxalHandleImageIntent", self.html)
         self.assertIn('payload.imagem_base64', self.console)
         self.assertIn('payload.mime_type', self.console)
 
