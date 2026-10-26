@@ -30,6 +30,8 @@ on:
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
+      - "interface/js/nyxal-voice-console.js"
+      - "teste_nyxos_voice_console.py"
       - ".github/workflows/nyxal-agent-stack-validation.yml"
       - "scripts/autorizar_gmail_nyxal.py"
       - "scripts/configurar_hermes_whatsapp_policy.py"
@@ -68,6 +70,8 @@ on:
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
+      - "interface/js/nyxal-voice-console.js"
+      - "teste_nyxos_voice_console.py"
       - ".github/workflows/nyxal-agent-stack-validation.yml"
       - "scripts/autorizar_gmail_nyxal.py"
       - "scripts/configurar_hermes_whatsapp_policy.py"
@@ -134,6 +138,8 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund --package-lock=false
           npm run lint
           npm run build
+      - name: Check voice console JavaScript
+        run: node --check interface/js/nyxal-voice-console.js
       - name: Compile integrations
         run: |
           python3 -m compileall -q \
