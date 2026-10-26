@@ -424,17 +424,44 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("/root/nyxal.env", body)
 
+        resposta_nucleo = {
+            "sucesso": True,
+            "estado": "resposta_pronta",
+            "origem": "nucleo_conversacional_nixal",
+            "resposta": "Resposta indisponível.",
+            "sessao": "sessao-teste",
+            "valor": {
+                "texto": "Resposta indisponível.",
+                "sessao": "sessao-teste",
+                "modo": "dialogo_indisponivel",
+            },
+        }
+        resultado_integracao = {
+            "sucesso": True,
+            "estado": "mensagem_processada_com_sessao",
+            "sessao": "sessao-teste",
+            "valor": {"transporte": {"resposta": resposta_nucleo}},
+        }
         with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="gemini"):
-            with patch.object(api.AGENTE_NYXAL, "responder", side_effect=RuntimeError(detalhe_interno)):
-                status, body = self.request(
-                    "POST", "/api/agent/chat",
-                    body=b'{"mensagem":"teste","provedor":"auto"}',
-                    headers={**auth, "Content-Type": "application/json"},
-                )
+            with patch.object(
+                api.INTEGRACAO_CONVERSACIONAL,
+                "processar_mensagem",
+                return_value=resultado_integracao,
+            ) as processar:
+                with patch.object(api.AGENTE_NYXAL, "responder") as responder_direto:
+                    status, body = self.request(
+                        "POST", "/api/agent/chat",
+                        body=b'{"mensagem":"teste","provedor":"gemini","sessao":"sessao-teste"}',
+                        headers={**auth, "Content-Type": "application/json"},
+                    )
         self.assertEqual(status, 503)
         self.assertIn("O provedor selecionado não está disponível.", body)
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("nao-retornar", body)
+        processar.assert_called_once()
+        self.assertEqual(processar.call_args.kwargs["provedor"], "gemini")
+        self.assertEqual(processar.call_args.kwargs["sessao_id"], "sessao-teste")
+        responder_direto.assert_not_called()
 
         with patch.object(api, "generate_kokoro_audio", side_effect=RuntimeError(detalhe_interno)):
             with patch.object(api.Path, "exists", return_value=True):
@@ -462,6 +489,55 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertIn("O serviço Google Workspace não está disponível.", body)
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("/root/nyxal.env", body)
+
+    def test_agent_chat_uses_core_session_integration_for_remote_provider(self) -> None:
+        api.PROXY_MODE = True
+        api.API_TOKEN = "token-de-teste"
+        answer = {
+            "sucesso": True,
+            "estado": "resposta_conversacional",
+            "origem": "nucleo_conversacional_nixal",
+            "resposta": "Resposta pelo núcleo.",
+            "sessao": "sessao-core-123",
+            "valor": {
+                "texto": "Resposta pelo núcleo.",
+                "sessao": "sessao-core-123",
+                "modo": "resposta_conversacional",
+            },
+        }
+        integration_result = {
+            "sucesso": True,
+            "estado": "mensagem_processada_com_sessao",
+            "sessao": "sessao-core-123",
+            "valor": {"transporte": {"resposta": answer}},
+        }
+        auth = {
+            "Authorization": "Bearer token-de-teste",
+            "Content-Type": "application/json",
+        }
+        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="openai"):
+            with patch.object(
+                api.INTEGRACAO_CONVERSACIONAL,
+                "processar_mensagem",
+                return_value=integration_result,
+            ) as processar:
+                with patch.object(api.AGENTE_NYXAL, "responder") as responder_direto:
+                    status, body = self.request(
+                        "POST",
+                        "/api/agent/chat",
+                        body=b'{"mensagem":"Ol\u00e1","provedor":"openai","sessao":"sessao-core-123"}',
+                        headers=auth,
+                    )
+        self.assertEqual(status, 200, body)
+        self.assertIn("Resposta pelo núcleo.", body)
+        self.assertEqual(json.loads(body)["sessao"], "sessao-core-123")
+        processar.assert_called_once()
+        kwargs = processar.call_args.kwargs
+        self.assertEqual(kwargs["texto"], "Olá")
+        self.assertEqual(kwargs["sessao_id"], "sessao-core-123")
+        self.assertEqual(kwargs["provedor"], "openai")
+        self.assertEqual(kwargs["contexto_sistema"], {})
+        responder_direto.assert_not_called()
 
     def test_limites_de_corpo_sao_aplicados_antes_da_leitura(self) -> None:
         # Os corpos não são enviados intencionalmente: se uma rota tentar lê-los
