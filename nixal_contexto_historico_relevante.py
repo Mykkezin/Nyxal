@@ -228,6 +228,12 @@ class ContextoHistoricoRelevanteNixal:
             and (len(token) >= 3 or token in termos_curtos_validos)
         ]
 
+    @staticmethod
+    def _ciclo(registro: dict[str, Any]) -> dict[str, Any]:
+        """Retorna o ciclo validado do envelope persistido, sem alterar a origem."""
+        ciclo = registro.get("ciclo")
+        return ciclo if isinstance(ciclo, dict) else {}
+
     def analisar_consulta(
         self,
         consulta: str,
