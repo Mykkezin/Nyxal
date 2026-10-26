@@ -24,9 +24,12 @@ Princípios:
 from __future__ import annotations
 
 import copy
+import fcntl
 import hashlib
 import json
 import os
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +52,7 @@ class MemoriaInvestigacaoNixal:
         caminho: Path = ARQUIVO_MEMORIA_PADRAO,
     ) -> None:
         self.caminho = Path(caminho)
+        self._erro_carregamento: str | None = None
         self._dados = self._carregar()
 
     # ============================================================
@@ -56,47 +60,31 @@ class MemoriaInvestigacaoNixal:
     # ============================================================
 
     def _carregar(self) -> dict[str, Any]:
+        """Carrega um arquivo íntegro; corrupção nunca vira memória vazia gravável."""
+        self._erro_carregamento = None
         if not self.caminho.exists():
             return self._estrutura_vazia()
-
         try:
-            dados = json.loads(
-                self.caminho.read_text(
-                    encoding="utf-8"
-                )
-            )
-        except (
-            OSError,
-            json.JSONDecodeError,
-        ):
+            dados = json.loads(self.caminho.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            self._erro_carregamento = "arquivo_ilegivel_ou_json_corrompido"
             return self._estrutura_vazia()
-
-        if not isinstance(
-            dados,
-            dict,
-        ):
+        if not isinstance(dados, dict):
+            self._erro_carregamento = "estrutura_raiz_invalida"
             return self._estrutura_vazia()
-
         if dados.get("versao") != VERSAO_MEMORIA:
+            self._erro_carregamento = "versao_memoria_nao_suportada"
             return self._estrutura_vazia()
-
-        registros = dados.get(
-            "registros",
-            [],
-        )
-
-        if not isinstance(
-            registros,
-            list,
-        ):
+        registros = dados.get("registros")
+        if not isinstance(registros, list):
+            self._erro_carregamento = "lista_registros_invalida"
             return self._estrutura_vazia()
+        for registro in registros:
+            if not isinstance(registro, dict) or not isinstance(registro.get("id"), str) or not isinstance(registro.get("ciclo"), dict):
+                self._erro_carregamento = "registro_memoria_invalido"
+                return self._estrutura_vazia()
+        return {"versao": VERSAO_MEMORIA, "registros": copy.deepcopy(registros)}
 
-        return {
-            "versao": VERSAO_MEMORIA,
-            "registros": copy.deepcopy(
-                registros
-            ),
-        }
 
     @staticmethod
     def _estrutura_vazia() -> dict[str, Any]:
@@ -205,69 +193,44 @@ class MemoriaInvestigacaoNixal:
     # REGISTRO
     # ============================================================
 
-    def registrar(
-        self,
-        ciclo: dict[str, Any],
-    ) -> dict[str, Any]:
-        valido, erro = self._validar_ciclo(
-            ciclo
-        )
-
+    def registrar(self, ciclo: dict[str, Any]) -> dict[str, Any]:
+        valido, erro = self._validar_ciclo(ciclo)
         if not valido:
-            return self._negado(
-                erro or "Ciclo inválido."
-            )
+            return self._negado(erro or "Ciclo inválido.")
+        ciclo_copia = copy.deepcopy(ciclo)
+        registro_id = self._id_registro(ciclo_copia)
 
-        ciclo_copia = copy.deepcopy(
-            ciclo
-        )
-
-        registro_id = self._id_registro(
-            ciclo_copia
-        )
-
-        for registro in self._dados[
-            "registros"
-        ]:
-            if (
-                isinstance(
-                    registro,
-                    dict,
+        # Refresh under an inter-process lock to prevent stale instances overwriting each other.
+        with self._bloquear_escrita():
+            self._dados = self._carregar()
+            if self._erro_carregamento is not None:
+                return self._negado(
+                    f"memoria_degradada:{self._erro_carregamento}; arquivo original preservado."
                 )
-                and registro.get("id")
-                == registro_id
-            ):
-                return {
-                    "sucesso": True,
-                    "estado": "ja_existente",
-                    "origem": self.FONTE,
-                    "valor": copy.deepcopy(
-                        registro
-                    ),
-                }
-
-        registro = {
-            "id": registro_id,
-            "versao_memoria": VERSAO_MEMORIA,
-            "ciclo": ciclo_copia,
-        }
-
-        self._dados[
-            "registros"
-        ].append(
-            registro
-        )
-
-        self._salvar()
-
+            for registro in self._dados["registros"]:
+                if registro.get("id") == registro_id:
+                    return {
+                        "sucesso": True, "estado": "ja_existente",
+                        "origem": self.FONTE, "valor": copy.deepcopy(registro),
+                    }
+            registro = {
+                "id": registro_id,
+                "versao_memoria": VERSAO_MEMORIA,
+                "ciclo": ciclo_copia,
+            }
+            self._dados["registros"].append(registro)
+            try:
+                self._salvar()
+            except OSError:
+                self._dados = self._carregar()
+                return self._negado(
+                    "falha_persistencia; arquivo anterior preservado quando possível."
+                )
         return {
-            "sucesso": True,
-            "estado": "persistido",
-            "origem": self.FONTE,
-            "valor": copy.deepcopy(
-                registro
-            ),
+            "sucesso": True, "estado": "persistido",
+            "origem": self.FONTE, "valor": copy.deepcopy(registro),
         }
+
 
     # ============================================================
     # LEITURA
@@ -315,15 +278,17 @@ class MemoriaInvestigacaoNixal:
 
     def recarregar(self) -> dict[str, Any]:
         self._dados = self._carregar()
-
+        if self._erro_carregamento is not None:
+            return {
+                "sucesso": False, "estado": "memoria_degradada",
+                "origem": self.FONTE, "motivo": self._erro_carregamento,
+                "arquivo_original_preservado": True, "valor": {"quantidade": 0},
+            }
         return {
-            "sucesso": True,
-            "estado": "recarregado",
-            "origem": self.FONTE,
-            "valor": {
-                "quantidade": self.quantidade(),
-            },
+            "sucesso": True, "estado": "recarregado",
+            "origem": self.FONTE, "valor": {"quantidade": self.quantidade()},
         }
+
 
     # ============================================================
     # PROTEÇÕES
@@ -361,31 +326,45 @@ class MemoriaInvestigacaoNixal:
     # PERSISTÊNCIA ATÔMICA
     # ============================================================
 
+    @contextmanager
+    def _bloquear_escrita(self):
+        self.caminho.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = self.caminho.with_name(self.caminho.name + ".lock")
+        lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            os.close(lock_fd)
+
     def _salvar(self) -> None:
-        self.caminho.parent.mkdir(
-            parents=True,
-            exist_ok=True,
+        self.caminho.parent.mkdir(parents=True, exist_ok=True)
+        texto = json.dumps(self._dados, ensure_ascii=False, indent=2)
+        temp_fd, temp_name = tempfile.mkstemp(
+            prefix=f".{self.caminho.name}.", suffix=".tmp", dir=str(self.caminho.parent)
         )
+        try:
+            os.fchmod(temp_fd, 0o600)
+            with os.fdopen(temp_fd, "w", encoding="utf-8") as arquivo:
+                temp_fd = -1
+                arquivo.write(texto)
+                arquivo.flush()
+                os.fsync(arquivo.fileno())
+            os.replace(temp_name, self.caminho)
+            dir_fd = os.open(self.caminho.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        finally:
+            if temp_fd >= 0:
+                os.close(temp_fd)
+            try:
+                os.unlink(temp_name)
+            except FileNotFoundError:
+                pass
 
-        texto = json.dumps(
-            self._dados,
-            ensure_ascii=False,
-            indent=2,
-        )
-
-        temporario = self.caminho.with_suffix(
-            self.caminho.suffix + ".tmp"
-        )
-
-        temporario.write_text(
-            texto,
-            encoding="utf-8",
-        )
-
-        os.replace(
-            temporario,
-            self.caminho,
-        )
 
     @staticmethod
     def _negado(
