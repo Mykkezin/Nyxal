@@ -10,39 +10,72 @@ class TestNyxalAgentHub(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(NyxalAgentHub().resolve_provider(), "nyxal")
 
-    def test_gemini_selecionado_quando_configurado(self):
-        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
-            self.assertEqual(NyxalAgentHub().resolve_provider(), "gemini")
+    def test_gemini_desativado_mesmo_quando_credencial_existe(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "GEMINI_API_KEY": "legacy-test-key",
+            "NYXAL_AGENT_PROVIDER": "gemini",
+        }, clear=True):
+            hub = NyxalAgentHub()
+            self.assertEqual(hub.resolve_provider(), "nyxal")
+            self.assertFalse(hub.provider_configured("gemini"))
+            with self.assertRaises(ValueError):
+                hub.resolve_provider("gemini")
 
-    def test_hermes_tem_precedencia_no_modo_auto(self):
+    def test_auto_permanece_local_mesmo_com_credenciais_remotas(self):
         with patch.dict(os.environ, {
             "NYXAL_HERMES_API_KEY": "test-key",
             "NYXAL_GEMINI_API_KEY": "gemini-key",
+            "LETTA_AGENT_ID": "agent",
+            "LETTA_API_KEY": "letta-key",
+            "LETTA_BASE_URL": "https://api.letta.com",
+            "NYXAL_AGENT_PROVIDER": "auto",
         }, clear=True):
-            self.assertEqual(NyxalAgentHub().resolve_provider(), "hermes")
-
-    def test_auto_recorre_ao_nucleo_local_se_gemini_indisponivel(self):
-        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             hub = NyxalAgentHub()
-            with patch.object(hub, "provider_configured", side_effect=lambda name: name == "gemini"):
-                with patch.object(hub, "_responder_provedor", side_effect=RuntimeError("provedor fora do ar")):
-                    result = hub.responder("Olá", provedor="auto")
+            self.assertEqual(hub.resolve_provider(), "nyxal")
+            self.assertFalse(hub.provider_configured("hermes"))
+            self.assertFalse(hub.provider_configured("letta"))
+
+    def test_auto_nao_tenta_provedores_externos(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_HERMES_API_KEY": "test-hermes",
+            "NYXAL_AGENT_PROVIDER": "auto",
+        }, clear=True):
+            hub = NyxalAgentHub()
+            with patch.object(hub, "_responder_provedor") as remote:
+                result = hub.responder("Olá", provedor="auto")
         self.assertTrue(result["fallback_local"])
         self.assertEqual(result["provedor"], "nyxal")
-        self.assertEqual(result["provedores_tentados"], ["gemini: RuntimeError"])
+        self.assertEqual(result["provedores_tentados"], [])
+        remote.assert_not_called()
 
-    def test_modelo_gemini_padrao_e_38_flash(self):
+    def test_gemini_chat_nao_e_invocado_por_nenhum_roteamento_publico(self):
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
-            with patch("nixal_agent_hub._json_request", return_value={
-                "candidates": [{"content": {"parts": [{"text": "resposta"}]}}]
-            }) as request:
-                NyxalAgentHub()._ask_gemini("Olá", "identidade")
-        self.assertIn("/models/gemini-3.8-flash:generateContent", request.call_args.args[0])
+            hub = NyxalAgentHub()
+            with patch.object(hub, "_ask_gemini") as gemini:
+                result = hub.responder("Olá", provedor="auto")
+        self.assertTrue(result["fallback_local"])
+        gemini.assert_not_called()
 
-    def test_provedor_explicito_nao_configurado_falha(self):
-        with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(RuntimeError):
-                NyxalAgentHub().resolve_provider("gemini")
+    def test_provedores_externos_explicitos_sao_bloqueados(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_HERMES_API_KEY": "test-key",
+            "LETTA_AGENT_ID": "agent",
+            "LETTA_API_KEY": "test-key",
+        }, clear=True):
+            hub = NyxalAgentHub()
+            for provider in ("gemini", "hermes", "letta"):
+                with self.subTest(provider=provider):
+                    with self.assertRaises(ValueError):
+                        hub.resolve_provider(provider)
+
+    def test_chat_api_forces_local_nyxal_even_when_client_requests_gemini(self):
+        from pathlib import Path
+        source = (Path(__file__).resolve().parent / "nyxal_web_api.py").read_text(encoding="utf-8")
+        self.assertIn('provedor = "nyxal"', source)
+        self.assertIn("ignora seleções antigas de Gemini", source)
 
     def test_bloqueia_url_arbitraria_para_hermes_e_letta(self):
         with patch.dict(os.environ, {
@@ -82,11 +115,19 @@ class TestNyxalAgentHub(unittest.TestCase):
         with patch("nixal_agent_hub.Path.read_text", side_effect=OSError("arquivo ausente")):
             self.assertEqual(hub._system_prompt_base(), hub.PROMPT_BASE)
 
-    def test_status_nao_declara_provedores_remotos_conectados_sem_chaves(self):
-        with patch.dict(os.environ, {}, clear=True):
+    def test_status_marca_chat_externo_desativado_mesmo_com_chaves(self):
+        with patch.dict(os.environ, {
+            "NYXAL_GEMINI_API_KEY": "test-key",
+            "NYXAL_HERMES_API_KEY": "test-key",
+            "LETTA_AGENT_ID": "agent",
+            "LETTA_API_KEY": "test-key",
+        }, clear=True):
             status = NyxalAgentHub().contexto()
-            self.assertFalse(status["provedores"]["gemini"]["configurado"])
-            self.assertFalse(status["provedores"]["hermes"]["configurado"])
+            self.assertEqual(status["modo_conversa"], "somente_nyxal_local")
+            self.assertEqual(status["provedor_resolvido"], "nyxal")
+            for provider in ("gemini", "hermes", "letta"):
+                self.assertFalse(status["provedores"][provider]["configurado"])
+                self.assertFalse(status["provedores"][provider]["habilitado"])
             self.assertEqual(status["voz"]["voz_configurada"], "pf_dora")
 
 if __name__ == "__main__":
