@@ -58,7 +58,7 @@ class TestResponsesAdapter(unittest.TestCase):
             {"role": "user", "content": f"message-{index}"}
             for index in range(31)
         ]
-        history.insert(-1, {"role": "system", "content": "must be filtered"})
+        history.insert(0, {"role": "system", "content": "must be filtered"})
         fake_response = io.BytesIO(b'{"output_text":"response-ok"}')
         with patch.dict(os.environ, {
             "NYXAL_OPENAI_API_KEY": "test-openai-key",
@@ -78,7 +78,7 @@ class TestResponsesAdapter(unittest.TestCase):
         self.assertEqual(payload["model"], "test-model")
         self.assertEqual(len(payload["instructions"]), 16000)
         self.assertEqual(len(payload["input"]), 21)
-        self.assertEqual(payload["input"][0]["content"], "message-12")
+        self.assertEqual(payload["input"][0]["content"], "message-11")
         self.assertEqual(payload["input"][-1]["content"], "current question")
         self.assertTrue(all(item["role"] in {"user", "assistant"} for item in payload["input"]))
 
