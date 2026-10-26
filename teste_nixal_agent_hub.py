@@ -219,6 +219,28 @@ class TestNyxalAgentHub(unittest.TestCase):
         self.assertIn("permissão para examinar", result["prompt_extra_capturado"])
         self.assertIn("resultado verificável", result["prompt_extra_capturado"])
 
+    def test_cybersecurity_and_data_science_use_specialist_prompts(self):
+        from nixal_intent_router import classificar_intencao
+        self.assertEqual(
+            classificar_intencao("Ative o modo de cibersegurança defensiva")[ "classe" ],
+            "ciberseguranca_defensiva",
+        )
+        self.assertEqual(
+            classificar_intencao("Quero fazer uma análise de Data Science com dataset"),
+            {"classe": "ciencia_dados", "motivo": "O pedido envolve análise de dados, estatística ou modelagem."},
+        )
+        with patch.dict(os.environ, {}, clear=True):
+            hub = NyxalAgentHub()
+            with patch.object(hub, "provider_configured", return_value=True):
+                with patch.object(hub, "_responder_provedor", side_effect=lambda mensagem, resolved, sessao, contexto, **kwargs: {
+                    "sucesso": True, "provedor": resolved, "resposta": "análise", "sessao": sessao,
+                    "prompt_extra_capturado": kwargs.get("prompt_sistema_extra", ""),
+                }):
+                    cyber = hub.responder("Ative o modo de cibersegurança defensiva")
+                    data = hub.responder("Quero fazer uma análise de Data Science com dataset")
+        self.assertIn("cibersegurança defensiva", cyber["prompt_extra_capturado"])
+        self.assertIn("Data Science", data["prompt_extra_capturado"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
