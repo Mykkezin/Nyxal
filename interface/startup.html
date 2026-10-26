@@ -210,6 +210,7 @@
     (() => {
       const params = new URLSearchParams(window.location.search);
       const fallbackNext = "http://127.0.0.1:8010/";
+      const allowedHosts = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
       let next = fallbackNext;
       try {
         const requestedNext = params.get("next");
@@ -217,12 +218,18 @@
           const destination = new URL(requestedNext);
           const protocolAllowed =
             destination.protocol === "http:" || destination.protocol === "https:";
-          if (protocolAllowed && !destination.username && !destination.password) {
+          const hostAllowed = allowedHosts.has(destination.hostname.toLowerCase());
+          if (
+            protocolAllowed &&
+            hostAllowed &&
+            !destination.username &&
+            !destination.password
+          ) {
             next = destination.href;
           }
         }
       } catch (_) {
-        // Malformed or executable destinations fall back to the local interface.
+        // Invalid or external destinations fall back to the local interface.
       }
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const duration = reduced ? 1000 : 5600;
