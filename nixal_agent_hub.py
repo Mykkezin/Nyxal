@@ -37,6 +37,30 @@ PROMPT_ENGENHARIA_REVERSA = (
     "os componentes existentes da Nyxal em vez de criar uma arquitetura paralela."
 )
 
+PROMPT_CIBERSEGURANCA_DEFENSIVA = (
+    "Atue como especialista em cibersegurança defensiva para ativos autorizados. Priorize "
+    "inventário, modelagem de ameaças, revisão de código, hardening, análise de logs, "
+    "triagem de vulnerabilidades e correções verificáveis. Distinga risco confirmado de "
+    "hipótese, identifique evidências e impacto potencial e proponha remediações graduais. "
+    "Antes de testes com impacto, confirme escopo e autorização. Não afirme que executou "
+    "verificações sem ferramentas e resultados reais."
+)
+
+PROMPT_DATA_SCIENCE = (
+    "Atue como especialista em Data Science. Comece pela pergunta de negócio e pelo "
+    "significado das colunas; avalie qualidade, ausências, vieses e vazamentos de dados; "
+    "escolha métodos estatísticos adequados; valide pressupostos e separe correlação de "
+    "causalidade. Prefira código Python reproduzível, gráficos legíveis e métricas com "
+    "baseline. Não invente valores, resultados ou conclusões; declare limitações e "
+    "incerteza e preserve dados sensíveis."
+)
+
+PROMPTS_ESPECIALIZADOS = {
+    "engenharia_reversa": PROMPT_ENGENHARIA_REVERSA,
+    "ciberseguranca_defensiva": PROMPT_CIBERSEGURANCA_DEFENSIVA,
+    "ciencia_dados": PROMPT_DATA_SCIENCE,
+}
+
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
@@ -254,6 +278,7 @@ class NyxalAgentHub:
                     "designer", "edicao-de-imagem", "edicao-de-video-audio",
                     "desenvolvimento", "observabilidade-do-sistema", "assistente-de-email",
                     "operador-nyxos", "mensageria-segura", "engenharia-reversa",
+                    "ciberseguranca-defensiva", "data-science",
                 ],
             },
             "erro_selecao": selection_error,
@@ -280,11 +305,12 @@ class NyxalAgentHub:
             extra_kwargs["historico_externo"] = historico_externo
         if prompt_sistema_extra is not None:
             extra_kwargs["prompt_sistema_extra"] = prompt_sistema_extra
-        if intent["classe"] == "engenharia_reversa":
+        specialist_prompt = PROMPTS_ESPECIALIZADOS.get(intent["classe"])
+        if specialist_prompt:
             supplied_extra = str(extra_kwargs.get("prompt_sistema_extra") or "").strip()
             extra_kwargs["prompt_sistema_extra"] = (
-                supplied_extra + "\n\n" + PROMPT_ENGENHARIA_REVERSA
-                if supplied_extra else PROMPT_ENGENHARIA_REVERSA
+                supplied_extra + "\n\n" + specialist_prompt
+                if supplied_extra else specialist_prompt
             )
 
         if requested != "auto":
