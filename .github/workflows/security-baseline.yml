@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - security/api-hardening-2026-10
     paths:
       - "nyxal_web_api.py"
       - "nixal_seguranca_http.py"
@@ -20,53 +19,32 @@ on:
       - "teste_decisao_autonoma_ci.py"
       - ".github/workflows/nyxal-nivel9-validation.yml"
       - ".github/workflows/security-baseline.yml"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "nyxal_web_api.py"
-      - "nixal_seguranca_http.py"
-      - "teste_seguranca_api.py"
-      - "deploy/systemd/nyxal-api.service"
-      - "deploy/systemd/nyxos-residente.service"
-      - "deploy/systemd/instalar_nyxos_servicos.sh"
-      - "teste_m5_9_residencia_linux.py"
-      - "docs/SEGURANCA_API_NYXAL.md"
-      - "teste_api_security_auth.py"
-      - "nixal_decisao_autonoma_ci.py"
-      - "nixal_evidencia_ci.py"
-      - "teste_decisao_autonoma_ci.py"
-      - ".github/workflows/nyxal-nivel9-validation.yml"
-      - ".github/workflows/security-baseline.yml"
-
 permissions:
   contents: read
 
 jobs:
   security-baseline:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Configure Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compile API security surface
         id: compile_api
         run: |
-          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_api_security_auth.py teste_decisao_autonoma_ci.py nixal_decisao_autonoma_ci.py nixal_evidencia_ci.py teste_m5_9_residencia_linux.py
+          python3 -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_api_security_auth.py teste_decisao_autonoma_ci.py nixal_decisao_autonoma_ci.py nixal_evidencia_ci.py teste_m5_9_residencia_linux.py
       - name: Run deterministic security policy tests
         id: policy_tests
-        run: python teste_seguranca_api.py
+        run: python3 teste_seguranca_api.py
 
       - name: Run HTTP API security integration tests
         id: http_security
-        run: python -m unittest teste_api_security_auth.py -v
+        run: python3 -m unittest teste_api_security_auth.py -v
 
       - name: Run governed autonomous CI decision tests
         id: decision_policy
-        run: python teste_decisao_autonoma_ci.py
+        run: python3 teste_decisao_autonoma_ci.py
 
       - name: Validate shell installer syntax
         id: shell_syntax
@@ -74,7 +52,7 @@ jobs:
 
       - name: Run Linux residence structural regression
         id: residence_regression
-        run: python teste_m5_9_residencia_linux.py
+        run: python3 teste_m5_9_residencia_linux.py
 
       - name: Evaluate validation evidence with Nyxal decision policy
         if: always()
@@ -88,7 +66,7 @@ jobs:
           SHELL_OUTCOME: ${{ steps.shell_syntax.outcome }}
           RESIDENCE_OUTCOME: ${{ steps.residence_regression.outcome }}
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           import json
           import os
           from pathlib import Path
@@ -111,7 +89,7 @@ jobs:
               json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8"
           )
           PY
-          python nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
+          python3 nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
 
       - name: Archive structured CI evidence
         if: always()
