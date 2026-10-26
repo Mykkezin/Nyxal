@@ -1441,7 +1441,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         if is_agent_or_workspace and not self._local_ou_autorizado():
             return
 
-        if self.path == "/":
+        if parsed_path == "/":
             caminho = caminho_display("index.html") or caminho_interface("index.html")
             if caminho is None:
                 self._send_json(404, {"estado": "interface_indisponivel"})
