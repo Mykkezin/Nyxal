@@ -40,6 +40,22 @@ for unidade in nyxos.target nyxal-api.service nyxos-residente.service nyxos-inte
   fi
 done
 
+SHELL_SCRIPT="${NYXAL_DIR}/deploy/systemd/iniciar_nyxos_shell.sh"
+printf '\n--- Entrypoint do desktop NyxOS ---\n'
+if [[ ! -f "${SHELL_SCRIPT}" ]]; then
+  echo "ERRO: script de entrada ausente: ${SHELL_SCRIPT}"
+elif [[ ! -x /usr/bin/bash ]]; then
+  echo 'ERRO: /usr/bin/bash não existe ou não é executável.'
+else
+  printf 'Arquivo: %s\n' "${SHELL_SCRIPT}"
+  stat -c 'Permissões: %A (%a)' "${SHELL_SCRIPT}" 2>/dev/null || true
+  if /usr/bin/bash -n "${SHELL_SCRIPT}"; then
+    echo 'Sintaxe Bash do desktop: OK.'
+  else
+    echo 'ERRO: a sintaxe Bash do entrypoint falhou.'
+  fi
+fi
+
 if [[ -f "${ENV_FILE}" ]]; then
   printf '\nConfiguração local existe; modo/permissões: '
   stat -c '%a' "${ENV_FILE}" 2>/dev/null || echo 'indisponível'

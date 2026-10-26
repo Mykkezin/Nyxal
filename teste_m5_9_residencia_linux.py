@@ -23,6 +23,7 @@ def main() -> None:
     instalador = ler("instalar_nyxos_servicos.sh")
     desinstalador = ler("desinstalar_nyxos_servicos.sh")
     diagnostico = ler("diagnosticar_nyxos_local.sh")
+    shell_principal = ler("iniciar_nyxos_shell.sh")
 
     for unidade in (api, residente):
         assert "Type=simple" in unidade
@@ -68,6 +69,14 @@ def main() -> None:
 
     assert "Wants=nyxal-api.service nyxos-residente.service" in target
     assert "WantedBy=default.target" in target
+    interface = ler("nyxos-interface.service")
+    assert (
+        "ExecStart=/usr/bin/bash %h/Nyxal/deploy/systemd/iniciar_nyxos_shell.sh"
+        in interface
+    )
+    assert "find_browser()" in shell_principal
+    assert 'exec "${BROWSER}"' in shell_principal
+    assert "iniciar_nyxos_shell.sh" in diagnostico
 
     assert "systemctl --user daemon-reload" in instalador
     assert "systemctl --user enable --now nyxos.target" in instalador
