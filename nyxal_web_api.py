@@ -1311,10 +1311,13 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/api/agent/chat":
-            provedor = payload.get("provedor", os.environ.get("NYXAL_AGENT_PROVIDER", "auto"))
-            if not isinstance(provedor, str):
+            provedor_solicitado = payload.get("provedor")
+            if provedor_solicitado is not None and not isinstance(provedor_solicitado, str):
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": "O campo provedor precisa ser texto."})
                 return
+            # Política de chat somente Nyxal: ignora seleções antigas de Gemini,
+            # auto ou outros provedores enviadas pelo ambiente/cliente.
+            provedor = "nyxal"
             try:
                 provedor_resolvido = AGENTE_NYXAL.resolve_provider(provedor)
                 if provedor_resolvido != "nyxal":
