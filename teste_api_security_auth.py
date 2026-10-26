@@ -2,6 +2,8 @@
 """Testes de integração HTTP para os limites de autenticação e CORS da Nyxal."""
 from __future__ import annotations
 
+import json
+
 import http.client
 import sys
 import threading
