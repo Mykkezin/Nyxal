@@ -3,12 +3,13 @@
 A Nyxal passa a escolher provedores configurados com base em uma classificação determinística da intenção:
 
 - **Operação/ferramentas:** Hermes primeiro.
-- **Código e Data Science:** OpenAI primeiro, depois Hermes e outros provedores disponíveis.
+- **Código, Data Science e raciocínio técnico:** OpenAI primeiro, depois Hermes e outros provedores disponíveis.
+- **Engenharia reversa autorizada e cibersegurança defensiva:** Hermes primeiro para tarefas de ferramentas, seguido por provedores configurados; o prompt especializado inclui o playbook versionado em `skills/`.
 - **Conhecimento geral/raciocínio:** OpenAI, Gemini e Grok antes de agentes auxiliares.
 - **Continuidade de conversa:** Letta primeiro, caso esteja configurado.
 - **Falha ou ausência de provedores remotos:** mantém o fallback local existente.
 
-Esta é a primeira camada de roteamento, baseada em marcadores de intenção e coberta por testes; não é um classificador semântico treinado nem garante que um provedor seja sempre melhor. Cada resposta inclui metadados de rota. O endpoint de estado do agente agrega latência, classes e provedores dos últimos 100 eventos em memória. A telemetria não armazena mensagens nem respostas, e os eventos são descartados quando o processo reinicia.
+Esta é uma camada de roteamento determinística baseada em marcadores de intenção, coberta por testes; não é um classificador semântico treinado nem garante que um provedor seja sempre melhor. O núcleo carrega o playbook local de cada habilidade especializada quando ele existe, tanto nos provedores remotos quanto no fallback Qwen local. Os playbooks reforçam escopo autorizado, evidências, separação entre fatos e hipóteses e proibição de declarar ações não verificadas. Cada resposta inclui metadados de rota. O endpoint de estado do agente agrega latência, classes e provedores dos últimos 100 eventos em memória. A telemetria não armazena mensagens nem respostas, e os eventos são descartados quando o processo reinicia.
 
 ## OpenAI e Grok (xAI)
 
