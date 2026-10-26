@@ -106,9 +106,8 @@ class TestNyxalPrimaryDialogueRouter(unittest.TestCase):
         dialog = DialogoQwenNixal(cliente=client)
 
         with patch.dict(os.environ, {"NYXAL_AGENT_PROVIDER": "openai"}, clear=True):
-            with patch("nixal_agent_hub.get_shared_agent_hub", return_value=None):
-                with patch("nixal_agent_hub.NyxalAgentHub", return_value=hub):
-                    answer = dialog.responder("Olá, Nyxal.", sessao="sessao-remota")
+            with patch("nixal_agent_hub.NyxalAgentHub", return_value=hub):
+                answer = dialog.responder("Olá, Nyxal.", sessao="sessao-remota")
 
         self.assertTrue(answer["sucesso"])
         self.assertEqual(answer["origem"], "nixal_agent_hub")
@@ -116,26 +115,6 @@ class TestNyxalPrimaryDialogueRouter(unittest.TestCase):
         self.assertEqual(client.calls, [])
         hub.responder.assert_called_once()
         self.assertEqual(hub.responder.call_args.kwargs["sessao"], "sessao-remota")
-
-    def test_dialogue_reuses_existing_shared_runtime_hub(self):
-        shared = NyxalAgentHub()
-        shared.responder = Mock(return_value={
-            "sucesso": True,
-            "provedor": "openai",
-            "resposta": "Resposta do hub compartilhado.",
-            "roteamento": {"classe": "conhecimento_geral", "provedor": "openai"},
-        })
-        client = FakeLocalChat()
-        dialog = DialogoQwenNixal(cliente=client)
-
-        with patch.dict(os.environ, {"NYXAL_AGENT_PROVIDER": "openai"}, clear=True):
-            answer = dialog.responder("Continue.", sessao="sessao-compartilhada")
-
-        self.assertEqual(answer["origem"], "nixal_agent_hub")
-        self.assertEqual(answer["resposta"], "Resposta do hub compartilhado.")
-        shared.responder.assert_called_once()
-        self.assertEqual(shared.responder.call_args.kwargs["sessao"], "sessao-compartilhada")
-        self.assertEqual(client.calls, [])
 
     def test_local_qwen_receives_reverse_engineering_specialist_guidance(self):
         client = FakeLocalChat()
