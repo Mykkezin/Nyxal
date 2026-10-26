@@ -28,6 +28,8 @@ def main() -> None:
     assert 'destination.protocol === "https:"' in splash
     assert 'const allowedhosts = new set(["127.0.0.1", "localhost", "[::1]", "::1"])' in splash
     assert "allowedhosts.has(destination.hostname.tolowercase())" in splash
+    assert 'const endpointportallowed = destination.port === "8010"' in splash
+    assert "endpointportallowed" in splash
     assert "destination.username" in splash
     assert "destination.password" in splash
     assert "fallbacknext" in splash
