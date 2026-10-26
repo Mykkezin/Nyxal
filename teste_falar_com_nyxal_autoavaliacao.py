@@ -108,6 +108,59 @@ class TesteAutoavaliacaoLocal(unittest.TestCase):
         self.assertEqual(resultado["sessao"], "sessao-retornada")
         self.assertTrue(connection.closed)
 
+    def test_token_e_lido_da_configuracao_local_se_nao_existe_no_ambiente(self):
+        fake = FakeResponse({"resposta": "ok", "sessao": "s"})
+        connection = FakeConnection(fake)
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "nyxal.env"
+            config.write_text(
+                "NYXAL_API_TOKEN='token-da-configuracao'\n",
+                encoding="utf-8",
+            )
+            with patch.object(ferramenta, "NYXAL_ENV_FILE", config):
+                with patch.dict(os.environ, {}, clear=True):
+                    with patch.object(ferramenta, "HTTPConnection", return_value=connection):
+                        ferramenta.chamar_nyxal(
+                            "teste", sessao="s", port=8010, timeout=5
+                        )
+        self.assertEqual(
+            connection.request_info["headers"]["Authorization"],
+            "Bearer token-da-configuracao",
+        )
+        self.assertNotIn(
+            "token-da-configuracao",
+            connection.request_info["body"].decode("utf-8"),
+        )
+
+    def test_ambiente_tem_precedencia_sobre_token_da_configuracao(self):
+        fake = FakeResponse({"resposta": "ok", "sessao": "s"})
+        connection = FakeConnection(fake)
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "nyxal.env"
+            config.write_text("NYXAL_API_TOKEN=token-antigo\n", encoding="utf-8")
+            with patch.object(ferramenta, "NYXAL_ENV_FILE", config):
+                with patch.dict(os.environ, {"NYXAL_API_TOKEN": "token-do-ambiente"}):
+                    with patch.object(ferramenta, "HTTPConnection", return_value=connection):
+                        ferramenta.chamar_nyxal(
+                            "teste", sessao="s", port=8010, timeout=5
+                        )
+        self.assertEqual(
+            connection.request_info["headers"]["Authorization"],
+            "Bearer token-do-ambiente",
+        )
+
+    def test_rejeita_timeout_ou_sessao_invalida_antes_da_conexao(self):
+        with patch.object(ferramenta, "HTTPConnection") as connection:
+            with self.assertRaisesRegex(ValueError, "timeout_invalido"):
+                ferramenta.chamar_nyxal(
+                    "teste", sessao="s", port=8010, timeout=0
+                )
+            with self.assertRaisesRegex(ValueError, "sessao_invalida"):
+                ferramenta.chamar_nyxal(
+                    "teste", sessao=" " * 2, port=8010, timeout=5
+                )
+        connection.assert_not_called()
+
     def test_token_e_enviado_apenas_no_cabecalho(self):
         fake = FakeResponse({"resposta": "ok", "sessao": "s"})
         connection = FakeConnection(fake)
