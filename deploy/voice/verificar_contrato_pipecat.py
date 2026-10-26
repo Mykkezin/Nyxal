@@ -22,13 +22,13 @@ class NyxalPipecatContractTests(unittest.TestCase):
 
     def test_never_sends_local_token_to_remote_api(self):
         with patch.dict(os.environ, {"NYXAL_API_TOKEN": "local-secret"}, clear=True):
-            with self.assertRaisesRegex(RuntimeError, "só pode ser enviado ao endpoint local"):
+            with self.assertRaisesRegex(RuntimeError, "localhost/loopback"):
                 _api_request_headers("https://nyxal.example")
 
-    def test_accepts_remote_url_without_leaking_local_token(self):
+    def test_rejects_remote_api_even_without_token(self):
         with patch.dict(os.environ, {}, clear=True):
-            headers = _api_request_headers("https://nyxal.example")
-        self.assertEqual(headers, {"Accept": "application/json"})
+            with self.assertRaisesRegex(RuntimeError, "localhost/loopback"):
+                _api_request_headers("https://nyxal.example")
 
     def test_rejects_api_urls_with_embedded_credentials(self):
         with patch.dict(os.environ, {}, clear=True):
