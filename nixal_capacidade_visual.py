@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 import os
 from typing import Any
@@ -11,7 +12,62 @@ from urllib.request import Request, urlopen
 
 
 MAX_INPUT_BYTES = 8 * 1024 * 1024
+MAX_OUTPUT_BYTES = 12 * 1024 * 1024
 ALLOWED_MIME = {"image/png", "image/jpeg", "image/webp"}
+
+
+def _assinatura_compativel(binary: bytes, mime_type: str) -> bool:
+    """Verifica a assinatura do conteúdo para impedir MIME/Base64 incoerentes."""
+    if mime_type == "image/png":
+        return binary.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+    if mime_type == "image/jpeg":
+        return binary.startswith(b"\\xff\\xd8\\xff")
+    if mime_type == "image/webp":
+        return len(binary) >= 12 and binary[:4] == b"RIFF" and binary[8:12] == b"WEBP"
+    return False
+
+
+def _decodificar_imagem_validada(
+    data: str,
+    mime_type: str,
+    *,
+    limite_bytes: int,
+    descricao: str,
+) -> bytes:
+    """Decodifica Base64 estritamente, aplica limite e confere assinatura/MIME."""
+    try:
+        binary = base64.b64decode(data, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise ValueError(f"Base64 inválido para {descricao}.") from exc
+    if not binary:
+        raise ValueError(f"{descricao.capitalize()} vazia.")
+    if len(binary) > limite_bytes:
+        raise ValueError(f"{descricao.capitalize()} excede o limite de {limite_bytes} bytes.")
+    if not _assinatura_compativel(binary, mime_type):
+        raise ValueError(f"Os bytes de {descricao} não correspondem ao MIME {mime_type}.")
+    return binary
+
+
+def _imagem_saida_validada(data: Any, mime_type: Any) -> dict[str, str] | None:
+    """Retorna uma imagem saída somente se MIME, Base64, assinatura e tamanho forem válidos."""
+    if not isinstance(data, str) or not isinstance(mime_type, str):
+        return None
+    normalized_mime = mime_type.strip().lower()
+    if normalized_mime not in ALLOWED_MIME:
+        return None
+    try:
+        binary = _decodificar_imagem_validada(
+            data,
+            normalized_mime,
+            limite_bytes=MAX_OUTPUT_BYTES,
+            descricao="imagem gerada",
+        )
+    except ValueError:
+        return None
+    return {
+        "mime_type": normalized_mime,
+        "base64": base64.b64encode(binary).decode("ascii"),
+    }
 
 
 class CapacidadeVisualGeminiNixOS:
@@ -31,6 +87,7 @@ class CapacidadeVisualGeminiNixOS:
             "estado": "configurado" if configured else "configuracao_pendente",
             "modelo": os.environ.get("NYXAL_GEMINI_IMAGE_MODEL", "gemini-nano-banana-2.1"),
             "entrada_max_bytes": MAX_INPUT_BYTES,
+            "saida_max_bytes": MAX_OUTPUT_BYTES,
             "mime_permitidos": sorted(ALLOWED_MIME),
             "salva_upload_no_servidor": False,
         }
@@ -61,20 +118,19 @@ class CapacidadeVisualGeminiNixOS:
             raise ValueError("O tipo MIME da imagem é inválido.")
 
         inputs: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
-        if imagem_base64:
-            if not isinstance(mime_type, str) or mime_type.lower() not in ALLOWED_MIME:
+        if imagem_base64 is not None:
+            if not isinstance(mime_type, str) or mime_type.strip().lower() not in ALLOWED_MIME:
                 raise ValueError("Formato de imagem não permitido. Use PNG, JPEG ou WebP.")
-            try:
-                binary = base64.b64decode(imagem_base64, validate=True)
-            except (ValueError, base64.binascii.Error) as exc:
-                raise ValueError("A imagem enviada não contém Base64 válido.") from exc
-            if not binary:
-                raise ValueError("O arquivo de imagem está vazio.")
-            if len(binary) > MAX_INPUT_BYTES:
-                raise ValueError("A imagem excede o limite de 8 MiB.")
+            normalized_mime = mime_type.strip().lower()
+            binary = _decodificar_imagem_validada(
+                imagem_base64,
+                normalized_mime,
+                limite_bytes=MAX_INPUT_BYTES,
+                descricao="imagem enviada",
+            )
             inputs.append({
                 "type": "image",
-                "mime_type": mime_type.lower(),
+                "mime_type": normalized_mime,
                 "data": base64.b64encode(binary).decode("ascii"),
             })
 
@@ -114,10 +170,11 @@ class CapacidadeVisualGeminiNixOS:
             if isinstance(output_text, str) and output_text.strip():
                 text_parts.append(output_text.strip())
             output_image = result.get("output_image")
-            if isinstance(output_image, dict) and isinstance(output_image.get("data"), str):
-                mime = output_image.get("mime_type") or "image/png"
-                if mime in ALLOWED_MIME:
-                    image = {"mime_type": mime, "base64": output_image["data"]}
+            if isinstance(output_image, dict):
+                image = _imagem_saida_validada(
+                    output_image.get("data"),
+                    output_image.get("mime_type") or "image/png",
+                )
         steps = result.get("steps", []) if isinstance(result, dict) else []
         for step in steps if isinstance(steps, list) else []:
             if not isinstance(step, dict) or step.get("type") != "model_output":
@@ -131,10 +188,13 @@ class CapacidadeVisualGeminiNixOS:
                     text_value = item.get("text")
                     if isinstance(text_value, str) and text_value.strip():
                         text_parts.append(text_value.strip())
-                elif block_type == "image" and isinstance(item.get("data"), str):
-                    mime = item.get("mime_type") or "image/png"
-                    if mime in ALLOWED_MIME:
-                        image = {"mime_type": mime, "base64": item["data"]}
+                elif block_type == "image":
+                    candidate_image = _imagem_saida_validada(
+                        item.get("data"),
+                        item.get("mime_type") or "image/png",
+                    )
+                    if candidate_image is not None:
+                        image = candidate_image
                         break
             if image:
                 break
@@ -151,10 +211,13 @@ class CapacidadeVisualGeminiNixOS:
                     if isinstance(item.get("text"), str) and item["text"].strip():
                         text_parts.append(item["text"].strip())
                     data = item.get("inlineData") or item.get("inline_data")
-                    if isinstance(data, dict) and isinstance(data.get("data"), str):
-                        mime = data.get("mimeType") or data.get("mime_type") or "image/png"
-                        if mime in ALLOWED_MIME:
-                            image = {"mime_type": mime, "base64": data["data"]}
+                    if isinstance(data, dict):
+                        candidate_image = _imagem_saida_validada(
+                            data.get("data"),
+                            data.get("mimeType") or data.get("mime_type") or "image/png",
+                        )
+                        if candidate_image is not None:
+                            image = candidate_image
                             break
 
         if image is None:
@@ -171,4 +234,4 @@ class CapacidadeVisualGeminiNixOS:
         }
 
 
-__all__ = ["CapacidadeVisualGeminiNixOS", "MAX_INPUT_BYTES", "ALLOWED_MIME"]
+__all__ = ["CapacidadeVisualGeminiNixOS", "MAX_INPUT_BYTES", "MAX_OUTPUT_BYTES", "ALLOWED_MIME"]
