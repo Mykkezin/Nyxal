@@ -778,9 +778,7 @@
             </span>
             <span id="aiStatusText" class="font-orbitron text-xs font-bold text-hud-cyan tracking-wider">NYXAL • PRESENÇA ATIVA</span>
           </div>
-          <button onclick="toggleAvatarSourceModal()" class="text-[10px] font-mono text-slate-400 hover:text-hud-cyan transition-colors" title="Ajustar Vídeo/Imagem Holográfica">
-            <i class="fa-solid fa-sliders text-xs"></i> VIDEO
-          </button>
+          <span class="text-[10px] font-mono text-slate-400" title="Presença vetorial autônoma, sem dependência de vídeo externo"><i class="fa-solid fa-brain text-xs text-hud-cyan"></i> AUTÔNOMA</span>
         </div>
 
         <!-- Video Hologram Container -->
@@ -801,26 +799,74 @@
             </div>
           </div>
 
-          <!-- Video Element (Loading user's generated holographic video) -->
-          <video 
-            id="hologramVideo" 
-            autoplay 
-            loop 
-            muted 
-            playsinline 
-            hidden
-            class="w-full h-full object-cover object-center relative z-10 filter brightness-110 contrast-125 saturate-125 transition-all duration-500"
-            onerror="handleVideoLoadError()"
-          >
-          </video>
-
-          <!-- Fallback Image Element if Video unavailable -->
-          <img 
-            id="hologramImageFallback" 
-            src="/interface/nyxal-presenca.jpg" 
-            alt="Nyxal Hologram Fallback" 
-            class="w-full h-full object-cover object-center relative z-10 filter brightness-110 contrast-125"
-          />
+          <!-- Presença vetorial autônoma: não depende de vídeo, arquivo local ou serviço externo. -->
+          <div id="nyxalCharacterSvg" class="relative z-10 flex h-full w-full items-center justify-center" role="img" aria-label="Nyxal, presença digital autônoma">
+            <svg viewBox="0 0 360 320" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="nyxalHalo" cx="50%" cy="42%" r="60%">
+                  <stop offset="0" stop-color="#7dd3fc" stop-opacity=".54"/>
+                  <stop offset=".56" stop-color="#2563eb" stop-opacity=".16"/>
+                  <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+                </radialGradient>
+                <linearGradient id="nyxalSkin" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#f5e8f3"/>
+                  <stop offset=".55" stop-color="#a8c3e3"/>
+                  <stop offset="1" stop-color="#4b7097"/>
+                </linearGradient>
+                <linearGradient id="nyxalHair" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#d8efff"/>
+                  <stop offset=".46" stop-color="#7299c5"/>
+                  <stop offset="1" stop-color="#182c4c"/>
+                </linearGradient>
+                <linearGradient id="nyxalCloak" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#24476a"/>
+                  <stop offset="1" stop-color="#040813"/>
+                </linearGradient>
+                <filter id="nyxalSoftGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="5"/>
+                </filter>
+                <style>
+                  @keyframes nyxalAvatarFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+                  @keyframes nyxalAvatarPulse { 0%,100% { opacity: .2; transform: scale(.96); } 50% { opacity: .62; transform: scale(1.05); } }
+                  @keyframes nyxalOrbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                  .nyxal-avatar-float { transform-box: fill-box; transform-origin: center; animation: nyxalAvatarFloat 4.6s ease-in-out infinite; }
+                  .nyxal-avatar-aura { transform-box: fill-box; transform-origin: center; animation: nyxalAvatarPulse 3.3s ease-in-out infinite; }
+                  .nyxal-avatar-orbit { transform-box: fill-box; transform-origin: center; animation: nyxalOrbitSpin 30s linear infinite; }
+                  @media (prefers-reduced-motion: reduce) { .nyxal-avatar-float,.nyxal-avatar-aura,.nyxal-avatar-orbit { animation: none; } }
+                </style>
+              </defs>
+              <circle cx="180" cy="145" r="128" fill="url(#nyxalHalo)" class="nyxal-avatar-aura"/>
+              <g class="nyxal-avatar-orbit" fill="none" stroke="#7dd3fc" stroke-opacity=".38">
+                <ellipse cx="180" cy="145" rx="107" ry="42" stroke-width="1.1" transform="rotate(-28 180 145)"/>
+                <ellipse cx="180" cy="145" rx="106" ry="42" stroke-width=".7" transform="rotate(54 180 145)"/>
+                <circle cx="279" cy="108" r="3" fill="#d9f5ff" stroke="none"/>
+                <circle cx="82" cy="177" r="2.5" fill="#d9f5ff" stroke="none"/>
+              </g>
+              <g class="nyxal-avatar-float">
+                <path d="M83 290 Q89 228 121 210 L145 198 L216 198 L241 211 Q275 236 278 290 Z" fill="url(#nyxalCloak)" stroke="#7dd3fc" stroke-opacity=".56" stroke-width="1.5"/>
+                <path d="M143 202 L180 253 L217 202 L205 290 L155 290 Z" fill="#071426" stroke="#8bdcff" stroke-opacity=".62" stroke-width="1"/>
+                <path d="M155 202 L180 231 L205 202" fill="none" stroke="#b5eaff" stroke-opacity=".72" stroke-width="2"/>
+                <path d="M160 185 L160 213 Q180 231 200 213 L200 185" fill="url(#nyxalSkin)"/>
+                <path d="M129 116 Q131 67 180 65 Q231 68 232 119 L224 162 Q217 193 180 201 Q143 193 136 162 Z" fill="url(#nyxalSkin)" stroke="#d8f2ff" stroke-opacity=".84" stroke-width="1.2"/>
+                <path d="M128 130 Q115 91 139 65 Q159 43 190 52 Q227 50 238 88 Q243 109 231 138 L218 106 Q199 102 184 84 Q168 105 143 111 L140 150 Z" fill="url(#nyxalHair)" stroke="#b8e8ff" stroke-opacity=".72" stroke-width="1.2"/>
+                <path d="M141 130 Q155 119 169 130" fill="none" stroke="#172d4c" stroke-width="4" stroke-linecap="round"/>
+                <path d="M191 130 Q205 119 219 130" fill="none" stroke="#172d4c" stroke-width="4" stroke-linecap="round"/>
+                <path d="M146 139 Q157 132 169 139" fill="none" stroke="#76e4ff" stroke-width="2.4" stroke-linecap="round"/>
+                <path d="M191 139 Q203 132 215 139" fill="none" stroke="#76e4ff" stroke-width="2.4" stroke-linecap="round"/>
+                <circle cx="158" cy="138" r="2.3" fill="#e8fbff"/>
+                <circle cx="203" cy="138" r="2.3" fill="#e8fbff"/>
+                <path d="M180 140 L176 160 L183 162" fill="none" stroke="#6688a9" stroke-width="1.7" stroke-linecap="round"/>
+                <path d="M165 174 Q180 181 195 174" fill="none" stroke="#355c7e" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M133 106 Q140 72 171 68 Q201 60 223 92" fill="none" stroke="#e3f7ff" stroke-opacity=".8" stroke-width="2"/>
+                <path d="M121 113 L106 144 L124 137 M235 112 L252 144 L234 138" fill="none" stroke="#7dd3fc" stroke-opacity=".6" stroke-width="2"/>
+                <path d="M130 214 L109 251 L132 246 M230 214 L251 251 L228 246" fill="none" stroke="#6cccf2" stroke-opacity=".65" stroke-width="2"/>
+                <path d="M180 237 L180 274" stroke="#7dd3fc" stroke-opacity=".8" stroke-width="1.5"/>
+                <circle cx="180" cy="240" r="8" fill="#0b223c" stroke="#83ddff" stroke-width="1.2"/>
+                <path d="M180 233 L185 240 L180 247 L175 240 Z" fill="#a5f3fc"/>
+              </g>
+              <text x="180" y="308" font-family="Orbitron, sans-serif" font-size="10" letter-spacing="4" text-anchor="middle" fill="#a9d8f1">NYXAL · RESIDENTE</text>
+            </svg>
+          </div>
 
           <!-- Subtitle / Voice Output Overlay -->
           <div id="voiceDiagnostics" class="fixed bottom-2 left-2 z-50 hidden px-2 py-1 rounded bg-black/70 border border-hud-cyan/20 text-[9px] font-mono text-hud-cyan pointer-events-none"></div>
@@ -958,29 +1004,6 @@
     </div>
   </div>
 
-  <!-- 2. AVATAR / HOLOGRAM SOURCE MODAL -->
-  <div id="avatarModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
-    <div class="hud-card cyber-brackets w-full max-w-md p-6 space-y-4">
-      <div class="flex justify-between items-center border-b border-hud-border/40 pb-3">
-        <h3 class="font-orbitron font-bold text-hud-cyan text-base flex items-center gap-2">
-          <i class="fa-solid fa-video"></i> CARREGAR HOLOGRAMA DA NYXAL
-        </h3>
-        <button onclick="closeModal('avatarModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-      </div>
-
-      <div class="space-y-3 text-xs font-rajdhani">
-        <div>
-          <label class="block text-slate-300 font-bold mb-1">ARQUIVO LOCAL DE VÍDEO / IMAGEM</label>
-          <input type="file" id="avatarFileInput" accept="video/*,image/*" onchange="handleLocalAvatarFile(event)" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-orbitron file:bg-hud-cyan file:text-black hover:file:bg-cyan-300 cursor-pointer" />
-        </div>
-      </div>
-
-      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
-        <button onclick="closeModal('avatarModal')" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-orbitron">Fechar</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 3. ORBITAL NODE DETAIL MODAL -->
   <div id="nodeDetailModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
     <div class="hud-card cyber-brackets w-full max-w-lg p-6 space-y-4">
@@ -1012,95 +1035,6 @@
     const VOICE_UI_IDLE_HIDE_MS = 60000;
     let isNyxalOnline = false;
     let nyxalSessionId = sessionStorage.getItem('NYXAL_SESSION_ID') || null;
-
-    // ================= NYXAL HOLOGRAM PERSISTENCE =================
-    const NYXAL_AVATAR_DB = 'nyxal-interface-storage';
-    const NYXAL_AVATAR_STORE = 'settings';
-    const NYXAL_AVATAR_KEY = 'hologram';
-
-    function openAvatarDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(NYXAL_AVATAR_DB, 1);
-        request.onupgradeneeded = () => {
-          const db = request.result;
-          if (!db.objectStoreNames.contains(NYXAL_AVATAR_STORE)) {
-            db.createObjectStore(NYXAL_AVATAR_STORE);
-          }
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    }
-
-    async function saveHologramBlob(file) {
-      const db = await openAvatarDB();
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction(NYXAL_AVATAR_STORE, 'readwrite');
-        tx.objectStore(NYXAL_AVATAR_STORE).put({
-          kind: file.type,
-          blob: file,
-          name: file.name,
-          updatedAt: Date.now()
-        }, NYXAL_AVATAR_KEY);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-      });
-      db.close();
-    }
-
-    async function loadHologramBlob() {
-      const db = await openAvatarDB();
-      const value = await new Promise((resolve, reject) => {
-        const tx = db.transaction(NYXAL_AVATAR_STORE, 'readonly');
-        const request = tx.objectStore(NYXAL_AVATAR_STORE).get(NYXAL_AVATAR_KEY);
-        request.onsuccess = () => resolve(request.result || null);
-        request.onerror = () => reject(request.error);
-      });
-      db.close();
-      return value;
-    }
-
-    function clearStoredHologram() {
-      return openAvatarDB().then(db => new Promise((resolve, reject) => {
-        const tx = db.transaction(NYXAL_AVATAR_STORE, 'readwrite');
-        tx.objectStore(NYXAL_AVATAR_STORE).delete(NYXAL_AVATAR_KEY);
-        tx.oncomplete = () => { db.close(); resolve(); };
-        tx.onerror = () => { db.close(); reject(tx.error); };
-      }));
-    }
-
-    function setHologramMedia(url, kind) {
-      const video = document.getElementById('hologramVideo');
-      const img = document.getElementById('hologramImageFallback');
-      if (!video || !img) return;
-
-      if (kind.startsWith('video/')) {
-        img.classList.add('hidden');
-        video.classList.remove('hidden');
-        video.src = url;
-        video.play().catch(() => {});
-      } else {
-        video.pause();
-        video.removeAttribute('src');
-        video.load();
-        video.classList.add('hidden');
-        img.classList.remove('hidden');
-        img.src = url;
-      }
-    }
-
-    async function restoreStoredHologram() {
-      try {
-        const stored = await loadHologramBlob();
-        if (stored?.blob instanceof Blob) {
-          setHologramMedia(URL.createObjectURL(stored.blob), stored.kind || stored.blob.type || 'image/*');
-          return;
-        }
-
-      } catch (err) {
-        console.warn('Não foi possível restaurar a presença holográfica:', err);
-      }
-    }
 
     // WEB AUDIO SYNTHESIZER FOR HUD SFX & VOICE REVERB
     let audioCtx = null;
@@ -1721,8 +1655,6 @@
       speakGoddessNyxVoice("Configuração de rede atualizada. Conectando à ponte Nyxal.");
     }
 
-    restoreStoredHologram();
-
     // ================= BACKEND STATUS POLLING =================
     function atualizarGaugeSistema(circleId, textId, valor) {
       const circle = document.getElementById(circleId);
@@ -2291,6 +2223,17 @@
       showSubtitles(`Entendendo: "${msg}"...`);
 
       try {
+        if (typeof window.nyxalHandleImageIntent === 'function') {
+          const imageIntent = await window.nyxalHandleImageIntent(msg);
+          if (imageIntent && imageIntent.handled) {
+            const imageReply = imageIntent.resposta || 'Concluí o pedido visual.';
+            setHologramProcessing(false);
+            showSubtitles(imageReply);
+            await speakGoddessNyxVoice(imageIntent.fala || imageReply, false);
+            return;
+          }
+        }
+
         const { response: res, data } = await nyxalApiPost('/api/chat', {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
@@ -3191,38 +3134,6 @@
 
       updateVoiceConversationButton();
       setGlobeVoiceState('idle');
-    }
-
-    // ================= HOLOGRAM SOURCE CONTROL =================
-    function toggleAvatarSourceModal() {
-      playHudSound('open');
-      document.getElementById('avatarModal').classList.remove('hidden');
-      setHologramReceded(true);
-    }
-
-    async function handleLocalAvatarFile(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      try {
-        await saveHologramBlob(file);
-        const url = URL.createObjectURL(file);
-        setHologramMedia(url, file.type || 'image/*');
-
-        closeModal('avatarModal');
-        speakGoddessNyxVoice("Arquivo de presença visual atualizado e salvo.");
-      } catch (err) {
-        console.error('Falha ao salvar o arquivo holográfico:', err);
-        alert('Não foi possível salvar esse arquivo no armazenamento local do navegador.');
-      }
-    }
-
-    function handleVideoLoadError() {
-      console.warn("Holographic video feed unavailable. Switching to local Nyxal image fallback.");
-      const video = document.getElementById('hologramVideo');
-      const img = document.getElementById('hologramImageFallback');
-      video.classList.add('hidden');
-      img.classList.remove('hidden');
     }
 
     // ================= THREE.JS 3D HOLOGRAPHIC COMPUTATIONAL CORE =================

@@ -179,6 +179,7 @@ jobs:
           python3 -m unittest -v \
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
+            teste_nyxos_voice_console \
             teste_nixal_observabilidade_sistema \
             teste_nixal_capacidade_visual \
             teste_nixal_integracao_google \
