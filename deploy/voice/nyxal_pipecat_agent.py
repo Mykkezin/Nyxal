@@ -131,13 +131,15 @@ def _api_request_headers(api_base: str) -> dict[str, str]:
     ):
         raise ValueError("NYXAL_API_BASE precisa ser uma URL HTTP(S) sem credenciais, query ou fragmento.")
 
+    if not host_loopback(parsed.hostname):
+        raise RuntimeError(
+            "NYXAL_API_BASE deve apontar para localhost/loopback; "
+            "o adaptador de voz não pode falar com outra instância remota."
+        )
+
     headers = {"Accept": "application/json"}
     token = os.environ.get("NYXAL_API_TOKEN", "").strip()
     if token:
-        if not host_loopback(parsed.hostname):
-            raise RuntimeError(
-                "Por segurança, NYXAL_API_TOKEN só pode ser enviado ao endpoint local da Nyxal."
-            )
         headers["Authorization"] = f"Bearer {token}"
     return headers
 
@@ -275,7 +277,10 @@ class NyxalChatProcessor(FrameProcessor):
 async def _check_api(api_base: str) -> None:
     timeout = aiohttp.ClientTimeout(total=5, connect=3)
     async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(f"{api_base.rstrip('/')}/health") as response:
+        async with session.get(
+            f"{api_base.rstrip('/')}/health",
+            headers=_api_request_headers(api_base),
+        ) as response:
             if response.status != 200:
                 raise RuntimeError(f"Nyxal API health returned HTTP {response.status}")
             await response.read()
