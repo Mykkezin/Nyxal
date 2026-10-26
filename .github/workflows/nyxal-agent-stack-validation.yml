@@ -32,7 +32,6 @@ on:
       - "scripts/nyxal_letta_memory.py"
       - "deploy/agent/**"
       - "deploy/voice/**"
-      - ".github/workflows/nyxal-agent-stack-validation.yml"
   push:
     branches:
       - feat/nyxal-agent-stack-current-main-20261009
