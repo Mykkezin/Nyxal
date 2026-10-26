@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""Regressões de corrupção, preservação e concorrência das memórias duráveis."""
+from __future__ import annotations
+
+import stat
+import tempfile
+import unittest
+from pathlib import Path
+
+from nixal_memoria_investigacao import MemoriaInvestigacaoNixal
+from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
+
+
+def ciclo(hipotese: str) -> dict:
+    return {
+        "necessidade": "auditar persistência",
+        "hipotese": hipotese,
+        "estado_atual": "provisoria",
+        "historico": [],
+        "testes": [],
+        "avaliacoes": [],
+        "conhecimento_permanente": False,
+    }
+
+
+def candidato(texto: str) -> dict:
+    return {
+        "texto": texto,
+        "tipo": "observacao",
+        "origem": {"estado": "suportada"},
+        "conhecimento_permanente": False,
+        "gravado": False,
+    }
+
+
+class TesteMemoriasPersistenciaSegura(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+
+    def test_investigacao_corrompida_e_preservada_e_bloqueia_gravacao(self):
+        path = self.root / "memoria_investigacao_nixal.json"
+        original = '{"versao":'
+        path.write_text(original, encoding="utf-8")
+
+        memoria = MemoriaInvestigacaoNixal(path)
+        estado = memoria.recarregar()
+        escrita = memoria.registrar(ciclo("nova hipótese"))
+
+        self.assertIs(estado.get("sucesso"), False)
+        self.assertEqual(estado.get("estado"), "memoria_degradada")
+        self.assertTrue(estado.get("arquivo_original_preservado"))
+        self.assertEqual(escrita.get("estado"), "negado")
+        self.assertEqual(path.read_text(encoding="utf-8"), original)
+
+    def test_versao_desconhecida_na_investigacao_nao_e_sobrescrita(self):
+        path = self.root / "memoria_investigacao_nixal.json"
+        original = '{"versao":"futura","registros":[]}'
+        path.write_text(original, encoding="utf-8")
+
+        memoria = MemoriaInvestigacaoNixal(path)
+        self.assertIs(memoria.recarregar().get("sucesso"), False)
+        self.assertEqual(memoria.registrar(ciclo("nova hipótese")).get("estado"), "negado")
+        self.assertEqual(path.read_text(encoding="utf-8"), original)
+
+    def test_conhecimento_corrompido_e_preservado_e_bloqueia_gravacao(self):
+        path = self.root / "memoria_conhecimento_nixal.json"
+        original = "{malformed"
+        path.write_text(original, encoding="utf-8")
+
+        memoria = MemoriaConhecimentoNixal(path)
+        estado = memoria.recarregar()
+        escrita = memoria.registrar(candidato("novo candidato"))
+
+        self.assertIs(estado.get("sucesso"), False)
+        self.assertEqual(estado.get("estado"), "memoria_degradada")
+        self.assertTrue(estado.get("arquivo_original_preservado"))
+        self.assertEqual(escrita.get("estado"), "negado")
+        self.assertEqual(path.read_text(encoding="utf-8"), original)
+
+    def test_instancias_antigas_nao_perdem_registros_de_investigacao(self):
+        path = self.root / "memoria_investigacao_nixal.json"
+        primeira = MemoriaInvestigacaoNixal(path)
+        segunda = MemoriaInvestigacaoNixal(path)
+
+        self.assertEqual(primeira.registrar(ciclo("hipótese A")).get("estado"), "persistido")
+        self.assertEqual(segunda.registrar(ciclo("hipótese B")).get("estado"), "persistido")
+
+        recuperada = MemoriaInvestigacaoNixal(path)
+        self.assertEqual(recuperada.quantidade(), 2)
+
+    def test_instancias_antigas_nao_perdem_candidatos_de_conhecimento(self):
+        path = self.root / "memoria_conhecimento_nixal.json"
+        primeira = MemoriaConhecimentoNixal(path)
+        segunda = MemoriaConhecimentoNixal(path)
+
+        self.assertEqual(primeira.registrar(candidato("candidato A")).get("estado"), "persistido")
+        self.assertEqual(segunda.registrar(candidato("candidato B")).get("estado"), "persistido")
+
+        recuperada = MemoriaConhecimentoNixal(path)
+        self.assertEqual(recuperada.quantidade(), 2)
+
+    def test_arquivo_persistido_recebe_permissao_proprietario(self):
+        path = self.root / "memoria_investigacao_nixal.json"
+        memoria = MemoriaInvestigacaoNixal(path)
+        self.assertEqual(memoria.registrar(ciclo("hipótese segura")).get("estado"), "persistido")
+        self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
