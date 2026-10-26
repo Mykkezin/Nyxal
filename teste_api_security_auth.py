@@ -198,6 +198,25 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(headers.get("access-control-allow-origin"), "http://localhost:3000")
 
+    def test_html_estatico_recebe_cabecalhos_de_seguranca_e_cors(self) -> None:
+        with patch.object(api, "PROXY_MODE", False), patch.object(
+            api, "CORS_ORIGINS", api.parse_allowed_origins("")
+        ):
+            for path in ("/", "/interface/index.html"):
+                with self.subTest(path=path):
+                    status, headers, _body = self.request_full(
+                        "GET", path,
+                        headers={"Origin": "http://localhost:3000"},
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(headers.get("referrer-policy"), "no-referrer")
+                    self.assertEqual(headers.get("x-content-type-options"), "nosniff")
+                    self.assertEqual(headers.get("cache-control"), "no-store")
+                    self.assertEqual(
+                        headers.get("access-control-allow-origin"),
+                        "http://localhost:3000",
+                    )
+
     def test_token_ausente_e_incorreto_sao_rejeitados_quando_configurado(self) -> None:
         api.API_TOKEN = "segredo-configurado"
         status, body = self.request(
