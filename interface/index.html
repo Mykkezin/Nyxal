@@ -3614,6 +3614,11 @@
         initGlobeVoiceControl();
         fetchNyxalStatus();
         setInterval(fetchNyxalStatus, 15000);
+        // Solicita a permissão e inicia a escuta residente ao abrir o shell.
+        // O navegador continuará exigindo autorização explícita para o microfone.
+        window.setTimeout(() => {
+          if (!voiceConversationActive) startContinuousVoice();
+        }, 0);
       } else {
         initSpaceBgCanvas();
         init3DGlobe();
