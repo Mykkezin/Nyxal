@@ -12,7 +12,7 @@ Este cliente deve ser executado na própria máquina da Nyxal. Ele envia três t
 ## Segurança e limites
 
 - A conexão é aberta diretamente com `HTTPConnection("127.0.0.1", porta)`: não consulta `HTTP_PROXY`/`HTTPS_PROXY` nem segue redirecionamentos `Location`. Host e rota são fixos; a resposta de qualquer status diferente de 2xx é recusada.
-- Usa `NYXAL_API_PORT` (padrão 8010) e, se configurado, envia `NYXAL_API_TOKEN` apenas no cabeçalho Bearer.
+- Usa `NYXAL_API_PORT` (padrão 8010) e envia `NYXAL_API_TOKEN` apenas no cabeçalho Bearer. A chave é lida primeiro do ambiente do processo e, se não estiver definida, de `~/.config/nyxal/nyxal.env`; o arquivo é interpretado como pares simples `KEY=value`, sem executar código shell.
 - Não lê o repositório, não executa comandos, não aplica alterações sugeridas, não abre PR, não faz merge e não autoriza integração.
 - A conversa não é salva automaticamente. Para guardá-la, informe `--saida` com um caminho novo; o arquivo é criado com permissão `0600` e não é sobrescrito.
 - A resposta da Nyxal é uma hipótese de modelo, não evidência por si só. A auditoria deve exigir logs, resultados de testes e critérios de aceitação.
