@@ -86,8 +86,24 @@ install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
 rm -f "${AUTOSTART_DIR}/nyxos-shell.desktop"
 
 systemctl --user daemon-reload
-systemctl --user enable --now nyxos.target
+if ! systemctl --user enable --now nyxos.target; then
+    echo "ERRO: não foi possível ativar nyxos.target." >&2
+    systemctl --user --no-pager --full status nyxos.target nyxal-api.service nyxos-residente.service || true
+    exit 1
+fi
 systemctl --user enable nyxos-interface.service
+
+# enable --now não reinicia unidades que já estão ativas. Reinicie API e residente
+# para aplicar imediatamente o código/unidades recém-instalados.
+CORE_RESTART_FAILED=0
+for unidade in nyxal-api.service nyxos-residente.service; do
+    if systemctl --user restart "${unidade}"; then
+        echo "Unidade reiniciada: ${unidade}"
+    else
+        echo "ERRO: falha ao reiniciar ${unidade}; consulte o diagnóstico local." >&2
+        CORE_RESTART_FAILED=1
+    fi
+done
 
 if loginctl enable-linger "${USER}" 2>/dev/null; then
     LINGER_STATUS="ativado"
@@ -96,8 +112,12 @@ else
 fi
 
 if systemctl --user is-active --quiet graphical-session.target; then
-    systemctl --user restart nyxos-interface.service
-    SHELL_STATUS="iniciado"
+    if systemctl --user restart nyxos-interface.service; then
+        SHELL_STATUS="iniciado"
+    else
+        SHELL_STATUS="falha ao iniciar; consulte o diagnóstico local"
+        CORE_RESTART_FAILED=1
+    fi
 else
     SHELL_STATUS="aguardando a próxima sessão gráfica"
 fi
@@ -114,7 +134,13 @@ echo
 echo "Para acompanhar:"
 echo "  systemctl --user status nyxal-api.service nyxos-residente.service nyxos-interface.service"
 echo "  journalctl --user -u nyxal-api.service -u nyxos-residente.service -u nyxos-interface.service -f"
+echo "  bash ${NYXAL_DIR}/deploy/systemd/diagnosticar_nyxos_local.sh"
 echo
+if [[ "${CORE_RESTART_FAILED}" -ne 0 ]]; then
+    echo "ATENÇÃO: uma ou mais unidades não iniciaram. O ambiente e as unidades foram instalados, mas a saúde dos serviços não foi confirmada." >&2
+    systemctl --user --no-pager --full status nyxal-api.service nyxos-residente.service nyxos-interface.service || true
+    exit 1
+fi
 if [[ "${LINGER_STATUS}" != "ativado" ]]; then
     echo "ATENÇÃO: para residência mesmo antes do login, execute:"
     echo "  loginctl enable-linger ${USER}"

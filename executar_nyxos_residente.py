@@ -29,6 +29,7 @@ from nixal_adaptador_sandbox_fisico import AdaptadorSandboxFisicoNixOS
 from nixal_auditoria_atuacao import AuditoriaAtuacaoNixOS
 from nixal_plano_central_controle import PlanoCentralControleNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
+from nixal_autoreparo_residente import AutoreparoResidenteNixOS
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -113,6 +114,7 @@ def main() -> int:
     presenca_maquina = PresencaMaquinaNixOS(
         arquivo=BASE_DIR / "presenca_maquina_nyxos.json",
     )
+    autoreparo_residente = AutoreparoResidenteNixOS()
     plano_central_controle = PlanoCentralControleNixOS(
         arquivo=BASE_DIR / "plano_central_controle_nyxos.json",
     )
@@ -143,6 +145,7 @@ def main() -> int:
         plano_central_controle,
         gateway_atuacao,
         coletor_dataset_dual_ae5=coletor_dataset_dual_ae5,
+        autoreparo_residente=autoreparo_residente,
         intervalo_segundos=args.intervalo,
         parar_em_erro=not args.continuar_em_erro,
     )
@@ -184,6 +187,7 @@ def main() -> int:
     print("M5.16 — ADAPTADOR HOST: CONTROLADO / SOMENTE LEITURA")
     print("M5.17 — SANDBOX FÍSICO: DISPONÍVEL / DESABILITADO")
     print("M5.18 — AUDITORIA DE ATUAÇÃO: HABILITADA")
+    print("M5.25 — AUTOREPARO API/DESKTOP: HABILITADO")
     print("=" * 64)
 
     return 0 if all(

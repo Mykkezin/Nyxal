@@ -1,12 +1,14 @@
 [Unit]
 Description=NyxOS — ciclo operacional residente
+StartLimitIntervalSec=300
+StartLimitBurst=10
 After=nyxal-api.service
 Wants=nyxal-api.service
 
 [Service]
 Type=simple
 WorkingDirectory=%h/Nyxal
-ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/executar_nyxos_residente.py --intervalo 5
+ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/executar_nyxos_residente.py --intervalo 5 --continuar-em-erro --habilitar-aprendizado --habilitar-auto-experimento
 EnvironmentFile=-%h/.config/nyxal/nyxal.env
 Restart=on-failure
 RestartSec=3
