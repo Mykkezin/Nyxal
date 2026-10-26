@@ -18,12 +18,14 @@ on:
       - "nixal_voz_nyxos.py"
       - "teste_m5_22_voz_nyxos.py"
       - "deploy/voice/**"
+      - ".github/workflows/m5-22-voice-validation.yml"
+
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-      - ".github/workflows/m5-22-voice-validation.yml"
   validate-m5-22:
     if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
     runs-on: self-hosted
