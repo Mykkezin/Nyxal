@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -61,8 +62,21 @@ def main() -> None:
 
     validacao = auditoria.validar()
     assert validacao["valido"] is True
+    assert validacao["registros"] == 5
 
-    # Um segundo processo/instância deve continuar a cadeia sem repetir
+    linhas = arquivo_auditoria.read_text(encoding="utf-8").splitlines()
+    assert len(linhas) == 5
+
+    eventos = [json.loads(linha)["evento"] for linha in linhas]
+    assert eventos == [
+        "operacao_preparada",
+        "operacao_bloqueada",
+        "atuacao_sandbox_executada",
+        "operacao_executada",
+        "rollback_executado",
+    ]
+
+    # Uma segunda instância/processo deve continuar a cadeia sem repetir
     # sequência ou hash anterior.
     auditoria_2 = AuditoriaAtuacaoNixOS(arquivo=arquivo_auditoria)
     segundo = auditoria_2.registrar(
@@ -71,6 +85,18 @@ def main() -> None:
     )
     assert segundo["sequencia"] == 6
     assert segundo["hash_anterior"] == validacao["ultimo_hash"]
+
+    validacao_2 = auditoria_2.validar()
+    assert validacao_2["valido"] is True
+    assert validacao_2["registros"] == 6
+
+    linhas_apos_segunda_instancia = arquivo_auditoria.read_text(
+        encoding="utf-8"
+    ).splitlines()
+    assert len(linhas_apos_segunda_instancia) == 6
+    assert json.loads(linhas_apos_segunda_instancia[-1])["evento"] == (
+        "teste_segunda_instancia"
+    )
 
     # Um arquivo truncado/corrompido não pode derrubar o residente.
     arquivo_corrompido = pasta / "auditoria-corrompida.jsonl"
@@ -87,20 +113,6 @@ def main() -> None:
     )
     assert nova["sequencia"] == 1
     assert recuperada.validar()["valido"] is True
-
-    linhas = arquivo_auditoria.read_text(encoding="utf-8").splitlines()
-    assert len(linhas) == 5
-
-    eventos = [__import__("json").loads(linha)["evento"] for linha in linhas]
-    assert eventos == [
-        "operacao_preparada",
-        "operacao_bloqueada",
-        "atuacao_sandbox_executada",
-        "operacao_executada",
-        "rollback_executado",
-    ]
-
-    assert validacao["registros"] == 5
 
     print("TESTE_M5_18_AUDITORIA_ATUACAO_OK")
     print("EVENTOS: ENCADEADOS")
