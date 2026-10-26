@@ -33,10 +33,10 @@ jobs:
       - name: Verify system Python 3.12
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compilar M5.22
-        run: python -m py_compile nixal_audio_nyxos.py nixal_voz_nyxos.py teste_m5_22_voz_nyxos.py
+        run: python3 -m py_compile nixal_audio_nyxos.py nixal_voz_nyxos.py teste_m5_22_voz_nyxos.py
       - name: Compilar adaptador experimental de voz
-        run: python -m py_compile deploy/voice/nyxal_pipecat_agent.py deploy/voice/verificar_api_nyxal.py deploy/voice/verificar_contrato_pipecat.py
+        run: python3 -m py_compile deploy/voice/nyxal_pipecat_agent.py deploy/voice/verificar_api_nyxal.py deploy/voice/verificar_contrato_pipecat.py
       - name: Validar scripts de instalação e diagnóstico
         run: bash -n deploy/voice/instalar_pipecat_experimental.sh deploy/voice/diagnosticar_runtime_local.sh
       - name: Executar teste M5.22
-        run: python teste_m5_22_voz_nyxos.py
+        run: python3 teste_m5_22_voz_nyxos.py
