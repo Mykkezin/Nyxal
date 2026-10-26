@@ -76,25 +76,23 @@ permissions:
 
 jobs:
   validate-agent-stack:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - name: Checkout without optional submodules
         uses: actions/checkout@v4
         with:
+        persist-credentials: false
           submodules: false
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      - name: Verify system Node.js 22 and npm
+        run: node -e 'const v=process.versions.node.split(".").map(Number); if(v[0]!==22) process.exit(1); console.log(process.version)' && npm --version
       - name: Build passive Nyxal Display
         working-directory: interface/display
         run: |
-          npm install --no-audit --no-fund
+          npm install --ignore-scripts --no-audit --no-fund --package-lock=false
           npm run lint
           npm run build
       - name: Compile integrations
