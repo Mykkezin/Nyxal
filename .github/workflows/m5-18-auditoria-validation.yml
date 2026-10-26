@@ -13,7 +13,6 @@ on:
       - "nixal_gateway_atuacao.py"
       - "nixal_adaptador_sandbox_fisico.py"
       - "teste_m5_18_auditoria_atuacao.py"
-      - ".github/workflows/m5-18-auditoria-validation.yml"
 
 jobs:
   validate-m5-18:
