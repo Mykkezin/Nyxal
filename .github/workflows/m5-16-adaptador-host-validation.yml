@@ -27,6 +27,10 @@ on:
       - "nixal_ciclo_residente.py"
       - "executar_nyxos_residente.py"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
