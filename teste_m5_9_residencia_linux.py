@@ -22,6 +22,7 @@ def main() -> None:
     target = ler("nyxos.target")
     instalador = ler("instalar_nyxos_servicos.sh")
     desinstalador = ler("desinstalar_nyxos_servicos.sh")
+    diagnostico = ler("diagnosticar_nyxos_local.sh")
 
     for unidade in (api, residente):
         assert "Type=simple" in unidade
@@ -44,7 +45,6 @@ def main() -> None:
         assert "ProtectKernelLogs=true" in unidade
         assert "%h/Nyxal/.venv/bin/python" in unidade
         assert "/usr/bin/python3" not in unidade
-        assert "--habilitar-auto-experimento" not in unidade
 
     assert "Restart=always" in api
     assert "RestartSec=2" in api
@@ -57,15 +57,26 @@ def main() -> None:
     )
     assert (
         "ExecStart=%h/Nyxal/.venv/bin/python "
-        "%h/Nyxal/executar_nyxos_residente.py --intervalo 5"
+        "%h/Nyxal/executar_nyxos_residente.py --intervalo 5 "
+        "--continuar-em-erro --habilitar-aprendizado --habilitar-auto-experimento"
         in residente
     )
+    assert "StartLimitIntervalSec=300" in residente
+    assert "StartLimitBurst=10" in residente
+    assert "--habilitar-auto-experimento" not in api
+    assert "--habilitar-aprendizado" not in api
 
     assert "Wants=nyxal-api.service nyxos-residente.service" in target
     assert "WantedBy=default.target" in target
 
     assert "systemctl --user daemon-reload" in instalador
     assert "systemctl --user enable --now nyxos.target" in instalador
+    assert 'systemctl --user restart "${unidade}"' in instalador
+    assert 'for unidade in nyxal-api.service nyxos-residente.service; do' in instalador
+    assert "diagnosticar_nyxos_local.sh" in instalador
+    assert "systemctl --user show" in diagnostico
+    assert "cmp -s" in diagnostico
+    assert "NYXAL_API_TOKEN" not in diagnostico
     assert 'PYTHON_BIN="${NYXAL_DIR}/.venv/bin/python"' in instalador
     assert '[[ ! -x "${PYTHON_BIN}" ]]' in instalador
     assert 'import nyxal_web_api; import executar_nyxos_residente' in instalador
@@ -111,9 +122,10 @@ def main() -> None:
     print("TESTE_M5_9_RESIDENCIA_LINUX_OK")
     print("TESTE_MEMORIA_RESIDENTE_LIMITADA_OK")
     print("PYTHON: .venv/bin/python")
-    print("SERVICOS: 2")
+    print("SERVICOS: API + RESIDENTE + INTERFACE GRAFICA")
     print("TARGET: nyxos.target")
-    print("AE2_AUTOMATICA: DESABILITADA")
+    print("AE2_AUTOMATICA: HABILITADA_COM_GATES")
+    print("AUTOREPARO: API/INTERFACE_COM_LIMITES")
 
 def testar_historico_residente_limitado() -> None:
     from nixal_ciclo_residente import CicloResidenteNixOS

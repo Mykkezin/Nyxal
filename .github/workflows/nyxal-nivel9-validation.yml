@@ -30,6 +30,13 @@ jobs:
         run: |
           python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nixal_delta.py             nixal_recursos_habitat.py             nixal_ciclo_residente.py             nixal_auto_experimento_ae2.py             nixal_auto_avaliacao_ae3.py             nixal_ciclo_evolucao_ae4.py             nixal_descoberta_continua_ae5.py             nixal_trilha_http.py teste_nixal_trilha_http.py teste_api_trilha_http_e2e.py nyxal_web_api.py nixal_decisao_autonoma_ci.py
 
+      - name: Testes de autoreparo residente e integração
+        run: |
+          python -m py_compile nixal_autoreparo_residente.py nixal_ciclo_residente.py executar_nyxos_residente.py
+          python -m unittest -v teste_nixal_autoreparo_residente.py
+          python teste_m5_9_residencia_linux.py
+          bash -n deploy/systemd/instalar_nyxos_servicos.sh deploy/systemd/diagnosticar_nyxos_local.sh
+
       - name: Testes HTTP de segurança da API
         id: api_http_security
         run: python -m unittest teste_api_security_auth.py -v
