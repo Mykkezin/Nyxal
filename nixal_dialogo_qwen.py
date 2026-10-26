@@ -154,7 +154,7 @@ class DialogoQwenNixal:
                     "resposta": None,
                     "erro": "O contexto do sistema não é JSON válido.",
                 }
-            if len(contexto_json) > 32000:
+            if len(contexto_json) > 128000:
                 return {
                     "sucesso": False,
                     "estado": "contexto_sistema_invalido",
