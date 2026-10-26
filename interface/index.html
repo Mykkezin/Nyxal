@@ -2290,6 +2290,18 @@
       showSubtitles(`Entendendo: "${msg}"...`);
 
       try {
+        if (typeof window.nyxalHandleImageIntent === 'function') {
+          const visual = await window.nyxalHandleImageIntent(msg);
+          if (visual && visual.handled) {
+            setHologramProcessing(false);
+            showSubtitles(visual.resposta || 'A solicitação visual foi processada.');
+            if (conversaContinua) {
+              await speakGoddessNyxVoice(visual.fala || visual.resposta || 'Concluído.', false);
+            }
+            return;
+          }
+        }
+
         const { response: res, data } = await nyxalApiPost('/api/chat', {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
