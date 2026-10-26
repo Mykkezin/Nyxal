@@ -49,7 +49,7 @@ Mantenha a API ligada em loopback. Para acesso remoto, exponha somente uma **VPN
 
 A API continua vinculada a loopback. Se for publicada atrás de um proxy reverso, habilite explicitamente `NYXAL_API_BEHIND_PROXY=1` e configure `NYXAL_API_TOKEN` no serviço. A inicialização é recusada quando o modo proxy está habilitado sem token.
 
-Nesse modo, toda requisição GET exceto `/health` e toda requisição POST exige `Authorization: Bearer <token>`, incluindo endpoints ainda não implementados e assets do shell. O proxy deve autenticar o usuário externo e injetar o Bearer do serviço somente no tráfego upstream, após a autenticação. Nunca entregue o token ao JavaScript/browser.
+Nesse modo, toda requisição GET exceto `/health` e toda requisição POST exige `Authorization: Bearer <token>`, inclusive quando a chamada chega diretamente por loopback, endpoints ainda não implementados e assets do shell. O proxy deve autenticar o usuário externo e injetar o Bearer do serviço somente no tráfego upstream, após a autenticação. Nunca entregue o token ao JavaScript/browser.
 
 Em acesso local direto, cabeçalhos `Forwarded`, `X-Forwarded-For` e `X-Real-IP` desativam o atalho de confiança no loopback. A API também valida `Host` e a porta do listener para reduzir o risco de DNS rebinding. CORS não é autenticação e não substitui o modo proxy/token.
 
