@@ -379,6 +379,29 @@ def _assinatura_compativel(dados: bytes, mime_type: str) -> bool:
     return bool(assinatura and assinatura(dados))
 
 
+def _validar_imagem_saida(data: Any, mime_type: Any) -> dict[str, str] | None:
+    """Valida imagem candidata antes de a escolher como saída final."""
+    if not isinstance(data, str) or not isinstance(mime_type, str):
+        return None
+    mime = mime_type.strip().lower()
+    if mime not in ALLOWED_MIME:
+        return None
+    try:
+        dados = base64.b64decode(data, validate=True)
+    except (ValueError, base64.binascii.Error):
+        return None
+    if (
+        not dados
+        or len(dados) > MAX_OUTPUT_IMAGE_BYTES
+        or not _assinatura_compativel(dados, mime)
+    ):
+        return None
+    return {
+        "mime_type": mime,
+        "base64": base64.b64encode(dados).decode("ascii"),
+    }
+
+
 def _extrair_parametros_midjourney(
     prompt: str, *, modelo: str = DEFAULT_IMAGE_MODEL
 ) -> tuple[str, int | None, str | None, str | None]:
@@ -692,11 +715,12 @@ class CapacidadeVisualGeminiNixOS:
             if isinstance(output_text, str) and output_text.strip():
                 text_parts.append(output_text.strip())
             output_image = result.get("output_image")
-            if isinstance(output_image, dict) and isinstance(output_image.get("data"), str):
-                mime = output_image.get("mime_type") or "image/png"
-                if isinstance(mime, str) and mime.lower() in ALLOWED_MIME:
-                    image = {"mime_type": mime.lower(), "base64": output_image["data"]}
-                    output_image_found = True
+            if isinstance(output_image, dict):
+                image = _validar_imagem_saida(
+                    output_image.get("data"),
+                    output_image.get("mime_type") or "image/png",
+                )
+                output_image_found = image is not None
         steps = result.get("steps", []) if isinstance(result, dict) else []
         for step in steps if isinstance(steps, list) else []:
             if not isinstance(step, dict) or step.get("type") != "model_output":
@@ -710,15 +734,14 @@ class CapacidadeVisualGeminiNixOS:
                     text_value = item.get("text")
                     if isinstance(text_value, str) and text_value.strip():
                         text_parts.append(text_value.strip())
-                elif (
-                    block_type == "image"
-                    and isinstance(item.get("data"), str)
-                    and not output_image_found
-                ):
-                    mime = item.get("mime_type") or "image/png"
-                    if isinstance(mime, str) and mime.lower() in ALLOWED_MIME:
-                        # Quando a resposta contém múltiplas imagens, a última é a saída final.
-                        image = {"mime_type": mime.lower(), "base64": item["data"]}
+                elif block_type == "image" and not output_image_found:
+                    candidate_image = _validar_imagem_saida(
+                        item.get("data"),
+                        item.get("mime_type") or "image/png",
+                    )
+                    if candidate_image is not None:
+                        # Quando há várias imagens válidas, a última é a saída final.
+                        image = candidate_image
 
         # Compatibilidade defensiva com respostas antigas do endpoint Gemini.
         if image is None:
@@ -732,10 +755,13 @@ class CapacidadeVisualGeminiNixOS:
                     if isinstance(item.get("text"), str) and item["text"].strip():
                         text_parts.append(item["text"].strip())
                     data = item.get("inlineData") or item.get("inline_data")
-                    if isinstance(data, dict) and isinstance(data.get("data"), str):
-                        mime = data.get("mimeType") or data.get("mime_type") or "image/png"
-                        if isinstance(mime, str) and mime.lower() in ALLOWED_MIME:
-                            image = {"mime_type": mime.lower(), "base64": data["data"]}
+                    if isinstance(data, dict):
+                        candidate_image = _validar_imagem_saida(
+                            data.get("data"),
+                            data.get("mimeType") or data.get("mime_type") or "image/png",
+                        )
+                        if candidate_image is not None:
+                            image = candidate_image
                             break
 
         if image is None:
