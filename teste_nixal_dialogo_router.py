@@ -109,6 +109,7 @@ class TestNyxalPrimaryDialogueRouter(unittest.TestCase):
         system_prompt = client.calls[0]["messages"][0]["content"]
         self.assertIn("permissão para examinar", system_prompt)
         self.assertIn("Estilo conversacional", system_prompt)
+        self.assertIn("Playbook da habilidade versionado no projeto", system_prompt)
         hub.responder.assert_not_called()
 
     def test_hub_passes_external_history_and_voice_style_to_provider(self):
