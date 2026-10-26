@@ -1,24 +1,6 @@
 name: Nyxal Storage and Startup Baseline
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - ".gitignore"
-      - "log_capacidades_nixal.json"
-      - "log_nyxal_runtime.json"
-      - "nixal_capacidades.py"
-      - "nixal_runtime.py"
-      - "teste_limites_armazenamento.py"
-      - "interface/startup.html"
-      - "interface/assets/nyxos-startup.mp4"
-      - "deploy/systemd/iniciar_nyxos_shell.sh"
-      - "deploy/systemd/iniciar_nyxos_interface.sh"
-      - "teste_inicio_codigo.py"
-      - ".github/workflows/storage-baseline.yml"
-      - ".github/workflows/prune-actions-artifacts.yml"
-      - "docs/OTIMIZACAO_ARMAZENAMENTO.md"
   push:
     branches:
       - main
@@ -45,7 +27,7 @@ permissions:
 jobs:
   storage-and-startup:
     name: Storage limits and code-only startup
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 5
     steps:
       - name: Checkout
