@@ -64,11 +64,11 @@ class MemoriaInvestigacaoNixal:
     def _carregar(self) -> dict[str, Any]:
         """Carrega um arquivo íntegro; corrupção nunca vira memória vazia gravável."""
         self._erro_carregamento = None
-        if not self.caminho.exists():
-            return self._estrutura_vazia()
         try:
             with self.caminho.open("rb") as arquivo:
                 bruto = arquivo.read(MAX_MEMORIA_JSON_BYTES + 1)
+        except FileNotFoundError:
+            return self._estrutura_vazia()
         except OSError:
             self._erro_carregamento = "arquivo_ilegivel_ou_json_corrompido"
             return self._estrutura_vazia()
