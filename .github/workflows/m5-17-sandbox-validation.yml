@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - feat/m5-17-sandbox-fisico-reversivel
+    paths:
+      - "nixal_adaptador_sandbox_fisico.py"
+      - "teste_m5_17_sandbox_fisico_reversivel.py"
+      - "nixal_gateway_atuacao.py"
+      - "nixal_plano_central_controle.py"
   pull_request:
     branches:
       - main
