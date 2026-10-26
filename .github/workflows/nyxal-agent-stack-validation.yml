@@ -43,6 +43,8 @@ on:
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
+      - "interface/js/nyxal-voice-console.js"
+      - "teste_nyxos_voice_console.py"
       - ".github/workflows/nyxal-agent-stack-validation.yml"
       - "scripts/autorizar_gmail_nyxal.py"
       - "scripts/configurar_hermes_whatsapp_policy.py"
@@ -94,6 +96,8 @@ on:
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
+      - "interface/js/nyxal-voice-console.js"
+      - "teste_nyxos_voice_console.py"
       - ".github/workflows/nyxal-agent-stack-validation.yml"
       - "scripts/autorizar_gmail_nyxal.py"
       - "scripts/configurar_hermes_whatsapp_policy.py"
@@ -185,6 +189,7 @@ jobs:
             nixal_memoria_conhecimento.py \
             nixal_dialogo_qwen.py \
             teste_nixal_dialogo_router.py \
+            teste_nyxos_voice_console.py \
             teste_api_security_auth.py \
             teste_nucleo_contexto_persistente.py \
             teste_nucleo_conversacional.py \
@@ -213,6 +218,7 @@ jobs:
           python3 -m unittest -v \
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
+            teste_nyxos_voice_console \
             teste_nixal_responses_api \
             teste_nixal_dialogo_router \
             teste_nixal_observabilidade_sistema \
