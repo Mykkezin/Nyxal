@@ -32,12 +32,15 @@ permissions:
 
 jobs:
   validate-amd-cloud:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    runs-on: self-hosted
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          persist-credentials: false
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compile AMD cloud integration
         run: python -m py_compile nixal_amd_developer_cloud.py nixal_dialogo_qwen.py nyxal_web_api.py teste_nixal_amd_developer_cloud.py
       - name: Check cloud launcher syntax
