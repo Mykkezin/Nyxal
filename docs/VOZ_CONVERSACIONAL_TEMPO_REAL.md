@@ -67,7 +67,7 @@ Para inventariar serviços/modelos locais sem parar nada nem exibir argumentos c
 bash deploy/voice/diagnosticar_runtime_local.sh
 ```
 
-Ele lista serviços relevantes em execução, modelos Ollama carregados/instalados, portas TCP em escuta e as opções de provedor/modelo conversacional permitidas. Revise a saída antes de compartilhá-la; ela contém nomes de serviços, processos, portas e hostname, mas não deve imprimir argumentos completos ou tokens.
+Ele lista serviços de usuário e do sistema com nomes correspondentes a assistentes/LLMs, modelos Ollama, portas TCP em escuta, opções de provedor/modelo permitidas e, para processos candidatos, caminho do executável, diretório de trabalho e cgroup/serviço pai. Isso ajuda a distinguir uma instância da Nyxal de outro processo homônimo sem ler argumentos completos de processo nem variáveis de ambiente. Revise a saída antes de compartilhá-la: ela pode conter nomes de serviços, caminhos locais, portas, hostname e estrutura de diretórios, mas não deve imprimir argumentos completos, `cmdline` nem tokens.
 
 O smoke test envia duas mensagens fixas ao `/api/chat`, sem imprimir o conteúdo da conversa. Ele confirma se a primeira chamada cria uma sessão válida e se a segunda reutiliza o ID devolvido. Se falhar, resolva esse problema antes de avaliar o agente de voz: reconhecimento e síntese de áudio podem funcionar mesmo quando o núcleo rejeita a sessão.
 
