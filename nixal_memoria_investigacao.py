@@ -332,6 +332,7 @@ class MemoriaInvestigacaoNixal:
         lock_path = self.caminho.with_name(self.caminho.name + ".lock")
         lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
+            os.fchmod(lock_fd, 0o600)
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
             yield
         finally:
