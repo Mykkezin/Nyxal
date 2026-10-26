@@ -99,68 +99,68 @@ jobs:
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compilar Habitat M5.1
         run: |
-          python -m py_compile nixal_habitat.py nixal_processos_habitat.py nixal_persistencia_operacional.py nixal_delta.py nixal_recursos_habitat.py nixal_ciclo_residente.py nixal_auto_experimento_ae2.py nixal_auto_avaliacao_ae3.py nixal_ciclo_evolucao_ae4.py nixal_descoberta_continua_ae5.py corpo_nixal.py nixal_runtime.py nyxal_web_api.py executar_nyxos_residente.py nixal_gateway_atuacao_host.py nixal_controle_processos_aplicativos.py nixal_corpo_termico.py nixal_fisiologia_operacional.py nixal_plano_controle_central.py nixal_presenca_maquina.py teste_habitat_m5_1.py teste_processos_habitat_m5_2.py teste_persistencia_operacional_m5_3.py teste_delta_m5_4.py teste_auto_experimento_ae2.py teste_ae2_ciclo_residente.py teste_m5_8_dependencias_arquiteturais.py teste_m5_8_cobertura_importacoes.py teste_m5_9_residencia_linux.py teste_m5_10_gateway_atuacao_host.py teste_m5_11_controle_processos_aplicativos.py teste_m5_12_corpo_termico.py teste_m5_13_fisiologia_operacional.py teste_m5_14_plano_controle_central.py teste_m5_15_presenca_maquina.py nixal_coletor_dataset_dual_ae5.py teste_ae5_coletor_dual.py auditar_evidencias_ae5.py
+          python3 -m py_compile nixal_habitat.py nixal_processos_habitat.py nixal_persistencia_operacional.py nixal_delta.py nixal_recursos_habitat.py nixal_ciclo_residente.py nixal_auto_experimento_ae2.py nixal_auto_avaliacao_ae3.py nixal_ciclo_evolucao_ae4.py nixal_descoberta_continua_ae5.py corpo_nixal.py nixal_runtime.py nyxal_web_api.py executar_nyxos_residente.py nixal_gateway_atuacao_host.py nixal_controle_processos_aplicativos.py nixal_corpo_termico.py nixal_fisiologia_operacional.py nixal_plano_controle_central.py nixal_presenca_maquina.py teste_habitat_m5_1.py teste_processos_habitat_m5_2.py teste_persistencia_operacional_m5_3.py teste_delta_m5_4.py teste_auto_experimento_ae2.py teste_ae2_ciclo_residente.py teste_m5_8_dependencias_arquiteturais.py teste_m5_8_cobertura_importacoes.py teste_m5_9_residencia_linux.py teste_m5_10_gateway_atuacao_host.py teste_m5_11_controle_processos_aplicativos.py teste_m5_12_corpo_termico.py teste_m5_13_fisiologia_operacional.py teste_m5_14_plano_controle_central.py teste_m5_15_presenca_maquina.py nixal_coletor_dataset_dual_ae5.py teste_ae5_coletor_dual.py auditar_evidencias_ae5.py
 
       - name: Testar Habitat M5.1
-        run: python teste_habitat_m5_1.py
+        run: python3 teste_habitat_m5_1.py
 
       - name: Testar Processos do Habitat M5.2
-        run: python teste_processos_habitat_m5_2.py
+        run: python3 teste_processos_habitat_m5_2.py
       - name: Testar Persistência Operacional M5.3
-        run: python teste_persistencia_operacional_m5_3.py
+        run: python3 teste_persistencia_operacional_m5_3.py
       - name: Testar Delta M5.4
-        run: python teste_delta_m5_4.py
+        run: python3 teste_delta_m5_4.py
       - name: Testar Interface M5.5
-        run: python teste_interface_m5_5.py
+        run: python3 teste_interface_m5_5.py
       - name: Testar Recursos do Habitat M5.6
-        run: python teste_recursos_habitat_m5_6.py
+        run: python3 teste_recursos_habitat_m5_6.py
       - name: Testar Ciclo Residente M5.7
-        run: python teste_ciclo_residente_m5_7.py
+        run: python3 teste_ciclo_residente_m5_7.py
       - name: Testar Auto-Evolution AE1
-        run: python teste_auto_evolucao_ae1.py
+        run: python3 teste_auto_evolucao_ae1.py
 
       - name: Testar Auto-Experimento AE2
-        run: python teste_auto_experimento_ae2.py
+        run: python3 teste_auto_experimento_ae2.py
       - name: Testar AE2 no Ciclo Residente
-        run: python teste_ae2_ciclo_residente.py
+        run: python3 teste_ae2_ciclo_residente.py
       - name: Testar Auto-Avaliação AE3
-        run: python teste_auto_avaliacao_ae3.py
+        run: python3 teste_auto_avaliacao_ae3.py
       - name: Testar AE3 no Ciclo Residente
-        run: python teste_ae3_ciclo_residente.py
+        run: python3 teste_ae3_ciclo_residente.py
 
       - name: Teste Ciclo de Evolução AE4
-        run: python teste_ciclo_evolucao_ae4.py
+        run: python3 teste_ciclo_evolucao_ae4.py
 
       - name: Testar Descoberta Contínua AE5
-        run: python teste_descoberta_continua_ae5.py
+        run: python3 teste_descoberta_continua_ae5.py
 
       - name: Testar Coleta Dual AE5
-        run: python teste_ae5_coletor_dual.py
+        run: python3 teste_ae5_coletor_dual.py
 
       - name: Testar Dependências Arquiteturais M5.8
-        run: python teste_m5_8_dependencias_arquiteturais.py
+        run: python3 teste_m5_8_dependencias_arquiteturais.py
 
       - name: Testar Cobertura de Importações M5.8
-        run: python teste_m5_8_cobertura_importacoes.py
+        run: python3 teste_m5_8_cobertura_importacoes.py
 
       - name: Testar Residência Linux M5.9
-        run: python teste_m5_9_residencia_linux.py
+        run: python3 teste_m5_9_residencia_linux.py
 
       - name: Testar Gateway de Atuação M5.10
-        run: python teste_m5_10_gateway_atuacao_host.py
+        run: python3 teste_m5_10_gateway_atuacao_host.py
 
       - name: Testar Controle de Processos e Aplicativos M5.11
-        run: python teste_m5_11_controle_processos_aplicativos.py
+        run: python3 teste_m5_11_controle_processos_aplicativos.py
 
       - name: Testar Corpo Térmico M5.12
-        run: python teste_m5_12_corpo_termico.py
+        run: python3 teste_m5_12_corpo_termico.py
 
       - name: Testar Fisiologia Operacional M5.13
-        run: python teste_m5_13_fisiologia_operacional.py
+        run: python3 teste_m5_13_fisiologia_operacional.py
 
       - name: Testar Plano Central de Controle M5.14
-        run: python teste_m5_14_plano_controle_central.py
+        run: python3 teste_m5_14_plano_controle_central.py
 
       - name: Testar Presença de Máquina M5.15
-        run: python teste_m5_15_presenca_maquina.py
+        run: python3 teste_m5_15_presenca_maquina.py
 
