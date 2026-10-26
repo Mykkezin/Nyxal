@@ -2,6 +2,7 @@
 <html lang="pt-BR" class="dark">
 <head>
   <meta charset="UTF-8" />
+  <script>if (new URLSearchParams(window.location.search).get("modo") === "voz") document.documentElement.classList.add("nyxal-voice-only");</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NyxOS v2.0 DELTA | Nyxal Holographic Interface</title>
 
@@ -265,7 +266,117 @@
 #nyxosOperationalPanel .nyxos-op-label{color:#64748b;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
 #nyxosOperationalPanel .nyxos-op-value{color:#e2e8f0;font:600 12px/1.3 monospace;margin-top:3px}
 #nyxosOperationalPanel .nyxos-op-value.active{color:#00f2fe}
-</style></head>
+
+    html.nyxal-voice-only, html.nyxal-voice-only body {
+      margin: 0 !important; width: 100%; height: 100%; min-height: 100%;
+      overflow: hidden !important; background: #030407 !important; color: #edf4ff !important;
+    }
+    html.nyxal-voice-only body > *:not(#nyxalVoiceSurface) { display: none !important; }
+    #nyxalVoiceSurface {
+      position: fixed; inset: 0; z-index: 999999; display: grid; place-items: center;
+      overflow: hidden; background: radial-gradient(ellipse at 50% 44%, rgba(37,85,123,.2), transparent 34%), #030407;
+      color: #edf4ff; font-family: Inter, "Segoe UI", sans-serif; isolation: isolate;
+    }
+    #nyxalVoiceSurface::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .2;
+      background-image: radial-gradient(rgba(178,211,255,.32) .65px, transparent .65px);
+      background-size: 32px 32px; mask-image: radial-gradient(ellipse at center, #000, transparent 72%);
+    }
+    #nyxalVoiceSurface .nyxal-voice-content {
+      width: min(760px,94vw); min-height: min(680px,94vh);
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+      gap: 26px; padding: clamp(22px,5vh,52px) 20px 20px; position: relative; z-index: 2;
+      opacity: 1; transform: translateY(0) scale(1); transition: opacity .45s ease, transform .45s ease;
+    }
+    #nyxalVoiceSurface .nyxal-voice-brand {
+      display: flex; align-items: center; gap: 11px; letter-spacing: .27em;
+      font: 600 12px/1 Inter, sans-serif; color: #e5f0ff;
+    }
+    #nyxalVoiceSurface .nyxal-voice-brand-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #7dd3fc; box-shadow: 0 0 18px rgba(125,211,252,.9);
+    }
+    #nyxalVoiceSurface .nyxal-voice-brand small { color: #64748b; font-size: 9px; letter-spacing: .2em; margin-left: 5px; }
+    #nyxalVoiceSurface .nyxal-voice-center { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 20px; text-align: center; }
+    #nyxalVoiceStage {
+      width: min(300px,65vw); height: min(300px,65vw); max-height: 36vh; max-width: 36vh;
+      min-width: 190px; min-height: 190px; position: relative; display: grid; place-items: center; overflow: visible; touch-action: manipulation;
+    }
+    #nyxalVoiceStage .nyxal-voice-ring {
+      position: absolute; border: 1px solid rgba(125,211,252,.19); border-radius: 50%; inset: 4%; pointer-events: none;
+      transition: border-color .35s ease, transform .35s ease;
+    }
+    #nyxalVoiceStage .nyxal-voice-ring.ring-two { inset: 13%; border-color: rgba(125,211,252,.12); }
+    #nyxalVoiceStage .nyxal-voice-ring.ring-three { inset: 23%; border-color: rgba(125,211,252,.1); }
+    #nyxalVoiceSurface #globeContainer {
+      position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+      display: grid !important; place-items: center !important; overflow: visible !important; background: transparent !important; transform: none;
+    }
+    #nyxalVoiceSurface #globeContainer canvas, #nyxalVoiceSurface #globeContainer img { display: none !important; }
+    #nyxalVoiceSurface #globeContainer::before {
+      content: ""; display: block; width: 53%; height: 53%; border-radius: 50%;
+      background: radial-gradient(circle at 34% 27%, #eefaff 0%, #9adcfb 6%, #427ba0 24%, #122d48 56%, #060a13 76%);
+      border: 1px solid rgba(190,232,255,.62);
+      box-shadow: 0 0 18px rgba(104,199,255,.22), 0 0 70px rgba(67,150,209,.18), inset -14px -18px 30px rgba(0,0,0,.72);
+      animation: nyxalVoiceBreath 3.1s ease-in-out infinite;
+    }
+    #nyxalVoiceSurface #globeContainer.globe-voice-listening::before {
+      animation: nyxalVoiceBreath 1.25s ease-in-out infinite;
+      box-shadow: 0 0 24px rgba(104,199,255,.38), 0 0 90px rgba(67,150,209,.28), inset -14px -18px 30px rgba(0,0,0,.72);
+    }
+    #nyxalVoiceSurface #globeContainer.globe-voice-processing::before {
+      animation: nyxalVoiceProcessing 1s ease-in-out infinite;
+      box-shadow: 0 0 24px rgba(189,147,255,.28), 0 0 92px rgba(120,85,205,.22), inset -14px -18px 30px rgba(0,0,0,.72);
+    }
+    #nyxalVoiceSurface #globeContainer.globe-voice-speaking::before {
+      animation: nyxalVoiceSpeaking .85s ease-in-out infinite;
+      box-shadow: 0 0 27px rgba(104,199,255,.5), 0 0 105px rgba(67,150,209,.32), inset -14px -18px 30px rgba(0,0,0,.72);
+    }
+    #nyxalVoiceSurface #globeVoiceButton {
+      position: absolute !important; inset: 0 !important; z-index: 20 !important; width: 100% !important; height: 100% !important;
+      border-radius: 50% !important; border: 0 !important; background: transparent !important; cursor: pointer; outline-offset: 8px; touch-action: manipulation;
+    }
+    #nyxalVoiceSurface #globeVoiceState {
+      position: absolute !important; left: 50% !important; bottom: -24px !important; transform: translateX(-50%); z-index: 21; white-space: nowrap;
+      background: transparent !important; border: 0 !important; padding: 0 !important; backdrop-filter: none !important; box-shadow: none !important;
+    }
+    #nyxalVoiceSurface #globeVoiceState > div {
+      background: transparent !important; border: 0 !important; color: #93c5fd !important;
+      font: 500 9px/1.3 monospace !important; letter-spacing: .22em !important; padding: 0 !important;
+    }
+    #nyxalVoiceSurface #nyxalVoicePrompt { margin: 12px 0 0; color: #e2e8f0; font-size: 15px; font-weight: 400; letter-spacing: .015em; }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus { color: #64748b; font: 10px/1.4 monospace; letter-spacing: .15em; text-transform: uppercase; margin-top: -10px; }
+    #nyxalVoiceSurface #nyxalVoiceSubtitleMount {
+      width: min(680px,90vw); min-height: 42px; display: flex; align-items: center; justify-content: center;
+    }
+    #nyxalVoiceSurface #aiSubtitlesBox {
+      position: static !important; inset: auto !important; width: 100%; border: 0 !important; background: transparent !important;
+      box-shadow: none !important; backdrop-filter: none !important; padding: 0 !important; margin: 0 !important;
+    }
+    #nyxalVoiceSurface #aiSubtitlesText {
+      color: #cbd5e1 !important; font: 400 14px/1.6 Inter,sans-serif !important; letter-spacing: .01em; overflow-wrap: anywhere;
+    }
+    #nyxalVoiceSurface #voiceDiagnostics { display: none !important; }
+    #nyxalVoiceSurface .nyxal-voice-footer {
+      width: min(680px,90vw); display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      color: #475569; font: 9px/1.4 monospace; letter-spacing: .12em;
+    }
+    #nyxalVoiceSurface #nyxalVoiceStop {
+      color: #94a3b8; border: 1px solid rgba(148,163,184,.2); background: rgba(15,23,42,.42);
+      border-radius: 999px; padding: 9px 14px; font: 10px/1.2 Inter,sans-serif; letter-spacing: .04em; transition: color .2s, border-color .2s;
+    }
+    #nyxalVoiceSurface #nyxalVoiceStop:hover { color: #e2e8f0; border-color: rgba(148,163,184,.48); }
+    #nyxalVoiceSurface #nyxalVoiceStop[hidden] { display: none !important; }
+    #nyxalVoiceSurface.is-dormant .nyxal-voice-content { opacity: 0; transform: translateY(8px) scale(.985); pointer-events: none; }
+    #nyxalVoiceSurface.is-dormant::after { content: ""; position: absolute; inset: 0; z-index: 10; background: #030407; pointer-events: none; }
+    @keyframes nyxalVoiceBreath { 0%,100% { transform: scale(.98); filter: brightness(.86); } 50% { transform: scale(1.035); filter: brightness(1.12); } }
+    @keyframes nyxalVoiceProcessing { 0%,100% { transform: scale(.95); filter: hue-rotate(0deg); } 50% { transform: scale(1.04); filter: hue-rotate(28deg) brightness(1.2); } }
+    @keyframes nyxalVoiceSpeaking { 0%,100% { transform: scale(.98); } 35% { transform: scale(1.06); } 70% { transform: scale(1.01); } }
+    @media (max-height: 560px) {
+      #nyxalVoiceSurface .nyxal-voice-content { min-height: 100vh; padding-top: 12px; padding-bottom: 12px; gap: 8px; }
+      #nyxalVoiceStage { width: min(240px,47vh); height: min(240px,47vh); min-width: 150px; min-height: 150px; }
+      #nyxalVoiceSurface #nyxalVoicePrompt { font-size: 12px; }
+    }
+  </style></head>
 
 <body class="min-h-screen bg-[#02050e] text-slate-100 flex flex-col justify-between relative selection:bg-hud-cyan selection:text-black">
 
@@ -894,6 +1005,10 @@
   <script>
     // ================= CONFIGURATION & GLOBAL STATE =================
     window.NYXAL_API_BASE = localStorage.getItem('NYXAL_API_BASE') || 'http://127.0.0.1:8010';
+    const NYXAL_VOICE_ONLY_MODE = document.documentElement.classList.contains('nyxal-voice-only');
+    let voiceUiDormant = false;
+    let voiceUiIdleTimer = null;
+    const VOICE_UI_IDLE_HIDE_MS = 60000;
     let isNyxalOnline = false;
     let nyxalSessionId = sessionStorage.getItem('NYXAL_SESSION_ID') || null;
 
@@ -2119,6 +2234,106 @@
       textEl.innerText = `"${text}"`;
     }
 
+
+    function setVoiceUiDormant(dormant) {
+      if (!NYXAL_VOICE_ONLY_MODE) return;
+      voiceUiDormant = Boolean(dormant);
+      if (voiceUiIdleTimer !== null) {
+        clearTimeout(voiceUiIdleTimer);
+        voiceUiIdleTimer = null;
+      }
+      document.getElementById('nyxalVoiceSurface')?.classList.toggle('is-dormant', voiceUiDormant);
+      updateVoiceOnlySurfaceState();
+      if (!voiceUiDormant && voiceConversationActive && !voiceConversationBusy) scheduleVoiceUiIdleHide();
+    }
+
+    function scheduleVoiceUiIdleHide() {
+      if (!NYXAL_VOICE_ONLY_MODE || !voiceConversationActive || voiceUiDormant) return;
+      if (voiceUiIdleTimer !== null) clearTimeout(voiceUiIdleTimer);
+      voiceUiIdleTimer = window.setTimeout(() => {
+        voiceUiIdleTimer = null;
+        if (!voiceConversationActive || voiceConversationBusy) return;
+        if (voiceSpeechDetectedInCurrentRecording) {
+          scheduleVoiceUiIdleHide();
+          return;
+        }
+        setVoiceUiDormant(true);
+      }, VOICE_UI_IDLE_HIDE_MS);
+    }
+
+    function registerVoiceUiActivity() {
+      if (!NYXAL_VOICE_ONLY_MODE || voiceUiDormant) return;
+      if (voiceUiIdleTimer !== null) {
+        clearTimeout(voiceUiIdleTimer);
+        voiceUiIdleTimer = null;
+      }
+      if (voiceConversationActive && !voiceConversationBusy) scheduleVoiceUiIdleHide();
+      updateVoiceOnlySurfaceState();
+    }
+
+    function extractNyxalWakeCommand(transcript) {
+      const text = String(transcript || '').trim();
+      const match = text.match(/^(?:(?:oi|ei|hey)\s+)?(?:nyxal|nixal|nixieon|nixion)\b[\s,.:;!?—-]*(.*)$/i);
+      if (!match) return null;
+      return { command: String(match[1] || '').trim() };
+    }
+
+    function updateVoiceOnlySurfaceState() {
+      if (!NYXAL_VOICE_ONLY_MODE) return;
+      const prompt = document.getElementById('nyxalVoicePrompt');
+      const status = document.getElementById('nyxalVoiceMiniStatus');
+      const stop = document.getElementById('nyxalVoiceStop');
+      if (prompt) {
+        if (!voiceConversationActive) prompt.textContent = 'Toque no núcleo para ativar a conversa por voz';
+        else if (voiceUiDormant) prompt.textContent = 'Escuta residente ativa';
+        else if (voiceConversationBusy) prompt.textContent = 'Só um instante…';
+        else prompt.textContent = 'Pode falar naturalmente';
+      }
+      if (status) {
+        status.textContent = voiceConversationActive
+          ? (voiceConversationBusy ? 'PROCESSANDO ÁUDIO' : 'MICROFONE ATIVO • ESCUTA LOCAL')
+          : 'MICROFONE DESATIVADO';
+      }
+      if (stop) stop.hidden = !voiceConversationActive;
+    }
+
+    function initNyxalVoiceOnlySurface() {
+      if (!NYXAL_VOICE_ONLY_MODE || document.getElementById('nyxalVoiceSurface')) return;
+      const surface = document.createElement('main');
+      surface.id = 'nyxalVoiceSurface';
+      surface.setAttribute('aria-label', 'Nyxal — conversa por voz');
+      surface.innerHTML =
+        '<div class="nyxal-voice-content">' +
+          '<header class="nyxal-voice-brand"><span class="nyxal-voice-brand-dot"></span><span>NYXAL</span><small>VOICE · RESIDENTE</small></header>' +
+          '<section class="nyxal-voice-center">' +
+            '<div id="nyxalVoiceStage" aria-label="Núcleo de voz">' +
+              '<span class="nyxal-voice-ring ring-one"></span><span class="nyxal-voice-ring ring-two"></span><span class="nyxal-voice-ring ring-three"></span>' +
+            '</div>' +
+            '<p id="nyxalVoicePrompt">Toque no núcleo para ativar a conversa por voz</p>' +
+            '<div id="nyxalVoiceMiniStatus">MICROFONE DESATIVADO</div><div id="nyxalVoiceSubtitleMount"></div>' +
+          '</section>' +
+          '<footer class="nyxal-voice-footer"><span>NYXOS · ESCUTA LOCAL</span><button id="nyxalVoiceStop" type="button" hidden>Pausar escuta</button></footer>' +
+        '</div>';
+      document.body.appendChild(surface);
+      const stage = document.getElementById('nyxalVoiceStage');
+      ['globeContainer','globeVoiceButton','globeVoiceState'].forEach((id) => {
+        const node = document.getElementById(id);
+        if (node) stage.appendChild(node);
+      });
+      const subtitleMount = document.getElementById('nyxalVoiceSubtitleMount');
+      ['aiSubtitlesBox','voiceDiagnostics'].forEach((id) => {
+        const node = document.getElementById(id);
+        if (node) subtitleMount.appendChild(node);
+      });
+      document.getElementById('nyxalVoiceStop')?.addEventListener('click', () => {
+        if (voiceConversationActive) stopContinuousVoice();
+        else setVoiceUiDormant(false);
+        updateVoiceOnlySurfaceState();
+      });
+      document.title = 'Nyxal · Conversa por voz';
+      updateVoiceOnlySurfaceState();
+    }
+
     function showVoiceDiagnostics() {
       const box = document.getElementById('voiceDiagnostics');
       if (box) box.classList.remove('hidden');
@@ -2369,7 +2584,7 @@
             );
           }
 
-          const transcript = (data.texto || '').trim();
+          let transcript = (data.texto || '').trim();
 
           if (!transcript) {
             setHologramProcessing(false);
@@ -2377,7 +2592,27 @@
             return;
           }
 
-          showSubtitles(`Você disse: "${transcript}"`);
+          if (NYXAL_VOICE_ONLY_MODE && voiceUiDormant) {
+            const wake = extractNyxalWakeCommand(transcript);
+            if (!wake) {
+              setHologramProcessing(false);
+              return;
+            }
+            setVoiceUiDormant(false);
+            if (wake.command) {
+              transcript = wake.command;
+            } else {
+              showSubtitles('Estou aqui. Pode falar.');
+              await speakGoddessNyxVoice('Estou aqui. Pode falar.');
+              return;
+            }
+          } else if (NYXAL_VOICE_ONLY_MODE) {
+            const wake = extractNyxalWakeCommand(transcript);
+            if (wake && wake.command) transcript = wake.command;
+          }
+
+          if (NYXAL_VOICE_ONLY_MODE) registerVoiceUiActivity();
+          showSubtitles('Você disse: "' + transcript + '"');
           await sendNyxalMessage(transcript);
         } catch (err) {
           setHologramProcessing(false);
@@ -2568,6 +2803,8 @@
       scheduleContinuousVoiceLoop(
         VOICE_RESUME_GUARD_MS
       );
+      if (NYXAL_VOICE_ONLY_MODE && !voiceUiDormant) scheduleVoiceUiIdleHide();
+      updateVoiceOnlySurfaceState();
     }
 
     function cleanupContinuousVoice() {
@@ -2597,6 +2834,10 @@
         'text-hud-cyan'
       );
       updateVoiceConversationButton();
+      if (NYXAL_VOICE_ONLY_MODE) {
+        setVoiceUiDormant(false);
+        updateVoiceOnlySurfaceState();
+      }
 
       setTimeout(() => {
         document.getElementById('aiSubtitlesBox')?.classList.add('hidden');
@@ -2711,6 +2952,11 @@
           'Conversa por voz ativa. Fale normalmente; não é necessário tocar novamente.'
         );
         showVoiceDiagnostics();
+        if (NYXAL_VOICE_ONLY_MODE) {
+          setVoiceUiDormant(false);
+          updateVoiceOnlySurfaceState();
+          scheduleVoiceUiIdleHide();
+        }
 
         // Captura começa imediatamente; não dependemos de o VAD conseguir
         // detectar o primeiro fonema para começar a gravar.
@@ -2754,7 +3000,14 @@
       const globeButton = document.getElementById('globeVoiceButton');
       if (!globeButton) return;
 
-      globeButton.addEventListener('click', toggleVoiceInput);
+      globeButton.addEventListener('click', () => {
+        if (NYXAL_VOICE_ONLY_MODE && voiceConversationActive) {
+          if (voiceUiDormant) setVoiceUiDormant(false);
+          registerVoiceUiActivity();
+          return;
+        }
+        toggleVoiceInput();
+      });
       globeButton.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
@@ -3183,25 +3436,27 @@
 
     // Initialize Everything
     window.onload = function() {
-      initSpaceBgCanvas();
-      init3DGlobe();
-      initGlobeVoiceControl();
-      initSysGraph();
-      initNyxosOperationalPanel();
-      restoreStoredHologram();
-      initInfinityDrag();
-      renderReflexaoDiaria();
-
-      setInterval(updateLiveClock, 1000);
-      updateLiveClock();
-
-      // Initial Status Poll & Poll Every 5s
-      fetchNyxalStatus();
-      fetchNyxosOperationalContext();
-      setInterval(fetchNyxalStatus, 5000);
-      setInterval(fetchNyxosOperationalContext, 5000);
-
-      // Pre-load speech synthesis voices
+      if (NYXAL_VOICE_ONLY_MODE) {
+        initNyxalVoiceOnlySurface();
+        initGlobeVoiceControl();
+        fetchNyxalStatus();
+        setInterval(fetchNyxalStatus, 15000);
+      } else {
+        initSpaceBgCanvas();
+        init3DGlobe();
+        initGlobeVoiceControl();
+        initSysGraph();
+        initNyxosOperationalPanel();
+        restoreStoredHologram();
+        initInfinityDrag();
+        renderReflexaoDiaria();
+        setInterval(updateLiveClock, 1000);
+        updateLiveClock();
+        fetchNyxalStatus();
+        fetchNyxosOperationalContext();
+        setInterval(fetchNyxalStatus, 5000);
+        setInterval(fetchNyxosOperationalContext, 5000);
+      }
       if ('speechSynthesis' in window) {
         window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
       }
