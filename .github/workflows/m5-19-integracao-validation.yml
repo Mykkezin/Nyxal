@@ -3,6 +3,7 @@ name: M5.19 Integração Residente da Atuação
 on:
   push:
     branches:
+      - main
       - feat/m5-19-integracao-residente-atuacao
     paths:
       - "nixal_adaptador_sandbox_fisico.py"
@@ -12,6 +13,7 @@ on:
       - "nixal_ciclo_residente.py"
       - "executar_nyxos_residente.py"
       - "teste_m5_19_integracao_residente_atuacao.py"
+      - ".github/workflows/m5-19-integracao-validation.yml"
   pull_request:
     branches:
       - main
