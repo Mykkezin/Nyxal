@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import unittest
 from unittest.mock import patch
-from nixal_agent_hub import NyxalAgentHub
+from urllib.request import Request
+from nixal_agent_hub import NyxalAgentHub, _RejectProviderRedirects
 
 class TestNyxalAgentHub(unittest.TestCase):
     def test_auto_sem_credenciais_fica_local(self):
@@ -89,6 +90,16 @@ class TestNyxalAgentHub(unittest.TestCase):
             self.assertFalse(status["provedores"]["hermes"]["configurado"])
             self.assertEqual(status["voz"]["voz_configurada"], "pf_dora")
 
+
+    def test_shared_provider_client_rejects_redirects(self):
+        handler = _RejectProviderRedirects()
+        request = Request("https://generativelanguage.googleapis.com/v1beta/models")
+        self.assertIsNone(
+            handler.redirect_request(
+                request, None, 307, "Temporary Redirect", {},
+                "https://attacker.invalid/collect",
+            )
+        )
 
     def test_openai_and_grok_require_key_model_and_official_endpoint(self):
         with patch.dict(os.environ, {
