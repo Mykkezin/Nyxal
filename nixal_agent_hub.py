@@ -253,6 +253,8 @@ class NyxalAgentHub:
         sessao: str | None = None,
         provedor: str | None = None,
         contexto_sistema: dict[str, Any] | None = None,
+        historico_externo: list[dict[str, str]] | None = None,
+        prompt_sistema_extra: str | None = None,
     ) -> dict[str, Any]:
         if not isinstance(mensagem, str) or not mensagem.strip():
             raise ValueError("A mensagem é obrigatória.")
@@ -260,6 +262,11 @@ class NyxalAgentHub:
         requested = (provedor or _env("NYXAL_AGENT_PROVIDER", "auto")).lower().strip()
         intent = classificar_intencao(mensagem)
         started = time.monotonic()
+        extra_kwargs: dict[str, Any] = {}
+        if historico_externo is not None:
+            extra_kwargs["historico_externo"] = historico_externo
+        if prompt_sistema_extra is not None:
+            extra_kwargs["prompt_sistema_extra"] = prompt_sistema_extra
 
         if requested != "auto":
             resolved = self.resolve_provider(requested)
@@ -268,7 +275,7 @@ class NyxalAgentHub:
                     result = self._fallback_local(sessao)
                 else:
                     result = self._responder_provedor(
-                        mensagem.strip(), resolved, sessao, contexto_sistema
+                        mensagem.strip(), resolved, sessao, contexto_sistema, **extra_kwargs
                     )
             except Exception as exc:
                 self._routing_telemetry.registrar(
@@ -300,7 +307,7 @@ class NyxalAgentHub:
             attempted.append(resolved)
             try:
                 result = self._responder_provedor(
-                    mensagem.strip(), resolved, sessao, contexto_sistema
+                    mensagem.strip(), resolved, sessao, contexto_sistema, **extra_kwargs
                 )
             except Exception as exc:
                 failures.append(f"{resolved}: {type(exc).__name__}")
@@ -375,6 +382,9 @@ class NyxalAgentHub:
         resolved: str,
         sessao: str | None,
         contexto_sistema: dict[str, Any] | None,
+        *,
+        historico_externo: list[dict[str, str]] | None = None,
+        prompt_sistema_extra: str | None = None,
     ) -> dict[str, Any]:
         # A memória Letta indisponível não bloqueia o modelo principal.
         try:
@@ -383,6 +393,8 @@ class NyxalAgentHub:
             memory = ""
 
         system_prompt = self._system_prompt_base()
+        if isinstance(prompt_sistema_extra, str) and prompt_sistema_extra.strip():
+            system_prompt += "\n\nDiretrizes do núcleo conversacional da Nyxal:\n" + prompt_sistema_extra.strip()[:8000]
         if memory:
             system_prompt += "\n\nMemória persistente da Nyxal (contexto; pode estar desatualizada):\n" + memory[:12000]
         if contexto_sistema:
@@ -391,7 +403,16 @@ class NyxalAgentHub:
                 + json.dumps(contexto_sistema, ensure_ascii=False)[:16000]
             )
 
-        history = self._historico(sessao)
+        if historico_externo is None:
+            history = self._historico(sessao)
+        else:
+            history = []
+            for item in historico_externo[-20:]:
+                if not isinstance(item, dict):
+                    continue
+                role, content = item.get("role"), item.get("content")
+                if role in {"user", "assistant"} and isinstance(content, str) and content.strip():
+                    history.append({"role": role, "content": content[:12000]})
         if resolved == "gemini":
             answer = self._ask_gemini(mensagem, system_prompt, history)
             new_session = sessao
