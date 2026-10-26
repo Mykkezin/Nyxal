@@ -378,10 +378,6 @@ class ContextoHistoricoRelevanteNixal:
         *_args: Any,
         **_kwargs: Any,
     ) -> None:
-        self,
-        *_args: Any,
-        **_kwargs: Any,
-    ) -> None:
         raise PermissionError(
             "ContextoHistoricoRelevanteNixal não executa capacidades"
         )
