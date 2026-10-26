@@ -3,12 +3,14 @@ name: M5.17 Sandbox Físico Reversível
 on:
   push:
     branches:
+      - main
       - feat/m5-17-sandbox-fisico-reversivel
     paths:
       - "nixal_adaptador_sandbox_fisico.py"
       - "teste_m5_17_sandbox_fisico_reversivel.py"
       - "nixal_gateway_atuacao.py"
       - "nixal_plano_central_controle.py"
+      - ".github/workflows/m5-17-sandbox-validation.yml"
   pull_request:
     branches:
       - main
