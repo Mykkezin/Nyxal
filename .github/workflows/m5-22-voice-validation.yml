@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - feat/m5-22-voz-nyxos
+    - feat/voz-tempo-real-pipecat
 
 jobs:
   validate-m5-22:

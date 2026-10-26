@@ -1,4 +1,0 @@
-[submodule "interface/display"]
-	path = interface/display
-	url = https://github.com/Mykkezin/Nyxal---DISPLAY.git
-	branch = main
