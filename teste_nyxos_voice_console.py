@@ -55,6 +55,19 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn("ambiente isolado", self.console)
         self.assertIn('"7": "reverse"', self.console)
 
+    def test_metrics_sources_fail_independently_and_gpu_temperature_has_fallback(self):
+        self.assertIn("function fetchSnapshot(path, label)", self.console)
+        self.assertIn('fetchSnapshot("/api/agent/contexto", "observabilidade")', self.console)
+        self.assertIn('fetchSnapshot("/api/public/status", "estado público")', self.console)
+        self.assertIn("Array.isArray(resources.gpu)", self.console)
+        self.assertIn("gpu.temperatura_c", self.console)
+
+    def test_reflections_rotate_after_three_hours_and_are_dismissible(self):
+        self.assertIn("3 * 60 * 60 * 1000", self.console)
+        self.assertIn("function checkReflectionInterval()", self.console)
+        self.assertIn("rotateReflection(true)", self.console)
+        self.assertIn("nvcReflectionDismiss", self.console)
+
 
 if __name__ == "__main__":
     unittest.main()

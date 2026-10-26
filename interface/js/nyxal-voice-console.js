@@ -320,24 +320,45 @@
     });
   }
 
+  function fetchSnapshot(path, label) {
+    return fetch(apiUrl(path), { cache: "no-store" })
+      .then(function (response) {
+        if (!response.ok) throw new Error(label + "_http_" + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        return data && typeof data === "object" ? data : {};
+      })
+      .catch(function (error) {
+        // Uma fonte indisponível não deve impedir a leitura da outra.
+        console.warn("Nyxal console: fonte " + label + " indisponível", error);
+        return {};
+      });
+  }
+
   function refreshMetrics() {
     tickClock();
     Promise.all([
-      fetch(apiUrl("/api/agent/contexto"), { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("observabilidade_http_" + r.status); return r.json(); }),
-      fetch(apiUrl("/api/public/status"), { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("status_http_" + r.status); return r.json(); })
+      fetchSnapshot("/api/agent/contexto", "observabilidade"),
+      fetchSnapshot("/api/public/status", "estado público")
     ]).then(function (results) {
-      var obs = results[0].observabilidade || {};
-      var habitat = results[1].habitat || {};
+      var context = results[0] || {};
+      var status = results[1] || {};
+      var obs = context.observabilidade || context;
+      var habitat = status.habitat || {};
       var resources = habitat.recursos || {};
       var cpu = resources.cpu || {};
       var memory = obs.memoria || resources.memoria || {};
       var disk = obs.armazenamento_home || resources.armazenamento || {};
       var gpuPack = obs.gpu || {};
-      var devices = Array.isArray(gpuPack.dispositivos) ? gpuPack.dispositivos : [];
+      var devices = Array.isArray(gpuPack.dispositivos)
+        ? gpuPack.dispositivos
+        : (Array.isArray(resources.gpu) ? resources.gpu : []);
       var gpu = devices[0] || {};
       var tempsPack = obs.temperaturas || {};
       var sensors = Array.isArray(tempsPack.sensores) ? tempsPack.sensores : [];
       var temp = gpu.temperatura_celsius;
+      if (temp === null || temp === undefined) temp = gpu.temperatura_c;
       if (temp === null || temp === undefined) {
         var values = sensors.map(function (item) { return Number(item.celsius); }).filter(function (value) { return Number.isFinite(value); });
         if (values.length) temp = Math.max.apply(null, values);
@@ -350,13 +371,8 @@
       setMetric("nvcGpu", gpuValue, "%");
       setMetric("nvcTemp", temp, "°C");
     }).catch(function (error) {
-      ["nvcCpu", "nvcRam", "nvcDisk", "nvcGpu", "nvcTemp"].forEach(function (id) {
-        var node = document.getElementById(id);
-        if (!node) return;
-        node.textContent = "offline";
-        node.title = "Falha ao consultar a observabilidade; leitura anterior descartada.";
-      });
-      console.warn("Nyxal console: métricas indisponíveis", error);
+      // Falhas inesperadas não derrubam a interface nem apagam a última leitura.
+      console.warn("Nyxal console: falha ao atualizar métricas", error);
     });
   }
 
