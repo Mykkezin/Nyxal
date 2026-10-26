@@ -33,6 +33,8 @@ on:
       - "teste_nucleo_contexto_persistente.py"
       - "teste_nucleo_conversacional.py"
       - "teste_contexto_conversacional_56_5_5.py"
+      - "teste_contexto_historico_relevante_56_4_21.py"
+      - "teste_preparacao_investigacao_56_4_22.py"
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
@@ -77,6 +79,8 @@ on:
       - "teste_nucleo_contexto_persistente.py"
       - "teste_nucleo_conversacional.py"
       - "teste_contexto_conversacional_56_5_5.py"
+      - "teste_contexto_historico_relevante_56_4_21.py"
+      - "teste_preparacao_investigacao_56_4_22.py"
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
@@ -172,6 +176,8 @@ jobs:
             teste_nucleo_contexto_persistente.py \
             teste_nucleo_conversacional.py \
             teste_contexto_conversacional_56_5_5.py \
+            teste_contexto_historico_relevante_56_4_21.py \
+            teste_preparacao_investigacao_56_4_22.py \
             teste_memorias_persistencia_segura.py \
             scripts/autorizar_gmail_nyxal.py \
             scripts/configurar_hermes_whatsapp_policy.py \
@@ -203,3 +209,5 @@ jobs:
             teste_memorias_persistencia_segura
           python3 teste_nucleo_conversacional.py
           python3 teste_contexto_conversacional_56_5_5.py
+          python3 teste_contexto_historico_relevante_56_4_21.py
+          python3 teste_preparacao_investigacao_56_4_22.py
