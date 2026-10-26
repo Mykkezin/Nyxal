@@ -21,16 +21,6 @@ permissions:
   contents: read
 
 jobs:
-      - "nixal_learning_loop_causal.py"
-      - "nixal_evidencia_ambiental_llc.py"
-      - "nixal_evidencia_longitudinal_llc.py"
-      - "nixal_proveniencia_evidencia_llc.py"
-      - "nixal_aprendizado_persistente.py"
-      - "nixal_runtime.py"
-      - "teste_llc_learning_loop.py"
-      - "teste_llc4_evidencia_ambiental.py"
-      - "teste_llc5_evidencia_longitudinal.py"
-      - ".github/workflows/llc-validation.yml"
   llc:
     runs-on: self-hosted
     timeout-minutes: 10
