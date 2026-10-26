@@ -91,6 +91,25 @@ class TestNyxalAgentHub(unittest.TestCase):
             self.assertEqual(status["voz"]["voz_configurada"], "pf_dora")
 
 
+    def test_external_core_history_is_not_duplicated_in_hub_memory(self):
+        hub = NyxalAgentHub()
+        external_history = [
+            {"role": "user", "content": "pergunta anterior"},
+            {"role": "assistant", "content": "resposta anterior"},
+        ]
+        with patch.object(hub, "_system_prompt_base", return_value="identidade"):
+            with patch.object(hub, "_letta_memory_context", return_value=""):
+                with patch("nixal_agent_hub.ask_responses_api", return_value="resposta atual"):
+                    result = hub._responder_provedor(
+                        "pergunta atual",
+                        "openai",
+                        "sessao-core",
+                        None,
+                        historico_externo=external_history,
+                    )
+        self.assertTrue(result["sucesso"])
+        self.assertEqual(hub._historico("sessao-core"), [])
+
     def test_shared_provider_client_rejects_redirects(self):
         handler = _RejectProviderRedirects()
         request = Request("https://generativelanguage.googleapis.com/v1beta/models")
