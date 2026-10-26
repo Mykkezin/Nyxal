@@ -505,7 +505,10 @@ class NyxalAgentHub:
             raise RuntimeError(f"O provedor '{resolved}' retornou uma resposta vazia.")
 
         self._last_provider = resolved
-        self._registrar_turno(sessao, mensagem, answer.strip())
+        # Quando a mensagem vem do núcleo, o núcleo é o registro canônico
+        # da conversa. Não duplique o mesmo turno na memória volátil do hub.
+        if historico_externo is None:
+            self._registrar_turno(sessao, mensagem, answer.strip())
         memory_sync = "não solicitado"
         if resolved != "letta" and self._memory_sync_enabled() and self.provider_configured("letta"):
             try:
