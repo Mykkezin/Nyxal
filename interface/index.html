@@ -2881,7 +2881,9 @@
             now - voiceSpeechStartedAt >=
             VOICE_VAD_START_MS
           ) {
+            const primeiraFalaDaFrase = !voiceSpeechDetectedInCurrentRecording;
             voiceSpeechDetectedInCurrentRecording = true;
+            if (primeiraFalaDaFrase) registerVoiceUiActivity();
           }
         } else if (
           voiceSpeechDetectedInCurrentRecording &&
