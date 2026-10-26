@@ -12,13 +12,13 @@ on:
     branches:
       - feat/m5-22-voz-nyxos
       - feat/voz-tempo-real-pipecat
-
-jobs:
     paths:
       - "nixal_audio_nyxos.py"
       - "nixal_voz_nyxos.py"
       - "teste_m5_22_voz_nyxos.py"
       - "deploy/voice/**"
+
+jobs:
   validate-m5-22:
     runs-on: ubuntu-latest
     steps:
