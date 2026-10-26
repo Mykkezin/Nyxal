@@ -249,7 +249,7 @@ class NucleoConversacionalNixal:
                         sessao=sessao,
                         estado="opcoes_dialogo_invalidas",
                     )
-                if len(contexto_json) > 32000:
+                if len(contexto_json) > 128000:
                     return self.interface.criar_resposta(
                         "O contexto do sistema excede o limite permitido.",
                         sessao=sessao,
