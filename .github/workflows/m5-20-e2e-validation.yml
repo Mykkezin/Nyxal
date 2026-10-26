@@ -3,6 +3,7 @@ name: M5.20 Validacao E2E
 on:
   push:
     branches:
+      - main
       - feat/m5-20-validacao-e2e
     paths:
       - "nixal_adaptador_sandbox_fisico.py"
@@ -11,6 +12,7 @@ on:
       - "nixal_plano_central_controle.py"
       - "nixal_ciclo_residente.py"
       - "teste_m5_20_validacao_e2e.py"
+      - ".github/workflows/m5-20-e2e-validation.yml"
   pull_request:
     branches:
       - main
