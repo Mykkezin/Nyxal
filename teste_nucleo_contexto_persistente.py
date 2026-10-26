@@ -117,6 +117,38 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         self.assertIn("access_token=[REDACTED]", texto_usuario)
         self.assertNotIn("abc123", texto_usuario)
 
+    def test_memoria_corrompida_nao_e_classificada_como_historico_ausente(self) -> None:
+        caminho_corrompido = Path(self.tempdir.name) / "memoria_corrompida.json"
+        conteudo_original = '{"versao":'
+        caminho_corrompido.write_text(conteudo_original, encoding="utf-8")
+
+        memoria_corrompida = MemoriaInvestigacaoNixal(caminho_corrompido)
+        contexto_corrompido = ContextoHistoricoRelevanteNixal(memoria_corrompida)
+        cliente = FakeChatClient()
+        dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
+        nucleo = NucleoConversacionalNixal(
+            dialogo=dialogo,
+            memoria_investigacao=memoria_corrompida,
+            contexto_historico_relevante=contexto_corrompido,
+        )
+
+        consulta = "Onde paramos na investigação do runner privado do GitHub Actions?"
+        resposta = nucleo.processar(
+            nucleo.interface.criar_entrada(consulta, sessao="sessao-memoria-corrompida")
+        )
+
+        metadados = resposta["valor"]["contexto_historico_persistido"]
+        self.assertTrue(metadados["consultado"])
+        self.assertEqual(metadados["estado"], "memoria_degradada")
+        self.assertEqual(metadados["quantidade"], 0)
+        self.assertEqual(metadados["registros"], [])
+        mensagens = cliente.calls[0]["messages"]
+        texto_usuario = "\\n".join(
+            item["content"] for item in mensagens if item["role"] == "user"
+        )
+        self.assertNotIn("CONTEXTO DE INVESTIGAÇÕES ANTERIORES", texto_usuario)
+        self.assertEqual(caminho_corrompido.read_text(encoding="utf-8"), conteudo_original)
+
     def test_consulta_lexical_rejeita_limite_invalido(self) -> None:
         for limite in (0, -1, 6, True, "3"):
             with self.subTest(limite=limite):
