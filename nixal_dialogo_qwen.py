@@ -119,10 +119,10 @@ class DialogoQwenNixal:
         # provedor remoto está configurado ou quando o fallback é necessário.
         try:
             from nixal_intent_router import classificar_intencao
-            from nixal_agent_hub import PROMPTS_ESPECIALIZADOS
+            from nixal_agent_hub import prompt_especialista
 
             intent = classificar_intencao(texto)
-            specialist_prompt = PROMPTS_ESPECIALIZADOS.get(intent["classe"])
+            specialist_prompt = prompt_especialista(intent["classe"])
             if specialist_prompt:
                 mensagens[0]["content"] += (
                     "\n\nDiretrizes especializadas da Nyxal:\n" + specialist_prompt
