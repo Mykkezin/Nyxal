@@ -196,8 +196,12 @@ class MemoriaConhecimentoNixal:
             self._dados["registros"].append(registro)
             try:
                 self._salvar()
-            except OSError:
+            except OSError as erro:
                 self._dados = self._carregar()
+                if str(erro) == "memoria_excede_limite_tamanho":
+                    return self._negado(
+                        f"memoria_excede_limite_tamanho:{MAX_MEMORIA_JSON_BYTES}; arquivo anterior preservado."
+                    )
                 return self._negado(
                     "falha_persistencia; arquivo anterior preservado quando possível."
                 )
