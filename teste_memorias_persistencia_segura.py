@@ -79,6 +79,30 @@ class TesteMemoriasPersistenciaSegura(unittest.TestCase):
         self.assertEqual(escrita.get("estado"), "negado")
         self.assertEqual(path.read_text(encoding="utf-8"), original)
 
+    def test_listar_recent_copia_apenas_o_sufixo_e_nao_altera_a_memoria(self):
+        path = self.root / "memoria_investigacao_nixal.json"
+        memoria = MemoriaInvestigacaoNixal(path)
+        for nome in ("hipótese A", "hipótese B", "hipótese C"):
+            self.assertEqual(memoria.registrar(ciclo(nome)).get("estado"), "persistido")
+
+        recentes = memoria.listar_recent(2)
+        self.assertEqual(
+            [registro["ciclo"]["hipotese"] for registro in recentes],
+            ["hipótese B", "hipótese C"],
+        )
+        recentes[0]["ciclo"]["hipotese"] = "alterada fora"
+        self.assertEqual(
+            memoria.listar_recent(2)[0]["ciclo"]["hipotese"],
+            "hipótese B",
+        )
+
+    def test_listar_recent_rejeita_limites_invalidos(self):
+        memoria = MemoriaInvestigacaoNixal(self.root / "memoria_investigacao_nixal.json")
+        for limite in (0, -1, True, 5001, "2"):
+            with self.subTest(limite=limite):
+                with self.assertRaises(ValueError):
+                    memoria.listar_recent(limite)
+
     def test_instancias_antigas_nao_perdem_registros_de_investigacao(self):
         path = self.root / "memoria_investigacao_nixal.json"
         primeira = MemoriaInvestigacaoNixal(path)
