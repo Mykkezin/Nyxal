@@ -54,6 +54,11 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn("window.nyxalHandleImageIntent", self.html)
         self.assertIn('payload.imagem_base64', self.console)
         self.assertIn('payload.mime_type', self.console)
+        self.assertIn('["image/png", "image/jpeg", "image/webp"]', self.console)
+        self.assertIn("24 * 1024 * 1024", self.console)
+        self.assertIn('replace(/\\s+/g, "")', self.console)
+        self.assertIn('window.nyxalApiPost("/api/agent/image"', self.console)
+        self.assertIn('/interface/js/nyxal-api-client.js', self.html)
 
     def test_chat_image_is_rendered_in_the_main_display_without_voice_console(self):
         self.assertIn("function showImageInMainDisplay(imageUrl, prompt, filename)", self.console)
