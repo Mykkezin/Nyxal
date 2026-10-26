@@ -218,6 +218,8 @@ class TestNyxalAgentHub(unittest.TestCase):
         self.assertEqual(result["roteamento"]["classe"], "engenharia_reversa")
         self.assertIn("permissão para examinar", result["prompt_extra_capturado"])
         self.assertIn("resultado verificável", result["prompt_extra_capturado"])
+        self.assertIn("Playbook da habilidade versionado no projeto", result["prompt_extra_capturado"])
+        self.assertIn("Critérios de conclusão", result["prompt_extra_capturado"])
 
     def test_cybersecurity_and_data_science_use_specialist_prompts(self):
         from nixal_intent_router import classificar_intencao
@@ -240,6 +242,8 @@ class TestNyxalAgentHub(unittest.TestCase):
                     data = hub.responder("Quero fazer uma análise de Data Science com dataset")
         self.assertIn("cibersegurança defensiva", cyber["prompt_extra_capturado"])
         self.assertIn("Data Science", data["prompt_extra_capturado"])
+        self.assertIn("Playbook da habilidade versionado no projeto", cyber["prompt_extra_capturado"])
+        self.assertIn("Playbook da habilidade versionado no projeto", data["prompt_extra_capturado"])
 
 
 if __name__ == "__main__":
