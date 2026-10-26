@@ -37,7 +37,7 @@ removido da árvore atual. A abertura usa `interface/startup.html`, uma animaç�
 local em HTML/CSS/canvas com núcleo luminoso, órbitas, satélites, scanlines,
 estrelas e barra de progresso. Ela não depende de bibliotecas ou mídia remotas,
 respeita `prefers-reduced-motion` e segue para a interface local após a sequência.
-Os dois launchers usam a página local; não precisam de um reprodutor de vídeo. O parâmetro `next` só aceita URL HTTP/HTTPS sem credenciais, com host `127.0.0.1`, `localhost` ou loopback IPv6 e porta exatamente `8010`. Destinos externos, serviços em outras portas, esquemas executáveis e valores malformados voltam à interface local. O teste de regressão verifica a allowlist e que a porta 8010 faz parte da condição de autorização do redirecionamento.
+Os dois launchers usam a página local; não precisam de um reprodutor de vídeo. O parâmetro `next` só aceita URL HTTP/HTTPS sem credenciais, com host `127.0.0.1`, `localhost` ou loopback IPv6, porta exatamente `8010`, caminho `/` ou `/index.html`, sem query nem fragmento. Destinos externos, serviços em outras portas, outros caminhos da API, esquemas executáveis e valores malformados voltam à interface local. O teste de regressão verifica a allowlist de host/porta, o caminho permitido e a ausência de query/fragmento.
 
 A animação segue a identidade visual do NyxOS, mas não é declarada uma reprodução
 quadro a quadro do vídeo original, pois essa equivalência não foi verificada.
