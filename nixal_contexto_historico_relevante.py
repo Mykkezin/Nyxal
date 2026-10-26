@@ -377,7 +377,7 @@ class ContextoHistoricoRelevanteNixal:
         self,
         *_args: Any,
         **_kwargs: Any,
-    ) -> None:    def executar_capacidade(
+    ) -> None:
         self,
         *_args: Any,
         **_kwargs: Any,
