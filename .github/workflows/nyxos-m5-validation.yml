@@ -43,7 +43,6 @@ on:
       - "teste_ciclo_evolucao_ae*.py"
       - "teste_descoberta_continua_ae*.py"
       - "teste_m5_*.py"
-      - ".github/workflows/nyxos-m5-validation.yml"
   workflow_dispatch:
 
 permissions:
