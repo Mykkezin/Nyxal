@@ -54,6 +54,8 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn("window.nyxalHandleImageIntent", self.html)
         self.assertIn('payload.imagem_base64', self.console)
         self.assertIn('payload.mime_type', self.console)
+        self.assertIn('["image/png", "image/jpeg", "image/webp"]', self.console)
+        self.assertIn("24 * 1024 * 1024", self.console)
 
     def test_weather_reflections_and_keyboard_shortcuts_are_present(self):
         self.assertIn('api.open-meteo.com/v1/forecast', self.console)
