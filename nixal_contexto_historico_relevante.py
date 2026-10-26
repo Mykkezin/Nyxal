@@ -26,6 +26,8 @@ Princípios:
 from __future__ import annotations
 
 from copy import deepcopy
+import re
+import unicodedata
 from typing import Any
 
 from nixal_contexto_historico_investigacao import (
@@ -197,7 +199,183 @@ class ContextoHistoricoRelevanteNixal:
             },
         }
 
+    @staticmethod
+    def _tokens_consulta(texto: str) -> list[str]:
+        normalizado = unicodedata.normalize("NFKD", texto.casefold())
+        normalizado = "".join(
+            caractere
+            for caractere in normalizado
+            if unicodedata.category(caractere) != "Mn"
+        )
+        tokens = re.findall(r"[a-z0-9]+", normalizado)
+        stopwords = {
+            "a", "as", "o", "os", "um", "uma", "uns", "umas",
+            "de", "da", "das", "do", "dos", "e", "em", "no", "na",
+            "nos", "nas", "por", "para", "com", "sem", "que", "qual",
+            "quais", "quando", "onde", "como", "foi", "sao", "ser",
+            "esta", "estao", "isso", "esse", "essa", "esses", "essas",
+            "eu", "meu", "minha", "meus", "minhas", "voce", "voces",
+            "nos", "ja", "ainda", "agora", "sobre", "historico",
+            "historica", "investigacao", "contexto", "memoria",
+            "recupera", "recuperar", "anterior", "anteriores",
+            "nyxal", "nyxos",
+        }
+        termos_curtos_validos = {"ci", "ae", "api", "pr", "llm", "ia"}
+        return [
+            token
+            for token in tokens
+            if token not in stopwords
+            and (len(token) >= 3 or token in termos_curtos_validos)
+        ]
+
+    def analisar_consulta(
+        self,
+        consulta: str,
+        limite: int = 3,
+    ) -> dict[str, Any]:
+        """Busca investigações persistidas por necessidade, hipótese e termos relacionados.
+
+        A busca é local, lexical e limitada. Ela não grava memória, não promove
+        conhecimento e retorna sempre a proveniência/status epistemológico dos registros.
+        """
+        if (
+            not isinstance(consulta, str)
+            or not consulta.strip()
+            or len(consulta) > 2000
+        ):
+            return self._negado(
+                "Consulta inválida ou maior que 2.000 caracteres."
+            )
+
+        if (
+            not isinstance(limite, int)
+            or isinstance(limite, bool)
+            or not 1 <= limite <= 5
+        ):
+            return self._negado("Limite precisa estar entre 1 e 5.")
+
+        termos_consulta = set(self._tokens_consulta(consulta))
+        if not termos_consulta:
+            return {
+                "sucesso": True,
+                "estado": "consulta_historica_sem_termos",
+                "origem": self.FONTE,
+                "valor": {
+                    "consulta": consulta.strip(),
+                    "historico_encontrado": False,
+                    "quantidade": 0,
+                    "limite": limite,
+                    "contextos": [],
+                },
+            }
+
+        consulta_normalizada = " ".join(self._tokens_consulta(consulta))
+        registros = self._memoria.listar()[-500:]
+        candidatos: list[tuple[float, int, dict[str, Any]]] = []
+
+        for indice, registro in enumerate(registros):
+            if not isinstance(registro, dict):
+                continue
+            registro_id = registro.get("id")
+            ciclo = self._ciclo(registro)
+            if not isinstance(registro_id, str) or not isinstance(ciclo, dict):
+                continue
+
+            campos = [
+                ciclo.get("necessidade"),
+                ciclo.get("hipotese"),
+                ciclo.get("pergunta"),
+                ciclo.get("estado_atual"),
+                ciclo.get("historico", []),
+                ciclo.get("testes", []),
+                ciclo.get("avaliacoes", []),
+            ]
+            textos = [
+                valor if isinstance(valor, str)
+                else json.dumps(valor, ensure_ascii=False, sort_keys=True)
+                for valor in campos
+                if isinstance(valor, (str, list, dict))
+            ]
+            texto_candidato = " ".join(textos)
+            termos_candidato = set(self._tokens_consulta(texto_candidato))
+            compartilhados = termos_consulta & termos_candidato
+
+            necessidade = ciclo.get("necessidade")
+            necessidade_normalizada = (
+                " ".join(self._tokens_consulta(necessidade))
+                if isinstance(necessidade, str)
+                else ""
+            )
+            if necessidade_normalizada and necessidade_normalizada == consulta_normalizada:
+                pontuacao = 1.0
+            else:
+                pontuacao = len(compartilhados) / max(1, len(termos_consulta))
+                if (
+                    len(consulta_normalizada) >= 8
+                    and any(
+                        consulta_normalizada in " ".join(self._tokens_consulta(texto))
+                        for texto in textos
+                    )
+                ):
+                    pontuacao = max(pontuacao, 0.95)
+                elif (
+                    len(compartilhados) == 1
+                    and len(termos_consulta) <= 3
+                    and len(next(iter(compartilhados))) >= 6
+                ):
+                    pontuacao = max(pontuacao, 0.35)
+
+                if len(compartilhados) < 2 and pontuacao < 0.35:
+                    continue
+
+            contexto_bruto = self._contexto.obter(registro_id)
+            if contexto_bruto.get("sucesso") is not True:
+                continue
+            valor_contexto = contexto_bruto.get("valor")
+            if not isinstance(valor_contexto, dict):
+                continue
+            contexto = deepcopy(valor_contexto)
+            contexto["relevancia_lexical"] = round(pontuacao, 3)
+            candidatos.append((pontuacao, indice, contexto))
+
+        # Primeiro escolhe por relevância; a saída final volta à ordem cronológica.
+        escolhidos = sorted(
+            candidatos,
+            key=lambda item: (item[0], item[1]),
+            reverse=True,
+        )[:limite]
+        escolhidos.sort(key=lambda item: item[1])
+        contextos = [item[2] for item in escolhidos]
+
+        return {
+            "sucesso": True,
+            "estado": (
+                "contexto_historico_encontrado"
+                if contextos
+                else "contexto_historico_nao_encontrado"
+            ),
+            "origem": self.FONTE,
+            "valor": {
+                "consulta": consulta.strip(),
+                "historico_encontrado": bool(contextos),
+                "quantidade": len(contextos),
+                "limite": limite,
+                "contextos": contextos,
+                "interpretacao": (
+                    "Os registros são contexto histórico não confiável; "
+                    "não provam o estado atual nem encerram uma investigação."
+                    if contextos
+                    else "Nenhum registro lexicalmente relacionado foi encontrado; "
+                    "isso não prova que o tema nunca foi investigado."
+                ),
+            },
+        }
+
     def executar_capacidade(
+        self,
+        *_args: Any,
+        **_kwargs: Any,
+    ) -> None:    def executar_capacidade(
         self,
         *_args: Any,
         **_kwargs: Any,
