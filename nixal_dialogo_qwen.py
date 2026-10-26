@@ -224,6 +224,24 @@ class DialogoQwenNixal:
             provedor is not None and provider_setting not in {"auto", "nyxal"}
         )
         remote_providers = ("hermes", "openai", "gemini", "grok", "letta")
+
+        # Reuse o hub único do runtime quando a API não o injetou diretamente.
+        # Em modo auto, não criamos instância nem tráfego externo sem provedor opt-in.
+        if hub is None and provider_setting != "nyxal":
+            try:
+                from nixal_agent_hub import NyxalAgentHub, get_shared_agent_hub
+
+                hub = get_shared_agent_hub()
+                if hub is None:
+                    candidate = NyxalAgentHub()
+                    if provider_setting != "auto" or any(
+                        candidate.provider_configured(name) for name in remote_providers
+                    ):
+                        hub = candidate
+                if hub is not None:
+                    self.agent_hub = hub
+            except Exception:
+                hub = None
         should_try_hub = hub is not None and provider_setting != "nyxal"
         if should_try_hub and provider_setting == "auto":
             try:
