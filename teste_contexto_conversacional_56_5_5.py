@@ -97,12 +97,15 @@ class DialogoFake(DialogoQwenNixalStub):
         self,
         texto: str,
         historico=None,
+        *,
+        sessao: str | None = None,
     ) -> dict:
         historico_copiado = list(historico or [])
         self.chamadas.append(
             {
                 "texto": texto,
                 "historico": historico_copiado,
+                "sessao": sessao,
             }
         )
 
@@ -324,6 +327,13 @@ def main() -> None:
     verificar(
         len(dialogo.chamadas) == 2,
         "módulo de diálogo foi chamado duas vezes",
+        falhas,
+        total,
+    )
+
+    verificar(
+        all(chamada["sessao"] == sessao for chamada in dialogo.chamadas),
+        "o núcleo encaminha a mesma sessão ao diálogo em cada turno",
         falhas,
         total,
     )

@@ -650,28 +650,17 @@
     if (status) status.textContent = "Solicitando geração visual ao provedor configurado…";
     if (output) output.replaceChildren();
     try {
-      var response;
-      var payload;
-      if (typeof window.nyxalApiPost === "function") {
-        var apiResult = await window.nyxalApiPost("/api/agent/image", {
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: prompt })
-        });
-        response = apiResult.response;
-        payload = apiResult.data;
-      } else {
-        response = await fetch(apiUrl("/api/agent/image"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: prompt })
-        });
-        try { payload = await response.json(); } catch (_) { payload = null; }
-      }
-      if (!response.ok || !payload || payload.sucesso === false) {
+      var response = await fetch(apiUrl("/api/agent/image"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt })
+      });
+      var payload = await response.json();
+      if (!response.ok || payload.sucesso === false) {
         throw new Error(payload.motivo || payload.estado || "O provedor não gerou a imagem.");
       }
       var mimeType = String(payload.mime_type || "").trim().toLowerCase();
-      var imageBase64 = String(payload.imagem_base64 || "").replace(/\\s+/g, "");
+      var imageBase64 = String(payload.imagem_base64 || "").replace(/\s+/g, "");
       if (!imageBase64 || !["image/png", "image/jpeg", "image/webp"].includes(mimeType)) {
         throw new Error("A API retornou um formato de imagem ausente ou não suportado.");
       }

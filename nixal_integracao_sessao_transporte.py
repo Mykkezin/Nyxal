@@ -93,6 +93,9 @@ class IntegracaoSessaoTransporteNixal:
         texto: str,
         nucleo: Any,
         sessao_id: str | None = None,
+        *,
+        provedor: str | None = None,
+        contexto_sistema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Processa uma mensagem dentro de uma sessão.
@@ -116,6 +119,23 @@ class IntegracaoSessaoTransporteNixal:
             return self._negado(
                 "Um núcleo conversacional precisa ser fornecido."
             )
+
+        if provedor is not None and (
+            not isinstance(provedor, str)
+            or provedor.strip().lower() not in {
+                "auto", "nyxal", "gemini", "hermes",
+                "letta", "openai", "grok",
+            }
+        ):
+            return self._negado("O provedor conversacional é inválido.")
+        if contexto_sistema is not None and not isinstance(contexto_sistema, dict):
+            return self._negado("O contexto do sistema precisa ser um objeto.")
+
+        opcoes_transporte: dict[str, Any] = {}
+        if provedor is not None:
+            opcoes_transporte["provedor"] = provedor.strip().lower()
+        if contexto_sistema is not None:
+            opcoes_transporte["contexto_sistema"] = deepcopy(contexto_sistema)
 
         # --------------------------------------------------------
         # OBTENÇÃO OU CRIAÇÃO DA SESSÃO
@@ -224,13 +244,20 @@ class IntegracaoSessaoTransporteNixal:
         # --------------------------------------------------------
 
         try:
-            resultado_transporte = (
-                self.transporte.processar_mensagem(
+            if opcoes_transporte:
+                resultado_transporte = self.transporte.processar_mensagem(
+                    texto,
+                    nucleo,
+                    sessao_id,
+                    **opcoes_transporte,
+                )
+            else:
+                # Mantém compatibilidade com transportes antigos/injetados.
+                resultado_transporte = self.transporte.processar_mensagem(
                     texto,
                     nucleo,
                     sessao_id,
                 )
-            )
 
         except Exception as erro:
             return self._erro(

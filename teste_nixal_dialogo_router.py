@@ -94,49 +94,6 @@ class TestNyxalPrimaryDialogueRouter(unittest.TestCase):
         self.assertEqual(len(client.calls), 1)
         hub.responder.assert_called_once()
 
-    def test_dialogue_discovers_configured_hub_without_api_injection(self):
-        client = FakeLocalChat()
-        hub = Mock()
-        hub.responder.return_value = {
-            "sucesso": True,
-            "provedor": "openai",
-            "resposta": "Resposta remota roteada.",
-            "roteamento": {"classe": "conhecimento_geral", "provedor": "openai"},
-        }
-        dialog = DialogoQwenNixal(cliente=client)
-
-        with patch.dict(os.environ, {"NYXAL_AGENT_PROVIDER": "openai"}, clear=True):
-            with patch("nixal_agent_hub.get_shared_agent_hub", return_value=None):
-                with patch("nixal_agent_hub.NyxalAgentHub", return_value=hub):
-                    answer = dialog.responder("Olá, Nyxal.", sessao="sessao-remota")
-
-        self.assertTrue(answer["sucesso"])
-        self.assertEqual(answer["origem"], "nixal_agent_hub")
-        self.assertEqual(answer["resposta"], "Resposta remota roteada.")
-        self.assertEqual(client.calls, [])
-        hub.responder.assert_called_once()
-        self.assertEqual(hub.responder.call_args.kwargs["sessao"], "sessao-remota")
-
-    def test_dialogue_reuses_existing_shared_runtime_hub(self):
-        shared = NyxalAgentHub()
-        shared.responder = Mock(return_value={
-            "sucesso": True,
-            "provedor": "openai",
-            "resposta": "Resposta do hub compartilhado.",
-            "roteamento": {"classe": "conhecimento_geral", "provedor": "openai"},
-        })
-        client = FakeLocalChat()
-        dialog = DialogoQwenNixal(cliente=client)
-
-        with patch.dict(os.environ, {"NYXAL_AGENT_PROVIDER": "openai"}, clear=True):
-            answer = dialog.responder("Continue.", sessao="sessao-compartilhada")
-
-        self.assertEqual(answer["origem"], "nixal_agent_hub")
-        self.assertEqual(answer["resposta"], "Resposta do hub compartilhado.")
-        shared.responder.assert_called_once()
-        self.assertEqual(shared.responder.call_args.kwargs["sessao"], "sessao-compartilhada")
-        self.assertEqual(client.calls, [])
-
     def test_local_qwen_receives_reverse_engineering_specialist_guidance(self):
         client = FakeLocalChat()
         hub = Mock()
@@ -178,14 +135,79 @@ class TestNyxalPrimaryDialogueRouter(unittest.TestCase):
         self.assertIn("Converse com naturalidade", args[2])
         self.assertEqual(args[3], history)
 
-    def test_dialogue_discovers_opt_in_router_and_core_passes_session(self):
+    def test_primary_api_injects_router_and_core_passes_session(self):
         root = Path(__file__).resolve().parent
-        dialogue_source = (root / "nixal_dialogo_qwen.py").read_text(encoding="utf-8")
+        api_source = (root / "nyxal_web_api.py").read_text(encoding="utf-8")
         core_source = (root / "nixal_nucleo_conversacional.py").read_text(encoding="utf-8")
-        self.assertIn("candidate = NyxalAgentHub()", dialogue_source)
-        self.assertIn("candidate.provider_configured", dialogue_source)
+        self.assertIn("NUCLEO_CONVERSACIONAL.dialogo.agent_hub = AGENTE_NYXAL", api_source)
         self.assertIn("historico=historico,\n                sessao=sessao,", core_source)
 
+
+    def test_explicit_local_provider_overrides_auto_environment(self):
+        client = FakeLocalChat()
+        hub = Mock()
+        hub.provider_configured.return_value = True
+        dialog = DialogoQwenNixal(cliente=client)
+        dialog.agent_hub = hub
+
+        with patch.dict(os.environ, {"NYXAL_AGENT_PROVIDER": "auto"}, clear=True):
+            answer = dialog.responder("Vamos conversar localmente.", provedor="nyxal")
+
+        self.assertTrue(answer["sucesso"])
+        self.assertEqual(answer["origem"], DialogoQwenNixal.FONTE)
+        self.assertEqual(answer["resposta"], "Resposta local Qwen.")
+        hub.responder.assert_not_called()
+        self.assertEqual(len(client.calls), 1)
+
+    def test_explicit_provider_receives_read_only_system_context(self):
+        client = FakeLocalChat()
+        hub = Mock()
+        hub.responder.return_value = {
+            "sucesso": True,
+            "estado": "resposta_gerada",
+            "provedor": "openai",
+            "resposta": "Resumo contextual.",
+            "roteamento": {"classe": "conhecimento_geral", "provedor": "openai"},
+        }
+        dialog = DialogoQwenNixal(cliente=client)
+        dialog.agent_hub = hub
+        contexto = {"observabilidade": {"cpu_percent": 23.0}}
+
+        with patch.dict(os.environ, {"NYXAL_AGENT_PROVIDER": "nyxal"}, clear=True):
+            answer = dialog.responder(
+                "Resuma o estado atual.",
+                historico=[{"papel": "user", "texto": "Contexto anterior"}],
+                sessao="sessao-contextual",
+                provedor="openai",
+                contexto_sistema=contexto,
+            )
+
+        self.assertTrue(answer["sucesso"])
+        self.assertEqual(answer["modelo"], "openai")
+        kwargs = hub.responder.call_args.kwargs
+        self.assertEqual(kwargs["provedor"], "openai")
+        self.assertEqual(kwargs["sessao"], "sessao-contextual")
+        self.assertEqual(kwargs["contexto_sistema"], contexto)
+        self.assertEqual(kwargs["historico_externo"], [
+            {"role": "user", "content": "Contexto anterior"},
+        ])
+        self.assertEqual(client.calls, [])
+
+    def test_explicit_remote_provider_failure_does_not_silently_switch_models(self):
+        client = FakeLocalChat()
+        hub = Mock()
+        hub.responder.side_effect = RuntimeError("PRIVATE_PROVIDER_SECRET")
+        dialog = DialogoQwenNixal(cliente=client)
+        dialog.agent_hub = hub
+
+        with patch.dict(os.environ, {"NYXAL_AGENT_PROVIDER": "auto"}, clear=True):
+            answer = dialog.responder("Continue.", sessao="sessao-remote", provedor="openai")
+
+        self.assertFalse(answer["sucesso"])
+        self.assertEqual(answer["estado"], "provedor_indisponivel")
+        self.assertEqual(answer["erro"], "O provedor selecionado não está disponível.")
+        self.assertNotIn("PRIVATE_PROVIDER_SECRET", str(answer))
+        self.assertEqual(client.calls, [])
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,6 +9,9 @@ on:
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
+      - "nixal_intent_router.py"
+      - "nixal_responses_api.py"
+      - "teste_nixal_responses_api.py"
       - "nixal_observabilidade_sistema.py"
       - "nixal_integracao_gmail.py"
       - "nixal_integracao_google.py"
@@ -16,17 +19,27 @@ on:
       - "nixal_capacidade_visual.py"
       - "nixal_seguranca_http.py"
       - "nixal_nucleo_conversacional.py"
+      - "nixal_transporte_conversacional.py"
+      - "nixal_integracao_sessao_transporte.py"
       - "nixal_contexto_historico_relevante.py"
       - "nixal_memoria_investigacao.py"
       - "nixal_memoria_conhecimento.py"
       - "nixal_dialogo_qwen.py"
       - "teste_nixal_display_routes.py"
       - "teste_nixal_agent_hub.py"
+      - "teste_nixal_dialogo_router.py"
+      - "teste_api_security_auth.py"
       - "teste_nixal_observabilidade_sistema.py"
       - "teste_nixal_capacidade_visual.py"
       - "teste_nixal_integracao_google.py"
       - "teste_nixal_integracao_gmail.py"
       - "teste_nucleo_contexto_persistente.py"
+      - "teste_nucleo_conversacional.py"
+      - "teste_transporte_conversacional_56_5_2.py"
+      - "teste_integracao_sessao_transporte_56_5_4.py"
+      - "teste_contexto_conversacional_56_5_5.py"
+      - "teste_contexto_historico_relevante_56_4_21.py"
+      - "teste_preparacao_investigacao_56_4_22.py"
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
@@ -35,6 +48,7 @@ on:
       - "scripts/configurar_hermes_whatsapp_policy.py"
       - "scripts/nyxal_letta_memory.py"
       - "deploy/agent/**"
+      - "skills/**"
       - "deploy/voice/**"
   push:
     branches:
@@ -47,6 +61,9 @@ on:
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
+      - "nixal_intent_router.py"
+      - "nixal_responses_api.py"
+      - "teste_nixal_responses_api.py"
       - "nixal_observabilidade_sistema.py"
       - "nixal_integracao_gmail.py"
       - "nixal_integracao_google.py"
@@ -54,17 +71,26 @@ on:
       - "nixal_capacidade_visual.py"
       - "nixal_seguranca_http.py"
       - "nixal_nucleo_conversacional.py"
+      - "nixal_transporte_conversacional.py"
+      - "nixal_integracao_sessao_transporte.py"
       - "nixal_contexto_historico_relevante.py"
       - "nixal_memoria_investigacao.py"
       - "nixal_memoria_conhecimento.py"
       - "nixal_dialogo_qwen.py"
       - "teste_nixal_display_routes.py"
       - "teste_nixal_agent_hub.py"
+      - "teste_nixal_dialogo_router.py"
       - "teste_nixal_observabilidade_sistema.py"
       - "teste_nixal_capacidade_visual.py"
       - "teste_nixal_integracao_google.py"
       - "teste_nixal_integracao_gmail.py"
       - "teste_nucleo_contexto_persistente.py"
+      - "teste_nucleo_conversacional.py"
+      - "teste_transporte_conversacional_56_5_2.py"
+      - "teste_integracao_sessao_transporte_56_5_4.py"
+      - "teste_contexto_conversacional_56_5_5.py"
+      - "teste_contexto_historico_relevante_56_4_21.py"
+      - "teste_preparacao_investigacao_56_4_22.py"
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
@@ -73,6 +99,7 @@ on:
       - "scripts/configurar_hermes_whatsapp_policy.py"
       - "scripts/nyxal_letta_memory.py"
       - "deploy/agent/**"
+      - "skills/**"
       - "deploy/voice/**"
   workflow_dispatch:
 
@@ -140,6 +167,9 @@ jobs:
             nyxal_web_api.py \
             nixal_display_routes.py \
             nixal_agent_hub.py \
+            nixal_intent_router.py \
+            nixal_responses_api.py \
+            teste_nixal_responses_api.py \
             nixal_observabilidade_sistema.py \
             nixal_integracao_gmail.py \
             nixal_capacidade_visual.py \
@@ -148,11 +178,21 @@ jobs:
             deploy/voice/verificar_api_nyxal.py \
             deploy/voice/verificar_contrato_pipecat.py \
             nixal_nucleo_conversacional.py \
+            nixal_transporte_conversacional.py \
+            nixal_integracao_sessao_transporte.py \
             nixal_contexto_historico_relevante.py \
             nixal_memoria_investigacao.py \
             nixal_memoria_conhecimento.py \
             nixal_dialogo_qwen.py \
+            teste_nixal_dialogo_router.py \
+            teste_api_security_auth.py \
             teste_nucleo_contexto_persistente.py \
+            teste_nucleo_conversacional.py \
+            teste_transporte_conversacional_56_5_2.py \
+            teste_integracao_sessao_transporte_56_5_4.py \
+            teste_contexto_conversacional_56_5_5.py \
+            teste_contexto_historico_relevante_56_4_21.py \
+            teste_preparacao_investigacao_56_4_22.py \
             teste_memorias_persistencia_segura.py \
             scripts/autorizar_gmail_nyxal.py \
             scripts/configurar_hermes_whatsapp_policy.py \
@@ -173,6 +213,8 @@ jobs:
           python3 -m unittest -v \
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
+            teste_nixal_responses_api \
+            teste_nixal_dialogo_router \
             teste_nixal_observabilidade_sistema \
             teste_nixal_capacidade_visual \
             teste_nixal_integracao_google \
@@ -180,3 +222,10 @@ jobs:
             teste_nixal_vps \
             teste_nucleo_contexto_persistente \
             teste_memorias_persistencia_segura
+          python3 teste_nucleo_conversacional.py
+          python3 teste_transporte_conversacional_56_5_2.py
+          python3 teste_integracao_sessao_transporte_56_5_4.py
+          python3 -m unittest -v teste_api_security_auth.py
+          python3 teste_contexto_conversacional_56_5_5.py
+          python3 teste_contexto_historico_relevante_56_4_21.py
+          python3 teste_preparacao_investigacao_56_4_22.py
