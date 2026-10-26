@@ -228,6 +228,14 @@ class ContextoHistoricoRelevanteNixal:
             and (len(token) >= 3 or token in termos_curtos_validos)
         ]
 
+    @staticmethod
+    def _ciclo(registro: dict[str, Any]) -> dict[str, Any] | None:
+        """Extrai o ciclo persistido, sem converter registros inválidos em fatos."""
+        if not isinstance(registro, dict):
+            return None
+        ciclo = registro.get("ciclo")
+        return deepcopy(ciclo) if isinstance(ciclo, dict) else None
+
     def analisar_consulta(
         self,
         consulta: str,
