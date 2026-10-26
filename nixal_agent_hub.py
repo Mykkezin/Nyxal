@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Hub de agentes da Nyxal: Qwen local, Gemini, OpenAI, Grok, Hermes e Letta.
+"""Hub conversacional da Nyxal em modo local-only.
 
-Os provedores externos são opcionais e só são usados quando configurados.
-Segredos são lidos exclusivamente do ambiente; nenhum token é armazenado
-neste repositório. Ferramentas privilegiadas continuam sob a governança
-do agente externo e devem usar aprovação/sandbox próprias.
+As respostas textuais passam exclusivamente pelo núcleo local da Nyxal.
+Adaptadores externos permanecem desativados como respondentes de chat; a
+capacidade visual separada pode ter seu próprio backend. Segredos não são
+armazenados no repositório.
 """
 from __future__ import annotations
 
@@ -214,7 +214,7 @@ class NyxalAgentHub:
             _SHARED_AGENT_HUB = self
 
     def _system_prompt_base(self) -> str:
-        """Use a identidade versionada para manter Gemini, Hermes e Letta coerentes."""
+        """Use a identidade versionada no prompt do único respondente local."""
         identity_file = Path(__file__).resolve().parent / "deploy" / "agent" / "NYXAL_SOUL.md"
         try:
             identity = identity_file.read_text(encoding="utf-8").strip()
