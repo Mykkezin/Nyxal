@@ -141,18 +141,18 @@ permissions:
 
 jobs:
   nivel9:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    runs-on: self-hosted
     timeout-minutes: 10
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Python
-        uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          persist-credentials: false
 
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compilar módulos
         id: compile_main
         run: |
@@ -234,7 +234,7 @@ jobs:
 
       - name: Sanidade de regras de segurança
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           from nixal_governanca_evolucao import GovernancaEvolucaoNixal
           from nixal_solicitacao_evolucao import SolicitacaoEvolucaoNixal
 
@@ -288,7 +288,7 @@ jobs:
           DECISION_OUTCOME: ${{ steps.decision_policy.outcome }}
           CHAT_OUTCOME: ${{ steps.chat_smoke.outcome }}
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           import json
           import os
           from pathlib import Path
