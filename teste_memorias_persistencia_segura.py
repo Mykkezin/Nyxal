@@ -180,6 +180,44 @@ class TesteMemoriasPersistenciaSegura(unittest.TestCase):
         self.assertEqual(path.read_bytes(), original)
         self.assertIs(MemoriaConhecimentoNixal(path).recarregar().get("sucesso"), True)
 
+    def test_investigacao_nao_sobrescreve_memoria_quando_exists_reporta_falso(self):
+        path = self.root / "memoria_investigacao_nixal.json"
+        original = b'{"versao":"futura","registros":[]}'
+        path.write_bytes(original)
+        exists_real = Path.exists
+
+        def exists_falso_apenas_para_store(caminho):
+            return False if caminho == path else exists_real(caminho)
+
+        with patch.object(Path, "exists", new=exists_falso_apenas_para_store):
+            memoria = MemoriaInvestigacaoNixal(path)
+            estado = memoria.recarregar()
+            escrita = memoria.registrar(ciclo("nova hipótese"))
+
+        self.assertIs(estado.get("sucesso"), False)
+        self.assertEqual(estado.get("estado"), "memoria_degradada")
+        self.assertEqual(escrita.get("estado"), "negado")
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_conhecimento_nao_sobrescreve_memoria_quando_exists_reporta_falso(self):
+        path = self.root / "memoria_conhecimento_nixal.json"
+        original = b'{"versao":"futura","registros":[]}'
+        path.write_bytes(original)
+        exists_real = Path.exists
+
+        def exists_falso_apenas_para_store(caminho):
+            return False if caminho == path else exists_real(caminho)
+
+        with patch.object(Path, "exists", new=exists_falso_apenas_para_store):
+            memoria = MemoriaConhecimentoNixal(path)
+            estado = memoria.recarregar()
+            escrita = memoria.registrar(candidato("nova observação"))
+
+        self.assertIs(estado.get("sucesso"), False)
+        self.assertEqual(estado.get("estado"), "memoria_degradada")
+        self.assertEqual(escrita.get("estado"), "negado")
+        self.assertEqual(path.read_bytes(), original)
+
     def test_arquivo_persistido_recebe_permissao_proprietario(self):
         path = self.root / "memoria_investigacao_nixal.json"
         memoria = MemoriaInvestigacaoNixal(path)
