@@ -620,7 +620,7 @@
     return {
       handled: true,
       resposta: responseText,
-      fala: result.sucesso ? "Pronto. GereI a imagem e ela está visível no display." : responseText,
+      fala: result.sucesso ? "Pronto. Gerei a imagem e ela está visível no display." : responseText,
       sucesso: result.sucesso
     };
   };
