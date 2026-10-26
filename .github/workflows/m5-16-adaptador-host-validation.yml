@@ -16,7 +16,6 @@ on:
       - "nixal_plano_central_controle.py"
       - "nixal_ciclo_residente.py"
       - "executar_nyxos_residente.py"
-      - ".github/workflows/m5-16-adaptador-host-validation.yml"
 
 jobs:
   validate-m5-16:
