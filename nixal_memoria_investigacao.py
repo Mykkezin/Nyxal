@@ -35,6 +35,7 @@ from typing import Any
 
 
 VERSAO_MEMORIA = "56.4.15"
+MAX_REGISTROS_LEITURA_RECENTE = 5000
 
 ARQUIVO_MEMORIA_PADRAO = (
     Path(__file__).resolve().parent
@@ -239,12 +240,30 @@ class MemoriaInvestigacaoNixal:
     def listar(
         self,
     ) -> list[dict[str, Any]]:
+        """Retorna cópia completa para manter compatibilidade com consumidores existentes."""
         return copy.deepcopy(
             self._dados.get(
                 "registros",
                 [],
             )
         )
+
+    def listar_recent(
+        self,
+        limite: int = 500,
+    ) -> list[dict[str, Any]]:
+        """Copia apenas o sufixo recente, sem duplicar toda a memória em RAM."""
+        if (
+            isinstance(limite, bool)
+            or not isinstance(limite, int)
+            or not 1 <= limite <= MAX_REGISTROS_LEITURA_RECENTE
+        ):
+            raise ValueError(
+                "limite precisa ser inteiro entre 1 e "
+                f"{MAX_REGISTROS_LEITURA_RECENTE}."
+            )
+        registros = self._dados.get("registros", [])
+        return copy.deepcopy(registros[-limite:])
 
     def quantidade(self) -> int:
         return len(
