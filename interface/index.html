@@ -1466,8 +1466,165 @@
       });
     }
 
+
+    function stopVoiceBargeInVadLoop() {
+      if (voiceBargeInFrame !== null) {
+        cancelAnimationFrame(voiceBargeInFrame);
+        voiceBargeInFrame = null;
+      }
+    }
+
+    function stopVoiceBargeInCapture(discard = true) {
+      voiceBargeInDiscard = discard;
+      stopVoiceBargeInVadLoop();
+      const recorder = voiceBargeInRecorder;
+      if (recorder && recorder.state === 'recording') recorder.stop();
+    }
+
+    function startVoiceBargeInCapture() {
+      if (!voiceConversationActive || !voiceStream || !voiceAnalyser ||
+          !window.MediaRecorder || voiceBargeInRecorder || voiceBargeInHandoff) return;
+      try {
+        const Recorder = window.MediaRecorder;
+        voiceBargeInChunks = [];
+        voiceBargeInDiscard = false;
+        voiceBargeInDetected = false;
+        voiceBargeInStartedAt = performance.now();
+        voiceBargeSpeechStartedAt = 0;
+        voiceBargeLastSpeechAt = 0;
+        voiceBargeInRecorder = voiceMimeType
+          ? new Recorder(voiceStream, { mimeType: voiceMimeType })
+          : new Recorder(voiceStream);
+        const recorder = voiceBargeInRecorder;
+        recorder.ondataavailable = (event) => {
+          if (!event.data || event.data.size <= 0) return;
+          voiceBargeInChunks.push(event.data);
+          // Antes da interrupção, retenha só o pequeno trecho mais recente:
+          // evita enviar minutos de áudio da própria resposta para o STT.
+          if (!voiceBargeInDetected && voiceBargeInChunks.length > 4) {
+            voiceBargeInChunks.splice(0, voiceBargeInChunks.length - 4);
+          }
+        };
+        recorder.onerror = (event) => {
+          console.warn('Captura da interrupção por voz:', event.error || event);
+          stopVoiceBargeInCapture(true);
+        };
+        recorder.onstop = async () => {
+          const actualType = recorder.mimeType || voiceMimeType || 'audio/webm';
+          const blob = new Blob(voiceBargeInChunks, { type: actualType });
+          const interrompida = voiceBargeInDetected && !voiceBargeInDiscard;
+          voiceBargeInRecorder = null;
+          voiceBargeInChunks = [];
+          voiceBargeSpeechStartedAt = 0;
+          voiceBargeLastSpeechAt = 0;
+          voiceBargeInStartedAt = 0;
+          if (!interrompida || !blob.size || !voiceConversationActive) {
+            if (!voiceBargeInHandoff) voiceBargeInDetected = false;
+            return;
+          }
+
+          voiceBargeInHandoff = true;
+          voiceConversationBusy = true;
+          setVoiceMicrophoneEnabled(false);
+          setGlobeVoiceState('processing');
+          setAiStatusText('TRANSCRIÇÃO DA INTERRUPÇÃO...', 'text-emerald-400');
+          showSubtitles('Entendendo sua interrupção…');
+          try {
+            const result = await nyxalApiPost('/api/stt', {
+              headers: { 'Content-Type': actualType.split(';')[0] },
+              body: blob
+            });
+            if (!voiceConversationActive) {
+              voiceBargeInDetected = false;
+              voiceBargeInHandoff = false;
+              return;
+            }
+            if (!result.response.ok || !result.data.sucesso) {
+              throw new Error(result.data.motivo || 'Não foi possível reconhecer a interrupção.');
+            }
+            const transcript = String(result.data.texto || '').trim();
+            voiceBargeInDetected = false;
+            voiceBargeInHandoff = false;
+            voiceConversationBusy = false;
+            if (!transcript) {
+              showSubtitles('Não consegui entender a interrupção. Pode repetir.');
+              resumeContinuousListening();
+              return;
+            }
+            if (NYXAL_VOICE_ONLY_MODE) setVoiceUiDormant(false);
+            showSubtitles('Você disse: "' + transcript + '"');
+            await sendNyxalMessage(transcript);
+          } catch (error) {
+            voiceBargeInDetected = false;
+            voiceBargeInHandoff = false;
+            voiceConversationBusy = false;
+            console.warn('Falha na transcrição da interrupção:', error);
+            showSubtitles('Não consegui reconhecer a interrupção. Pode falar novamente.');
+            if (voiceConversationActive) resumeContinuousListening();
+          }
+        };
+        setVoiceMicrophoneEnabled(true);
+        recorder.start(100);
+        voiceBargeInFrame = requestAnimationFrame(runVoiceBargeInMonitor);
+      } catch (error) {
+        voiceBargeInRecorder = null;
+        voiceBargeInChunks = [];
+        console.warn('Interrupção por fala indisponível:', error);
+      }
+    }
+
+    function runVoiceBargeInMonitor() {
+      const recorder = voiceBargeInRecorder;
+      if (!voiceConversationActive || !voiceAnalyser || !recorder || recorder.state !== 'recording') {
+        voiceBargeInFrame = null;
+        return;
+      }
+      const samples = new Float32Array(voiceAnalyser.fftSize);
+      voiceAnalyser.getFloatTimeDomainData(samples);
+      const rms = voiceRms(samples);
+      const now = performance.now();
+      const maxCaptureMs = 120000;
+      if (voiceBargeInStartedAt > 0 && now - voiceBargeInStartedAt >= maxCaptureMs) {
+        stopVoiceBargeInCapture(true);
+        return;
+      }
+      const threshold = Math.min(
+        VOICE_MAX_THRESHOLD,
+        Math.max(VOICE_MIN_THRESHOLD * 2.2, voiceActivityThreshold() * 1.8)
+      );
+
+      if (!voiceBargeInDetected) {
+        if (rms >= threshold) {
+          if (!voiceBargeSpeechStartedAt) voiceBargeSpeechStartedAt = now;
+          voiceBargeLastSpeechAt = now;
+          if (now - voiceBargeSpeechStartedAt >= 180) {
+            voiceBargeInDetected = true;
+            voiceBargeInHandoff = true;
+            voiceBargeInDiscard = false;
+            voiceBargeLastSpeechAt = now;
+            if (NYXAL_VOICE_ONLY_MODE) setVoiceUiDormant(false);
+            showSubtitles('Fala detectada — interrompendo para ouvir você.');
+            setGlobeVoiceState('listening');
+            setAiStatusText('INTERROMPIDA • OUVINDO VOCÊ', 'text-emerald-400');
+            if (cancelCurrentNyxalSpeech) cancelCurrentNyxalSpeech();
+          }
+        } else {
+          voiceBargeSpeechStartedAt = 0;
+        }
+      } else {
+        if (rms >= threshold) voiceBargeLastSpeechAt = now;
+        else if (voiceBargeLastSpeechAt > 0 && now - voiceBargeLastSpeechAt >= VOICE_VAD_SILENCE_MS) {
+          stopVoiceBargeInCapture(false);
+          return;
+        }
+      }
+      voiceBargeInFrame = requestAnimationFrame(runVoiceBargeInMonitor);
+    }
+
     async function speakGoddessNyxVoice(text, updateSubtitle = true) {
       if (!text) return;
+
+      if (voiceConversationActive) startVoiceBargeInCapture();
 
       if (updateSubtitle) {
         showSubtitles(text);
@@ -1494,23 +1651,23 @@
           body: JSON.stringify({ texto: text }),
           parse: 'blob'
         });
-        await tocarAudioTtsComContexto(blob);
+        if (!voiceBargeInDetected) await tocarAudioTtsComContexto(blob);
       } catch (err) {
         console.warn('TTS local indisponível; usando voz do navegador:', err);
-        await speakBrowserFallback(text);
+        if (!voiceBargeInDetected) await speakBrowserFallback(text);
       } finally {
-        if (currentNyxalAudio === null && currentNyxalAudioSource === null) {
-          setGlobeVoiceState('idle');
+        const foiInterrompida = voiceBargeInDetected || voiceBargeInHandoff;
+        if (!foiInterrompida) {
+          stopVoiceBargeInCapture(true);
+          if (currentNyxalAudio === null && currentNyxalAudioSource === null) setGlobeVoiceState('idle');
+          setAiStatusText(isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL', 'text-hud-cyan');
+          setTimeout(() => {
+            document.getElementById('aiSubtitlesBox')?.classList.add('hidden');
+          }, 4000);
+        } else {
+          setGlobeVoiceState('listening');
+          setAiStatusText('INTERROMPIDA • OUVINDO VOCÊ', 'text-emerald-400');
         }
-
-        setAiStatusText(
-          isNyxalOnline ? 'PRESENÇA ATIVA' : 'MODO LOCAL',
-          'text-hud-cyan'
-        );
-
-        setTimeout(() => {
-          document.getElementById('aiSubtitlesBox')?.classList.add('hidden');
-        }, 4000);
       }
     }
 
@@ -2208,7 +2365,7 @@
           "Não consegui conectar à Nyxal. Verifique se a API local está em execução."
         );
       } finally {
-        if (conversaContinua && voiceConversationActive) {
+        if (conversaContinua && voiceConversationActive && !voiceBargeInHandoff && !voiceBargeInDetected) {
           voiceConversationBusy = false;
           resumeContinuousListening();
         }
@@ -2389,6 +2546,15 @@
     let voiceRmsAtual = 0;
     let voiceVozDetectada = false;
     let voiceCalibracaoIniciadaAt = 0;
+    let voiceBargeInRecorder = null;
+    let voiceBargeInChunks = [];
+    let voiceBargeInFrame = null;
+    let voiceBargeInDetected = false;
+    let voiceBargeInHandoff = false;
+    let voiceBargeInDiscard = false;
+    let voiceBargeInStartedAt = 0;
+    let voiceBargeSpeechStartedAt = 0;
+    let voiceBargeLastSpeechAt = 0;
 
     const VOICE_VAD_CALIBRATION_MS = 450;
     const VOICE_VAD_START_MS = 90;
@@ -2848,6 +3014,9 @@
       voiceConversationActive = false;
       voiceDiscardCurrentRecording = true;
       voiceConversationBusy = false;
+      voiceBargeInDetected = false;
+      voiceBargeInHandoff = false;
+      stopVoiceBargeInCapture(true);
       stopVoiceVadLoop();
 
       if (cancelCurrentNyxalSpeech) {
