@@ -210,39 +210,39 @@ class TestNyxalAgentHub(unittest.TestCase):
         sent = __import__("json").loads(opener.return_value.open.call_args.args[0].data.decode("utf-8"))
         self.assertNotIn("store", sent)
 
-    def test_auto_route_for_tools_prefers_hermes(self):
-        with patch.dict(os.environ, {}, clear=True):
+    def test_tools_intent_stays_on_nyxal_local(self):
+        with patch.dict(os.environ, {
+            "NYXAL_AGENT_PROVIDER": "auto",
+            "NYXAL_HERMES_API_KEY": "configured-test-key",
+        }, clear=True):
             hub = NyxalAgentHub()
-            with patch.object(hub, "provider_configured", return_value=True):
-                with patch.object(hub, "_responder_provedor", side_effect=lambda mensagem, resolved, sessao, contexto: {
-                    "sucesso": True, "provedor": resolved, "resposta": "ok", "sessao": sessao
-                }) as call:
-                    result = hub.responder("Execute os testes no repositório do GitHub.")
+            with patch.object(hub, "_responder_provedor") as remote:
+                result = hub.responder("Execute os testes no repositório do GitHub.")
         self.assertEqual(result["roteamento"]["classe"], "ferramentas_e_operacao")
-        self.assertEqual(result["provedor"], "hermes")
-        self.assertEqual(call.call_args.args[1], "hermes")
+        self.assertEqual(result["provedor"], "nyxal")
+        remote.assert_not_called()
 
-    def test_auto_route_general_reasoning_prefers_openai_when_configured(self):
-        with patch.dict(os.environ, {}, clear=True):
+    def test_general_reasoning_stays_on_nyxal_local(self):
+        with patch.dict(os.environ, {
+            "NYXAL_AGENT_PROVIDER": "auto",
+            "NYXAL_OPENAI_API_KEY": "configured-test-key",
+            "NYXAL_OPENAI_MODEL": "test-model",
+        }, clear=True):
             hub = NyxalAgentHub()
-            with patch.object(hub, "provider_configured", return_value=True):
-                with patch.object(hub, "_responder_provedor", side_effect=lambda mensagem, resolved, sessao, contexto: {
-                    "sucesso": True, "provedor": resolved, "resposta": "ok", "sessao": sessao
-                }):
-                    result = hub.responder("Explique como funciona a relatividade geral.")
+            with patch.object(hub, "_responder_provedor") as remote:
+                result = hub.responder("Explique como funciona a relatividade geral.")
         self.assertEqual(result["roteamento"]["classe"], "conhecimento_geral")
-        self.assertEqual(result["provedor"], "openai")
+        self.assertEqual(result["provedor"], "nyxal")
+        remote.assert_not_called()
 
-    def test_memory_intent_prefers_letta_and_telemetry_omits_prompt(self):
-        with patch.dict(os.environ, {}, clear=True):
+    def test_memory_intent_stays_local_and_telemetry_omits_prompt(self):
+        with patch.dict(os.environ, {"NYXAL_AGENT_PROVIDER": "auto"}, clear=True):
             hub = NyxalAgentHub()
-            with patch.object(hub, "provider_configured", return_value=True):
-                with patch.object(hub, "_responder_provedor", side_effect=lambda mensagem, resolved, sessao, contexto: {
-                    "sucesso": True, "provedor": resolved, "resposta": "ok", "sessao": sessao
-                }):
-                    result = hub.responder("Me lembra o que combinamos na conversa anterior.")
+            with patch.object(hub, "_responder_provedor") as remote:
+                result = hub.responder("Me lembra o que combinamos na conversa anterior.")
         self.assertEqual(result["roteamento"]["classe"], "memoria_continuidade")
-        self.assertEqual(result["provedor"], "letta")
+        self.assertEqual(result["provedor"], "nyxal")
+        remote.assert_not_called()
         telemetry = hub._routing_telemetry.snapshot()
         self.assertEqual(telemetry["eventos_em_memoria"], 1)
         latest = telemetry["ultimos_eventos"][0]
@@ -272,44 +272,26 @@ class TestNyxalAgentHub(unittest.TestCase):
         self.assertEqual(result["classe"], "engenharia_reversa")
         self.assertEqual(ordem_provedores("engenharia_reversa")[0], "hermes")
 
-    def test_reverse_engineering_adds_scope_and_evidence_guidance(self):
-        with patch.dict(os.environ, {}, clear=True):
-            hub = NyxalAgentHub()
-            with patch.object(hub, "provider_configured", return_value=True):
-                with patch.object(hub, "_responder_provedor", side_effect=lambda mensagem, resolved, sessao, contexto, **kwargs: {
-                    "sucesso": True, "provedor": resolved, "resposta": "análise", "sessao": sessao,
-                    "prompt_extra_capturado": kwargs.get("prompt_sistema_extra", ""),
-                }):
-                    result = hub.responder("Faça engenharia reversa autorizada deste repositório")
-        self.assertEqual(result["roteamento"]["classe"], "engenharia_reversa")
-        self.assertIn("permissão para examinar", result["prompt_extra_capturado"])
-        self.assertIn("resultado verificável", result["prompt_extra_capturado"])
-        self.assertIn("Playbook da habilidade versionado no projeto", result["prompt_extra_capturado"])
-        self.assertIn("Critérios de conclusão", result["prompt_extra_capturado"])
+    def test_reverse_engineering_playbook_is_available_without_remote_provider(self):
+        from nixal_agent_hub import prompt_especialista
+        prompt = prompt_especialista("engenharia_reversa")
+        self.assertIsInstance(prompt, str)
+        self.assertIn("permissão para examinar", prompt)
+        self.assertIn("resultado verificável", prompt)
+        self.assertIn("Playbook da habilidade versionado no projeto", prompt)
+        self.assertIn("Critérios de conclusão", prompt)
 
-    def test_cybersecurity_and_data_science_use_specialist_prompts(self):
+    def test_cybersecurity_and_data_science_playbooks_are_available_locally(self):
+        from nixal_agent_hub import prompt_especialista
         from nixal_intent_router import classificar_intencao
-        self.assertEqual(
-            classificar_intencao("Ative o modo de cibersegurança defensiva")[ "classe" ],
-            "ciberseguranca_defensiva",
-        )
-        self.assertEqual(
-            classificar_intencao("Quero fazer uma análise de Data Science com dataset"),
-            {"classe": "ciencia_dados", "motivo": "O pedido envolve análise de dados, estatística ou modelagem."},
-        )
-        with patch.dict(os.environ, {}, clear=True):
-            hub = NyxalAgentHub()
-            with patch.object(hub, "provider_configured", return_value=True):
-                with patch.object(hub, "_responder_provedor", side_effect=lambda mensagem, resolved, sessao, contexto, **kwargs: {
-                    "sucesso": True, "provedor": resolved, "resposta": "análise", "sessao": sessao,
-                    "prompt_extra_capturado": kwargs.get("prompt_sistema_extra", ""),
-                }):
-                    cyber = hub.responder("Ative o modo de cibersegurança defensiva")
-                    data = hub.responder("Quero fazer uma análise de Data Science com dataset")
-        self.assertIn("cibersegurança defensiva", cyber["prompt_extra_capturado"])
-        self.assertIn("Data Science", data["prompt_extra_capturado"])
-        self.assertIn("Playbook da habilidade versionado no projeto", cyber["prompt_extra_capturado"])
-        self.assertIn("Playbook da habilidade versionado no projeto", data["prompt_extra_capturado"])
+        self.assertEqual(classificar_intencao("Ative o modo de cibersegurança defensiva")["classe"], "ciberseguranca_defensiva")
+        self.assertEqual(classificar_intencao("Quero fazer uma análise de Data Science com dataset")["classe"], "ciencia_dados")
+        cyber = prompt_especialista("ciberseguranca_defensiva")
+        data = prompt_especialista("ciencia_dados")
+        self.assertIn("cibersegurança defensiva", cyber)
+        self.assertIn("Data Science", data)
+        self.assertIn("Playbook da habilidade versionado no projeto", cyber)
+        self.assertIn("Playbook da habilidade versionado no projeto", data)
 
 
 if __name__ == "__main__":
