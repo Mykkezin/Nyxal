@@ -94,6 +94,28 @@ class TestNyxalPrimaryDialogueRouter(unittest.TestCase):
         self.assertEqual(len(client.calls), 1)
         hub.responder.assert_called_once()
 
+    def test_dialogue_discovers_configured_hub_without_api_injection(self):
+        client = FakeLocalChat()
+        hub = Mock()
+        hub.responder.return_value = {
+            "sucesso": True,
+            "provedor": "openai",
+            "resposta": "Resposta remota roteada.",
+            "roteamento": {"classe": "conhecimento_geral", "provedor": "openai"},
+        }
+        dialog = DialogoQwenNixal(cliente=client)
+
+        with patch.dict(os.environ, {"NYXAL_AGENT_PROVIDER": "openai"}, clear=True):
+            with patch("nixal_agent_hub.NyxalAgentHub", return_value=hub):
+                answer = dialog.responder("Olá, Nyxal.", sessao="sessao-remota")
+
+        self.assertTrue(answer["sucesso"])
+        self.assertEqual(answer["origem"], "nixal_agent_hub")
+        self.assertEqual(answer["resposta"], "Resposta remota roteada.")
+        self.assertEqual(client.calls, [])
+        hub.responder.assert_called_once()
+        self.assertEqual(hub.responder.call_args.kwargs["sessao"], "sessao-remota")
+
     def test_local_qwen_receives_reverse_engineering_specialist_guidance(self):
         client = FakeLocalChat()
         hub = Mock()
