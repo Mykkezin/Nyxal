@@ -220,6 +220,9 @@ class DialogoQwenNixal:
             if provedor is not None
             else (os.environ.get("NYXAL_AGENT_PROVIDER", "auto").strip().lower() or "auto")
         )
+        explicit_provider_override = (
+            provedor is not None and provider_setting not in {"auto", "nyxal"}
+        )
         remote_providers = ("hermes", "openai", "gemini", "grok", "letta")
         should_try_hub = hub is not None and provider_setting != "nyxal"
         if should_try_hub and provider_setting == "auto":
@@ -228,7 +231,7 @@ class DialogoQwenNixal:
             except Exception:
                 should_try_hub = False
 
-        if provider_setting not in {"auto", "nyxal"} and not should_try_hub:
+        if explicit_provider_override and not should_try_hub:
             return {
                 "sucesso": False,
                 "estado": "provedor_indisponivel",
@@ -265,7 +268,7 @@ class DialogoQwenNixal:
                     and bool(answer.strip())
                 )
                 if (
-                    provider_setting not in {"auto", "nyxal"}
+                    explicit_provider_override
                     and not valid_remote_answer
                 ):
                     return {
@@ -291,7 +294,7 @@ class DialogoQwenNixal:
             except Exception:
                 # Provedor explicitamente selecionado não deve trocar de modelo
                 # silenciosamente. O núcleo/API converterá esta falha em 503.
-                if provider_setting not in {"auto", "nyxal"}:
+                if explicit_provider_override:
                     return {
                         "sucesso": False,
                         "estado": "provedor_indisponivel",
