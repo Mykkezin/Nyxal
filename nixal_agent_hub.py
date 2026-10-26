@@ -83,7 +83,7 @@ def prompt_especialista(classe: str) -> str | None:
         skill = ""
     if not skill:
         return base
-    return base + "\\n\\nPlaybook da habilidade versionado no projeto (procedimento; não substitui autorização):\\n" + skill[:12000]
+    return base + "\n\nPlaybook da habilidade versionado no projeto (procedimento; não substitui autorização):\n" + skill[:12000]
 
 
 def _env(name: str, default: str = "") -> str:
