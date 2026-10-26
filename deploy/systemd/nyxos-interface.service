@@ -8,7 +8,7 @@ PartOf=graphical-session.target
 [Service]
 Type=simple
 WorkingDirectory=%h/Nyxal
-ExecStart=%h/Nyxal/deploy/systemd/iniciar_nyxos_shell.sh
+ExecStart=/usr/bin/bash %h/Nyxal/deploy/systemd/iniciar_nyxos_shell.sh
 Environment=XDG_RUNTIME_DIR=%t
 Restart=always
 RestartSec=2
