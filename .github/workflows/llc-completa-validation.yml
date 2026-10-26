@@ -3,6 +3,7 @@ name: Nyxal LLC — validação completa
 on:
   push:
     branches:
+      - main
       - feat/llc-complete-validation
     paths:
       - "nixal_learning_loop_causal.py"
@@ -16,6 +17,7 @@ on:
       - "nixal_aprendizado_persistente.py"
       - "nixal_runtime.py"
       - "teste_llc*.py"
+      - ".github/workflows/llc-completa-validation.yml"
   pull_request:
     branches:
       - main
