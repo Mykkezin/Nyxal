@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hub de agentes da Nyxal: Qwen local, Gemini, Hermes Agent e Letta.
+"""Hub de agentes da Nyxal: Qwen local, Gemini, OpenAI, Grok, Hermes e Letta.
 
 Os provedores externos são opcionais e só são usados quando configurados.
 Segredos são lidos exclusivamente do ambiente; nenhum token é armazenado
