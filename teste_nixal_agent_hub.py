@@ -211,6 +211,11 @@ class TestNyxalAgentHub(unittest.TestCase):
             "conhecimento_geral",
         )
 
+    def test_new_hub_registers_as_shared_runtime_instance(self):
+        from nixal_agent_hub import get_shared_agent_hub
+        hub = NyxalAgentHub()
+        self.assertIs(get_shared_agent_hub(), hub)
+
     def test_reverse_engineering_gets_dedicated_route(self):
         from nixal_intent_router import classificar_intencao, ordem_provedores
         result = classificar_intencao("Faça engenharia reversa autorizada deste repositório")
