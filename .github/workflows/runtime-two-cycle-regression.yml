@@ -1,0 +1,34 @@
+name: Runtime Two-Cycle Regression
+
+on:
+  push:
+    branches:
+      - main
+      - desenvolvimento/mcp-bridge
+    paths:
+      - "nixal_runtime.py"
+      - "nixal_aprendizado_persistente.py"
+      - "teste_runtime_real_dois_ciclos.py"
+      - "teste_nivel_8_aprendizado_persistente.py"
+      - ".github/workflows/runtime-two-cycle-regression.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-two-cycles:
+    # Testes determinísticos, com sensores simulados e arquivos temporários.
+    # Sem gatilho pull_request: não executar código arbitrário de PR no host.
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted branch
+        uses: actions/checkout@v4
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      - name: Compile runtime learning regression
+        run: python3 -m py_compile nixal_runtime.py nixal_aprendizado_persistente.py teste_runtime_real_dois_ciclos.py teste_nivel_8_aprendizado_persistente.py
+      - name: Prove two autonomous cycles
+        run: python3 teste_runtime_real_dois_ciclos.py
+      - name: Prove persistent learning across runtime instances
+        run: python3 teste_nivel_8_aprendizado_persistente.py
