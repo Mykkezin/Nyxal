@@ -30,6 +30,8 @@ on:
       - "teste_nixal_integracao_google.py"
       - "teste_nixal_integracao_gmail.py"
       - "teste_nucleo_contexto_persistente.py"
+      - "teste_nucleo_conversacional.py"
+      - "teste_contexto_conversacional_56_5_5.py"
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
@@ -72,6 +74,8 @@ on:
       - "teste_nixal_integracao_google.py"
       - "teste_nixal_integracao_gmail.py"
       - "teste_nucleo_contexto_persistente.py"
+      - "teste_nucleo_conversacional.py"
+      - "teste_contexto_conversacional_56_5_5.py"
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
       - "interface/index.html"
@@ -164,6 +168,8 @@ jobs:
             nixal_dialogo_qwen.py \
             teste_nixal_dialogo_router.py \
             teste_nucleo_contexto_persistente.py \
+            teste_nucleo_conversacional.py \
+            teste_contexto_conversacional_56_5_5.py \
             teste_memorias_persistencia_segura.py \
             scripts/autorizar_gmail_nyxal.py \
             scripts/configurar_hermes_whatsapp_policy.py \
@@ -192,3 +198,5 @@ jobs:
             teste_nixal_vps \
             teste_nucleo_contexto_persistente \
             teste_memorias_persistencia_segura
+          python3 teste_nucleo_conversacional.py
+          python3 teste_contexto_conversacional_56_5_5.py
