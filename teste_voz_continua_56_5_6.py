@@ -263,6 +263,17 @@ def main() -> None:
         "API aceita o parâmetro ?modo=voz na rota raiz",
     )
 
+    verificar(
+        'parse_qs(urlsplit(self.path).query).get("modo", [""])[0] == "voz"' in api
+        and 'caminho_interface("index.html")' in api,
+        "modo de voz prefere a interface enxuta mesmo quando existe um display compilado antigo",
+    )
+
+    verificar(
+        'INTERFACE_URL}" != *"modo=voz"*' in shell,
+        "shell de voz ignora o splash antigo e abre diretamente a conversa",
+    )
+
     # ------------------------------------------------------------
     # Sintaxe Python
     # ------------------------------------------------------------
