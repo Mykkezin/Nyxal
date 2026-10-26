@@ -33,3 +33,11 @@ log_nyxal_runtime.json
 
 # Resultados de execuções locais, não código-fonte
 saida_cadeia_real_56_4_34.txt
+
+# Runtime-only persistent memory stores and their local write locks/atomic temp files.
+/memoria_investigacao_nixal.json
+/memoria_investigacao_nixal.json.lock
+/memoria_conhecimento_nixal.json
+/memoria_conhecimento_nixal.json.lock
+/.memoria_investigacao_nixal.json.*.tmp
+/.memoria_conhecimento_nixal.json.*.tmp

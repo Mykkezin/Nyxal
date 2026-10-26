@@ -26,7 +26,45 @@ if ! "${PYTHON_BIN}" -c "import nyxal_web_api; import executar_nyxos_residente" 
     exit 1
 fi
 
+# Não atravesse links simbólicos em diretórios de configuração: o instalador
+# ajusta permissões, instala unidades e remove um autostart legado abaixo deles.
+validar_diretorios_sem_links() {
+    local caminho
+    for caminho in "${HOME}/.config" "${HOME}/.config/systemd" "${USER_SYSTEMD_DIR}" "${AUTOSTART_DIR}" "${CONFIG_DIR}"; do
+        if [[ -L "${caminho}" ]]; then
+            echo "ERRO: ${caminho} não pode ser um link simbólico." >&2
+            return 1
+        fi
+    done
+}
+
+if ! validar_diretorios_sem_links; then
+    exit 1
+fi
+
 mkdir -p "${USER_SYSTEMD_DIR}" "${AUTOSTART_DIR}" "${CONFIG_DIR}"
+# Revalida após a criação para evitar continuar se algum caminho apareceu como link.
+if ! validar_diretorios_sem_links; then
+    exit 1
+fi
+if [[ ! -d "${CONFIG_DIR}" ]]; then
+    echo "ERRO: ${CONFIG_DIR} precisa ser um diretório." >&2
+    exit 1
+fi
+chmod 700 "${CONFIG_DIR}"
+
+ENV_FILE="${CONFIG_DIR}/nyxal.env"
+if [[ -L "${ENV_FILE}" ]]; then
+    echo "ERRO: ${ENV_FILE} não pode ser um link simbólico." >&2
+    exit 1
+fi
+if [[ -e "${ENV_FILE}" && ! -f "${ENV_FILE}" ]]; then
+    echo "ERRO: ${ENV_FILE} precisa ser um arquivo regular." >&2
+    exit 1
+fi
+if [[ -f "${ENV_FILE}" ]]; then
+    chmod 600 "${ENV_FILE}"
+fi
 
 if [[ -f "${NYXAL_DIR}/.gitmodules" ]] && command -v npm >/dev/null 2>&1; then
     git -C "${NYXAL_DIR}" submodule update --init --recursive
