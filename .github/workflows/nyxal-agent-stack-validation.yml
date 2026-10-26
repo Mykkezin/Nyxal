@@ -58,6 +58,7 @@ on:
       - "nixal_agent_hub.py"
       - "nixal_intent_router.py"
       - "nixal_responses_api.py"
+      - "teste_nixal_responses_api.py"
       - "nixal_observabilidade_sistema.py"
       - "nixal_integracao_gmail.py"
       - "nixal_integracao_google.py"
