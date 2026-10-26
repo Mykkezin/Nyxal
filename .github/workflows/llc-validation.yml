@@ -21,18 +21,18 @@ jobs:
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compilar LLC e dependencias
         run: |
-          python -m py_compile nixal_learning_loop_causal.py
-          python -m py_compile nixal_evidencia_ambiental_llc.py
-          python -m py_compile nixal_aprendizado_persistente.py
-          python -m py_compile nixal_runtime.py
-          python -m py_compile teste_llc_learning_loop.py
-          python -m py_compile teste_llc4_evidencia_ambiental.py
-          python -m py_compile nixal_evidencia_longitudinal_llc.py
-          python -m py_compile teste_llc5_evidencia_longitudinal.py
+          python3 -m py_compile nixal_learning_loop_causal.py
+          python3 -m py_compile nixal_evidencia_ambiental_llc.py
+          python3 -m py_compile nixal_aprendizado_persistente.py
+          python3 -m py_compile nixal_runtime.py
+          python3 -m py_compile teste_llc_learning_loop.py
+          python3 -m py_compile teste_llc4_evidencia_ambiental.py
+          python3 -m py_compile nixal_evidencia_longitudinal_llc.py
+          python3 -m py_compile teste_llc5_evidencia_longitudinal.py
       - name: Testar LLC
-        run: python teste_llc_learning_loop.py
+        run: python3 teste_llc_learning_loop.py
       - name: Testar LLC.4
-        run: python teste_llc4_evidencia_ambiental.py
+        run: python3 teste_llc4_evidencia_ambiental.py
 
       - name: Testar LLC.5
-        run: python teste_llc5_evidencia_longitudinal.py
+        run: python3 teste_llc5_evidencia_longitudinal.py
