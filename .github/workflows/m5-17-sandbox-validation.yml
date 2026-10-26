@@ -13,7 +13,6 @@ on:
       - "teste_m5_17_sandbox_fisico_reversivel.py"
       - "nixal_gateway_atuacao.py"
       - "nixal_plano_central_controle.py"
-      - ".github/workflows/m5-17-sandbox-validation.yml"
 
 jobs:
   validate-m5-17:
