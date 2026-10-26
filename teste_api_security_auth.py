@@ -287,7 +287,9 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("access-control-allow-origin", denied)
 
         # A mesma allowlist exata vale para respostas de áudio, não apenas JSON.
+        # A origem CORS não substitui autenticação quando a origem é remota.
         api.PROXY_MODE = False
+        api.API_TOKEN = "token-cors-test"
         with patch.object(api, "generate_kokoro_audio", return_value=b"fake audio"):
             status, audio_headers, audio_body = self.request_full(
                 "POST", "/api/tts",
@@ -295,6 +297,7 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
                 headers={
                     "Content-Type": "application/json",
                     "Origin": "https://display.example",
+                    "Authorization": "Bearer token-cors-test",
                 },
             )
         self.assertEqual(status, 200)
@@ -327,8 +330,15 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("access-control-allow-origin", wildcard)
 
     def test_log_http_nao_imprime_query_string(self) -> None:
+        # O teste de 404 deve atravessar a autenticação; a API é configurada
+        # com token falso somente para esta instância temporária do teste.
+        api.API_TOKEN = "token-log-test"
         with patch("builtins.print") as output:
-            status, _body = self.request("GET", "/nao-existe?token=CANARY_SECRET_92af")
+            status, _body = self.request(
+                "GET",
+                "/nao-existe?token=CANARY_SECRET_92af",
+                headers={"Authorization": "Bearer token-log-test"},
+            )
         self.assertEqual(status, 404)
         logs = " ".join(str(call.args) for call in output.call_args_list)
         self.assertNotIn("CANARY_SECRET_92af", logs)
@@ -421,6 +431,10 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
                     body=b'{"mensagem":"teste","provedor":"auto"}',
                     headers={**auth, "Content-Type": "application/json"},
                 )
+        self.assertEqual(status, 503)
+        self.assertIn("O provedor selecionado não está disponível.", body)
+        self.assertNotIn("SEGREDO_INTERNO", body)
+        self.assertNotIn("nao-retornar", body)
 
         with patch.object(api, "generate_kokoro_audio", side_effect=RuntimeError(detalhe_interno)):
             with patch.object(api.Path, "exists", return_value=True):
@@ -438,10 +452,6 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertIn("O Piper não conseguiu gerar o áudio.", body)
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("/root/nyxal.env", body)
-        self.assertEqual(status, 503)
-        self.assertIn("O provedor selecionado não está disponível.", body)
-        self.assertNotIn("SEGREDO_INTERNO", body)
-        self.assertNotIn("nao-retornar", body)
 
         with patch.object(api.GMAIL_NYXOS, "listar_eventos", side_effect=RuntimeError(detalhe_interno)):
             status, body = self.request(
