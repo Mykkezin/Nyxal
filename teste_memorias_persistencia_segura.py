@@ -163,6 +163,7 @@ class TesteMemoriasPersistenciaSegura(unittest.TestCase):
         with patch.object(modulo_investigacao, "MAX_MEMORIA_JSON_BYTES", limite):
             resultado = memoria.registrar(ciclo("hipótese longa " + "x" * 400))
         self.assertIs(resultado.get("sucesso"), False)
+        self.assertIn("memoria_excede_limite_tamanho", resultado.get("motivo", ""))
         self.assertEqual(path.read_bytes(), original)
         self.assertIs(MemoriaInvestigacaoNixal(path).recarregar().get("sucesso"), True)
 
@@ -175,6 +176,7 @@ class TesteMemoriasPersistenciaSegura(unittest.TestCase):
         with patch.object(modulo_conhecimento, "MAX_MEMORIA_JSON_BYTES", limite):
             resultado = memoria.registrar(candidato("candidato longo " + "x" * 400))
         self.assertIs(resultado.get("sucesso"), False)
+        self.assertIn("memoria_excede_limite_tamanho", resultado.get("motivo", ""))
         self.assertEqual(path.read_bytes(), original)
         self.assertIs(MemoriaConhecimentoNixal(path).recarregar().get("sucesso"), True)
 
