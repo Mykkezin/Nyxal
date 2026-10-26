@@ -671,7 +671,7 @@
         throw new Error(payload.motivo || payload.estado || "O provedor não gerou a imagem.");
       }
       var mimeType = String(payload.mime_type || "").trim().toLowerCase();
-      var imageBase64 = String(payload.imagem_base64 || "").replace(/\\s+/g, "");
+      var imageBase64 = String(payload.imagem_base64 || "").replace(/\s+/g, "");
       if (!imageBase64 || !["image/png", "image/jpeg", "image/webp"].includes(mimeType)) {
         throw new Error("A API retornou um formato de imagem ausente ou não suportado.");
       }
