@@ -29,4 +29,9 @@ jobs:
           printf 'arch=%s\n' "${RUNNER_ARCH:-unknown}"
           printf 'sha=%s\n' "${GITHUB_SHA:-unknown}"
           python3 --version
+          git --version
+          if command -v node >/dev/null 2>&1; then node --version; else echo "NODE_UNAVAILABLE"; fi
+          if command -v npm >/dev/null 2>&1; then npm --version; else echo "NPM_UNAVAILABLE"; fi
+          if command -v gh >/dev/null 2>&1; then gh --version | head -n 1; else echo "GH_CLI_UNAVAILABLE"; fi
+          if command -v docker >/dev/null 2>&1; then docker --version; else echo "DOCKER_UNAVAILABLE"; fi
           echo "RUNNER_SMOKE_OK"
