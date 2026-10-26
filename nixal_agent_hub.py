@@ -206,7 +206,8 @@ class NyxalAgentHub:
             "criacao_visual": {
                 "modelo": _env("NYXAL_GEMINI_IMAGE_MODEL", "gemini-nano-banana-2.1"),
                 "configurado": bool(_env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")),
-                "funcao": "geração e edição de imagens",
+                "funcao": "apenas geração/edição de imagens; nunca responde à conversa",
+                "separado_do_chat": True,
             },
             "voz": {
                 "motor": "Kokoro",
