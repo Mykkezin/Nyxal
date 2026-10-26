@@ -24,6 +24,15 @@ from nixal_responses_api import provider_configured as provider_responses_config
 
 KNOWN_PROVIDERS = {"auto", "nyxal", "gemini", "hermes", "letta", "openai", "grok"}
 
+_SHARED_AGENT_HUB: Any = None
+_SHARED_AGENT_HUB_LOCK = threading.Lock()
+
+
+def get_shared_agent_hub() -> Any:
+    """Retorna o hub de runtime já criado, se existe, sem criar outra instância."""
+    with _SHARED_AGENT_HUB_LOCK:
+        return _SHARED_AGENT_HUB
+
 PROMPT_ENGENHARIA_REVERSA = (
     "Atue como especialista em engenharia reversa autorizada. Analise apenas artefatos "
     "que o usuário possui ou tem permissão para examinar. Comece pelo inventário das "
@@ -195,10 +204,14 @@ class NyxalAgentHub:
     )
 
     def __init__(self) -> None:
+        global _SHARED_AGENT_HUB
         self._last_provider = "nyxal"
         self._session_history: dict[str, list[dict[str, str]]] = {}
         self._history_lock = threading.Lock()
         self._routing_telemetry = TelemetriaRoteador()
+        # O runtime mantém uma única instância compartilhada para conversa e estado.
+        with _SHARED_AGENT_HUB_LOCK:
+            _SHARED_AGENT_HUB = self
 
     def _system_prompt_base(self) -> str:
         """Use a identidade versionada para manter Gemini, Hermes e Letta coerentes."""
