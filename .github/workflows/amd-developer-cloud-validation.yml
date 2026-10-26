@@ -15,6 +15,7 @@ on:
       - ".github/workflows/amd-developer-cloud-validation.yml"
   push:
     branches:
+      - main
       - feat/amd-cloud-vllm-hardening-v2
     paths:
       - "nixal_amd_developer_cloud.py"
