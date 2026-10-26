@@ -27,6 +27,10 @@ on:
       - "executar_nyxos_residente.py"
       - "teste_m5_19_integracao_residente_atuacao.py"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 

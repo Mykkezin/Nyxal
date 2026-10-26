@@ -21,6 +21,10 @@ on:
       - "nixal_gateway_atuacao.py"
       - "nixal_plano_central_controle.py"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 

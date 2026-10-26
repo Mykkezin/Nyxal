@@ -11,6 +11,10 @@ on:
       - ".github/workflows/nyxos-voice-console-validation.yml"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 

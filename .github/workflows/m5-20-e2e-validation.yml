@@ -25,6 +25,10 @@ on:
       - "nixal_ciclo_residente.py"
       - "teste_m5_20_validacao_e2e.py"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
