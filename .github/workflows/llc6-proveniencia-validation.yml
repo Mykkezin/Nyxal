@@ -14,6 +14,10 @@ on:
       - "teste_llc6_proveniencia_evidencia.py"
       - ".github/workflows/llc6-proveniencia-validation.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
