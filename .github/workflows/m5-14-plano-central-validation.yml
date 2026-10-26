@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - feat/m5-14-plano-central-controle
+    paths:
+      - "nixal_plano_central_controle.py"
+      - "nixal_ciclo_residente.py"
+      - "executar_nyxos_residente.py"
+      - "teste_m5_14_plano_central_controle.py"
+      - "teste_m5_14_integracao_residente.py"
   pull_request:
     branches:
       - main
