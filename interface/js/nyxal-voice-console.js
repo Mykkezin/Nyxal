@@ -577,6 +577,60 @@
     });
   }
 
+  function showImageInMainDisplay(imageUrl, prompt, filename) {
+    var existing = document.getElementById("nyxalGeneratedImageDialog");
+    if (existing) existing.remove();
+
+    var overlay = document.createElement("section");
+    overlay.id = "nyxalGeneratedImageDialog";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "Imagem gerada pela Nyxal");
+    overlay.style.cssText = "position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(1,5,14,.88);backdrop-filter:blur(14px);";
+
+    var panel = document.createElement("div");
+    panel.style.cssText = "position:relative;width:min(900px,100%);max-height:92vh;overflow:auto;padding:18px;border:1px solid rgba(125,211,252,.35);border-radius:16px;background:#07101f;color:#e6f2ff;box-shadow:0 25px 100px rgba(0,0,0,.55);";
+    var head = document.createElement("div");
+    head.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;";
+    var title = element("strong", "", "NYXAL • IMAGEM GERADA");
+    title.style.cssText = "font:600 12px/1.4 system-ui,sans-serif;letter-spacing:.12em;";
+    var close = element("button", "", "Fechar  ✕");
+    close.type = "button";
+    close.setAttribute("aria-label", "Fechar imagem gerada");
+    close.style.cssText = "border:1px solid rgba(148,163,184,.3);border-radius:8px;background:#0f1c30;color:#dbeafe;padding:8px 11px;cursor:pointer;";
+    close.addEventListener("click", function () { overlay.remove(); });
+    head.appendChild(title);
+    head.appendChild(close);
+
+    var image = document.createElement("img");
+    image.src = imageUrl;
+    image.alt = prompt || "Imagem gerada pela Nyxal";
+    image.style.cssText = "display:block;width:100%;max-height:68vh;object-fit:contain;border-radius:10px;background:#020611;";
+    var description = element("p", "", prompt || "Imagem gerada a partir da conversa.");
+    description.style.cssText = "margin:12px 0;color:#9fb3c8;font:12px/1.5 system-ui,sans-serif;overflow-wrap:anywhere;";
+    var actions = document.createElement("div");
+    actions.style.cssText = "display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;";
+    var download = element("a", "", "Salvar imagem");
+    download.href = imageUrl;
+    download.download = filename;
+    download.style.cssText = "display:inline-block;border:1px solid rgba(125,211,252,.4);border-radius:8px;background:#12304b;color:#e0f2fe;padding:9px 12px;text-decoration:none;font:12px system-ui,sans-serif;";
+    actions.appendChild(download);
+
+    panel.appendChild(head);
+    panel.appendChild(image);
+    panel.appendChild(description);
+    panel.appendChild(actions);
+    overlay.appendChild(panel);
+    overlay.addEventListener("click", function (event) {
+      if (event.target === overlay) overlay.remove();
+    });
+    overlay.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") overlay.remove();
+    });
+    document.body.appendChild(overlay);
+    close.focus();
+  }
+
   async function generateImage(promptOverride) {
     var promptField = document.getElementById("nvcImagePrompt");
     var status = document.getElementById("nvcImageStatus");
@@ -612,6 +666,7 @@
       img.alt = prompt;
       img.loading = "lazy";
       img.src = "data:" + payload.mime_type + ";base64," + payload.imagem_base64;
+      var mainDisplayImage = !output;
       if (output) output.appendChild(img);
       var actions = element("div", "nvc-row");
       var download = element("a", "nvc-button", "Salvar imagem");
@@ -620,6 +675,14 @@
       download.style.textDecoration = "none";
       actions.appendChild(download);
       if (output) output.appendChild(actions);
+      if (mainDisplayImage) {
+        showImageInMainDisplay(
+          img.src,
+          prompt,
+          "nyxal-imagem-" + new Date().toISOString().replace(/[:.]/g, "-") + "." +
+            (payload.mime_type.indexOf("jpeg") >= 0 ? "jpg" : payload.mime_type.indexOf("webp") >= 0 ? "webp" : "png")
+        );
+      }
       var successMessage = String(payload.mensagem || "Imagem gerada.");
       if (Array.isArray(payload.avisos) && payload.avisos.length) {
         successMessage += " • " + payload.avisos.join(" • ");
@@ -646,8 +709,10 @@
   window.nyxalHandleImageIntent = async function (message) {
     var prompt = extractConversationalImagePrompt(message);
     if (!prompt) return { handled: false };
-    setView("image");
-    setWorkspaceOpen(true);
+    if (document.getElementById("nyxalVoiceConsole")) {
+      setView("image");
+      setWorkspaceOpen(true);
+    }
     var result = await generateImage(prompt);
     var responseText = result.sucesso
       ? "A imagem está pronta no painel de ferramentas da Nyxal."
