@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#02060d">
+  <title>NyxOS — Inicialização</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --cyan: #83eaff;
+      --blue: #33aee8;
+      --dim: rgba(131, 234, 255, .34);
+      --bg: #02060d;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      position: relative;
+      background:
+        radial-gradient(ellipse at 50% 47%, rgba(20, 99, 141, .22), transparent 34%),
+        radial-gradient(ellipse at 50% 100%, rgba(0, 65, 105, .14), transparent 52%),
+        var(--bg);
+      color: #e8faff;
+      font-family: var(--mono);
+      letter-spacing: .08em;
+      user-select: none;
+    }
+    #stars { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .grid {
+      position: absolute; inset: 0; opacity: .22; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(67, 173, 215, .055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(67, 173, 215, .055) 1px, transparent 1px);
+      background-size: 68px 68px;
+      mask-image: radial-gradient(ellipse at center, #000 8%, transparent 78%);
+    }
+    .vignette {
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, .7) 100%);
+    }
+    .scanlines {
+      position: absolute; inset: 0; opacity: .14; pointer-events: none;
+      background: repeating-linear-gradient(180deg, rgba(220, 250, 255, .06) 0 1px, transparent 1px 4px);
+    }
+    .top, .bottom {
+      position: absolute; left: clamp(22px, 4vw, 64px); right: clamp(22px, 4vw, 64px);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
+      text-transform: uppercase; font-size: clamp(9px, .78vw, 12px);
+    }
+    .top { top: clamp(22px, 4vh, 48px); }
+    .bottom { bottom: clamp(26px, 5vh, 58px); align-items: flex-end; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .mark {
+      width: 44px; height: 44px; display: grid; place-items: center;
+      border: 1px solid rgba(131, 234, 255, .55); color: var(--cyan);
+      font: 300 28px/1 "Segoe UI", sans-serif;
+      text-shadow: 0 0 16px rgba(80, 210, 255, .7);
+      box-shadow: inset 0 0 18px rgba(51, 174, 232, .1), 0 0 24px rgba(51, 174, 232, .08);
+    }
+    .brand-name { font: 500 clamp(13px, 1.05vw, 17px)/1.2 "Segoe UI", sans-serif; letter-spacing: .36em; }
+    .brand-sub { margin-top: 6px; color: rgba(131, 234, 255, .55); font-size: 8px; letter-spacing: .2em; }
+    .meta { color: rgba(159, 205, 223, .58); line-height: 1.9; text-align: right; }
+    .meta strong { color: var(--cyan); font-weight: 500; }
+    .scene {
+      position: absolute; left: 50%; top: 47%; width: min(66vmin, 620px); aspect-ratio: 1;
+      transform: translate(-50%, -50%); display: grid; place-items: center;
+      filter: drop-shadow(0 0 28px rgba(20, 160, 220, .09));
+    }
+    .aura {
+      position: absolute; inset: 13%; border-radius: 50%;
+      background: radial-gradient(circle, rgba(24, 143, 197, .22), rgba(4, 40, 63, .08) 45%, transparent 70%);
+      filter: blur(15px); animation: breathe 4.8s ease-in-out infinite;
+    }
+    .orbit {
+      position: absolute; left: 50%; top: 50%; border: 1px solid rgba(131, 234, 255, .25);
+      border-radius: 50%; transform: translate(-50%, -50%) rotateX(66deg);
+    }
+    .orbit.one { width: 98%; height: 56%; animation: orbit 31s linear infinite; }
+    .orbit.two { width: 82%; height: 43%; border-style: dashed; border-color: rgba(51, 174, 232, .34); animation: counter 24s linear infinite; }
+    .orbit.three { width: 64%; height: 34%; border-color: rgba(131, 234, 255, .42); animation: orbit 19s linear infinite; }
+    .orbit.four { width: 48%; height: 25%; border-color: rgba(131, 234, 255, .15); border-style: dotted; }
+    .vertical-ring {
+      position: absolute; width: 55%; height: 94%; border: 1px solid rgba(131, 234, 255, .16);
+      border-radius: 50%; transform: rotate(35deg) rotateY(67deg);
+    }
+    .core {
+      position: relative; width: 36%; aspect-ratio: 1; border-radius: 50%; overflow: hidden;
+      border: 1px solid rgba(131, 234, 255, .68);
+      background:
+        radial-gradient(circle at 34% 27%, rgba(190, 250, 255, .7) 0 1%, transparent 13%),
+        radial-gradient(circle at 42% 38%, rgba(39, 153, 202, .65), transparent 32%),
+        radial-gradient(circle at 63% 70%, rgba(5, 48, 79, .96), transparent 47%),
+        radial-gradient(circle at 37% 34%, #174c70, #061827 65%, #01060c);
+      box-shadow: 0 0 32px rgba(35, 177, 232, .25), inset -18px -20px 36px rgba(0, 0, 0, .72), inset 10px 8px 28px rgba(99, 224, 255, .12);
+      animation: corePulse 5s ease-in-out infinite;
+    }
+    .core::before {
+      content: ""; position: absolute; inset: 9%; border-radius: 50%;
+      background: repeating-radial-gradient(ellipse at 45% 42%, transparent 0 13px, rgba(131, 234, 255, .18) 14px 15px);
+      transform: rotate(-18deg); animation: coreGrid 22s linear infinite;
+    }
+    .core::after {
+      content: ""; position: absolute; inset: -15% 0; opacity: .62;
+      background: repeating-linear-gradient(180deg, transparent 0 12px, rgba(131, 234, 255, .16) 13px, transparent 14px 21px);
+      animation: scan 3.8s ease-in-out infinite;
+    }
+    .crosshair { position: absolute; width: 76%; height: 76%; border: 1px solid rgba(131, 234, 255, .09); border-radius: 50%; }
+    .crosshair::before, .crosshair::after { content: ""; position: absolute; background: rgba(131, 234, 255, .17); }
+    .crosshair::before { height: 1px; left: -18%; right: -18%; top: 50%; }
+    .crosshair::after { width: 1px; top: -18%; bottom: -18%; left: 50%; }
+    .satellite {
+      position: absolute; width: 11px; height: 11px; border: 1px solid var(--cyan);
+      background: #071927; box-shadow: 0 0 12px rgba(131, 234, 255, .8);
+    }
+    .satellite::before, .satellite::after {
+      content: ""; position: absolute; top: 4px; width: 18px; height: 2px;
+      background: rgba(131, 234, 255, .48);
+    }
+    .satellite::before { right: 100%; } .satellite::after { left: 100%; }
+    .sat-a { top: 21%; left: 19%; animation: floatA 8s ease-in-out infinite; }
+    .sat-b { right: 16%; bottom: 25%; animation: floatB 6.5s ease-in-out infinite; }
+    .sat-c { right: 25%; top: 11%; width: 6px; height: 6px; animation: floatA 10s ease-in-out infinite reverse; }
+    .beam {
+      position: absolute; left: 3%; right: 3%; top: 48%; height: 1px; opacity: .65;
+      background: linear-gradient(90deg, transparent, rgba(131, 234, 255, .55), transparent);
+      box-shadow: 0 0 14px rgba(71, 195, 238, .42);
+    }
+    .readout {
+      position: absolute; color: rgba(131, 234, 255, .62); font-size: clamp(7px, .7vw, 10px);
+      line-height: 1.8; text-transform: uppercase;
+    }
+    .readout strong { color: var(--cyan); font-weight: 500; }
+    .readout.left { left: 4%; top: 42%; }
+    .readout.right { right: 3%; top: 53%; text-align: right; }
+    .main-label {
+      position: absolute; left: 50%; top: 79%; transform: translateX(-50%); text-align: center;
+      white-space: nowrap; text-transform: uppercase;
+    }
+    .main-label strong {
+      display: block; color: #e6fbff; font: 300 clamp(18px, 2.1vw, 30px)/1.3 "Segoe UI", sans-serif;
+      letter-spacing: .5em; text-shadow: 0 0 18px rgba(82, 209, 255, .4); padding-left: .5em;
+    }
+    .main-label span { display: block; margin-top: 8px; color: rgba(131, 234, 255, .64); font-size: 8px; letter-spacing: .28em; }
+    .progress-wrap { width: min(360px, 38vw); }
+    .progress-copy { display: flex; justify-content: space-between; color: rgba(159, 205, 223, .65); font-size: 8px; }
+    .progress-copy strong { color: var(--cyan); font-weight: 500; }
+    .progress-track { height: 2px; margin-top: 10px; background: rgba(131, 234, 255, .12); overflow: hidden; }
+    .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #147eb0, #a7f5ff); box-shadow: 0 0 12px rgba(131, 234, 255, .7); }
+    .boot-status { color: rgba(159, 205, 223, .62); font-size: 8px; line-height: 1.9; text-align: right; }
+    .boot-status strong { color: #8ef0d0; font-weight: 500; }
+    .bottom-note { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); color: rgba(131, 234, 255, .3); font-size: 7px; white-space: nowrap; letter-spacing: .2em; }
+    @keyframes orbit { to { transform: translate(-50%, -50%) rotateX(66deg) rotate(360deg); } }
+    @keyframes counter { to { transform: translate(-50%, -50%) rotateX(66deg) rotate(-360deg); } }
+    @keyframes breathe { 0%,100% { opacity: .62; transform: scale(.97); } 50% { opacity: 1; transform: scale(1.06); } }
+    @keyframes corePulse { 0%,100% { transform: scale(.985); filter: brightness(.88); } 50% { transform: scale(1.025); filter: brightness(1.18); } }
+    @keyframes coreGrid { to { transform: rotate(342deg); } }
+    @keyframes scan { 0%,100% { transform: translateY(-42%); opacity: .15; } 50% { transform: translateY(42%); opacity: .75; } }
+    @keyframes floatA { 0%,100% { transform: translate(0,0); } 50% { transform: translate(12px,-7px); } }
+    @keyframes floatB { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-9px,8px); } }
+    @media (max-width: 640px) {
+      .scene { width: 91vmin; top: 46%; }
+      .top, .bottom { left: 18px; right: 18px; }
+      .meta { font-size: 7px; }
+      .readout { display: none; }
+      .progress-wrap { width: 55vw; }
+      .boot-status { font-size: 7px; }
+      .bottom-note { display: none; }
+      .main-label { top: 81%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="grid" aria-hidden="true"></div>
+  <div class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">Δ</div>
+      <div><div class="brand-name">NYXOS</div><div class="brand-sub">HABITAT INTELLIGENCE SYSTEM</div></div>
+    </div>
+    <div class="meta">CORE <strong>DELTA</strong><br>BOOT SEQUENCE / 01</div>
+  </div>
+  <main class="scene" aria-label="Animação de inicialização NyxOS">
+    <div class="aura"></div>
+    <div class="orbit one"></div><div class="orbit two"></div>
+    <div class="orbit three"></div><div class="orbit four"></div>
+    <div class="vertical-ring"></div><div class="crosshair"></div>
+    <div class="beam"></div>
+    <div class="core" aria-hidden="true"></div>
+    <div class="satellite sat-a"></div><div class="satellite sat-b"></div><div class="satellite sat-c"></div>
+    <div class="readout left">LINK STATE<br><strong>ESTABLISHING</strong><br>LOCAL HABITAT<br>SECURE CHANNEL</div>
+    <div class="readout right">KERNEL BRIDGE<br><strong>READY</strong><br>RUNTIME / DELTA<br>AUTH PROFILE: LOCAL</div>
+    <div class="main-label"><strong>NYXAL</strong><span>INTELLIGENCE · MEMORY · CONTINUITY</span></div>
+  </main>
+  <div class="bottom">
+    <div class="progress-wrap">
+      <div class="progress-copy"><span id="phase">INITIALIZING HABITAT</span><strong id="percent">00%</strong></div>
+      <div class="progress-track"><div class="progress-fill" id="progress"></div></div>
+    </div>
+    <div class="boot-status">SECURITY PROFILE <strong>ACTIVE</strong><br>LOCAL SERVICES <strong>STARTING</strong></div>
+  </div>
+  <div class="vignette" aria-hidden="true"></div><div class="scanlines" aria-hidden="true"></div>
+  <div class="bottom-note">NYXOS // A GOVERNED INTELLIGENT HABITAT</div>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const fallbackNext = "http://127.0.0.1:8010/";
+      const allowedHosts = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
+      let next = fallbackNext;
+      try {
+        const requestedNext = params.get("next");
+        if (requestedNext) {
+          const destination = new URL(requestedNext);
+          const protocolAllowed =
+            destination.protocol === "http:" || destination.protocol === "https:";
+          const hostAllowed = allowedHosts.has(destination.hostname.toLowerCase());
+          // The splash may only open the local Nyxal display root, never arbitrary API paths.
+          const endpointPortAllowed = destination.port === "8010";
+          const pathAllowed =
+            destination.pathname === "/" || destination.pathname === "/index.html";
+          const noExtraComponents = !destination.search && !destination.hash;
+          if (
+            protocolAllowed &&
+            hostAllowed &&
+            endpointPortAllowed &&
+            pathAllowed &&
+            noExtraComponents &&
+            !destination.username &&
+            !destination.password
+          ) {
+            next = destination.href;
+          }
+        }
+      } catch (_) {
+        // Invalid or external destinations fall back to the local interface.
+      }
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const duration = reduced ? 1000 : 5600;
+      const started = performance.now();
+      const progress = document.getElementById("progress");
+      const percent = document.getElementById("percent");
+      const phase = document.getElementById("phase");
+      const phases = [
+        [0, "INITIALIZING HABITAT"],
+        [0.22, "VERIFYING LOCAL BOUNDARIES"],
+        [0.47, "CONNECTING DELTA RUNTIME"],
+        [0.72, "RESTORING SYSTEM CONTEXT"],
+        [0.91, "OPENING NYXOS DISPLAY"]
+      ];
+      function tick(now) {
+        const ratio = Math.min(1, (now - started) / duration);
+        const eased = 1 - Math.pow(1 - ratio, 2.2);
+        progress.style.width = (eased * 100).toFixed(1) + "%";
+        percent.textContent = String(Math.round(eased * 100)).padStart(2, "0") + "%";
+        for (const [at, label] of phases) if (ratio >= at) phase.textContent = label;
+        if (ratio < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+
+      const canvas = document.getElementById("stars");
+      const ctx = canvas.getContext("2d", { alpha: true });
+      let width = 0, height = 0, dpr = 1, stars = [];
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const count = Math.min(90, Math.max(30, Math.floor(width * height / 18000)));
+        stars = Array.from({ length: count }, () => ({
+          x: Math.random() * width, y: Math.random() * height,
+          r: Math.random() * 1.2 + .25, a: Math.random() * .55 + .15,
+          speed: Math.random() * .18 + .025
+        }));
+      }
+      function drawStars() {
+        ctx.clearRect(0, 0, width, height);
+        for (const s of stars) {
+          s.y -= s.speed;
+          if (s.y < -2) { s.y = height + 2; s.x = Math.random() * width; }
+          ctx.globalAlpha = s.a;
+          ctx.fillStyle = "#9cecff";
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        if (!reduced) requestAnimationFrame(drawStars);
+      }
+      resize();
+      drawStars();
+      window.addEventListener("resize", resize, { passive: true });
+      window.setTimeout(() => window.location.replace(next), duration + 180);
+    })();
+  </script>
+</body>
+</html>

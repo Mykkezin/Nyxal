@@ -98,6 +98,9 @@ ARQUIVO_MEMORIA_APRENDIZADO_RUNTIME = (
     BASE_DIR / "memoria_aprendizado_nixal.json"
 )
 
+# Limite absoluto para manter o log operacional sob controle.
+MAX_TAMANHO_LOG_RUNTIME = 512 * 1024
+
 
 class NyxalRuntime:
     """Coordenador mínimo do ciclo operacional da Nyxal."""
@@ -2044,16 +2047,99 @@ class NyxalRuntime:
 
         if self.arquivo_log.exists():
             try:
-                carregado = json.loads(
-                    self.arquivo_log.read_text(encoding="utf-8")
-                )
-                if isinstance(carregado, list):
-                    dados = carregado
-            except (OSError, json.JSONDecodeError):
+                # Lê no máximo o orçamento mais um byte, evitando carregar um
+                # log legado descontrolado antes de aplicar o limite de escrita.
+                with self.arquivo_log.open("rb") as arquivo_existente:
+                    conteudo_existente = arquivo_existente.read(
+                        MAX_TAMANHO_LOG_RUNTIME + 1
+                    )
+                if len(conteudo_existente) <= MAX_TAMANHO_LOG_RUNTIME:
+                    carregado = json.loads(conteudo_existente.decode("utf-8"))
+                    if isinstance(carregado, list):
+                        dados = carregado
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 dados = []
 
-        dados.append(deepcopy(ciclo))
+        registro = deepcopy(ciclo)
+        tamanho_registro = len(
+            json.dumps(
+                registro,
+                ensure_ascii=False,
+                indent=2,
+            ).encode("utf-8")
+        )
+
+        # Ciclos podem conter etapas/resultados muito grandes. Preserve
+        # os identificadores do ciclo, mas resuma o payload volumoso.
+        if tamanho_registro > MAX_TAMANHO_LOG_RUNTIME // 2:
+            registro = {
+                "sucesso": bool(ciclo.get("sucesso", False)),
+                "estado": str(ciclo.get("estado", "desconhecido"))[:64],
+                "origem": str(ciclo.get("origem", self.FONTE))[:128],
+                "versao_runtime": str(
+                    ciclo.get("versao_runtime", self.VERSAO)
+                )[:64],
+                "ciclo_id": str(ciclo.get("ciclo_id", ""))[:128],
+                "iniciado_em": str(ciclo.get("iniciado_em", ""))[:128],
+                "concluido_em": str(ciclo.get("concluido_em", ""))[:128],
+                "valor": {
+                    "resumo_truncado": True,
+                    "tamanho_original_bytes": tamanho_registro,
+                },
+                "erro": (
+                    str(ciclo.get("erro"))[:2048]
+                    if ciclo.get("erro") is not None
+                    else None
+                ),
+            }
+
+        dados.append(registro)
         dados = dados[-100:]
+
+        payload = json.dumps(
+            dados,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+        # O teto é definido por bytes serializados, não pelo número
+        # de ciclos, porque uma única etapa pode conter saída extensa.
+        while (
+            len(payload.encode("utf-8")) > MAX_TAMANHO_LOG_RUNTIME
+            and len(dados) > 1
+        ):
+            dados.pop(0)
+            payload = json.dumps(
+                dados,
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        if len(payload.encode("utf-8")) > MAX_TAMANHO_LOG_RUNTIME:
+            dados = [
+                {
+                    "sucesso": bool(registro.get("sucesso", False)),
+                    "estado": str(registro.get("estado", "desconhecido"))[:64],
+                    "origem": str(registro.get("origem", self.FONTE))[:128],
+                    "versao_runtime": str(
+                        registro.get("versao_runtime", self.VERSAO)
+                    )[:64],
+                    "ciclo_id": str(registro.get("ciclo_id", ""))[:128],
+                    "valor": {
+                        "resumo_truncado": True,
+                        "tamanho_original_bytes": tamanho_registro,
+                    },
+                }
+            ]
+            payload = json.dumps(
+                dados,
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        if len(payload.encode("utf-8")) > MAX_TAMANHO_LOG_RUNTIME:
+            dados = []
+
         self._atomic_write_json(self.arquivo_log, dados)
 
     # ============================================================

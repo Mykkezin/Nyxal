@@ -1,0 +1,4 @@
+# Optional experimental real-time voice stack. Install into an isolated venv.
+# Pipecat is BSD-2-Clause; model files are downloaded to the user's cache,
+# never stored in the Nyxal repository.
+pipecat-ai[local,whisper,kokoro]>=1.0.0,<2.0.0

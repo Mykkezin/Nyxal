@@ -1079,44 +1079,117 @@ class GerenciadorCapacidades:
         if ARQUIVO_LOG.exists():
 
             try:
+                # Limita também a leitura do histórico legado. Um log antigo
+                # maior que o teto não pode consumir memória antes da nova gravação.
+                with ARQUIVO_LOG.open("rb") as f:
+                    conteudo_existente = f.read(MAX_TAMANHO_ARQUIVO + 1)
 
-                with ARQUIVO_LOG.open(
-                    "r",
-                    encoding="utf-8",
-                ) as f:
-
-                    dados = json.load(f)
-
-                if isinstance(
-                    dados,
-                    list,
-                ):
-
-                    historico = dados
+                if len(conteudo_existente) <= MAX_TAMANHO_ARQUIVO:
+                    dados = json.loads(conteudo_existente.decode("utf-8"))
+                    if isinstance(dados, list):
+                        historico = dados
 
             except Exception:
-
                 historico = []
-
-        historico.append(
-            asdict(resultado)
-        )
-
-        historico = historico[-200:]
 
         try:
 
-            with ARQUIVO_LOG.open(
-                "w",
-                encoding="utf-8",
-            ) as f:
+            registro = asdict(resultado)
+            tamanho_registro = len(
+                json.dumps(
+                    registro,
+                    ensure_ascii=False,
+                    indent=2,
+                ).encode("utf-8")
+            )
 
-                json.dump(
+            # Um único resultado não pode consumir todo o orçamento
+            # do log. Preserve metadados e marque o conteúdo omitido.
+            if tamanho_registro > MAX_TAMANHO_ARQUIVO // 2:
+
+                registro["resultado"] = {
+                    "truncado": True,
+                    "motivo": (
+                        "Resultado omitido para respeitar "
+                        "o limite de armazenamento do log."
+                    ),
+                    "tamanho_original_bytes": tamanho_registro,
+                }
+
+                registro["capacidade"] = str(
+                    registro.get("capacidade", "")
+                )[:256]
+
+                if registro.get("erro") is not None:
+                    registro["erro"] = str(
+                        registro["erro"]
+                    )[:2048]
+
+            historico.append(registro)
+            historico = historico[-200:]
+
+            payload = json.dumps(
+                historico,
+                ensure_ascii=False,
+                indent=2,
+            )
+
+            # Limite rígido em bytes UTF-8, e não só em quantidade
+            # de execuções. Remove primeiro os registros mais antigos.
+            while (
+                len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO
+                and len(historico) > 1
+            ):
+
+                historico.pop(0)
+
+                payload = json.dumps(
                     historico,
-                    f,
                     ensure_ascii=False,
                     indent=2,
                 )
+
+            if len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO:
+
+                historico = [
+                    {
+                        "sucesso": bool(registro.get("sucesso")),
+                        "capacidade": str(
+                            registro.get("capacidade", "")
+                        )[:256],
+                        "erro": (
+                            str(registro.get("erro"))[:1024]
+                            if registro.get("erro") is not None
+                            else None
+                        ),
+                        "timestamp": registro.get("timestamp", 0.0),
+                        "duracao_ms": registro.get("duracao_ms", 0.0),
+                        "resultado": {
+                            "truncado": True,
+                            "motivo": "Limite rígido de armazenamento",
+                            "tamanho_original_bytes": tamanho_registro,
+                        },
+                    }
+                ]
+
+                payload = json.dumps(
+                    historico,
+                    ensure_ascii=False,
+                    indent=2,
+                )
+
+            if len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO:
+                payload = "[]"
+
+            ARQUIVO_LOG.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            ARQUIVO_LOG.write_text(
+                payload,
+                encoding="utf-8",
+            )
 
         except Exception as erro:
 

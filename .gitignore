@@ -1,8 +1,38 @@
+# Ambientes e bytecode
 .venv/
+venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Segredos locais (não versionar arquivos de ambiente)
 .env
 .env.*
+
+# Caches e relatórios de teste
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Artefatos de build/empacotamento
+build/
+dist/
+*.egg-info/
+
+# Logs e temporários gerados em runtime
+*.log
+*.log.*
+*.tmp
+log_capacidades_nixal.json
+log_nyxal_runtime.json
+
+# Resultados de execuções locais, não código-fonte
+saida_cadeia_real_56_4_34.txt
 
 # Runtime-only persistent memory stores and their local write locks/atomic temp files.
 /memoria_investigacao_nixal.json
