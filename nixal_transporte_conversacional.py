@@ -148,8 +148,8 @@ class TransporteConversacionalNixal:
                 )
             except (TypeError, ValueError):
                 return self._negado("O contexto do sistema não é JSON válido.")
-            if len(contexto_serializado) > 32000:
-                return self._negado("O contexto do sistema excede 32.000 caracteres.")
+            if len(contexto_serializado) > 128000:
+                return self._negado("O contexto do sistema excede 128.000 caracteres.")
 
         if provedor is not None or contexto_sistema is not None:
             entrada["valor"]["opcoes_dialogo"] = {}
