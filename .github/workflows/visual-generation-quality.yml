@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - improve/visual-generation-quality
+      - integrate/visual-quality-on-security-20261026
     paths:
       - "nixal_capacidade_visual.py"
       - "teste_nixal_capacidade_visual.py"
@@ -13,6 +14,7 @@ on:
   pull_request:
     branches:
       - main
+      - hardening/api-auth-ci-gates-20261023
       - hardening/api-auth-ci-gates-20261023
     paths:
       - "nixal_capacidade_visual.py"
