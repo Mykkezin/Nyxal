@@ -524,6 +524,8 @@ class CapacidadeVisualGeminiNixOS:
             raise ValueError("A descrição visual excede 4.000 caracteres.")
         if imagem_base64 is not None and not isinstance(imagem_base64, str):
             raise ValueError("A imagem precisa ser enviada como Base64.")
+        if imagem_base64 is not None and not imagem_base64.strip():
+            raise ValueError("A imagem Base64 não pode estar vazia.")
         if mime_type is not None and not isinstance(mime_type, str):
             raise ValueError("O tipo MIME da imagem é inválido.")
         if imagens_referencia is not None and not isinstance(imagens_referencia, list):
