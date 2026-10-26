@@ -16,6 +16,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
 from dotenv import load_dotenv
 from loguru import logger
 
@@ -135,6 +139,19 @@ def _api_request_headers(api_base: str) -> dict[str, str]:
         raise RuntimeError(
             "NYXAL_API_BASE deve apontar para localhost/loopback; "
             "o adaptador de voz não pode falar com outra instância remota."
+        )
+
+    try:
+        expected_port = int(os.environ.get("NYXAL_API_PORT", "8010").strip())
+    except ValueError as exc:
+        raise ValueError("NYXAL_API_PORT precisa ser uma porta numérica válida.") from exc
+    if not 1 <= expected_port <= 65535:
+        raise ValueError("NYXAL_API_PORT precisa estar entre 1 e 65535.")
+    actual_port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+    if actual_port != expected_port:
+        raise RuntimeError(
+            f"NYXAL_API_BASE usa a porta {actual_port}, mas NYXAL_API_PORT={expected_port}; "
+            "nenhuma requisição foi enviada."
         )
 
     headers = {"Accept": "application/json"}
