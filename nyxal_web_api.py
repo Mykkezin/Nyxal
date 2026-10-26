@@ -707,7 +707,6 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
     def _send_security_headers(self) -> None:
         """Emite cabeçalhos defensivos e CORS apenas para origens permitidas."""
         self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Cache-Control", "no-store")
         origin = self.headers.get("Origin")
         normalized = normalize_origin(origin) if origin is not None else None
