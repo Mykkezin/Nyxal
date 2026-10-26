@@ -14,6 +14,7 @@ PREFERENCES: dict[str, tuple[str, ...]] = {
     "ferramentas_e_operacao": ("hermes", "openai", "gemini", "grok", "letta"),
     "ciencia_dados": ("openai", "hermes", "gemini", "grok", "letta"),
     "codigo_e_raciocinio": ("openai", "hermes", "gemini", "grok", "letta"),
+    "engenharia_reversa": ("hermes", "openai", "gemini", "grok", "letta"),
     "conhecimento_geral": ("openai", "gemini", "grok", "hermes", "letta"),
 }
 
@@ -37,6 +38,20 @@ def classificar_intencao(mensagem: str) -> dict[str, str]:
         return {
             "classe": "memoria_continuidade",
             "motivo": "O pedido depende de recuperar uma conversa ou decisão anterior.",
+        }
+
+    reverse_markers = (
+        "engenharia reversa", "reverse engineering", "reverse engineer",
+        "reconstruir a arquitetura", "mapear dependencias", "mapear dependências",
+        "analisar um binario", "analisar um binário", "descompilar",
+        "reconstruir protocolo", "investigar formato de arquivo",
+        "entender como esse software funciona", "analisar comportamento do programa",
+        "engenharia inversa",
+    )
+    if any(marker in text for marker in reverse_markers):
+        return {
+            "classe": "engenharia_reversa",
+            "motivo": "O pedido indica análise estrutural de um artefato autorizado.",
         }
 
     tool_markers = (
