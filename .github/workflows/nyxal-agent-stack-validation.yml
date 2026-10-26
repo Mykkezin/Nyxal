@@ -38,6 +38,7 @@ on:
       - "scripts/configurar_hermes_whatsapp_policy.py"
       - "scripts/nyxal_letta_memory.py"
       - "deploy/agent/**"
+      - "skills/**"
       - "deploy/voice/**"
   push:
     branches:
@@ -79,6 +80,7 @@ on:
       - "scripts/configurar_hermes_whatsapp_policy.py"
       - "scripts/nyxal_letta_memory.py"
       - "deploy/agent/**"
+      - "skills/**"
       - "deploy/voice/**"
   workflow_dispatch:
 
