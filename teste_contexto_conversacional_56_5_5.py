@@ -97,6 +97,8 @@ class DialogoFake(DialogoQwenNixalStub):
         self,
         texto: str,
         historico=None,
+        *,
+        sessao: str | None = None,
     ) -> dict:
         historico_copiado = list(historico or [])
         self.chamadas.append(
