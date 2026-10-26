@@ -5,6 +5,34 @@ on:
     branches:
       - main
       - feat/durable-investigation-context-20261026
+    paths:
+      - "nyxal_web_api.py"
+      - "nixal_display_routes.py"
+      - "nixal_agent_hub.py"
+      - "nixal_observabilidade_sistema.py"
+      - "nixal_integracao_gmail.py"
+      - "nixal_capacidade_visual.py"
+      - "nixal_seguranca_http.py"
+      - "nixal_nucleo_conversacional.py"
+      - "nixal_contexto_historico_relevante.py"
+      - "nixal_memoria_investigacao.py"
+      - "nixal_memoria_conhecimento.py"
+      - "nixal_dialogo_qwen.py"
+      - "teste_nixal_display_routes.py"
+      - "teste_nixal_agent_hub.py"
+      - "teste_nixal_observabilidade_sistema.py"
+      - "teste_nixal_capacidade_visual.py"
+      - "teste_nixal_integracao_google.py"
+      - "teste_nixal_integracao_gmail.py"
+      - "teste_nucleo_contexto_persistente.py"
+      - "teste_memorias_persistencia_segura.py"
+      - "interface/display/**"
+      - "scripts/autorizar_gmail_nyxal.py"
+      - "scripts/configurar_hermes_whatsapp_policy.py"
+      - "scripts/nyxal_letta_memory.py"
+      - "deploy/agent/**"
+      - "deploy/voice/**"
+      - ".github/workflows/nyxal-agent-stack-validation.yml"
   push:
     branches:
       - feat/nyxal-agent-stack-current-main-20261009
