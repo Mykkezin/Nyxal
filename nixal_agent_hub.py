@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from nixal_intent_router import TelemetriaRoteador, classificar_intencao, ordem_provedores
 from nixal_responses_api import provider_configured as provider_responses_configured, ask as ask_responses_api
@@ -128,6 +128,13 @@ def _hermes_env(name: str, default: str = "") -> str:
     return _file_env(Path.home() / ".hermes" / ".env", name, default)
 
 
+class _RejectProviderRedirects(HTTPRedirectHandler):
+    """Reject redirects so credentials cannot be forwarded to another host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def _json_request(
     url: str,
     *,
@@ -143,7 +150,8 @@ def _json_request(
     request_headers.update(headers or {})
     request = Request(url, data=body, headers=request_headers, method=method)
     try:
-        with urlopen(request, timeout=timeout) as response:
+        opener = build_opener(_RejectProviderRedirects())
+        with opener.open(request, timeout=timeout) as response:
             raw = response.read(2 * 1024 * 1024 + 1)
             if len(raw) > 2 * 1024 * 1024:
                 raise RuntimeError("Resposta do provedor excedeu 2 MiB.")
