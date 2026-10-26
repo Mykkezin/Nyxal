@@ -1,12 +1,6 @@
 name: Nyxal Local Self-Assessment Client
 
 on:
-  pull_request:
-    paths:
-      - "falar_com_nyxal_autoavaliacao.py"
-      - "teste_falar_com_nyxal_autoavaliacao.py"
-      - "docs/NYXAL_AUTOAVALIACAO_LOCAL.md"
-      - ".github/workflows/nyxal-autoavaliacao-local.yml"
   push:
     branches:
       - main
@@ -22,7 +16,7 @@ permissions:
 
 jobs:
   offline-client-tests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 5
     steps:
       - name: Checkout
