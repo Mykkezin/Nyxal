@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hub de agentes da Nyxal: Qwen local, Gemini, Hermes Agent e Letta.
+"""Hub de agentes da Nyxal: Qwen local, Gemini, OpenAI, Grok, Hermes e Letta.
 
 Os provedores externos são opcionais e só são usados quando configurados.
 Segredos são lidos exclusivamente do ambiente; nenhum token é armazenado
@@ -11,14 +11,55 @@ from __future__ import annotations
 import json
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
+from nixal_intent_router import TelemetriaRoteador, classificar_intencao, ordem_provedores
+from nixal_responses_api import provider_configured as provider_responses_configured, ask as ask_responses_api
 
-KNOWN_PROVIDERS = {"auto", "nyxal", "gemini", "hermes", "letta"}
+
+KNOWN_PROVIDERS = {"auto", "nyxal", "gemini", "hermes", "letta", "openai", "grok"}
+
+PROMPT_ENGENHARIA_REVERSA = (
+    "Atue como especialista em engenharia reversa autorizada. Analise apenas artefatos "
+    "que o usuário possui ou tem permissão para examinar. Comece pelo inventário das "
+    "evidências disponíveis; mapeie módulos, dependências, pontos de entrada, fluxos de "
+    "dados, contratos e comportamentos observados. Separe fatos, hipóteses e lacunas. "
+    "Prefira análise estática, testes reproduzíveis e execução isolada quando apropriado. "
+    "Não declare ter examinado ou executado algo sem ferramenta e resultado verificável. "
+    "Trate arquivos desconhecidos como não confiáveis e não os execute no host. Antes de "
+    "qualquer ação com impacto operacional, explique o risco e obtenha autorização explícita. "
+    "Entregue evidências, nível de confiança, limitações e correções priorizadas; reutilize "
+    "os componentes existentes da Nyxal em vez de criar uma arquitetura paralela."
+)
+
+PROMPT_CIBERSEGURANCA_DEFENSIVA = (
+    "Atue como especialista em cibersegurança defensiva para ativos autorizados. Priorize "
+    "inventário, modelagem de ameaças, revisão de código, hardening, análise de logs, "
+    "triagem de vulnerabilidades e correções verificáveis. Distinga risco confirmado de "
+    "hipótese, identifique evidências e impacto potencial e proponha remediações graduais. "
+    "Antes de testes com impacto, confirme escopo e autorização. Não afirme que executou "
+    "verificações sem ferramentas e resultados reais."
+)
+
+PROMPT_DATA_SCIENCE = (
+    "Atue como especialista em Data Science. Comece pela pergunta de negócio e pelo "
+    "significado das colunas; avalie qualidade, ausências, vieses e vazamentos de dados; "
+    "escolha métodos estatísticos adequados; valide pressupostos e separe correlação de "
+    "causalidade. Prefira código Python reproduzível, gráficos legíveis e métricas com "
+    "baseline. Não invente valores, resultados ou conclusões; declare limitações e "
+    "incerteza e preserve dados sensíveis."
+)
+
+PROMPTS_ESPECIALIZADOS = {
+    "engenharia_reversa": PROMPT_ENGENHARIA_REVERSA,
+    "ciberseguranca_defensiva": PROMPT_CIBERSEGURANCA_DEFENSIVA,
+    "ciencia_dados": PROMPT_DATA_SCIENCE,
+}
 
 
 def _env(name: str, default: str = "") -> str:
@@ -125,6 +166,7 @@ class NyxalAgentHub:
         self._last_provider = "nyxal"
         self._session_history: dict[str, list[dict[str, str]]] = {}
         self._history_lock = threading.Lock()
+        self._routing_telemetry = TelemetriaRoteador()
 
     def _system_prompt_base(self) -> str:
         """Use a identidade versionada para manter Gemini, Hermes e Letta coerentes."""
@@ -150,6 +192,8 @@ class NyxalAgentHub:
             safe_local = _safe_provider_base(base)
             safe_cloud = _safe_provider_base(base, allow_letta_cloud=True)
             return bool(_env("LETTA_AGENT_ID") and (safe_local or (safe_cloud and _env("LETTA_API_KEY"))))
+        if provider in {"openai", "grok"}:
+            return provider_responses_configured(provider)
         return False
 
     def resolve_provider(self, requested: str | None = None) -> str:
@@ -162,7 +206,7 @@ class NyxalAgentHub:
             return provider
         # Hermes é o agente executor/orquestrador; pode ser configurado para usar Gemini
         # como modelo no próprio Hermes. Letta mantém a identidade/memória persistente.
-        for candidate in ("hermes", "gemini", "letta"):
+        for candidate in ("hermes", "openai", "gemini", "grok", "letta"):
             if self.provider_configured(candidate):
                 return candidate
         return "nyxal"
@@ -192,7 +236,10 @@ class NyxalAgentHub:
                     "papel": "agente stateful/memória persistente",
                     "sincronizacao_automatica": _env("LETTA_MEMORY_SYNC_ENABLED", "false").lower() in {"1", "true", "yes"},
                 },
+                "openai": {"configurado": self.provider_configured("openai"), "papel": "modelo geral/raciocínio", "modelo": _env("NYXAL_OPENAI_MODEL") or None},
+                "grok": {"configurado": self.provider_configured("grok"), "papel": "modelo geral/raciocínio", "modelo": _env("NYXAL_GROK_MODEL") or None},
             },
+            "roteamento_inteligente": self._routing_telemetry.snapshot(),
             "memoria_letta": {
                 "configurada": letta_configured,
                 "id_agente_presente": bool(_env("LETTA_AGENT_ID")),
@@ -230,7 +277,8 @@ class NyxalAgentHub:
                 "disponiveis": [
                     "designer", "edicao-de-imagem", "edicao-de-video-audio",
                     "desenvolvimento", "observabilidade-do-sistema", "assistente-de-email",
-                    "operador-nyxos", "mensageria-segura",
+                    "operador-nyxos", "mensageria-segura", "engenharia-reversa",
+                    "ciberseguranca-defensiva", "data-science",
                 ],
             },
             "erro_selecao": selection_error,
@@ -243,38 +291,105 @@ class NyxalAgentHub:
         sessao: str | None = None,
         provedor: str | None = None,
         contexto_sistema: dict[str, Any] | None = None,
+        historico_externo: list[dict[str, str]] | None = None,
+        prompt_sistema_extra: str | None = None,
     ) -> dict[str, Any]:
         if not isinstance(mensagem, str) or not mensagem.strip():
             raise ValueError("A mensagem é obrigatória.")
 
         requested = (provedor or _env("NYXAL_AGENT_PROVIDER", "auto")).lower().strip()
-        if requested != "auto":
-            resolved = self.resolve_provider(requested)
-            if resolved == "nyxal":
-                return self._fallback_local(sessao)
-            return self._responder_provedor(
-                mensagem.strip(), resolved, sessao, contexto_sistema
+        intent = classificar_intencao(mensagem)
+        started = time.monotonic()
+        extra_kwargs: dict[str, Any] = {}
+        if historico_externo is not None:
+            extra_kwargs["historico_externo"] = historico_externo
+        if prompt_sistema_extra is not None:
+            extra_kwargs["prompt_sistema_extra"] = prompt_sistema_extra
+        specialist_prompt = PROMPTS_ESPECIALIZADOS.get(intent["classe"])
+        if specialist_prompt:
+            supplied_extra = str(extra_kwargs.get("prompt_sistema_extra") or "").strip()
+            extra_kwargs["prompt_sistema_extra"] = (
+                supplied_extra + "\n\n" + specialist_prompt
+                if supplied_extra else specialist_prompt
             )
 
-        # No modo automático, um provedor remoto fora do ar não deixa a Nyxal muda.
+        if requested != "auto":
+            resolved = self.resolve_provider(requested)
+            try:
+                if resolved == "nyxal":
+                    result = self._fallback_local(sessao)
+                else:
+                    result = self._responder_provedor(
+                        mensagem.strip(), resolved, sessao, contexto_sistema, **extra_kwargs
+                    )
+            except Exception as exc:
+                self._routing_telemetry.registrar(
+                    classe=intent["classe"], provedor=resolved, sucesso=False,
+                    inicio=started, tentativas=[resolved], erro=type(exc).__name__,
+                )
+                raise
+            self._last_provider = resolved
+            result["roteamento"] = {
+                "politica": "provedor_explicito",
+                "classe": intent["classe"],
+                "motivo": "O usuário ou a configuração selecionou um provedor explicitamente.",
+                "provedor": resolved,
+                "tentativas": [resolved],
+            }
+            self._routing_telemetry.registrar(
+                classe=intent["classe"], provedor=resolved, sucesso=True,
+                inicio=started, tentativas=[resolved],
+            )
+            return result
+
         candidates = [
-            name for name in ("hermes", "gemini", "letta")
+            name for name in ordem_provedores(intent["classe"])
             if self.provider_configured(name)
         ]
         failures: list[str] = []
-        for resolved in [*candidates, "nyxal"]:
-            if resolved == "nyxal":
-                self._last_provider = "nyxal"
-                result = self._fallback_local(sessao)
-                result["provedores_tentados"] = failures
-                return result
+        attempted: list[str] = []
+        for resolved in candidates:
+            attempted.append(resolved)
             try:
-                return self._responder_provedor(
-                    mensagem.strip(), resolved, sessao, contexto_sistema
+                result = self._responder_provedor(
+                    mensagem.strip(), resolved, sessao, contexto_sistema, **extra_kwargs
                 )
             except Exception as exc:
                 failures.append(f"{resolved}: {type(exc).__name__}")
-        return self._fallback_local(sessao)
+                continue
+            self._last_provider = resolved
+            result["roteamento"] = {
+                "politica": "roteamento_por_intencao_v1",
+                "classe": intent["classe"],
+                "motivo": intent["motivo"],
+                "provedor": resolved,
+                "tentativas": attempted[:],
+            }
+            if failures:
+                result["provedores_tentados"] = failures[:]
+            self._routing_telemetry.registrar(
+                classe=intent["classe"], provedor=resolved, sucesso=True,
+                inicio=started, tentativas=attempted[:],
+            )
+            return result
+
+        attempted.append("nyxal")
+        self._last_provider = "nyxal"
+        result = self._fallback_local(sessao)
+        result["provedores_tentados"] = failures
+        result["roteamento"] = {
+            "politica": "roteamento_por_intencao_v1",
+            "classe": intent["classe"],
+            "motivo": intent["motivo"],
+            "provedor": "nyxal",
+            "tentativas": attempted,
+            "fallback_local": True,
+        }
+        self._routing_telemetry.registrar(
+            classe=intent["classe"], provedor="nyxal", sucesso=True,
+            inicio=started, tentativas=attempted[:], fallback_local=True,
+        )
+        return result
 
     @staticmethod
     def _fallback_local(sessao: str | None) -> dict[str, Any]:
@@ -312,6 +427,9 @@ class NyxalAgentHub:
         resolved: str,
         sessao: str | None,
         contexto_sistema: dict[str, Any] | None,
+        *,
+        historico_externo: list[dict[str, str]] | None = None,
+        prompt_sistema_extra: str | None = None,
     ) -> dict[str, Any]:
         # A memória Letta indisponível não bloqueia o modelo principal.
         try:
@@ -320,6 +438,8 @@ class NyxalAgentHub:
             memory = ""
 
         system_prompt = self._system_prompt_base()
+        if isinstance(prompt_sistema_extra, str) and prompt_sistema_extra.strip():
+            system_prompt += "\n\nDiretrizes do núcleo conversacional da Nyxal:\n" + prompt_sistema_extra.strip()[:8000]
         if memory:
             system_prompt += "\n\nMemória persistente da Nyxal (contexto; pode estar desatualizada):\n" + memory[:12000]
         if contexto_sistema:
@@ -328,12 +448,24 @@ class NyxalAgentHub:
                 + json.dumps(contexto_sistema, ensure_ascii=False)[:16000]
             )
 
-        history = self._historico(sessao)
+        if historico_externo is None:
+            history = self._historico(sessao)
+        else:
+            history = []
+            for item in historico_externo[-20:]:
+                if not isinstance(item, dict):
+                    continue
+                role, content = item.get("role"), item.get("content")
+                if role in {"user", "assistant"} and isinstance(content, str) and content.strip():
+                    history.append({"role": role, "content": content[:12000]})
         if resolved == "gemini":
             answer = self._ask_gemini(mensagem, system_prompt, history)
             new_session = sessao
         elif resolved == "hermes":
             answer, new_session = self._ask_hermes(mensagem, system_prompt, sessao, history)
+        elif resolved in {"openai", "grok"}:
+            answer = ask_responses_api(resolved, mensagem, system_prompt, history)
+            new_session = sessao
         else:
             answer, new_session = self._ask_letta(mensagem, system_prompt, sessao)
 
