@@ -89,13 +89,14 @@ class TestNyxalAgentHub(unittest.TestCase):
             self.assertFalse(hub.provider_configured("hermes"))
             self.assertFalse(hub.provider_configured("letta"))
 
-    def test_letta_cloud_so_usa_dominio_oficial(self):
+    def test_letta_nao_responde_chat_no_modo_somente_nyxal(self):
         with patch.dict(os.environ, {
             "LETTA_AGENT_ID": "agent",
             "LETTA_API_KEY": "private-test-key",
             "LETTA_BASE_URL": "https://api.letta.com",
         }, clear=True):
-            self.assertTrue(NyxalAgentHub().provider_configured("letta"))
+            self.assertFalse(NyxalAgentHub().provider_configured("letta"))
+            self.assertEqual(NyxalAgentHub().resolve_provider(), "nyxal")
 
     def test_fallback_local_e_explicito_no_retorno(self):
         with patch.dict(os.environ, {}, clear=True):
