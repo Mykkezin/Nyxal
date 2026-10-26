@@ -240,7 +240,12 @@ class NyxalAgentHub:
             raise ValueError("A mensagem é obrigatória.")
 
         requested = (provedor or _env("NYXAL_AGENT_PROVIDER", "nyxal")).lower().strip()
-        # "auto" é mantido por compatibilidade, mas significa Nyxal local.
+        # Ignora valores persistidos antigos como "gemini" quando não vieram
+        # explicitamente nesta chamada; a política padrão é sempre Nyxal local.
+        if provedor is None and requested not in KNOWN_PROVIDERS:
+            requested = "nyxal"
+        if requested == "auto":
+            requested = "nyxal"
         resolved = self.resolve_provider(requested)
         self._last_provider = "nyxal"
         result = self._fallback_local(sessao)
