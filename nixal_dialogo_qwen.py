@@ -109,7 +109,7 @@ class DialogoQwenNixal:
         mensagens: list[dict[str, str]] = [
             {
                 "role": "system",
-                "content": self.PROMPT_SISTEMA + "\\n\\nEstilo conversacional:\\n" + self.PROMPT_ESTILO_PROVEDOR,
+                "content": self.PROMPT_SISTEMA + "\n\nEstilo conversacional:\n" + self.PROMPT_ESTILO_PROVEDOR,
             }
         ]
 
@@ -122,7 +122,7 @@ class DialogoQwenNixal:
             specialist_prompt = prompt_especialista(intent["classe"])
             if specialist_prompt:
                 mensagens[0]["content"] += (
-                    "\\n\\nDiretrizes especializadas da Nyxal:\\n" + specialist_prompt
+                    "\n\nDiretrizes especializadas da Nyxal:\n" + specialist_prompt
                 )
         except (ImportError, AttributeError, TypeError):
             # Mantém o modo standalone disponível sem a pilha opcional de agentes.
@@ -159,6 +159,54 @@ class DialogoQwenNixal:
                 "content": texto.strip(),
             }
         )
+
+        hub = self.agent_hub
+        provider_setting = os.environ.get("NYXAL_AGENT_PROVIDER", "auto").strip().lower() or "auto"
+        remote_providers = ("hermes", "openai", "gemini", "grok", "letta")
+        should_try_hub = hub is not None and provider_setting != "nyxal"
+        if should_try_hub and provider_setting == "auto":
+            try:
+                should_try_hub = any(hub.provider_configured(name) for name in remote_providers)
+            except Exception:
+                should_try_hub = False
+
+        if should_try_hub:
+            try:
+                external_history = [
+                    {"role": item["role"], "content": item["content"]}
+                    for item in mensagens[1:-1]
+                    if item.get("role") in {"user", "assistant"}
+                    and isinstance(item.get("content"), str)
+                    and item["content"].strip()
+                ][-20:]
+                routed = hub.responder(
+                    texto.strip(),
+                    sessao=sessao,
+                    provedor=provider_setting,
+                    historico_externo=external_history,
+                    prompt_sistema_extra=self.PROMPT_ESTILO_PROVEDOR,
+                )
+                answer = routed.get("resposta") if isinstance(routed, dict) else None
+                if (
+                    isinstance(routed, dict)
+                    and routed.get("sucesso") is True
+                    and routed.get("fallback_local") is not True
+                    and isinstance(answer, str)
+                    and answer.strip()
+                ):
+                    return {
+                        "sucesso": True,
+                        "estado": "resposta_gerada",
+                        "origem": "nixal_agent_hub",
+                        "resposta": answer.strip(),
+                        "modelo": routed.get("provedor", "roteador_nyxal"),
+                        "roteamento": routed.get("roteamento"),
+                        "permanente": False,
+                        "versao_dialogo": self.VERSAO,
+                    }
+            except Exception:
+                # Provedor remoto indisponível não derruba a conversa local.
+                pass
 
         try:
             resposta = self.cliente.chat(
