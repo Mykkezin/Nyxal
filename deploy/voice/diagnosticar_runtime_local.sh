@@ -29,6 +29,12 @@ systemctl --user list-units --type=service --state=running --no-legend --no-page
   | grep -Ei 'nyx|nix|ollama|voice|assistant|agent|llm|qwen|hermes|letta|gemini|open.?webui|vllm|llama|local.?ai' \
   || true
 
+section "System services matching assistant/LLM names (names/descriptions only)"
+systemctl list-units --type=service --state=running --no-legend --no-pager 2>/dev/null \
+  | awk '{ unit=$1; $1=""; sub(/^ /, ""); print unit " — " $0 }' \
+  | grep -Ei 'nyx|nix|ollama|voice|assistant|agent|llm|qwen|hermes|letta|gemini|open.?webui|vllm|llama|local.?ai' \
+  || true
+
 section "Local Ollama runtime"
 if command -v ollama >/dev/null 2>&1; then
   printf '%s\n' '-- ollama ps --'
@@ -44,6 +50,22 @@ ss -ltnp 2>/dev/null || true
 
 section "Top processes (no command-line arguments)"
 ps -eo pid,ppid,comm,etime,%cpu,%mem --sort=-%cpu 2>/dev/null | head -n 36
+
+section "Executable paths and working directories for likely AI runtimes"
+# Read /proc metadata only. Never read cmdline or environ: those may contain credentials.
+while read -r pid comm; do
+  exe="$(readlink -f "/proc/${pid}/exe" 2>/dev/null || true)"
+  cwd="$(readlink -f "/proc/${pid}/cwd" 2>/dev/null || true)"
+  ppid="$(awk '/^PPid:/ {print $2; exit}' "/proc/${pid}/status" 2>/dev/null || true)"
+  cgroup="$(tr '\n' ' ' < "/proc/${pid}/cgroup" 2>/dev/null | cut -c1-180)"
+  printf 'PID=%s PPID=%s COMM=%s EXE=%s CWD=%s CGROUP=%s\n' \
+    "${pid}" "${ppid:-unknown}" "${comm}" "${exe:-unavailable}" \
+    "${cwd:-unavailable}" "${cgroup:-unavailable}"
+done < <(
+  ps -eo pid=,comm= 2>/dev/null \
+    | awk 'tolower($2) ~ /(python|node|ollama|qwen|hermes|letta|gemini|llama|vllm|nyx|nix)/ {print $1, $2}' \
+    | head -n 60
+)
 
 section "Configured conversational provider/model (allowlisted non-secret settings only)"
 env_file="${HOME}/.config/nyxal/nyxal.env"
