@@ -16,7 +16,7 @@ class TestNyxalVoiceConsole(unittest.TestCase):
 
     def test_voice_console_is_loaded(self):
         self.assertIn('/interface/js/nyxal-voice-console.js', self.html)
-        self.assertIn('modo=voz', self.html)
+        self.assertIn('get("modo") === "voz"', self.html)
 
     def test_console_uses_existing_real_telemetry(self):
         self.assertIn('"/api/agent/contexto"', self.console)
