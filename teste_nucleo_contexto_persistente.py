@@ -65,6 +65,16 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         self.assertIs(registro.get("sucesso"), True)
         self.contexto = ContextoHistoricoRelevanteNixal(self.memoria)
 
+    def test_ciclo_helper_retorna_copia_e_rejeita_registro_invalido(self) -> None:
+        ciclo = sample_cycle()
+        resultado = self.contexto._ciclo({"id": "registro-teste", "ciclo": ciclo})
+        self.assertEqual(resultado, ciclo)
+        self.assertIsNot(resultado, ciclo)
+        resultado["necessidade"] = "alteração de teste"
+        self.assertNotEqual(ciclo["necessidade"], resultado["necessidade"])
+        self.assertIsNone(self.contexto._ciclo({"id": "sem-ciclo"}))
+        self.assertIsNone(self.contexto._ciclo(None))
+
     def test_consulta_lexical_recupera_registro_com_proveniencia(self) -> None:
         resultado = self.contexto.analisar_consulta(
             "Onde paramos na investigação do runner privado do GitHub Actions?",
