@@ -119,6 +119,16 @@ def main() -> None:
     )
 
     verificar(
+        "--autoplay-policy=no-user-gesture-required" in shell,
+        "Chromium kiosk permite a saída de voz após ativação automática",
+    )
+
+    verificar(
+        "if (!voiceConversationActive) startContinuousVoice();" in interface,
+        "modo de voz tenta ativar a escuta ao iniciar o shell",
+    )
+
+    verificar(
         "VOICE_RECORDING_MS" not in interface,
         "antigo limite fixo de 7 segundos foi removido",
     )

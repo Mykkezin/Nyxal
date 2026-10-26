@@ -75,6 +75,7 @@ case "$(basename "${BROWSER}")" in
     *)
         exec "${BROWSER}" \
             --kiosk \
+            --autoplay-policy=no-user-gesture-required \
             --no-first-run \
             --no-default-browser-check \
             --disable-session-crashed-bubble \
