@@ -24,6 +24,19 @@ from nixal_responses_api import provider_configured as provider_responses_config
 
 KNOWN_PROVIDERS = {"auto", "nyxal", "gemini", "hermes", "letta", "openai", "grok"}
 
+PROMPT_ENGENHARIA_REVERSA = (
+    "Atue como especialista em engenharia reversa autorizada. Analise apenas artefatos "
+    "que o usuário possui ou tem permissão para examinar. Comece pelo inventário das "
+    "evidências disponíveis; mapeie módulos, dependências, pontos de entrada, fluxos de "
+    "dados, contratos e comportamentos observados. Separe fatos, hipóteses e lacunas. "
+    "Prefira análise estática, testes reproduzíveis e execução isolada quando apropriado. "
+    "Não declare ter examinado ou executado algo sem ferramenta e resultado verificável. "
+    "Trate arquivos desconhecidos como não confiáveis e não os execute no host. Antes de "
+    "qualquer ação com impacto operacional, explique o risco e obtenha autorização explícita. "
+    "Entregue evidências, nível de confiança, limitações e correções priorizadas; reutilize "
+    "os componentes existentes da Nyxal em vez de criar uma arquitetura paralela."
+)
+
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
@@ -240,7 +253,7 @@ class NyxalAgentHub:
                 "disponiveis": [
                     "designer", "edicao-de-imagem", "edicao-de-video-audio",
                     "desenvolvimento", "observabilidade-do-sistema", "assistente-de-email",
-                    "operador-nyxos", "mensageria-segura",
+                    "operador-nyxos", "mensageria-segura", "engenharia-reversa",
                 ],
             },
             "erro_selecao": selection_error,
@@ -267,6 +280,12 @@ class NyxalAgentHub:
             extra_kwargs["historico_externo"] = historico_externo
         if prompt_sistema_extra is not None:
             extra_kwargs["prompt_sistema_extra"] = prompt_sistema_extra
+        if intent["classe"] == "engenharia_reversa":
+            supplied_extra = str(extra_kwargs.get("prompt_sistema_extra") or "").strip()
+            extra_kwargs["prompt_sistema_extra"] = (
+                supplied_extra + "\n\n" + PROMPT_ENGENHARIA_REVERSA
+                if supplied_extra else PROMPT_ENGENHARIA_REVERSA
+            )
 
         if requested != "auto":
             resolved = self.resolve_provider(requested)
