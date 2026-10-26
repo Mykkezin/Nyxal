@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Fast, microphone-free contract tests for the optional voice adapter."""
 
+import os
 import unittest
+from unittest.mock import patch
 
 from nyxal_pipecat_agent import (
     _api_request_headers,
