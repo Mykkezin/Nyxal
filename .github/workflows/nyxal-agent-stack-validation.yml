@@ -4,7 +4,10 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [feat/nyxal-agent-stack-current-main-20261009, fix/display-root-route-20261009]
+    branches:
+      - feat/nyxal-agent-stack-current-main-20261009
+      - fix/display-root-route-20261009
+      - feat/voz-tempo-real-pipecat
   workflow_dispatch:
 
 permissions:
@@ -32,6 +35,10 @@ jobs:
             nixal_observabilidade_sistema.py \
             nixal_integracao_gmail.py \
             nixal_capacidade_visual.py \
+            nixal_seguranca_http.py \
+            deploy/voice/nyxal_pipecat_agent.py \
+            deploy/voice/verificar_api_nyxal.py \
+            deploy/voice/verificar_contrato_pipecat.py \
             scripts/autorizar_gmail_nyxal.py \
             scripts/configurar_hermes_whatsapp_policy.py \
             scripts/nyxal_letta_memory.py
@@ -44,6 +51,8 @@ jobs:
           bash -n deploy/agent/configurar_nyxal_agent.sh
           bash -n deploy/agent/instalar_nyxal_agent.sh
           bash -n deploy/agent/verificar_nyxal_agent.sh
+          bash -n deploy/voice/instalar_pipecat_experimental.sh
+          bash -n deploy/voice/diagnosticar_runtime_local.sh
       - name: Run focused unit tests
         run: |
           python -m unittest -v \
