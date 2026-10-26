@@ -154,7 +154,7 @@ class AmbienteTeste:
         )
 
         self.nucleo.dialogo.responder = (
-            lambda _texto, historico=None: {
+            lambda _texto, historico=None, sessao=None: {
                 "sucesso": False,
                 "estado": "qwen_nao_respondeu",
                 "origem": "dialogo_qwen_nixal",
@@ -274,7 +274,7 @@ def teste_pergunta_contextual_prioriza_dialogo() -> None:
     )
 
     ambiente.nucleo.dialogo.responder = (
-        lambda texto, historico=None: {
+        lambda texto, historico=None, sessao=None: {
             "sucesso": True,
             "estado": "resposta_gerada",
             "origem": "dialogo_qwen_nixal",
