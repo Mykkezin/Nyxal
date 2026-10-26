@@ -117,6 +117,15 @@ class AutoreparoResidenteTests(unittest.TestCase):
                 resultado["api"]["reparo"]["estado"],
                 "circuito_aberto_limite_reinicios",
             )
+            arquivo = Path(diretorio) / "autoreparo.jsonl"
+            linhas_antes = arquivo.read_text(encoding="utf-8").splitlines()
+            repetida = reparo.verificar_e_reparar()
+            linhas_depois = arquivo.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(
+                repetida["api"]["reparo"]["estado"],
+                "circuito_aberto_limite_reinicios",
+            )
+            self.assertEqual(linhas_depois, linhas_antes)
 
     def test_nao_reinicia_interface_sem_sessao_grafica(self):
         with tempfile.TemporaryDirectory() as diretorio:

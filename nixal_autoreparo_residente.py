@@ -76,6 +76,7 @@ class AutoreparoResidenteNixOS:
             "api": deque(),
             "interface": deque(),
         }
+        self._circuito_auditado: set[str] = set()
 
     def _rodar(self, argumentos: list[str]) -> Any:
         # Todas as chamadas são vetores constantes; nunca há shell ou comando do utilizador.
@@ -185,10 +186,14 @@ class AutoreparoResidenteNixOS:
         tentativas = self._reinicios[componente]
         while tentativas and agora - tentativas[0] >= self.JANELA_REINICIOS_SEGUNDOS:
             tentativas.popleft()
+        if len(tentativas) < self.MAX_REINICIOS_POR_JANELA:
+            self._circuito_auditado.discard(componente)
 
         if len(tentativas) >= self.MAX_REINICIOS_POR_JANELA:
             estado = "circuito_aberto_limite_reinicios"
-            self._auditar(componente=componente, estado=estado, falhas=falhas, unidade=unidade)
+            if componente not in self._circuito_auditado:
+                self._auditar(componente=componente, estado=estado, falhas=falhas, unidade=unidade)
+                self._circuito_auditado.add(componente)
             return {
                 "estado": estado,
                 "reinicio_solicitado": False,
