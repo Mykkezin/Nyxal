@@ -16,7 +16,6 @@ on:
       - "nixal_ciclo_residente.py"
       - "executar_nyxos_residente.py"
       - "teste_m5_19_integracao_residente_atuacao.py"
-      - ".github/workflows/m5-19-integracao-validation.yml"
 
 jobs:
   validate-m5-19:
