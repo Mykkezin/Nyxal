@@ -15,7 +15,6 @@ on:
       - "nixal_plano_central_controle.py"
       - "nixal_ciclo_residente.py"
       - "teste_m5_20_validacao_e2e.py"
-      - ".github/workflows/m5-20-e2e-validation.yml"
 
 jobs:
   validate-m5-20:
