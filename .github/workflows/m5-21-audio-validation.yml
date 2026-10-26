@@ -3,10 +3,12 @@ name: M5.21 Audio NyxOS
 on:
   push:
     branches:
+      - main
       - feat/m5-21-audio-nyxos
     paths:
       - "nixal_audio_nyxos.py"
       - "teste_m5_21_audio_nyxos.py"
+      - ".github/workflows/m5-21-audio-validation.yml"
   pull_request:
     branches:
       - main
