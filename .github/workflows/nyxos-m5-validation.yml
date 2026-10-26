@@ -3,6 +3,7 @@ name: NyxOS M5 — validação do Habitat
 on:
   push:
     branches:
+      - main
       - feat/m5-habitat-nyxos
     paths:
       - "nixal_habitat.py"
@@ -40,6 +41,7 @@ on:
       - "teste_ciclo_evolucao_ae*.py"
       - "teste_descoberta_continua_ae*.py"
       - "teste_m5_*.py"
+      - ".github/workflows/nyxos-m5-validation.yml"
   pull_request:
     branches:
       - main
@@ -163,4 +165,3 @@ jobs:
 
       - name: Testar Presença de Máquina M5.15
         run: python3 teste_m5_15_presenca_maquina.py
-
