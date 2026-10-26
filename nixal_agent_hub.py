@@ -18,7 +18,7 @@ from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 
-KNOWN_PROVIDERS = {"auto", "nyxal", "gemini", "hermes", "letta"}
+KNOWN_PROVIDERS = {"auto", "nyxal"}
 
 
 def _env(name: str, default: str = "") -> str:
@@ -138,37 +138,27 @@ class NyxalAgentHub:
         return identity[:16000] + "\n\nRestrições operacionais adicionais:\n" + self.PROMPT_BASE
 
     def provider_configured(self, provider: str) -> bool:
-        if provider == "nyxal":
-            return True
-        if provider == "gemini":
-            return bool(_env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY"))
-        if provider == "hermes":
-            base = _env("NYXAL_HERMES_BASE_URL", "http://127.0.0.1:8642/v1")
-            return bool(_env("NYXAL_HERMES_API_KEY") and _safe_provider_base(base))
-        if provider == "letta":
-            base = _env("LETTA_BASE_URL", "http://127.0.0.1:8283")
-            safe_local = _safe_provider_base(base)
-            safe_cloud = _safe_provider_base(base, allow_letta_cloud=True)
-            return bool(_env("LETTA_AGENT_ID") and (safe_local or (safe_cloud and _env("LETTA_API_KEY"))))
-        return False
+        # Política explícita: conversa somente pela Nyxal local.
+        # Credenciais Gemini/Hermes/Letta podem existir no ambiente, mas não
+        # habilitam esses provedores como respondentes do chat.
+        return provider == "nyxal"
 
     def resolve_provider(self, requested: str | None = None) -> str:
-        provider = (requested or _env("NYXAL_AGENT_PROVIDER", "auto")).lower().strip()
+        # Ignora uma variável antiga como NYXAL_AGENT_PROVIDER=gemini: a política
+        # local prevalece até que o usuário peça explicitamente para reativar provedores.
+        if requested is None:
+            configured = _env("NYXAL_AGENT_PROVIDER", "nyxal").lower().strip()
+            provider = configured if configured in KNOWN_PROVIDERS else "nyxal"
+        else:
+            provider = requested.lower().strip()
         if provider not in KNOWN_PROVIDERS:
-            raise ValueError(f"Provedor inválido. Use um de: {', '.join(sorted(KNOWN_PROVIDERS))}.")
-        if provider != "auto":
-            if not self.provider_configured(provider):
-                raise RuntimeError(f"O provedor '{provider}' ainda não está configurado.")
-            return provider
-        # Hermes é o agente executor/orquestrador; pode ser configurado para usar Gemini
-        # como modelo no próprio Hermes. Letta mantém a identidade/memória persistente.
-        for candidate in ("hermes", "gemini", "letta"):
-            if self.provider_configured(candidate):
-                return candidate
+            raise ValueError(
+                "Esta instalação está em modo somente Nyxal; provedores externos estão desativados."
+            )
         return "nyxal"
 
     def contexto(self) -> dict[str, Any]:
-        requested = _env("NYXAL_AGENT_PROVIDER", "auto").lower()
+        requested = _env("NYXAL_AGENT_PROVIDER", "nyxal").lower()
         try:
             active = self.resolve_provider()
             selection_error = None
@@ -178,18 +168,20 @@ class NyxalAgentHub:
         letta_configured = self.provider_configured("letta")
         return {
             "sucesso": True,
-            "estado": "agente_configurado" if active != "nyxal" else "agente_local",
+            "estado": "agente_local",
             "origem": "nyxal_agent_hub",
-            "provedor_solicitado": requested,
-            "provedor_resolvido": active,
+            "modo_conversa": "somente_nyxal_local",
+            "provedor_solicitado": "nyxal",
+            "provedor_resolvido": "nyxal",
             "ultimo_provedor": self._last_provider,
             "provedores": {
-                "nyxal_qwen": {"configurado": True, "papel": "fallback local"},
-                "gemini": {"configurado": self.provider_configured("gemini"), "papel": "modelo multimodal"},
-                "hermes": {"configurado": self.provider_configured("hermes"), "papel": "agente e ferramentas"},
+                "nyxal_qwen": {"configurado": True, "habilitado": True, "papel": "respondente local da Nyxal"},
+                "gemini": {"configurado": False, "habilitado": False, "papel": "desativado para conversa"},
+                "hermes": {"configurado": False, "habilitado": False, "papel": "desativado como respondente de conversa"},
                 "letta": {
-                    "configurado": letta_configured,
-                    "papel": "agente stateful/memória persistente",
+                    "configurado": False,
+                    "habilitado": False,
+                    "papel": "desativado como respondente de conversa",
                     "sincronizacao_automatica": _env("LETTA_MEMORY_SYNC_ENABLED", "false").lower() in {"1", "true", "yes"},
                 },
             },
@@ -247,34 +239,13 @@ class NyxalAgentHub:
         if not isinstance(mensagem, str) or not mensagem.strip():
             raise ValueError("A mensagem é obrigatória.")
 
-        requested = (provedor or _env("NYXAL_AGENT_PROVIDER", "auto")).lower().strip()
-        if requested != "auto":
-            resolved = self.resolve_provider(requested)
-            if resolved == "nyxal":
-                return self._fallback_local(sessao)
-            return self._responder_provedor(
-                mensagem.strip(), resolved, sessao, contexto_sistema
-            )
-
-        # No modo automático, um provedor remoto fora do ar não deixa a Nyxal muda.
-        candidates = [
-            name for name in ("hermes", "gemini", "letta")
-            if self.provider_configured(name)
-        ]
-        failures: list[str] = []
-        for resolved in [*candidates, "nyxal"]:
-            if resolved == "nyxal":
-                self._last_provider = "nyxal"
-                result = self._fallback_local(sessao)
-                result["provedores_tentados"] = failures
-                return result
-            try:
-                return self._responder_provedor(
-                    mensagem.strip(), resolved, sessao, contexto_sistema
-                )
-            except Exception as exc:
-                failures.append(f"{resolved}: {type(exc).__name__}")
-        return self._fallback_local(sessao)
+        requested = (provedor or _env("NYXAL_AGENT_PROVIDER", "nyxal")).lower().strip()
+        # "auto" é mantido por compatibilidade, mas significa Nyxal local.
+        resolved = self.resolve_provider(requested)
+        self._last_provider = "nyxal"
+        result = self._fallback_local(sessao)
+        result["provedores_tentados"] = []
+        return result
 
     @staticmethod
     def _fallback_local(sessao: str | None) -> dict[str, Any]:
