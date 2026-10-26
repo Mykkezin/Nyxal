@@ -34,6 +34,7 @@ from typing import Any
 
 
 VERSAO_MEMORIA = "1.0"
+MAX_MEMORIA_JSON_BYTES = 32 * 1024 * 1024
 
 ARQUIVO_MEMORIA_PADRAO = (
     Path(__file__).resolve().parent
@@ -67,8 +68,19 @@ class MemoriaConhecimentoNixal:
         if not self.caminho.exists():
             return self._estrutura_vazia()
         try:
-            dados = json.loads(self.caminho.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            with self.caminho.open("rb") as arquivo:
+                bruto = arquivo.read(MAX_MEMORIA_JSON_BYTES + 1)
+        except OSError:
+            self._erro_carregamento = "arquivo_ilegivel_ou_json_corrompido"
+            return self._estrutura_vazia()
+
+        if len(bruto) > MAX_MEMORIA_JSON_BYTES:
+            self._erro_carregamento = "arquivo_excede_limite_tamanho"
+            return self._estrutura_vazia()
+
+        try:
+            dados = json.loads(bruto.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
             self._erro_carregamento = "arquivo_ilegivel_ou_json_corrompido"
             return self._estrutura_vazia()
         if not isinstance(dados, dict):
@@ -290,6 +302,8 @@ class MemoriaConhecimentoNixal:
     def _salvar(self) -> None:
         self.caminho.parent.mkdir(parents=True, exist_ok=True)
         texto = json.dumps(self._dados, ensure_ascii=False, indent=2)
+        if len(texto.encode("utf-8")) > MAX_MEMORIA_JSON_BYTES:
+            raise OSError("memoria_excede_limite_tamanho")
         temp_fd, temp_name = tempfile.mkstemp(
             prefix=f".{self.caminho.name}.", suffix=".tmp", dir=str(self.caminho.parent)
         )
