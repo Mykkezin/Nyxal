@@ -35,6 +35,6 @@ jobs:
       - name: Verify system Python 3.12
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compile defense policy
-        run: python -m py_compile nixal_defesa_autonoma.py teste_defesa_autonoma.py
+        run: python3 -m py_compile nixal_defesa_autonoma.py teste_defesa_autonoma.py
       - name: Run defense policy tests
-        run: python -m unittest teste_defesa_autonoma.py -v
+        run: python3 -m unittest teste_defesa_autonoma.py -v
