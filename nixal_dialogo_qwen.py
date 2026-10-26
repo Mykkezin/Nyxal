@@ -111,7 +111,7 @@ class DialogoQwenNixal:
         mensagens: list[dict[str, str]] = [
             {
                 "role": "system",
-                "content": self.PROMPT_SISTEMA + "\\n\\nEstilo conversacional:\\n" + self.PROMPT_ESTILO_PROVEDOR,
+                "content": self.PROMPT_SISTEMA + "\n\nEstilo conversacional:\n" + self.PROMPT_ESTILO_PROVEDOR,
             }
         ]
 
@@ -125,7 +125,7 @@ class DialogoQwenNixal:
             specialist_prompt = PROMPTS_ESPECIALIZADOS.get(intent["classe"])
             if specialist_prompt:
                 mensagens[0]["content"] += (
-                    "\\n\\nDiretrizes especializadas da Nyxal:\\n" + specialist_prompt
+                    "\n\nDiretrizes especializadas da Nyxal:\n" + specialist_prompt
                 )
         except (ImportError, AttributeError, TypeError):
             # A conversa local continua disponível caso a pilha de roteamento
