@@ -29,6 +29,8 @@ on:
       - "teste_nucleo_contexto_persistente.py"
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
+      - "interface/index.html"
+      - ".github/workflows/nyxal-agent-stack-validation.yml"
       - "scripts/autorizar_gmail_nyxal.py"
       - "scripts/configurar_hermes_whatsapp_policy.py"
       - "scripts/nyxal_letta_memory.py"
@@ -65,6 +67,8 @@ on:
       - "teste_nucleo_contexto_persistente.py"
       - "teste_memorias_persistencia_segura.py"
       - "interface/display/**"
+      - "interface/index.html"
+      - ".github/workflows/nyxal-agent-stack-validation.yml"
       - "scripts/autorizar_gmail_nyxal.py"
       - "scripts/configurar_hermes_whatsapp_policy.py"
       - "scripts/nyxal_letta_memory.py"
@@ -90,6 +94,36 @@ jobs:
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Verify system Node.js 22 and npm
         run: node -e 'const v=process.versions.node.split(".").map(Number); if(v[0]!==22) process.exit(1); console.log(process.version)' && npm --version
+      - name: Check inline JavaScript in the legacy Nyxal interface
+        run: |
+          python3 - <<'PY'
+          import re
+          import subprocess
+          import tempfile
+          from pathlib import Path
+
+          html = Path("interface/index.html").read_text(encoding="utf-8")
+          pattern = re.compile(r"<script\b([^>]*)>(.*?)</script\s*>", re.IGNORECASE | re.DOTALL)
+          valid_types = {"", "text/javascript", "application/javascript", "module"}
+          checked = 0
+          with tempfile.TemporaryDirectory(prefix="nyxal-js-check-") as temp:
+              root = Path(temp)
+              for index, match in enumerate(pattern.finditer(html), start=1):
+                  attrs, body = match.group(1), match.group(2)
+                  if re.search(r"\bsrc\s*=", attrs, re.IGNORECASE):
+                      continue
+                  type_match = re.search(r"""\btype\s*=\s*["']([^"']+)["']""", attrs, re.IGNORECASE)
+                  script_type = type_match.group(1).casefold() if type_match else ""
+                  if script_type not in valid_types or not body.strip():
+                      continue
+                  script = root / f"inline-{index}.js"
+                  script.write_text(body, encoding="utf-8")
+                  subprocess.run(["node", "--check", str(script)], check=True)
+                  checked += 1
+          if checked == 0:
+              raise SystemExit("Nenhum script JavaScript inline foi verificado.")
+          print(f"JavaScript inline validado: {checked} scripts")
+          PY
       - name: Build passive Nyxal Display
         working-directory: interface/display
         run: |
