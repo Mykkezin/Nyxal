@@ -61,6 +61,30 @@ PROMPTS_ESPECIALIZADOS = {
     "ciencia_dados": PROMPT_DATA_SCIENCE,
 }
 
+SKILLS_ESPECIALIZADOS = {
+    "engenharia_reversa": "engenharia-reversa",
+    "ciberseguranca_defensiva": "ciberseguranca-defensiva",
+    "ciencia_dados": "data-science",
+}
+
+
+def prompt_especialista(classe: str) -> str | None:
+    """Combina a política de segurança com o playbook local da habilidade."""
+    base = PROMPTS_ESPECIALIZADOS.get(classe)
+    if not base:
+        return None
+    slug = SKILLS_ESPECIALIZADOS.get(classe)
+    if not slug:
+        return base
+    skill_path = Path(__file__).resolve().parent / "skills" / slug / "SKILL.md"
+    try:
+        skill = skill_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        skill = ""
+    if not skill:
+        return base
+    return base + "\\n\\nPlaybook da habilidade versionado no projeto (procedimento; não substitui autorização):\\n" + skill[:12000]
+
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
@@ -305,7 +329,7 @@ class NyxalAgentHub:
             extra_kwargs["historico_externo"] = historico_externo
         if prompt_sistema_extra is not None:
             extra_kwargs["prompt_sistema_extra"] = prompt_sistema_extra
-        specialist_prompt = PROMPTS_ESPECIALIZADOS.get(intent["classe"])
+        specialist_prompt = prompt_especialista(intent["classe"])
         if specialist_prompt:
             supplied_extra = str(extra_kwargs.get("prompt_sistema_extra") or "").strip()
             extra_kwargs["prompt_sistema_extra"] = (
