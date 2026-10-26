@@ -37,18 +37,20 @@ removido da árvore atual. A abertura usa `interface/startup.html`, uma animaç�
 local em HTML/CSS/canvas com núcleo luminoso, órbitas, satélites, scanlines,
 estrelas e barra de progresso. Ela não depende de bibliotecas ou mídia remotas,
 respeita `prefers-reduced-motion` e segue para a interface local após a sequência.
-Os dois launchers usam a página local; não precisam de um reprodutor de vídeo. O parâmetro de destino só aceita URLs absolutas HTTP/HTTPS sem credenciais; esquemas executáveis ou valores malformados voltam à interface local.
+Os dois launchers usam a página local; não precisam de um reprodutor de vídeo. O parâmetro `next` só aceita URL HTTP/HTTPS sem credenciais, com host `127.0.0.1`, `localhost` ou loopback IPv6 e porta exatamente `8010`. Destinos externos, serviços em outras portas, esquemas executáveis e valores malformados voltam à interface local. O teste de regressão verifica a allowlist e que a porta 8010 faz parte da condição de autorização do redirecionamento.
 
 A animação segue a identidade visual do NyxOS, mas não é declarada uma reprodução
 quadro a quadro do vídeo original, pois essa equivalência não foi verificada.
 
 ## Limites de medição
 
-A árvore da `main` verificada antes desta série de limpeza somava 12,61 MiB de
-blobs (494 arquivos). A árvore atual na branch de otimização soma **3,74 MiB**
-(496 arquivos), incluindo a nova página de inicialização, uma redução estimada de
-**8,87 MiB (70,4%)**. A API do GitHub informava aproximadamente 15.930 KB para o repositório
-na última consulta à `main`. O número global continua incluindo os objetos
+A árvore recursiva atual de `main` consultada em 2026-10-26 soma **13,16 MiB**
+(502 arquivos); a branch de otimização soma **3,74 MiB** (496 arquivos), incluindo
+a nova página de inicialização. A soma dos tamanhos dos arquivos rastreados cai em
+**9,43 MiB (71,62%)**. Os três arquivos dominantes removidos da árvore ativa são
+o vídeo de inicialização (4.316.200 bytes), `log_capacidades_nixal.json`
+(3.712.509 bytes) e `saida_cadeia_real_56_4_34.txt` (1.163.129 bytes).
+A API do GitHub reportou `size=16545 KB` para o repositório na consulta mais recente. O número global continua incluindo os objetos
 históricos: remover arquivos da árvore atual reduz checkouts e pacotes futuros,
 mas não apaga os blobs dos commits antigos. Reescrever o histórico Git para
 recuperar esse espaço seria uma operação separada e disruptiva; esta mudança
