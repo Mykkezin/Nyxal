@@ -3,10 +3,20 @@ name: M5.22 Voice Validation
 on:
   pull_request:
     branches: [main]
+    paths:
+      - "nixal_audio_nyxos.py"
+      - "nixal_voz_nyxos.py"
+      - "teste_m5_22_voz_nyxos.py"
+      - "deploy/voice/**"
   push:
     branches:
       - feat/m5-22-voz-nyxos
-    - feat/voz-tempo-real-pipecat
+      - feat/voz-tempo-real-pipecat
+    paths:
+      - "nixal_audio_nyxos.py"
+      - "nixal_voz_nyxos.py"
+      - "teste_m5_22_voz_nyxos.py"
+      - "deploy/voice/**"
 
 jobs:
   validate-m5-22:
