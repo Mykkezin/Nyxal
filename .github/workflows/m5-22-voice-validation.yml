@@ -8,7 +8,6 @@ on:
       - "nixal_voz_nyxos.py"
       - "teste_m5_22_voz_nyxos.py"
       - "deploy/voice/**"
-      - ".github/workflows/m5-22-voice-validation.yml"
   push:
     branches:
       - feat/m5-22-voz-nyxos
