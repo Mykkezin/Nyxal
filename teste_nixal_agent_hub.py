@@ -114,17 +114,14 @@ class TestNyxalAgentHub(unittest.TestCase):
             "NYXAL_OPENAI_API_KEY": "test-openai-key",
             "NYXAL_OPENAI_MODEL": "test-model",
         }, clear=True):
-            with patch("nixal_responses_api.urlopen", return_value=None):
-                with patch("nixal_responses_api.build_opener") as opener:
-                    response = __import__("io").BytesIO(
-                        b'{"output_text":"resposta de teste"}'
-                    )
-                    response.__enter__ = lambda: response
-                    response.__exit__ = lambda *args: None
-                    opener.return_value.open.return_value.__enter__.return_value = response
-                    answer = __import__("nixal_responses_api").ask(
-                        "openai", "pergunta", "identidade", []
-                    )
+            with patch("nixal_responses_api.build_opener") as opener:
+                response = __import__("io").BytesIO(
+                    b'{"output_text":"resposta de teste"}'
+                )
+                opener.return_value.open.return_value.__enter__.return_value = response
+                answer = __import__("nixal_responses_api").ask(
+                    "openai", "pergunta", "identidade", []
+                )
         self.assertEqual(answer, "resposta de teste")
         self.assertTrue(opener.called)
         self.assertEqual(opener.return_value.open.call_args.args[0].full_url, "https://api.openai.com/v1/responses")
