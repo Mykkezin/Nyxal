@@ -25,6 +25,7 @@ Princípios:
 
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 import re
 import unicodedata
