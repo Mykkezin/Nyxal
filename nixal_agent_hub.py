@@ -11,14 +11,18 @@ from __future__ import annotations
 import json
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
+from nixal_intent_router import TelemetriaRoteador, classificar_intencao, ordem_provedores
+from nixal_responses_api import provider_configured as provider_responses_configured, ask as ask_responses_api
 
-KNOWN_PROVIDERS = {"auto", "nyxal", "gemini", "hermes", "letta"}
+
+KNOWN_PROVIDERS = {"auto", "nyxal", "gemini", "hermes", "letta", "openai", "grok"}
 
 
 def _env(name: str, default: str = "") -> str:
@@ -125,6 +129,7 @@ class NyxalAgentHub:
         self._last_provider = "nyxal"
         self._session_history: dict[str, list[dict[str, str]]] = {}
         self._history_lock = threading.Lock()
+        self._routing_telemetry = TelemetriaRoteador()
 
     def _system_prompt_base(self) -> str:
         """Use a identidade versionada para manter Gemini, Hermes e Letta coerentes."""
@@ -150,6 +155,8 @@ class NyxalAgentHub:
             safe_local = _safe_provider_base(base)
             safe_cloud = _safe_provider_base(base, allow_letta_cloud=True)
             return bool(_env("LETTA_AGENT_ID") and (safe_local or (safe_cloud and _env("LETTA_API_KEY"))))
+        if provider in {"openai", "grok"}:
+            return provider_responses_configured(provider)
         return False
 
     def resolve_provider(self, requested: str | None = None) -> str:
@@ -162,7 +169,7 @@ class NyxalAgentHub:
             return provider
         # Hermes é o agente executor/orquestrador; pode ser configurado para usar Gemini
         # como modelo no próprio Hermes. Letta mantém a identidade/memória persistente.
-        for candidate in ("hermes", "gemini", "letta"):
+        for candidate in ("hermes", "openai", "gemini", "grok", "letta"):
             if self.provider_configured(candidate):
                 return candidate
         return "nyxal"
@@ -192,7 +199,10 @@ class NyxalAgentHub:
                     "papel": "agente stateful/memória persistente",
                     "sincronizacao_automatica": _env("LETTA_MEMORY_SYNC_ENABLED", "false").lower() in {"1", "true", "yes"},
                 },
+                "openai": {"configurado": self.provider_configured("openai"), "papel": "modelo geral/raciocínio", "modelo": _env("NYXAL_OPENAI_MODEL") or None},
+                "grok": {"configurado": self.provider_configured("grok"), "papel": "modelo geral/raciocínio", "modelo": _env("NYXAL_GROK_MODEL") or None},
             },
+            "roteamento_inteligente": self._routing_telemetry.snapshot(),
             "memoria_letta": {
                 "configurada": letta_configured,
                 "id_agente_presente": bool(_env("LETTA_AGENT_ID")),
@@ -248,33 +258,86 @@ class NyxalAgentHub:
             raise ValueError("A mensagem é obrigatória.")
 
         requested = (provedor or _env("NYXAL_AGENT_PROVIDER", "auto")).lower().strip()
+        intent = classificar_intencao(mensagem)
+        started = time.monotonic()
+
         if requested != "auto":
             resolved = self.resolve_provider(requested)
-            if resolved == "nyxal":
-                return self._fallback_local(sessao)
-            return self._responder_provedor(
-                mensagem.strip(), resolved, sessao, contexto_sistema
+            try:
+                if resolved == "nyxal":
+                    result = self._fallback_local(sessao)
+                else:
+                    result = self._responder_provedor(
+                        mensagem.strip(), resolved, sessao, contexto_sistema
+                    )
+            except Exception as exc:
+                self._routing_telemetry.registrar(
+                    classe=intent["classe"], provedor=resolved, sucesso=False,
+                    inicio=started, tentativas=[resolved], erro=type(exc).__name__,
+                )
+                raise
+            self._last_provider = resolved
+            result["roteamento"] = {
+                "politica": "provedor_explicito",
+                "classe": intent["classe"],
+                "motivo": "O usuário ou a configuração selecionou um provedor explicitamente.",
+                "provedor": resolved,
+                "tentativas": [resolved],
+            }
+            self._routing_telemetry.registrar(
+                classe=intent["classe"], provedor=resolved, sucesso=True,
+                inicio=started, tentativas=[resolved],
             )
+            return result
 
-        # No modo automático, um provedor remoto fora do ar não deixa a Nyxal muda.
         candidates = [
-            name for name in ("hermes", "gemini", "letta")
+            name for name in ordem_provedores(intent["classe"])
             if self.provider_configured(name)
         ]
         failures: list[str] = []
-        for resolved in [*candidates, "nyxal"]:
-            if resolved == "nyxal":
-                self._last_provider = "nyxal"
-                result = self._fallback_local(sessao)
-                result["provedores_tentados"] = failures
-                return result
+        attempted: list[str] = []
+        for resolved in candidates:
+            attempted.append(resolved)
             try:
-                return self._responder_provedor(
+                result = self._responder_provedor(
                     mensagem.strip(), resolved, sessao, contexto_sistema
                 )
             except Exception as exc:
                 failures.append(f"{resolved}: {type(exc).__name__}")
-        return self._fallback_local(sessao)
+                continue
+            self._last_provider = resolved
+            result["roteamento"] = {
+                "politica": "roteamento_por_intencao_v1",
+                "classe": intent["classe"],
+                "motivo": intent["motivo"],
+                "provedor": resolved,
+                "tentativas": attempted[:],
+            }
+            if failures:
+                result["provedores_tentados"] = failures[:]
+            self._routing_telemetry.registrar(
+                classe=intent["classe"], provedor=resolved, sucesso=True,
+                inicio=started, tentativas=attempted[:],
+            )
+            return result
+
+        attempted.append("nyxal")
+        self._last_provider = "nyxal"
+        result = self._fallback_local(sessao)
+        result["provedores_tentados"] = failures
+        result["roteamento"] = {
+            "politica": "roteamento_por_intencao_v1",
+            "classe": intent["classe"],
+            "motivo": intent["motivo"],
+            "provedor": "nyxal",
+            "tentativas": attempted,
+            "fallback_local": True,
+        }
+        self._routing_telemetry.registrar(
+            classe=intent["classe"], provedor="nyxal", sucesso=True,
+            inicio=started, tentativas=attempted[:], fallback_local=True,
+        )
+        return result
 
     @staticmethod
     def _fallback_local(sessao: str | None) -> dict[str, Any]:
@@ -334,6 +397,9 @@ class NyxalAgentHub:
             new_session = sessao
         elif resolved == "hermes":
             answer, new_session = self._ask_hermes(mensagem, system_prompt, sessao, history)
+        elif resolved in {"openai", "grok"}:
+            answer = ask_responses_api(resolved, mensagem, system_prompt, history)
+            new_session = sessao
         else:
             answer, new_session = self._ask_letta(mensagem, system_prompt, sessao)
 
