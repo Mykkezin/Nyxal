@@ -7,7 +7,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
+from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS, _assinatura_compativel
 
 
 PNG_SAMPLE = b"\x89PNG\r\n\x1a\n" + b"sample-png-data"
@@ -30,6 +30,13 @@ class FakeResponse:
 
 
 class TestCapacidadeVisualGemini(unittest.TestCase):
+    def test_reconhece_assinaturas_png_jpeg_webp(self):
+        self.assertTrue(_assinatura_compativel(PNG_SAMPLE, "image/png"))
+        self.assertTrue(_assinatura_compativel(JPEG_SAMPLE, "image/jpeg"))
+        self.assertTrue(_assinatura_compativel(WEBP_SAMPLE, "image/webp"))
+        self.assertFalse(_assinatura_compativel(PNG_SAMPLE, "image/jpeg"))
+        self.assertFalse(_assinatura_compativel(b"RIFF", "image/webp"))
+
     def test_exige_prompt(self):
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with self.assertRaises(ValueError):
