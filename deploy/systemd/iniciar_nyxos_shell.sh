@@ -3,10 +3,11 @@ set -euo pipefail
 
 NYXAL_DIR="${HOME}/Nyxal"
 INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/}"
-VIDEO="${NYXOS_STARTUP_VIDEO:-${NYXAL_DIR}/interface/assets/nyxos-startup.mp4}"
+STARTUP_PAGE="${NYXAL_DIR}/interface/startup.html"
 RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 LOCK_DIR="${RUNTIME_DIR}/nyxos-shell"
 LOCK_FILE="${LOCK_DIR}/singleton.lock"
+STARTUP_MARKER="${LOCK_DIR}/startup-video.played"
 BROWSER_PROFILE="${NYXOS_BROWSER_PROFILE:-${HOME}/.config/nyxos/browser}"
 API_HEALTH_URL="${NYXOS_API_HEALTH_URL:-http://127.0.0.1:8010/health}"
 
@@ -28,12 +29,6 @@ wait_for_api() {
 }
 
 wait_for_api || true
-
-STARTUP_MARKER="${RUNTIME_DIR}/nyxos-shell/startup-video.played"
-if [[ -f "${VIDEO}" ]] && [[ ! -f "${STARTUP_MARKER}" ]] && command -v mpv >/dev/null 2>&1; then
-    touch "${STARTUP_MARKER}"
-    /usr/bin/mpv         --no-config         --fs         --osc=no         --osd-level=0         --cursor-autohide=always         --really-quiet         --keep-open=no         "${VIDEO}" || true
-fi
 
 find_browser() {
     if [[ -n "${NYXOS_BROWSER_BIN:-}" && -x "${NYXOS_BROWSER_BIN}" ]]; then
@@ -57,11 +52,34 @@ if [[ -z "${BROWSER}" ]]; then
     exit 1
 fi
 
+# O splash é HTML/CSS/canvas local, sem dependências externas ou arquivo de vídeo.
+# Reutiliza o marcador antigo para não repetir a animação na mesma sessão gráfica.
+LAUNCH_URL="${INTERFACE_URL}"
+if [[ -f "${STARTUP_PAGE}" && ! -f "${STARTUP_MARKER}" ]]; then
+    if command -v python3 >/dev/null 2>&1; then
+        STARTUP_FILE_URL="$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve().as_uri())' "${STARTUP_PAGE}")"
+        ENCODED_NEXT_URL="$(python3 -c 'import sys; from urllib.parse import quote; print(quote(sys.argv[1], safe=""))' "${INTERFACE_URL}")"
+        if [[ -n "${STARTUP_FILE_URL}" && -n "${ENCODED_NEXT_URL}" ]]; then
+            touch "${STARTUP_MARKER}"
+            LAUNCH_URL="${STARTUP_FILE_URL}?next=${ENCODED_NEXT_URL}"
+        fi
+    else
+        echo "AVISO: python3 não encontrado; abrindo a interface sem animação de inicialização." >&2
+    fi
+fi
+
 case "$(basename "${BROWSER}")" in
     firefox)
-        exec "${BROWSER}" --kiosk "${INTERFACE_URL}"
+        exec "${BROWSER}" --kiosk "${LAUNCH_URL}"
         ;;
     *)
-        exec "${BROWSER}"             --kiosk             --no-first-run             --no-default-browser-check             --disable-session-crashed-bubble             --disable-infobars             --user-data-dir="${BROWSER_PROFILE}"             "${INTERFACE_URL}"
+        exec "${BROWSER}" \
+            --kiosk \
+            --no-first-run \
+            --no-default-browser-check \
+            --disable-session-crashed-bubble \
+            --disable-infobars \
+            --user-data-dir="${BROWSER_PROFILE}" \
+            "${LAUNCH_URL}"
         ;;
 esac

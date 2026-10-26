@@ -1,0 +1,69 @@
+name: Nyxal Storage and Startup Baseline
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".gitignore"
+      - "log_capacidades_nixal.json"
+      - "log_nyxal_runtime.json"
+      - "nixal_capacidades.py"
+      - "nixal_runtime.py"
+      - "teste_limites_armazenamento.py"
+      - "interface/startup.html"
+      - "interface/assets/nyxos-startup.mp4"
+      - "deploy/systemd/iniciar_nyxos_shell.sh"
+      - "deploy/systemd/iniciar_nyxos_interface.sh"
+      - "teste_inicio_codigo.py"
+      - ".github/workflows/storage-baseline.yml"
+      - ".github/workflows/prune-actions-artifacts.yml"
+      - "docs/OTIMIZACAO_ARMAZENAMENTO.md"
+  push:
+    branches:
+      - main
+    paths:
+      - ".gitignore"
+      - "log_capacidades_nixal.json"
+      - "log_nyxal_runtime.json"
+      - "nixal_capacidades.py"
+      - "nixal_runtime.py"
+      - "teste_limites_armazenamento.py"
+      - "interface/startup.html"
+      - "interface/assets/nyxos-startup.mp4"
+      - "deploy/systemd/iniciar_nyxos_shell.sh"
+      - "deploy/systemd/iniciar_nyxos_interface.sh"
+      - "teste_inicio_codigo.py"
+      - ".github/workflows/storage-baseline.yml"
+      - ".github/workflows/prune-actions-artifacts.yml"
+      - "docs/OTIMIZACAO_ARMAZENAMENTO.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storage-and-startup:
+    name: Storage limits and code-only startup
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile changed Python modules
+        run: python -m py_compile nixal_capacidades.py nixal_runtime.py teste_limites_armazenamento.py teste_inicio_codigo.py
+
+      - name: Test generated log size limits
+        run: python -m unittest teste_limites_armazenamento.py -v
+
+      - name: Test code-only startup animation
+        run: python teste_inicio_codigo.py
+
+      - name: Validate launcher shell syntax
+        run: bash -n deploy/systemd/iniciar_nyxos_shell.sh && bash -n deploy/systemd/iniciar_nyxos_interface.sh
