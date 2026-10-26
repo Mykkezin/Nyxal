@@ -3,25 +3,13 @@ name: Nyxal Visual Generation Quality
 on:
   push:
     branches:
-      - improve/visual-generation-quality
-      - integrate/visual-quality-on-security-20261026
-    paths:
-      - "nixal_capacidade_visual.py"
-      - "teste_nixal_capacidade_visual.py"
-      - "nyxal_web_api.py"
-      - "docs/NYXAL_AGENT_STACK.md"
-      - ".github/workflows/visual-generation-quality.yml"
-  pull_request:
-    branches:
       - main
-      - hardening/api-auth-ci-gates-20261023
-      - hardening/api-auth-ci-gates-20261023
-    paths:
       - "nixal_capacidade_visual.py"
       - "teste_nixal_capacidade_visual.py"
       - "nyxal_web_api.py"
       - "docs/NYXAL_AGENT_STACK.md"
       - ".github/workflows/visual-generation-quality.yml"
+
   workflow_dispatch:
 
 permissions:
@@ -29,16 +17,14 @@ permissions:
 
 jobs:
   visual-quality:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Configure Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compile visual module and tests
-        run: python -m py_compile nixal_capacidade_visual.py teste_nixal_capacidade_visual.py nyxal_web_api.py
+        run: python3 -m py_compile nixal_capacidade_visual.py teste_nixal_capacidade_visual.py nyxal_web_api.py
       - name: Run deterministic visual quality tests
-        run: python teste_nixal_capacidade_visual.py
+        run: python3 teste_nixal_capacidade_visual.py
