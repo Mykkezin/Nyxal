@@ -54,6 +54,7 @@ class CicloResidenteNixOS:
         gateway_atuacao: GatewayAtuacaoNixOS | None = None,
         *,
         coletor_dataset_dual_ae5: ColetorDatasetDualAE5 | None = None,
+        autoreparo_residente: Any | None = None,
         intervalo_segundos: float = 5.0,
         parar_em_erro: bool = True,
     ) -> None:
@@ -73,6 +74,7 @@ class CicloResidenteNixOS:
         self.ciclo_evolucao_ae4 = ciclo_evolucao_ae4
         self.descoberta_continua_ae5 = descoberta_continua_ae5
         self.coletor_dataset_dual_ae5 = coletor_dataset_dual_ae5
+        self.autoreparo_residente = autoreparo_residente
         self._habitat_ae5 = HabitatNixOS() if coletor_dataset_dual_ae5 is not None else None
         self.fisiologia_operacional = fisiologia_operacional
         self.presenca_maquina = presenca_maquina
@@ -132,6 +134,7 @@ class CicloResidenteNixOS:
                 self.coletor_dataset_dual_ae5 is not None
                 and self.coletor_dataset_dual_ae5.habilitada
             ),
+            "autoreparo_residente_habilitado": self.autoreparo_residente is not None,
             "fisiologia_operacional_habilitada": (
                 self.fisiologia_operacional is not None
             ),
@@ -241,6 +244,25 @@ class CicloResidenteNixOS:
                 self._estado = "interrompido"
                 break
 
+            autoreparo_resultado = None
+            if self.autoreparo_residente is not None:
+                try:
+                    autoreparo_resultado = self.autoreparo_residente.verificar_e_reparar()
+                except Exception as erro:
+                    # Um monitor com defeito nunca pode derrubar o runtime principal.
+                    autoreparo_resultado = {
+                        "sucesso": False,
+                        "estado": "autoreparo_falhou",
+                        "origem": getattr(
+                            self.autoreparo_residente,
+                            "FONTE",
+                            "autoreparo_residente",
+                        ),
+                        "motivo": type(erro).__name__,
+                        "reparo_executado": False,
+                        "autorizacao_explicita": False,
+                    }
+
             try:
                 resultado = self.runtime.executar_ciclo()
             except Exception as erro:
@@ -265,6 +287,11 @@ class CicloResidenteNixOS:
                     "motivo": "Runtime não retornou um objeto válido.",
                 }
             )
+
+            if isinstance(autoreparo_resultado, dict):
+                resultado["autoreparo_residente"] = copy.deepcopy(
+                    autoreparo_resultado
+                )
 
             ciclos_nesta_execucao += 1
             self._quantidade_ciclos += 1
