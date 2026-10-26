@@ -2,9 +2,14 @@ name: Nyxal Agent Stack Validation
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - feat/durable-investigation-context-20261026
   push:
-    branches: [feat/nyxal-agent-stack-current-main-20261009, fix/display-root-route-20261009]
+    branches:
+      - feat/nyxal-agent-stack-current-main-20261009
+      - fix/display-root-route-20261009
+      - fix/durable-memory-corruption-guard-20261026
   workflow_dispatch:
 
 permissions:
