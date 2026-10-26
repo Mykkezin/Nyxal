@@ -20,7 +20,6 @@ on:
       - "nixal_aprendizado_persistente.py"
       - "nixal_runtime.py"
       - "teste_llc*.py"
-      - ".github/workflows/llc-completa-validation.yml"
 
 jobs:
   llc-completo:
