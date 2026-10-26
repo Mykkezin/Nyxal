@@ -4,6 +4,7 @@ name: Nyxal Nível 9/10 — validação determinística
 on:
   push:
     branches:
+      - main
       - feat/m5-habitat-nyxos
     paths:
       - "nixal_runtime.py"
@@ -68,6 +69,7 @@ on:
       - "teste_ciclo_evolucao_ae4.py"
       - "teste_descoberta_continua_ae5.py"
       - "deploy/systemd/**"
+      - ".github/workflows/nyxal-nivel9-validation.yml"
   pull_request:
     branches:
       - main
