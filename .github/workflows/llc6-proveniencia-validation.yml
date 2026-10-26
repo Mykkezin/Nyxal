@@ -18,13 +18,6 @@ permissions:
   contents: read
 
 jobs:
-      - "nixal_evidencia_ambiental_llc.py"
-      - "nixal_evidencia_longitudinal_llc.py"
-      - "nixal_proveniencia_evidencia_llc.py"
-      - "teste_llc4_evidencia_ambiental.py"
-      - "teste_llc5_evidencia_longitudinal.py"
-      - "teste_llc6_proveniencia_evidencia.py"
-      - ".github/workflows/llc6-proveniencia-validation.yml"
   llc6:
     runs-on: self-hosted
     timeout-minutes: 10
