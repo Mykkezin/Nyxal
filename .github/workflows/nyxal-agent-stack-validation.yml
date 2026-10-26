@@ -22,6 +22,7 @@ on:
       - "nixal_dialogo_qwen.py"
       - "teste_nixal_display_routes.py"
       - "teste_nixal_agent_hub.py"
+      - "teste_nixal_dialogo_router.py"
       - "teste_nixal_observabilidade_sistema.py"
       - "teste_nixal_capacidade_visual.py"
       - "teste_nixal_integracao_google.py"
@@ -114,6 +115,7 @@ jobs:
             nixal_memoria_investigacao.py \
             nixal_memoria_conhecimento.py \
             nixal_dialogo_qwen.py \
+            teste_nixal_dialogo_router.py \
             teste_nucleo_contexto_persistente.py \
             teste_memorias_persistencia_segura.py \
             scripts/autorizar_gmail_nyxal.py \
@@ -135,6 +137,7 @@ jobs:
           python3 -m unittest -v \
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
+            teste_nixal_dialogo_router \
             teste_nixal_observabilidade_sistema \
             teste_nixal_capacidade_visual \
             teste_nixal_integracao_google \
