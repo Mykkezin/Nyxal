@@ -228,6 +228,17 @@ class DialogoQwenNixal:
             except Exception:
                 should_try_hub = False
 
+        if provider_setting not in {"auto", "nyxal"} and not should_try_hub:
+            return {
+                "sucesso": False,
+                "estado": "provedor_indisponivel",
+                "origem": self.FONTE,
+                "resposta": None,
+                "erro": "O provedor selecionado não está disponível.",
+                "permanente": False,
+                "versao_dialogo": self.VERSAO,
+            }
+
         if should_try_hub:
             try:
                 external_history = [
@@ -246,13 +257,27 @@ class DialogoQwenNixal:
                     contexto_sistema=contexto_sistema,
                 )
                 answer = routed.get("resposta") if isinstance(routed, dict) else None
-                if (
+                valid_remote_answer = (
                     isinstance(routed, dict)
                     and routed.get("sucesso") is True
                     and routed.get("fallback_local") is not True
                     and isinstance(answer, str)
-                    and answer.strip()
+                    and bool(answer.strip())
+                )
+                if (
+                    provider_setting not in {"auto", "nyxal"}
+                    and not valid_remote_answer
                 ):
+                    return {
+                        "sucesso": False,
+                        "estado": "provedor_indisponivel",
+                        "origem": self.FONTE,
+                        "resposta": None,
+                        "erro": "O provedor selecionado não está disponível.",
+                        "permanente": False,
+                        "versao_dialogo": self.VERSAO,
+                    }
+                if valid_remote_answer:
                     return {
                         "sucesso": True,
                         "estado": "resposta_gerada",
