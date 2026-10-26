@@ -22,7 +22,7 @@ from nixal_intent_router import TelemetriaRoteador, classificar_intencao, ordem_
 from nixal_responses_api import provider_configured as provider_responses_configured, ask as ask_responses_api
 
 
-KNOWN_PROVIDERS = {"auto", "nyxal", "gemini", "hermes", "letta", "openai", "grok"}
+KNOWN_PROVIDERS = {"auto", "nyxal"}
 
 _SHARED_AGENT_HUB: Any = None
 _SHARED_AGENT_HUB_LOCK = threading.Lock()
@@ -225,39 +225,24 @@ class NyxalAgentHub:
         return identity[:16000] + "\n\nRestrições operacionais adicionais:\n" + self.PROMPT_BASE
 
     def provider_configured(self, provider: str) -> bool:
-        if provider == "nyxal":
-            return True
-        if provider == "gemini":
-            return bool(_env("NYXAL_GEMINI_API_KEY") or _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY"))
-        if provider == "hermes":
-            base = _env("NYXAL_HERMES_BASE_URL", "http://127.0.0.1:8642/v1")
-            return bool(_env("NYXAL_HERMES_API_KEY") and _safe_provider_base(base))
-        if provider == "letta":
-            base = _env("LETTA_BASE_URL", "http://127.0.0.1:8283")
-            safe_local = _safe_provider_base(base)
-            safe_cloud = _safe_provider_base(base, allow_letta_cloud=True)
-            return bool(_env("LETTA_AGENT_ID") and (safe_local or (safe_cloud and _env("LETTA_API_KEY"))))
-        if provider in {"openai", "grok"}:
-            return provider_responses_configured(provider)
-        return False
+        # Modo de conversa somente Nyxal: credenciais externas não habilitam outros respondentes.
+        return provider == "nyxal"
 
     def resolve_provider(self, requested: str | None = None) -> str:
-        provider = (requested or _env("NYXAL_AGENT_PROVIDER", "auto")).lower().strip()
+        if requested is None:
+            configured = _env("NYXAL_AGENT_PROVIDER", "nyxal").lower().strip()
+            provider = configured if configured in KNOWN_PROVIDERS else "nyxal"
+        else:
+            provider = requested.lower().strip()
         if provider not in KNOWN_PROVIDERS:
-            raise ValueError(f"Provedor inválido. Use um de: {', '.join(sorted(KNOWN_PROVIDERS))}.")
-        if provider != "auto":
-            if not self.provider_configured(provider):
-                raise RuntimeError(f"O provedor '{provider}' ainda não está configurado.")
-            return provider
-        # Hermes é o agente executor/orquestrador; pode ser configurado para usar Gemini
-        # como modelo no próprio Hermes. Letta mantém a identidade/memória persistente.
-        for candidate in ("hermes", "openai", "gemini", "grok", "letta"):
-            if self.provider_configured(candidate):
-                return candidate
+            raise ValueError(
+                "Esta instalação está em modo somente Nyxal; provedores externos estão desativados."
+            )
+        # Mesmo o modo auto resolve local; nenhum segredo externo pode ativar um responder.
         return "nyxal"
 
     def contexto(self) -> dict[str, Any]:
-        requested = _env("NYXAL_AGENT_PROVIDER", "auto").lower()
+        requested = _env("NYXAL_AGENT_PROVIDER", "nyxal").lower()
         try:
             active = self.resolve_provider()
             selection_error = None
@@ -267,10 +252,11 @@ class NyxalAgentHub:
         letta_configured = self.provider_configured("letta")
         return {
             "sucesso": True,
-            "estado": "agente_configurado" if active != "nyxal" else "agente_local",
+            "estado": "agente_local",
             "origem": "nyxal_agent_hub",
-            "provedor_solicitado": requested,
-            "provedor_resolvido": active,
+            "modo_conversa": "somente_nyxal_local",
+            "provedor_solicitado": "nyxal",
+            "provedor_resolvido": "nyxal",
             "ultimo_provedor": self._last_provider,
             "provedores": {
                 "nyxal_qwen": {"configurado": True, "papel": "fallback local"},
@@ -342,7 +328,11 @@ class NyxalAgentHub:
         if not isinstance(mensagem, str) or not mensagem.strip():
             raise ValueError("A mensagem é obrigatória.")
 
-        requested = (provedor or _env("NYXAL_AGENT_PROVIDER", "auto")).lower().strip()
+        requested = (provedor or _env("NYXAL_AGENT_PROVIDER", "nyxal")).lower().strip()
+        if provedor is None and requested not in KNOWN_PROVIDERS:
+            requested = "nyxal"  # ignora variáveis antigas que selecionavam outro modelo
+        if requested == "auto":
+            requested = "nyxal"
         intent = classificar_intencao(mensagem)
         started = time.monotonic()
         extra_kwargs: dict[str, Any] = {}
