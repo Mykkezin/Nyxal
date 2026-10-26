@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feat/m5-21-audio-nyxos
+    paths:
+      - "nixal_audio_nyxos.py"
+      - "teste_m5_21_audio_nyxos.py"
   pull_request:
     branches:
       - main
