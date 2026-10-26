@@ -24,8 +24,11 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('if parsed_path == "/api/agent/contexto":', self.api)
         for metric in ('"memoria"', '"armazenamento_home"', '"temperaturas"', '"gpu"'):
             self.assertIn(metric, self.telemetry)
-        self.assertIn('node.title = "Falha ao consultar a observabilidade; leitura anterior descartada."', self.console)
-        self.assertIn('node.textContent = "offline";', self.console)
+        # Uma fonte de telemetria pode falhar sem impedir a outra; leituras ausentes
+        # aparecem como indisponíveis, não como zero nem como dados antigos.
+        self.assertIn("function fetchSnapshot(path, label)", self.console)
+        self.assertIn("return {};", self.console)
+        self.assertIn('node.textContent = value !== null && value !== undefined && Number.isFinite(number)', self.console)
 
     def test_vps_tools_use_existing_api_and_safe_actions(self):
         self.assertIn('"/api/vps/status"', self.console)
