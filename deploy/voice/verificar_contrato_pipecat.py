@@ -35,6 +35,11 @@ class NyxalPipecatContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "sem credenciais"):
                 _api_request_headers("http://user:pass@127.0.0.1:8010")
 
+    def test_rejects_unexpected_local_api_port(self):
+        with patch.dict(os.environ, {"NYXAL_API_PORT": "8010"}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "porta 9999"):
+                _api_request_headers("http://127.0.0.1:9999")
+
     def test_reads_the_existing_top_level_chat_response(self):
         self.assertEqual(
             _extract_reply({"sucesso": True, "resposta": "Olá, **Myke**!"}),
