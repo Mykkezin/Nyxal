@@ -4,6 +4,7 @@
 import unittest
 
 from nyxal_pipecat_agent import (
+    _api_request_headers,
     _chat_payload,
     _extract_reply,
     _returned_session_id,
@@ -12,6 +13,26 @@ from nyxal_pipecat_agent import (
 
 
 class NyxalPipecatContractTests(unittest.TestCase):
+    def test_sends_configured_bearer_token_to_loopback_api(self):
+        with patch.dict(os.environ, {"NYXAL_API_TOKEN": "local-secret"}, clear=True):
+            headers = _api_request_headers("http://127.0.0.1:8010")
+        self.assertEqual(headers["Authorization"], "Bearer local-secret")
+
+    def test_never_sends_local_token_to_remote_api(self):
+        with patch.dict(os.environ, {"NYXAL_API_TOKEN": "local-secret"}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "só pode ser enviado ao endpoint local"):
+                _api_request_headers("https://nyxal.example")
+
+    def test_accepts_remote_url_without_leaking_local_token(self):
+        with patch.dict(os.environ, {}, clear=True):
+            headers = _api_request_headers("https://nyxal.example")
+        self.assertEqual(headers, {"Accept": "application/json"})
+
+    def test_rejects_api_urls_with_embedded_credentials(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(ValueError, "sem credenciais"):
+                _api_request_headers("http://user:pass@127.0.0.1:8010")
+
     def test_reads_the_existing_top_level_chat_response(self):
         self.assertEqual(
             _extract_reply({"sucesso": True, "resposta": "Olá, **Myke**!"}),
