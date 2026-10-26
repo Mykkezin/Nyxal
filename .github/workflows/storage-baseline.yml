@@ -33,19 +33,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
 
       - name: Compile changed Python modules
-        run: python -m py_compile nixal_capacidades.py nixal_runtime.py teste_limites_armazenamento.py teste_inicio_codigo.py
+        run: python3 -m py_compile nixal_capacidades.py nixal_runtime.py teste_limites_armazenamento.py teste_inicio_codigo.py
 
       - name: Test generated log size limits
-        run: python -m unittest teste_limites_armazenamento.py -v
+        run: python3 -m unittest teste_limites_armazenamento.py -v
 
       - name: Test code-only startup animation
-        run: python teste_inicio_codigo.py
+        run: python3 teste_inicio_codigo.py
 
       - name: Validate launcher shell syntax
         run: bash -n deploy/systemd/iniciar_nyxos_shell.sh && bash -n deploy/systemd/iniciar_nyxos_interface.sh
