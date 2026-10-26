@@ -10,6 +10,7 @@ on:
       - "deploy/voice/**"
   push:
     branches:
+      - main
       - feat/m5-22-voz-nyxos
       - feat/voz-tempo-real-pipecat
     paths:
@@ -22,6 +23,7 @@ permissions:
   contents: read
 
 jobs:
+      - ".github/workflows/m5-22-voice-validation.yml"
   validate-m5-22:
     if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
     runs-on: self-hosted
