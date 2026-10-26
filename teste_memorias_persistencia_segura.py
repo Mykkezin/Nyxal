@@ -6,7 +6,10 @@ import stat
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+import nixal_memoria_investigacao as modulo_investigacao
+import nixal_memoria_conhecimento as modulo_conhecimento
 from nixal_memoria_investigacao import MemoriaInvestigacaoNixal
 from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
 
@@ -124,6 +127,56 @@ class TesteMemoriasPersistenciaSegura(unittest.TestCase):
 
         recuperada = MemoriaConhecimentoNixal(path)
         self.assertEqual(recuperada.quantidade(), 2)
+
+    def test_memoria_investigacao_acima_do_teto_e_preservada(self):
+        path = self.root / "memoria_investigacao_nixal.json"
+        original = b" " * 65
+        path.write_bytes(original)
+        with patch.object(modulo_investigacao, "MAX_MEMORIA_JSON_BYTES", 64):
+            memoria = MemoriaInvestigacaoNixal(path)
+            estado = memoria.recarregar()
+            escrita = memoria.registrar(ciclo("nova hipótese"))
+        self.assertIs(estado.get("sucesso"), False)
+        self.assertEqual(estado.get("estado"), "memoria_degradada")
+        self.assertEqual(escrita.get("estado"), "negado")
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_memoria_conhecimento_acima_do_teto_e_preservada(self):
+        path = self.root / "memoria_conhecimento_nixal.json"
+        original = b" " * 65
+        path.write_bytes(original)
+        with patch.object(modulo_conhecimento, "MAX_MEMORIA_JSON_BYTES", 64):
+            memoria = MemoriaConhecimentoNixal(path)
+            estado = memoria.recarregar()
+            escrita = memoria.registrar(candidato("nova observação"))
+        self.assertIs(estado.get("sucesso"), False)
+        self.assertEqual(estado.get("estado"), "memoria_degradada")
+        self.assertEqual(escrita.get("estado"), "negado")
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_nova_investigacao_que_excede_teto_nao_substitui_arquivo_valido(self):
+        path = self.root / "memoria_investigacao_nixal.json"
+        memoria = MemoriaInvestigacaoNixal(path)
+        self.assertIs(memoria.registrar(ciclo("hipótese inicial")).get("sucesso"), True)
+        original = path.read_bytes()
+        limite = len(original) + 120
+        with patch.object(modulo_investigacao, "MAX_MEMORIA_JSON_BYTES", limite):
+            resultado = memoria.registrar(ciclo("hipótese longa " + "x" * 400))
+        self.assertIs(resultado.get("sucesso"), False)
+        self.assertEqual(path.read_bytes(), original)
+        self.assertIs(MemoriaInvestigacaoNixal(path).recarregar().get("sucesso"), True)
+
+    def test_novo_candidato_que_excede_teto_nao_substitui_arquivo_valido(self):
+        path = self.root / "memoria_conhecimento_nixal.json"
+        memoria = MemoriaConhecimentoNixal(path)
+        self.assertIs(memoria.registrar(candidato("candidato inicial")).get("sucesso"), True)
+        original = path.read_bytes()
+        limite = len(original) + 120
+        with patch.object(modulo_conhecimento, "MAX_MEMORIA_JSON_BYTES", limite):
+            resultado = memoria.registrar(candidato("candidato longo " + "x" * 400))
+        self.assertIs(resultado.get("sucesso"), False)
+        self.assertEqual(path.read_bytes(), original)
+        self.assertIs(MemoriaConhecimentoNixal(path).recarregar().get("sucesso"), True)
 
     def test_arquivo_persistido_recebe_permissao_proprietario(self):
         path = self.root / "memoria_investigacao_nixal.json"
