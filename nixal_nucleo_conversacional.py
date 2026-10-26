@@ -330,7 +330,12 @@ class NucleoConversacionalNixal:
         """Consulta apenas o repositório persistente de investigações já existente."""
         try:
             # Recarrega da fonte durável para não ficar preso ao snapshot inicial.
-            self.memoria_investigacao.recarregar()
+            recarregamento = self.memoria_investigacao.recarregar()
+            if (
+                not isinstance(recarregamento, dict)
+                or recarregamento.get("sucesso") is not True
+            ):
+                return {"estado": "memoria_degradada", "contextos": []}
             resultado = self.contexto_historico_relevante.analisar_consulta(
                 consulta,
                 limite=3,
