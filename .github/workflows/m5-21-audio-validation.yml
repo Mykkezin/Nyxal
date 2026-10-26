@@ -30,6 +30,6 @@ jobs:
       - name: Verify system Python 3.12
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compilar M5.21
-        run: python -m py_compile nixal_audio_nyxos.py teste_m5_21_audio_nyxos.py
+        run: python3 -m py_compile nixal_audio_nyxos.py teste_m5_21_audio_nyxos.py
       - name: Executar teste M5.21
-        run: python teste_m5_21_audio_nyxos.py
+        run: python3 teste_m5_21_audio_nyxos.py
