@@ -109,18 +109,15 @@ class DialogoQwenNixal:
                 "resposta": None,
                 "erro": "O texto conversacional é obrigatório.",
             }
-        allowed_providers = {"auto", "nyxal", "gemini", "hermes", "letta", "openai", "grok"}
-        if provedor is not None and (
-            not isinstance(provedor, str)
-            or provedor.strip().lower() not in allowed_providers
-        ):
+        if provedor is not None and not isinstance(provedor, str):
             return {
                 "sucesso": False,
                 "estado": "provedor_invalido",
                 "origem": self.FONTE,
                 "resposta": None,
-                "erro": "O provedor conversacional selecionado é inválido.",
+                "erro": "O campo provedor precisa ser texto.",
             }
+        # Seleções antigas como "gemini" serão ignoradas; só responde a Nyxal local.
         if contexto_sistema is not None and not isinstance(contexto_sistema, dict):
             return {
                 "sucesso": False,
@@ -214,116 +211,9 @@ class DialogoQwenNixal:
             }
         )
 
-        hub = self.agent_hub
-        provider_setting = (
-            provedor.strip().lower()
-            if provedor is not None
-            else (os.environ.get("NYXAL_AGENT_PROVIDER", "auto").strip().lower() or "auto")
-        )
-        explicit_provider_override = (
-            provedor is not None and provider_setting not in {"auto", "nyxal"}
-        )
-        remote_providers = ("hermes", "openai", "gemini", "grok", "letta")
-
-        # Reuse o hub único do runtime quando a API não o injetou diretamente.
-        # Em modo auto, não criamos instância nem tráfego externo sem provedor opt-in.
-        if hub is None and provider_setting != "nyxal":
-            try:
-                from nixal_agent_hub import NyxalAgentHub, get_shared_agent_hub
-
-                hub = get_shared_agent_hub()
-                if hub is None:
-                    candidate = NyxalAgentHub()
-                    if provider_setting != "auto" or any(
-                        candidate.provider_configured(name) for name in remote_providers
-                    ):
-                        hub = candidate
-                if hub is not None:
-                    self.agent_hub = hub
-            except Exception:
-                hub = None
-        should_try_hub = hub is not None and provider_setting != "nyxal"
-        if should_try_hub and provider_setting == "auto":
-            try:
-                should_try_hub = any(hub.provider_configured(name) for name in remote_providers)
-            except Exception:
-                should_try_hub = False
-
-        if explicit_provider_override and not should_try_hub:
-            return {
-                "sucesso": False,
-                "estado": "provedor_indisponivel",
-                "origem": self.FONTE,
-                "resposta": None,
-                "erro": "O provedor selecionado não está disponível.",
-                "permanente": False,
-                "versao_dialogo": self.VERSAO,
-            }
-
-        if should_try_hub:
-            try:
-                external_history = [
-                    {"role": item["role"], "content": item["content"]}
-                    for item in mensagens[1:-1]
-                    if item.get("role") in {"user", "assistant"}
-                    and isinstance(item.get("content"), str)
-                    and item["content"].strip()
-                ][-20:]
-                routed = hub.responder(
-                    texto.strip(),
-                    sessao=sessao,
-                    provedor=provider_setting,
-                    historico_externo=external_history,
-                    prompt_sistema_extra=self.PROMPT_ESTILO_PROVEDOR,
-                    contexto_sistema=contexto_sistema,
-                )
-                answer = routed.get("resposta") if isinstance(routed, dict) else None
-                valid_remote_answer = (
-                    isinstance(routed, dict)
-                    and routed.get("sucesso") is True
-                    and routed.get("fallback_local") is not True
-                    and isinstance(answer, str)
-                    and bool(answer.strip())
-                )
-                if (
-                    explicit_provider_override
-                    and not valid_remote_answer
-                ):
-                    return {
-                        "sucesso": False,
-                        "estado": "provedor_indisponivel",
-                        "origem": self.FONTE,
-                        "resposta": None,
-                        "erro": "O provedor selecionado não está disponível.",
-                        "permanente": False,
-                        "versao_dialogo": self.VERSAO,
-                    }
-                if valid_remote_answer:
-                    return {
-                        "sucesso": True,
-                        "estado": "resposta_gerada",
-                        "origem": "nixal_agent_hub",
-                        "resposta": answer.strip(),
-                        "modelo": routed.get("provedor", "roteador_nyxal"),
-                        "roteamento": routed.get("roteamento"),
-                        "permanente": False,
-                        "versao_dialogo": self.VERSAO,
-                    }
-            except Exception:
-                # Provedor explicitamente selecionado não deve trocar de modelo
-                # silenciosamente. O núcleo/API converterá esta falha em 503.
-                if explicit_provider_override:
-                    return {
-                        "sucesso": False,
-                        "estado": "provedor_indisponivel",
-                        "origem": self.FONTE,
-                        "resposta": None,
-                        "erro": "O provedor selecionado não está disponível.",
-                        "permanente": False,
-                        "versao_dialogo": self.VERSAO,
-                    }
-                # Em modo automático, o Qwen local continua sendo fallback seguro.
-
+        # Modo de conversa somente Nyxal: nenhum provedor externo é chamado,
+        # mesmo que variáveis de ambiente antigas ainda mencionem Gemini/OpenAI.
+        # O cliente local Qwen abaixo recebe o histórico e a orientação especializada.
         try:
             resposta = self.cliente.chat(
                 model=self.modelo,
