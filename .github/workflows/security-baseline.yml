@@ -11,8 +11,14 @@ on:
       - "teste_seguranca_api.py"
       - "deploy/systemd/nyxal-api.service"
       - "deploy/systemd/nyxos-residente.service"
+      - "deploy/systemd/instalar_nyxos_servicos.sh"
       - "teste_m5_9_residencia_linux.py"
       - "docs/SEGURANCA_API_NYXAL.md"
+      - "teste_api_security_auth.py"
+      - "nixal_decisao_autonoma_ci.py"
+      - "nixal_evidencia_ci.py"
+      - "teste_decisao_autonoma_ci.py"
+      - ".github/workflows/nyxal-nivel9-validation.yml"
       - ".github/workflows/security-baseline.yml"
   pull_request:
     branches:
@@ -23,8 +29,14 @@ on:
       - "teste_seguranca_api.py"
       - "deploy/systemd/nyxal-api.service"
       - "deploy/systemd/nyxos-residente.service"
+      - "deploy/systemd/instalar_nyxos_servicos.sh"
       - "teste_m5_9_residencia_linux.py"
       - "docs/SEGURANCA_API_NYXAL.md"
+      - "teste_api_security_auth.py"
+      - "nixal_decisao_autonoma_ci.py"
+      - "nixal_evidencia_ci.py"
+      - "teste_decisao_autonoma_ci.py"
+      - ".github/workflows/nyxal-nivel9-validation.yml"
       - ".github/workflows/security-baseline.yml"
 
 permissions:
@@ -41,7 +53,71 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile API security surface
+        id: compile_api
         run: |
-          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_m5_9_residencia_linux.py
+          python -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_api_security_auth.py teste_decisao_autonoma_ci.py nixal_decisao_autonoma_ci.py nixal_evidencia_ci.py teste_m5_9_residencia_linux.py
       - name: Run deterministic security policy tests
+        id: policy_tests
         run: python teste_seguranca_api.py
+
+      - name: Run HTTP API security integration tests
+        id: http_security
+        run: python -m unittest teste_api_security_auth.py -v
+
+      - name: Run governed autonomous CI decision tests
+        id: decision_policy
+        run: python teste_decisao_autonoma_ci.py
+
+      - name: Validate shell installer syntax
+        id: shell_syntax
+        run: bash -n deploy/systemd/instalar_nyxos_servicos.sh
+
+      - name: Run Linux residence structural regression
+        id: residence_regression
+        run: python teste_m5_9_residencia_linux.py
+
+      - name: Evaluate validation evidence with Nyxal decision policy
+        if: always()
+        env:
+          HEAD_SHA: ${{ github.sha }}
+          JOB_OUTCOME: ${{ job.status }}
+          COMPILE_OUTCOME: ${{ steps.compile_api.outcome }}
+          POLICY_OUTCOME: ${{ steps.policy_tests.outcome }}
+          HTTP_OUTCOME: ${{ steps.http_security.outcome }}
+          DECISION_OUTCOME: ${{ steps.decision_policy.outcome }}
+          SHELL_OUTCOME: ${{ steps.shell_syntax.outcome }}
+          RESIDENCE_OUTCOME: ${{ steps.residence_regression.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from nixal_evidencia_ci import construir_evidencia_ci
+
+          outcomes = {
+              "compilacao": os.getenv("COMPILE_OUTCOME", "unknown"),
+              "politica_origem": os.getenv("POLICY_OUTCOME", "unknown"),
+              "integracao_http": os.getenv("HTTP_OUTCOME", "unknown"),
+              "decisor": os.getenv("DECISION_OUTCOME", "unknown"),
+              "shell_syntax": os.getenv("SHELL_OUTCOME", "unknown"),
+              "regressoes": os.getenv("RESIDENCE_OUTCOME", "unknown"),
+          }
+          evidence = construir_evidencia_ci(
+              head_sha=os.getenv("HEAD_SHA", ""),
+              job_outcome=os.getenv("JOB_OUTCOME", "unknown"),
+              step_outcomes=outcomes,
+          )
+          Path("/tmp/nyxal-ci-evidence.json").write_text(
+              json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8"
+          )
+          PY
+          python nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
+
+      - name: Archive structured CI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyxal-ci-evidence-${{ github.run_id }}
+          path: /tmp/nyxal-ci-evidence.json
+          if-no-files-found: warn
+          retention-days: 3

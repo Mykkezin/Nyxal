@@ -10,6 +10,7 @@ import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from secrets import compare_digest, token_urlsafe
+from threading import BoundedSemaphore
 
 from nixal_nucleo_conversacional import (
     NucleoConversacionalNixal,
@@ -39,25 +40,37 @@ from urllib.parse import parse_qs, urlsplit
 
 from nixal_seguranca_http import (
     host_loopback,
+    normalize_origin,
+    origin_host_loopback,
     origin_permitida,
-    parse_allowed_origins,
+    parse_allowed_origins as _parse_allowed_origins,
 )
 
 
 BASE_DIR = Path(__file__).resolve().parent
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
+MAX_CONCURRENT_HTTP_REQUESTS = 8
+HTTP_REQUEST_TIMEOUT_SECONDS = 30
 API_TOKEN = os.environ.get("NYXAL_API_TOKEN", "")
+PROXY_MODE = os.environ.get("NYXAL_API_BEHIND_PROXY", "").strip().lower() in {"1", "true", "yes", "on"}
+DEFAULT_BROWSER_ORIGINS = frozenset(
+    f"http://{host}:{port}"
+    for host in ("127.0.0.1", "localhost", "[::1]")
+    for port in {PORT, 3000, 5173, 8010}
+)
+
+
+def parse_allowed_origins(configured: str | None = None) -> frozenset[str]:
+    """Compatibilidade para os testes e a configuração da API."""
+    return _parse_allowed_origins(configured, default_origins=DEFAULT_BROWSER_ORIGINS)
+
+
 CORS_ORIGINS = parse_allowed_origins(
     os.environ.get(
         "NYXAL_API_CORS_ORIGINS",
         os.environ.get("NYXAL_API_CORS_ORIGIN"),
     ),
-    default_origins={
-        f"http://127.0.0.1:{PORT}",
-        f"http://localhost:{PORT}",
-        f"http://[::1]:{PORT}",
-    },
 )
 NUCLEO_CONVERSACIONAL = NucleoConversacionalNixal()
 INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
@@ -613,39 +626,114 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
     server_version = "NyxalAPI"
     sys_version = ""
 
+    def parse_request(self) -> bool:
+        """Recusa enquadramento HTTP ambíguo antes de qualquer rota."""
+        if not super().parse_request():
+            return False
+
+        transfer_encoding = self.headers.get_all("Transfer-Encoding", [])
+        content_lengths = self.headers.get_all("Content-Length", [])
+        content_length_invalido = any(
+            not valor.strip().isascii() or not valor.strip().isdigit()
+            for valor in content_lengths
+        )
+        if transfer_encoding or len(content_lengths) > 1 or content_length_invalido:
+            self.close_connection = True
+            self._send_json(
+                400,
+                {
+                    "estado": "enquadramento_http_invalido",
+                    "motivo": (
+                        "Transfer-Encoding e Content-Length duplicado ou inválido "
+                        "não são aceitos por este servidor."
+                    ),
+                },
+            )
+            return False
+        return True
+
+    def setup(self) -> None:
+        super().setup()
+        self.connection.settimeout(HTTP_REQUEST_TIMEOUT_SECONDS)
+
+    def send_response(self, code: int, message: str | None = None) -> None:
+        self._nyxal_status_code = code
+        super().send_response(code, message)
+
+    def end_headers(self) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        super().end_headers()
+
+    def _conexao_loopback_direta(self) -> bool:
+        endereco = self.client_address[0] if self.client_address else ""
+        cabecalhos_proxy = any(
+            nome in self.headers
+            for nome in ("Forwarded", "X-Forwarded-For", "X-Real-IP")
+        )
+        return (
+            host_loopback(HOST)
+            and endereco in {"127.0.0.1", "::1"}
+            and not PROXY_MODE
+            and not cabecalhos_proxy
+        )
+
+    def _host_loopback_autorizado(self) -> bool:
+        host_header = self.headers.get("Host", "").strip()
+        if not host_header or any(char.isspace() for char in host_header):
+            return False
+        try:
+            parsed_host = urlsplit(f"//{host_header}")
+            hostname = parsed_host.hostname
+            port = parsed_host.port
+        except ValueError:
+            return False
+        try:
+            listener_port = int(self.server.server_address[1])
+        except (AttributeError, IndexError, TypeError, ValueError):
+            listener_port = PORT
+        return (
+            host_loopback(hostname or "")
+            and port == listener_port
+            and parsed_host.username is None
+            and parsed_host.password is None
+            and parsed_host.path == ""
+            and not parsed_host.query
+            and not parsed_host.fragment
+            and parsed_host.netloc.lower() == host_header.lower()
+            and "?" not in host_header
+            and "#" not in host_header
+        )
+
     def _send_security_headers(self) -> None:
         """Emite cabeçalhos defensivos e CORS apenas para origens permitidas."""
-        origin = self.headers.get("Origin")
-        self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Cache-Control", "no-store")
-        if origin is not None and origin_permitida(origin, CORS_ORIGINS):
-            self.send_header("Access-Control-Allow-Origin", origin)
+        origin = self.headers.get("Origin")
+        normalized = normalize_origin(origin) if origin is not None else None
+        if normalized is not None and normalized in CORS_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", normalized)
             self.send_header("Vary", "Origin")
-            self.send_header(
-                "Access-Control-Allow-Headers",
-                "Authorization, Content-Type",
-            )
-            self.send_header(
-                "Access-Control-Allow-Methods",
-                "GET, POST, OPTIONS",
-            )
+            self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
     def _origem_api_permitida(self) -> bool:
-        """Bloqueia origens web não autorizadas antes de acessar dados locais."""
-        parsed_path = urlsplit(self.path).path
-        origin = self.headers.get("Origin")
-        if not parsed_path.startswith("/api/") or origin is None:
-            return True
-        if origin_permitida(origin, CORS_ORIGINS):
-            return True
-        self._send_json(
-            403,
-            {
+        """Valida Host em loopback direto e qualquer Origin fornecida."""
+        if self._conexao_loopback_direta() and not self._host_loopback_autorizado():
+            self._send_json(403, {
                 "estado": "origem_nao_permitida",
-                "motivo": "A origem web não está na lista de origens autorizadas.",
-            },
-        )
+                "motivo": "Host local inválido; requisição rejeitada antes da rota.",
+            })
+            return False
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True
+        normalized = normalize_origin(origin)
+        if normalized is not None and normalized in CORS_ORIGINS:
+            return True
+        self._send_json(403, {
+            "estado": "origem_nao_permitida",
+            "motivo": "A origem web não está na lista de origens autorizadas.",
+        })
         return False
 
     def _send_json(
@@ -715,7 +803,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         token = authorization.removeprefix("Bearer ").strip()
 
-        if not compare_digest(token, API_TOKEN):
+        if not compare_digest(token.encode("utf-8"), API_TOKEN.encode("utf-8")):
             self._send_json(
                 403,
                 {
@@ -727,8 +815,17 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         return True
 
     def _local_ou_autorizado(self) -> bool:
-        endereco = self.client_address[0] if self.client_address else ""
-        if endereco in {"127.0.0.1", "::1"}:
+        # Proxy reverso é uma fronteira de autenticação: até pedidos feitos
+        # diretamente por loopback precisam de Bearer quando esse modo está ativo.
+        if PROXY_MODE:
+            return self._authorized()
+
+        # Fora do modo proxy, uma origem web não-local exige Bearer mesmo se
+        # a conexão chegar por loopback; Origin não autentica o usuário.
+        origem = self.headers.get("Origin")
+        if origem is not None and not origin_host_loopback(origem):
+            return self._authorized()
+        if self._conexao_loopback_direta():
             return True
         return self._authorized()
 
@@ -742,8 +839,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self._origem_api_permitida():
             return
+        parsed_path = urlsplit(self.path).path
+        # Em modo proxy, toda mutação exige Bearer; todos os POST /api/* também passam pelo gate.
         if (
-            urlsplit(self.path).path.startswith("/api/")
+            (PROXY_MODE or parsed_path.startswith("/api/"))
             and not self._local_ou_autorizado()
         ):
             return
@@ -775,6 +874,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     prompt=payload.get("prompt", ""),
                     imagem_base64=payload.get("imagem_base64"),
                     mime_type=payload.get("mime_type"),
+                    imagens_referencia=payload.get("imagens_referencia"),
                 )
                 self._send_json(200, result)
             except ValueError as erro:
@@ -835,9 +935,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     )
                 self._send_json(200 if resultado.get("sucesso") else 422, resultado)
             except (TypeError, ValueError, FileNotFoundError, FileExistsError) as erro:
-                self._send_json(400, {"estado": "entrada_vps_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_vps_invalida", "motivo": "A solicitação VPS é inválida."})
             except Exception as erro:
-                self._send_json(500, {"estado": "erro_vps", "motivo": str(erro)})
+                self._send_json(500, {"estado": "erro_vps", "motivo": "A operação de VPS não pôde ser concluída."})
             return
 
         if self.path == "/api/stt":
@@ -927,7 +1027,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     500,
                     {
                         "estado": "erro_ao_transcrever",
-                        "motivo": str(erro),
+                        "motivo": "A transcrição do áudio não pôde ser concluída.",
                     },
                 )
             return
@@ -1007,10 +1107,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     "audio/wav",
                 )
             except Exception as kokoro_erro:
-                print(
-                    "[Nyxal-API] Kokoro falhou; usando Piper:",
-                    kokoro_erro,
-                )
+                print("[Nyxal-API] Kokoro falhou; tentando o fallback Piper.")
 
                 if not PIPER_BIN.exists() or not TTS_MODEL.exists():
                     self._send_json(
@@ -1047,10 +1144,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                                 500,
                                 {
                                     "estado": "erro_ao_gerar_audio",
-                                    "motivo": (
-                                        processo.stderr.strip()
-                                        or "O Piper não conseguiu gerar o áudio."
-                                    ),
+                                    "motivo": "O Piper não conseguiu gerar o áudio.",
                                 },
                             )
                             return
@@ -1076,7 +1170,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                         500,
                         {
                             "estado": "erro_ao_gerar_audio",
-                            "motivo": str(erro),
+                            "motivo": "O mecanismo de áudio local não pôde ser iniciado.",
                         },
                     )
             return
@@ -1232,7 +1326,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": str(erro)})
                 return
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "provedor_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "provedor_indisponivel", "motivo": "O provedor selecionado não está disponível."})
                 return
             except Exception as erro:
                 self._send_json(502, {"estado": "falha_no_agente", "motivo": f"{type(erro).__name__}: integração indisponível."})
@@ -1251,7 +1345,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 500,
                 {
                     "estado": "erro_ao_processar_conversa",
-                    "motivo": str(erro),
+                    "motivo": "Não foi possível processar a conversa.",
                 },
             )
             return
@@ -1295,10 +1389,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         parsed_path = urlsplit(self.path).path
         if not self._origem_api_permitida():
             return
-        if (
-            parsed_path.startswith("/api/")
-            and not self._local_ou_autorizado()
-        ):
+        # /health permanece público; em modo proxy todo o restante exige Bearer,
+        # inclusive rotas futuras e os assets do shell.
+        if PROXY_MODE and parsed_path != "/health":
+            if not self._authorized():
+                return
+        elif parsed_path.startswith("/api/") and not self._local_ou_autorizado():
             return
         is_agent_or_workspace = (
             parsed_path in {"/api/agent/status", "/api/agent/contexto", "/api/integracoes/google/status", "/api/integracoes/gmail/status"}
@@ -1317,7 +1413,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(corpo)))
-            self.send_header("Cache-Control", "no-store")
+            self._send_security_headers()
             self.end_headers()
             self.wfile.write(corpo)
             return
@@ -1334,7 +1430,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", tipo)
             self.send_header("Content-Length", str(len(corpo)))
-            self.send_header("Cache-Control", "no-store")
+            self._send_security_headers()
             self.end_headers()
             self.wfile.write(corpo)
             return
@@ -1350,7 +1446,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", tipo)
             self.send_header("Content-Length", str(len(corpo)))
-            self.send_header("Cache-Control", "no-store")
+            self._send_security_headers()
             self.end_headers()
             self.wfile.write(corpo)
             return
@@ -1383,9 +1479,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     dias=int(query.get("days", ["14"])[0]),
                 ))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": "Os parâmetros da consulta Google são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": "O serviço Google Workspace não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
@@ -1397,9 +1493,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     limite=int(query.get("limit", ["25"])[0]),
                 ))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": "Os parâmetros da consulta Google são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": "O serviço Google Workspace não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
@@ -1411,9 +1507,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     limite=int(query.get("limit", ["25"])[0]),
                 ))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_google_invalida", "motivo": "Os parâmetros da consulta Google são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "google_workspace_indisponivel", "motivo": "O serviço Google Workspace não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "google_workspace_falhou", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
@@ -1430,9 +1526,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     limite=int(query.get("limit", ["10"])[0]),
                 ))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": "Os parâmetros da consulta Gmail são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": "O serviço Gmail não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "falha_gmail", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
@@ -1442,9 +1538,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             try:
                 self._send_json(200, GMAIL_NYXOS.obter_mensagem(query.get("id", [""])[0]))
             except ValueError as erro:
-                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": str(erro)})
+                self._send_json(400, {"estado": "entrada_gmail_invalida", "motivo": "Os parâmetros da consulta Gmail são inválidos."})
             except RuntimeError as erro:
-                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": str(erro)})
+                self._send_json(503, {"estado": "gmail_indisponivel", "motivo": "O serviço Gmail não está disponível."})
             except Exception as erro:
                 self._send_json(502, {"estado": "falha_gmail", "motivo": f"{type(erro).__name__}: consulta indisponível."})
             return
@@ -1721,21 +1817,56 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         format_string: str,
         *args,
     ) -> None:
-        print(
-            "[Nyxal-API]",
-            format_string % args,
-        )
+        # Não imprime caminho, query string, IDs de mensagens ou possíveis segredos.
+        metodo = getattr(self, "command", None) or "HTTP"
+        codigo = getattr(self, "_nyxal_status_code", None)
+        print(f"[Nyxal-API] {metodo} status={codigo if codigo is not None else 'unknown'}")
 
 
 class NyxalThreadingHTTPServer(ThreadingHTTPServer):
-    """Servidor HTTP com família de endereços compatível com bind local IPv4/IPv6."""
+    """Servidor HTTP local com timeout e limite de clientes concorrentes."""
 
     address_family = socket.AF_INET6 if ":" in HOST else socket.AF_INET
+    daemon_threads = True
+    block_on_close = False
+    request_slots = BoundedSemaphore(MAX_CONCURRENT_HTTP_REQUESTS)
+
+    def process_request(self, request, client_address) -> None:
+        if not self.request_slots.acquire(blocking=False):
+            response = (
+                b"HTTP/1.1 503 Service Unavailable\r\n"
+                b"Content-Length: 0\r\n"
+                b"Connection: close\r\n"
+                b"Retry-After: 1\r\n"
+                b"Cache-Control: no-store\r\n\r\n"
+            )
+            try:
+                request.sendall(response)
+            except OSError:
+                pass
+            self.shutdown_request(request)
+            return
+
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self.request_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self.request_slots.release()
 
 
 def main() -> None:
+    if PROXY_MODE and not API_TOKEN:
+        raise SystemExit(
+            "Inicialização recusada: configure NYXAL_API_TOKEN ao habilitar NYXAL_API_BEHIND_PROXY."
+        )
     if not host_loopback(HOST):
-        raise RuntimeError(
+        raise SystemExit(
             "A API HTTP da Nyxal só pode escutar em loopback. "
             "Para acesso remoto, mantenha NYXAL_API_HOST=127.0.0.1 e "
             "use uma VPN ou proxy reverso com TLS e autenticação na borda."
