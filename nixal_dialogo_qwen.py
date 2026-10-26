@@ -96,6 +96,8 @@ class DialogoQwenNixal:
         historico: list[dict[str, str]] | None = None,
         *,
         sessao: str | None = None,
+        provedor: str | None = None,
+        contexto_sistema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not isinstance(texto, str) or not texto.strip():
             return {
@@ -104,6 +106,26 @@ class DialogoQwenNixal:
                 "origem": self.FONTE,
                 "resposta": None,
                 "erro": "O texto conversacional é obrigatório.",
+            }
+        allowed_providers = {"auto", "nyxal", "gemini", "hermes", "letta", "openai", "grok"}
+        if provedor is not None and (
+            not isinstance(provedor, str)
+            or provedor.strip().lower() not in allowed_providers
+        ):
+            return {
+                "sucesso": False,
+                "estado": "provedor_invalido",
+                "origem": self.FONTE,
+                "resposta": None,
+                "erro": "O provedor conversacional selecionado é inválido.",
+            }
+        if contexto_sistema is not None and not isinstance(contexto_sistema, dict):
+            return {
+                "sucesso": False,
+                "estado": "contexto_sistema_invalido",
+                "origem": self.FONTE,
+                "resposta": None,
+                "erro": "O contexto do sistema precisa ser um objeto.",
             }
 
         mensagens: list[dict[str, str]] = [
@@ -161,7 +183,11 @@ class DialogoQwenNixal:
         )
 
         hub = self.agent_hub
-        provider_setting = os.environ.get("NYXAL_AGENT_PROVIDER", "auto").strip().lower() or "auto"
+        provider_setting = (
+            provedor.strip().lower()
+            if provedor is not None
+            else (os.environ.get("NYXAL_AGENT_PROVIDER", "auto").strip().lower() or "auto")
+        )
         remote_providers = ("hermes", "openai", "gemini", "grok", "letta")
         should_try_hub = hub is not None and provider_setting != "nyxal"
         if should_try_hub and provider_setting == "auto":
@@ -185,6 +211,7 @@ class DialogoQwenNixal:
                     provedor=provider_setting,
                     historico_externo=external_history,
                     prompt_sistema_extra=self.PROMPT_ESTILO_PROVEDOR,
+                    contexto_sistema=contexto_sistema,
                 )
                 answer = routed.get("resposta") if isinstance(routed, dict) else None
                 if (
@@ -205,8 +232,19 @@ class DialogoQwenNixal:
                         "versao_dialogo": self.VERSAO,
                     }
             except Exception:
-                # Provedor remoto indisponível não derruba a conversa local.
-                pass
+                # Provedor explicitamente selecionado não deve trocar de modelo
+                # silenciosamente. O núcleo/API converterá esta falha em 503.
+                if provider_setting not in {"auto", "nyxal"}:
+                    return {
+                        "sucesso": False,
+                        "estado": "provedor_indisponivel",
+                        "origem": self.FONTE,
+                        "resposta": None,
+                        "erro": "O provedor selecionado não está disponível.",
+                        "permanente": False,
+                        "versao_dialogo": self.VERSAO,
+                    }
+                # Em modo automático, o Qwen local continua sendo fallback seguro.
 
         try:
             resposta = self.cliente.chat(
