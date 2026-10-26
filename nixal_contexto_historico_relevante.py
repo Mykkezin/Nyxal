@@ -306,27 +306,29 @@ class ContextoHistoricoRelevanteNixal:
                 if isinstance(necessidade, str)
                 else ""
             )
+            correspondencia_direta = (
+                len(consulta_normalizada) >= 8
+                and any(
+                    consulta_normalizada in " ".join(self._tokens_consulta(texto))
+                    for texto in textos
+                )
+            )
             if necessidade_normalizada and necessidade_normalizada == consulta_normalizada:
                 pontuacao = 1.0
-            else:
+            elif correspondencia_direta:
+                pontuacao = 0.95
+            elif len(compartilhados) >= 2:
                 pontuacao = len(compartilhados) / max(1, len(termos_consulta))
-                if (
-                    len(consulta_normalizada) >= 8
-                    and any(
-                        consulta_normalizada in " ".join(self._tokens_consulta(texto))
-                        for texto in textos
-                    )
-                ):
-                    pontuacao = max(pontuacao, 0.95)
-                elif (
-                    len(compartilhados) == 1
-                    and len(termos_consulta) <= 3
-                    and len(next(iter(compartilhados))) >= 6
-                ):
-                    pontuacao = max(pontuacao, 0.35)
-
-                if len(compartilhados) < 2 and pontuacao < 0.35:
+                if pontuacao < 0.25:
                     continue
+            elif (
+                len(compartilhados) == 1
+                and len(termos_consulta) <= 3
+                and len(next(iter(compartilhados))) >= 6
+            ):
+                pontuacao = 0.35
+            else:
+                continue
 
             contexto_bruto = self._contexto.obter(registro_id)
             if contexto_bruto.get("sucesso") is not True:
