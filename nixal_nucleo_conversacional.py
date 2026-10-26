@@ -271,6 +271,10 @@ class NucleoConversacionalNixal:
             texto,
             historico,
         )
+        # /api/agent/chat envia provedor explicitamente: preserve o contrato
+        # desse endpoint e não converta um pedido ao modelo em ação local.
+        if "provedor" in kwargs_dialogo:
+            priorizar_dialogo = True
         contexto_persistido = {
             "estado": "nao_consultado",
             "contextos": [],
