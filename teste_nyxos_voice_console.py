@@ -24,6 +24,8 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('if parsed_path == "/api/agent/contexto":', self.api)
         for metric in ('"memoria"', '"armazenamento_home"', '"temperaturas"', '"gpu"'):
             self.assertIn(metric, self.telemetry)
+        self.assertIn('node.title = "Falha ao consultar a observabilidade; leitura anterior descartada."', self.console)
+        self.assertIn('node.textContent = "offline";', self.console)
 
     def test_vps_tools_use_existing_api_and_safe_actions(self):
         self.assertIn('"/api/vps/status"', self.console)
