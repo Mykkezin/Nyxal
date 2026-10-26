@@ -8,6 +8,15 @@ on:
     branches:
       - main
       - feat/m5-16-adaptador-host-controlado
+    paths:
+      - "nixal_adaptador_host_controlado.py"
+      - "teste_m5_16_adaptador_host_controlado.py"
+      - "teste_m5_16_cadeia_gateway_adaptador.py"
+      - "nixal_gateway_atuacao.py"
+      - "nixal_plano_central_controle.py"
+      - "nixal_ciclo_residente.py"
+      - "executar_nyxos_residente.py"
+      - ".github/workflows/m5-16-adaptador-host-validation.yml"
 
 jobs:
   validate-m5-16:
