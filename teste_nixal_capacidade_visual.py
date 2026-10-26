@@ -10,9 +10,9 @@ from unittest.mock import patch
 from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
 
 
-PNG_SAMPLE = b"\\x89PNG\\r\\n\\x1a\\n" + b"sample-png-data"
-JPEG_SAMPLE = b"\\xff\\xd8\\xff" + b"sample-jpeg-data"
-WEBP_SAMPLE = b"RIFF\\x04\\x00\\x00\\x00WEBP" + b"sample-webp-data"
+PNG_SAMPLE = b"\x89PNG\r\n\x1a\n" + b"sample-png-data"
+JPEG_SAMPLE = b"\xff\xd8\xff" + b"sample-jpeg-data"
+WEBP_SAMPLE = b"RIFF\x04\x00\x00\x00WEBP" + b"sample-webp-data"
 
 
 class FakeResponse:
