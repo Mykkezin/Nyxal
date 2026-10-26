@@ -1357,9 +1357,6 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                             }
                     if _precisa_contexto_drive(mensagem):
                         try:
-                            contexto_sistema_conversa["google_drive"] = GMAIL_NYXAL.listar_arquivos_drive(limite=25)
-                        except NameError:
-                            # Nome da integração é mantido como GMAIL_NYXOS no runtime atual.
                             contexto_sistema_conversa["google_drive"] = GMAIL_NYXOS.listar_arquivos_drive(limite=25)
                         except Exception:
                             contexto_sistema_conversa["google_drive"] = {
