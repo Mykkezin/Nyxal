@@ -5,6 +5,7 @@
   var WEATHER_REFRESH_MS = 10 * 60 * 1000;
   var REFLECTION_INTERVAL_MS = 3 * 60 * 60 * 1000;
   var activeView = "chat";
+  var clockTimer = null;
   var weatherTimer = null;
   var metricsTimer = null;
   var reflectionTimer = null;
@@ -183,6 +184,7 @@
     updateWeather();
     refreshMetrics();
     showInitialReflection();
+    if (clockTimer === null) clockTimer = window.setInterval(tickClock, 1000);
     if (metricsTimer === null) metricsTimer = window.setInterval(refreshMetrics, METRICS_REFRESH_MS);
     if (weatherTimer === null) weatherTimer = window.setInterval(updateWeather, WEATHER_REFRESH_MS);
     if (reflectionTimer === null) reflectionTimer = window.setInterval(checkReflectionInterval, 60000);
