@@ -200,6 +200,25 @@ class TestNyxalAgentHub(unittest.TestCase):
             "conhecimento_geral",
         )
 
+    def test_reverse_engineering_gets_dedicated_route(self):
+        from nixal_intent_router import classificar_intencao, ordem_provedores
+        result = classificar_intencao("Faça engenharia reversa autorizada deste repositório")
+        self.assertEqual(result["classe"], "engenharia_reversa")
+        self.assertEqual(ordem_provedores("engenharia_reversa")[0], "hermes")
+
+    def test_reverse_engineering_adds_scope_and_evidence_guidance(self):
+        with patch.dict(os.environ, {}, clear=True):
+            hub = NyxalAgentHub()
+            with patch.object(hub, "provider_configured", return_value=True):
+                with patch.object(hub, "_responder_provedor", side_effect=lambda mensagem, resolved, sessao, contexto, **kwargs: {
+                    "sucesso": True, "provedor": resolved, "resposta": "análise", "sessao": sessao,
+                    "prompt_extra_capturado": kwargs.get("prompt_sistema_extra", ""),
+                }):
+                    result = hub.responder("Faça engenharia reversa autorizada deste repositório")
+        self.assertEqual(result["roteamento"]["classe"], "engenharia_reversa")
+        self.assertIn("permissão para examinar", result["prompt_extra_capturado"])
+        self.assertIn("resultado verificável", result["prompt_extra_capturado"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
