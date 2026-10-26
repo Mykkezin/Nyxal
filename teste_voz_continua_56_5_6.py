@@ -62,6 +62,14 @@ def main() -> None:
     # ------------------------------------------------------------
 
     for simbolo, descricao in (
+        ("NYXAL_VOICE_ONLY_MODE", "modo dedicado de voz sem painel antigo"),
+        ("initNyxalVoiceOnlySurface", "montagem da tela minimalista de voz"),
+        ("VOICE_UI_IDLE_HIDE_MS", "tempo de recolhimento visual por inatividade"),
+        ("setVoiceUiDormant", "recolhimento visual sem encerrar a escuta"),
+        ("extractNyxalWakeCommand", "detecção da palavra de ativação Nyxal"),
+        ("startVoiceBargeInCapture", "captura durante a fala sintetizada"),
+        ("runVoiceBargeInMonitor", "detecção de interrupção por voz"),
+        ("voiceBargeInHandoff", "transferência segura após interrupção"),
         ("VOICE_VAD_CALIBRATION_MS", "calibração inicial do piso de ruído"),
         ("voiceRmsAtual", "leitura atual do nível do microfone"),
         ("voiceActivityThreshold", "limiar adaptativo de fala"),
@@ -104,6 +112,12 @@ def main() -> None:
         "áudio sem fala não é enviado ao STT",
     )
 
+    shell = (BASE_DIR / "deploy" / "systemd" / "iniciar_nyxos_shell.sh").read_text(encoding="utf-8")
+    verificar(
+        "NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/?modo=voz" in shell,
+        "desktop abre por padrão a interface de voz limpa",
+    )
+
     verificar(
         "VOICE_RECORDING_MS" not in interface,
         "antigo limite fixo de 7 segundos foi removido",
@@ -144,9 +158,10 @@ def main() -> None:
     )
 
     verificar(
-        "setVoiceMicrophoneEnabled(false)" in interface
-        and "setVoiceMicrophoneEnabled(true)" in interface,
-        "microfone é pausado durante a resposta e reativado depois",
+        "startVoiceBargeInCapture" in interface
+        and "setVoiceMicrophoneEnabled(true)" in interface
+        and "!voiceBargeInHandoff" in interface,
+        "microfone fica disponível para detectar interrupções durante a fala",
     )
 
     # ------------------------------------------------------------
@@ -231,6 +246,11 @@ def main() -> None:
         and "import numpy as np" in api
         and "import soundfile as sf" in api,
         "dependências pesadas de voz continuam lazy-loaded",
+    )
+
+    verificar(
+        'if parsed_path == "/":' in api,
+        "API aceita o parâmetro ?modo=voz na rota raiz",
     )
 
     # ------------------------------------------------------------
