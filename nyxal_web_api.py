@@ -7,6 +7,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from secrets import compare_digest, token_urlsafe
@@ -45,9 +46,11 @@ from nixal_seguranca_http import (
     origin_permitida,
     parse_allowed_origins as _parse_allowed_origins,
 )
+from nixal_trilha_http import RegistroTrilhaHTTP
 
 
 BASE_DIR = Path(__file__).resolve().parent
+TRILHA_HTTP = RegistroTrilhaHTTP.do_ambiente()
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
 MAX_CONCURRENT_HTTP_REQUESTS = 8
@@ -626,6 +629,37 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
     server_version = "NyxalAPI"
     sys_version = ""
 
+    def handle_one_request(self) -> None:
+        """Correlaciona uma requisição sem registrar payloads, cabeçalhos ou query strings."""
+        inicio = time.perf_counter()
+        # O handler pode ser reutilizado em conexões keep-alive.
+        self.command = None
+        self.path = ""
+        self._nyxal_request_id = token_urlsafe(12)
+        self._nyxal_status_code = None
+        erro_tipo = None
+        try:
+            super().handle_one_request()
+        except Exception as erro:
+            erro_tipo = type(erro).__name__
+            raise
+        finally:
+            metodo = getattr(self, "command", None)
+            caminho = getattr(self, "path", "")
+            if metodo and caminho:
+                # A instrumentação nunca deve derrubar a API se a trilha estiver indisponível.
+                try:
+                    TRILHA_HTTP.registrar(
+                        request_id=self._nyxal_request_id,
+                        method=metodo,
+                        path=caminho,
+                        status_code=self._nyxal_status_code,
+                        duration_ms=(time.perf_counter() - inicio) * 1000.0,
+                        error_type=erro_tipo,
+                    )
+                except Exception:
+                    pass
+
     def parse_request(self) -> bool:
         """Recusa enquadramento HTTP ambíguo antes de qualquer rota."""
         if not super().parse_request():
@@ -661,6 +695,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         super().send_response(code, message)
 
     def end_headers(self) -> None:
+        request_id = getattr(self, "_nyxal_request_id", None)
+        if request_id:
+            self.send_header("X-Request-ID", request_id)
         self.send_header("X-Content-Type-Options", "nosniff")
         super().end_headers()
 
