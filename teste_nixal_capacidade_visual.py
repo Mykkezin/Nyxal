@@ -729,6 +729,42 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
 
         self.assertEqual(base64.b64decode(result["imagem_base64"]), final_image)
 
+    def test_imagem_saida_invalida_nao_impede_fallback_para_step_valido(self):
+        response = response_with_image()
+        response["output_image"] = {
+            "mime_type": "image/png",
+            "data": "%%%base64-invalido%%%",
+        }
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual._urlopen_no_redirect",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ):
+                result = CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
+
+        self.assertEqual(base64.b64decode(result["imagem_base64"]), PNG_BYTES)
+
+    def test_imagem_invalida_nao_sobrescreve_ultima_imagem_valida(self):
+        response = {
+            "steps": [{
+                "type": "model_output",
+                "content": [
+                    {"type": "image", "mime_type": "image/png",
+                     "data": base64.b64encode(PNG_BYTES).decode("ascii")},
+                    {"type": "image", "mime_type": "image/png",
+                     "data": "%%%base64-invalido%%%"},
+                ],
+            }],
+        }
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "nixal_capacidade_visual._urlopen_no_redirect",
+                return_value=FakeResponse(json.dumps(response).encode()),
+            ):
+                result = CapacidadeVisualGeminiNixOS().gerar_ou_editar("Crie uma paisagem.")
+
+        self.assertEqual(base64.b64decode(result["imagem_base64"]), PNG_BYTES)
+
     def test_prompt_de_infografico_recebe_direcao_de_legibilidade(self):
         response = response_with_image()
         prompt = "Crie um infográfico com três etapas e os títulos exatos Reciclar, Reutilizar e Reduzir."
