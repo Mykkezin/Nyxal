@@ -29,7 +29,8 @@ def main() -> None:
     assert 'const allowedhosts = new set(["127.0.0.1", "localhost", "[::1]", "::1"])' in splash
     assert "allowedhosts.has(destination.hostname.tolowercase())" in splash
     assert 'const endpointportallowed = destination.port === "8010"' in splash
-    assert "hostallowed &&\\n            endpointportallowed &&" in splash
+    splash_compact = " ".join(splash.split())
+    assert "hostallowed && endpointportallowed && pathallowed && noextracomponents &&" in splash_compact
     assert 'destination.pathname === "/" || destination.pathname === "/index.html"' in splash
     assert "pathallowed &&" in splash
     assert "noextracomponents &&" in splash
