@@ -15,6 +15,7 @@ PREFERENCES: dict[str, tuple[str, ...]] = {
     "ciencia_dados": ("openai", "hermes", "gemini", "grok", "letta"),
     "codigo_e_raciocinio": ("openai", "hermes", "gemini", "grok", "letta"),
     "engenharia_reversa": ("hermes", "openai", "gemini", "grok", "letta"),
+    "ciberseguranca_defensiva": ("hermes", "openai", "gemini", "grok", "letta"),
     "conhecimento_geral": ("openai", "gemini", "grok", "hermes", "letta"),
 }
 
@@ -52,6 +53,17 @@ def classificar_intencao(mensagem: str) -> dict[str, str]:
         return {
             "classe": "engenharia_reversa",
             "motivo": "O pedido indica análise estrutural de um artefato autorizado.",
+        }
+
+    cyber_markers = (
+        "ciberseguranca defensiva", "cybersecurity defensiva",
+        "hardening de seguranca", "triagem de vulnerabilidades",
+        "modelagem de ameacas", "analise defensiva de logs",
+    )
+    if any(marker in text for marker in cyber_markers):
+        return {
+            "classe": "ciberseguranca_defensiva",
+            "motivo": "O pedido é orientado à defesa de ativos autorizados.",
         }
 
     tool_markers = (
