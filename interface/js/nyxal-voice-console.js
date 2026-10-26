@@ -659,19 +659,27 @@
       if (!response.ok || payload.sucesso === false) {
         throw new Error(payload.motivo || payload.estado || "O provedor não gerou a imagem.");
       }
-      if (!payload.imagem_base64 || !payload.mime_type) {
-        throw new Error("A API respondeu sem dados de imagem.");
+      var mimeType = String(payload.mime_type || "").trim().toLowerCase();
+      var imageBase64 = String(payload.imagem_base64 || "").replace(/\\s+/g, "");
+      if (!imageBase64 || !["image/png", "image/jpeg", "image/webp"].includes(mimeType)) {
+        throw new Error("A API retornou um formato de imagem ausente ou não suportado.");
+      }
+      if (imageBase64.length > 24 * 1024 * 1024) {
+        throw new Error("A imagem retornada excede o limite local de 24 MiB em Base64.");
+      }
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64)) {
+        throw new Error("A API retornou dados de imagem malformados.");
       }
       var img = document.createElement("img");
       img.alt = prompt;
       img.loading = "lazy";
-      img.src = "data:" + payload.mime_type + ";base64," + payload.imagem_base64;
+      img.src = "data:" + mimeType + ";base64," + imageBase64;
       var mainDisplayImage = !output;
       if (output) output.appendChild(img);
       var actions = element("div", "nvc-row");
       var download = element("a", "nvc-button", "Salvar imagem");
       download.href = img.src;
-      download.download = "nyxal-imagem-" + new Date().toISOString().replace(/[:.]/g, "-") + "." + (payload.mime_type.indexOf("jpeg") >= 0 ? "jpg" : payload.mime_type.indexOf("webp") >= 0 ? "webp" : "png");
+      download.download = "nyxal-imagem-" + new Date().toISOString().replace(/[:.]/g, "-") + "." + (mimeType.indexOf("jpeg") >= 0 ? "jpg" : mimeType.indexOf("webp") >= 0 ? "webp" : "png");
       download.style.textDecoration = "none";
       actions.appendChild(download);
       if (output) output.appendChild(actions);
@@ -680,7 +688,7 @@
           img.src,
           prompt,
           "nyxal-imagem-" + new Date().toISOString().replace(/[:.]/g, "-") + "." +
-            (payload.mime_type.indexOf("jpeg") >= 0 ? "jpg" : payload.mime_type.indexOf("webp") >= 0 ? "webp" : "png")
+            (mimeType.indexOf("jpeg") >= 0 ? "jpg" : mimeType.indexOf("webp") >= 0 ? "webp" : "png")
         );
       }
       var successMessage = String(payload.mensagem || "Imagem gerada.");
