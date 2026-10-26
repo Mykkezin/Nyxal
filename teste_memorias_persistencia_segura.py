@@ -106,6 +106,8 @@ class TesteMemoriasPersistenciaSegura(unittest.TestCase):
         memoria = MemoriaInvestigacaoNixal(path)
         self.assertEqual(memoria.registrar(ciclo("hipótese segura")).get("estado"), "persistido")
         self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+        lock_path = path.with_name(path.name + ".lock")
+        self.assertEqual(stat.S_IMODE(lock_path.stat().st_mode), 0o600)
 
 
 if __name__ == "__main__":
