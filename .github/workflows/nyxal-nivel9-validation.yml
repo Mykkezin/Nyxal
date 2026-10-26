@@ -156,81 +156,81 @@ jobs:
       - name: Compilar módulos
         id: compile_main
         run: |
-          python -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nixal_delta.py             nixal_recursos_habitat.py             nixal_ciclo_residente.py             nixal_auto_experimento_ae2.py             nixal_auto_avaliacao_ae3.py             nixal_ciclo_evolucao_ae4.py             nixal_descoberta_continua_ae5.py             nixal_trilha_http.py teste_nixal_trilha_http.py teste_api_trilha_http_e2e.py nyxal_web_api.py nixal_decisao_autonoma_ci.py
+          python3 -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nixal_delta.py             nixal_recursos_habitat.py             nixal_ciclo_residente.py             nixal_auto_experimento_ae2.py             nixal_auto_avaliacao_ae3.py             nixal_ciclo_evolucao_ae4.py             nixal_descoberta_continua_ae5.py             nixal_trilha_http.py teste_nixal_trilha_http.py teste_api_trilha_http_e2e.py nyxal_web_api.py nixal_decisao_autonoma_ci.py
 
       - name: Testes de autoreparo residente e integração
         run: |
-          python -m py_compile nixal_autoreparo_residente.py nixal_ciclo_residente.py executar_nyxos_residente.py
-          python -m unittest -v teste_nixal_autoreparo_residente.py
-          python teste_m5_9_residencia_linux.py
+          python3 -m py_compile nixal_autoreparo_residente.py nixal_ciclo_residente.py executar_nyxos_residente.py
+          python3 -m unittest -v teste_nixal_autoreparo_residente.py
+          python3 teste_m5_9_residencia_linux.py
           bash -n deploy/systemd/instalar_nyxos_servicos.sh deploy/systemd/diagnosticar_nyxos_local.sh
 
       - name: Testes HTTP de segurança da API
         id: api_http_security
-        run: python -m unittest teste_api_security_auth.py -v
+        run: python3 -m unittest teste_api_security_auth.py -v
 
       - name: Testes privacy-first da trilha HTTP
-        run: python -m unittest teste_nixal_trilha_http.py teste_api_trilha_http_e2e.py -v
+        run: python3 -m unittest teste_nixal_trilha_http.py teste_api_trilha_http_e2e.py -v
 
       - name: Testes da política de segurança API
         id: api_policy
-        run: python teste_seguranca_api.py
+        run: python3 teste_seguranca_api.py
 
       - name: Decisão autônoma governada para bloqueios de CI
         id: decision_policy
-        run: python teste_decisao_autonoma_ci.py
+        run: python3 teste_decisao_autonoma_ci.py
 
       - name: Suite Nível 9
-        run: python teste_nivel_9_suite_final.py
+        run: python3 teste_nivel_9_suite_final.py
 
       - name: Suite Nível 10
-        run: python teste_nivel_10_suite_final.py
+        run: python3 teste_nivel_10_suite_final.py
 
       - name: Suite Conversacional 56.5.5
-        run: python teste_contexto_conversacional_56_5_5.py
+        run: python3 teste_contexto_conversacional_56_5_5.py
 
       - name: Teste adaptador Qwen 56.5.5
-        run: python teste_dialogo_qwen_56_5_5.py
+        run: python3 teste_dialogo_qwen_56_5_5.py
 
       - name: Teste Núcleo Conversacional
-        run: python teste_nucleo_conversacional.py
+        run: python3 teste_nucleo_conversacional.py
 
       - name: Smoke test API de chat sem voz
         id: chat_smoke
-        run: python teste_api_chat_sem_voz.py
+        run: python3 teste_api_chat_sem_voz.py
 
       - name: Teste Voz Contínua 56.5.6
-        run: python teste_voz_continua_56_5_6.py
+        run: python3 teste_voz_continua_56_5_6.py
 
       - name: Teste Reflexão Diária 56.5.6
-        run: python teste_reflexao_diaria_56_5_6.py
+        run: python3 teste_reflexao_diaria_56_5_6.py
 
       - name: Teste Habitat NyxOS M5.1
-        run: python teste_habitat_m5_1.py
+        run: python3 teste_habitat_m5_1.py
 
       - name: Teste Processos do Habitat M5.2
-        run: python teste_processos_habitat_m5_2.py
+        run: python3 teste_processos_habitat_m5_2.py
 
       - name: Teste Persistência Operacional M5.3
-        run: python teste_persistencia_operacional_m5_3.py
+        run: python3 teste_persistencia_operacional_m5_3.py
 
       - name: Teste Delta M5.4
-        run: python teste_delta_m5_4.py
+        run: python3 teste_delta_m5_4.py
 
       - name: Teste Interface M5.5
-        run: python teste_interface_m5_5.py
+        run: python3 teste_interface_m5_5.py
 
       - name: Teste Recursos do Habitat M5.6
-        run: python teste_recursos_habitat_m5_6.py
+        run: python3 teste_recursos_habitat_m5_6.py
 
       - name: Teste Ciclo Residente M5.7
-        run: python teste_ciclo_residente_m5_7.py
+        run: python3 teste_ciclo_residente_m5_7.py
 
       - name: Teste controle de aprendizado residente
-        run: python teste_controle_aprendizado_residente.py
+        run: python3 teste_controle_aprendizado_residente.py
 
       - name: Teste Série O9-O15 e handoff LLC
-        run: python teste_serie_o9_o15_handoff_final.py
+        run: python3 teste_serie_o9_o15_handoff_final.py
 
       - name: Sanidade de regras de segurança
         run: |
@@ -257,25 +257,25 @@ jobs:
           path: /tmp/nyxal-package/Nyxal-N10-*.zip
           if-no-files-found: error
       - name: Teste Auto-Evolution AE1
-        run: python teste_auto_evolucao_ae1.py
+        run: python3 teste_auto_evolucao_ae1.py
 
       - name: Teste Auto-Experimento AE2
-        run: python teste_auto_experimento_ae2.py
+        run: python3 teste_auto_experimento_ae2.py
 
       - name: Teste AE2 no Ciclo Residente
-        run: python teste_ae2_ciclo_residente.py
+        run: python3 teste_ae2_ciclo_residente.py
 
       - name: Teste Auto-Avaliação AE3
-        run: python teste_auto_avaliacao_ae3.py
+        run: python3 teste_auto_avaliacao_ae3.py
 
       - name: Teste AE3 no Ciclo Residente
-        run: python teste_ae3_ciclo_residente.py
+        run: python3 teste_ae3_ciclo_residente.py
 
       - name: Teste Ciclo de Evolução AE4
-        run: python teste_ciclo_evolucao_ae4.py
+        run: python3 teste_ciclo_evolucao_ae4.py
 
       - name: Teste Descoberta Contínua AE5
-        run: python teste_descoberta_continua_ae5.py
+        run: python3 teste_descoberta_continua_ae5.py
 
       - name: Avaliar evidências e escolher próximo passo governado
         if: always()
@@ -331,4 +331,4 @@ jobs:
               json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8"
           )
           PY
-          python nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
+          python3 nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
