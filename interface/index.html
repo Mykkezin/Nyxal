@@ -1478,7 +1478,9 @@
       voiceBargeInDiscard = discard;
       stopVoiceBargeInVadLoop();
       const recorder = voiceBargeInRecorder;
-      if (recorder && recorder.state === 'recording') recorder.stop();
+      if (recorder && recorder.state === 'recording') {
+        try { recorder.stop(); } catch (error) { console.debug('Captura de interrupção já encerrada.', error); }
+      }
     }
 
     function startVoiceBargeInCapture() {
@@ -2789,10 +2791,10 @@
           );
           showSubtitles(`Erro de reconhecimento: ${err.message}`);
         } finally {
-          if (voiceConversationActive) {
+          if (voiceConversationActive && !voiceBargeInHandoff && !voiceBargeInDetected) {
             voiceConversationBusy = false;
             resumeContinuousListening();
-          } else {
+          } else if (!voiceConversationActive) {
             cleanupContinuousVoice();
           }
         }
@@ -2957,7 +2959,7 @@
     }
 
     function resumeContinuousListening() {
-      if (!voiceConversationActive) {
+      if (!voiceConversationActive || voiceBargeInHandoff || voiceBargeInDetected) {
         return;
       }
 
