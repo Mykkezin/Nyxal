@@ -55,7 +55,8 @@ fi
 # O splash é HTML/CSS/canvas local, sem dependências externas ou arquivo de vídeo.
 # Reutiliza o marcador antigo para não repetir a animação na mesma sessão gráfica.
 LAUNCH_URL="${INTERFACE_URL}"
-if [[ -f "${STARTUP_PAGE}" && ! -f "${STARTUP_MARKER}" ]]; then
+# No modo de voz, abra direto a área limpa e ignore a tela de splash antiga.
+if [[ "${INTERFACE_URL}" != *"modo=voz"* && -f "${STARTUP_PAGE}" && ! -f "${STARTUP_MARKER}" ]]; then
     if command -v python3 >/dev/null 2>&1; then
         STARTUP_FILE_URL="$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve().as_uri())' "${STARTUP_PAGE}")"
         ENCODED_NEXT_URL="$(python3 -c 'import sys; from urllib.parse import quote; print(quote(sys.argv[1], safe=""))' "${INTERFACE_URL}")"
