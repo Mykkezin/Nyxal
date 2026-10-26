@@ -135,11 +135,12 @@ class TestNyxalPrimaryDialogueRouter(unittest.TestCase):
         self.assertIn("Converse com naturalidade", args[2])
         self.assertEqual(args[3], history)
 
-    def test_primary_api_injects_router_and_core_passes_session(self):
+    def test_dialogue_discovers_opt_in_router_and_core_passes_session(self):
         root = Path(__file__).resolve().parent
-        api_source = (root / "nyxal_web_api.py").read_text(encoding="utf-8")
+        dialogue_source = (root / "nixal_dialogo_qwen.py").read_text(encoding="utf-8")
         core_source = (root / "nixal_nucleo_conversacional.py").read_text(encoding="utf-8")
-        self.assertIn("NUCLEO_CONVERSACIONAL.dialogo.agent_hub = AGENTE_NYXAL", api_source)
+        self.assertIn("candidate = NyxalAgentHub()", dialogue_source)
+        self.assertIn("candidate.provider_configured", dialogue_source)
         self.assertIn("historico=historico,\n                sessao=sessao,", core_source)
 
 
