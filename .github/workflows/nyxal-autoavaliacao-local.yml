@@ -1,0 +1,37 @@
+name: Nyxal Local Self-Assessment Client
+
+on:
+  pull_request:
+    paths:
+      - "falar_com_nyxal_autoavaliacao.py"
+      - "teste_falar_com_nyxal_autoavaliacao.py"
+      - "docs/NYXAL_AUTOAVALIACAO_LOCAL.md"
+      - ".github/workflows/nyxal-autoavaliacao-local.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "falar_com_nyxal_autoavaliacao.py"
+      - "teste_falar_com_nyxal_autoavaliacao.py"
+      - "docs/NYXAL_AUTOAVALIACAO_LOCAL.md"
+      - ".github/workflows/nyxal-autoavaliacao-local.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-client-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile local client and tests
+        run: python -m py_compile falar_com_nyxal_autoavaliacao.py teste_falar_com_nyxal_autoavaliacao.py
+      - name: Test without network or live Nyxal instance
+        run: python -m unittest teste_falar_com_nyxal_autoavaliacao.py -v
