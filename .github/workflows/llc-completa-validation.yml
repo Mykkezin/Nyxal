@@ -8,6 +8,19 @@ on:
     branches:
       - main
       - feat/llc-learning-loop
+    paths:
+      - "nixal_learning_loop_causal.py"
+      - "nixal_evidencia_ambiental_llc.py"
+      - "nixal_evidencia_longitudinal_llc.py"
+      - "nixal_proveniencia_evidencia_llc.py"
+      - "nixal_replicacao_llc.py"
+      - "nixal_escopo_llc.py"
+      - "nixal_aprendizado_llc.py"
+      - "nixal_fechamento_llc.py"
+      - "nixal_aprendizado_persistente.py"
+      - "nixal_runtime.py"
+      - "teste_llc*.py"
+      - ".github/workflows/llc-completa-validation.yml"
 
 jobs:
   llc-completo:
