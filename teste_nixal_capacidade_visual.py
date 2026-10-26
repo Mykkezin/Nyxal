@@ -59,6 +59,15 @@ class TestCapacidadeVisualGemini(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 CapacidadeVisualGeminiNixOS().gerar_ou_editar("uma paisagem")
 
+    def test_rejeita_imagem_base64_vazia_em_vez_de_gerar_nova(self):
+        with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
+            with patch("nixal_capacidade_visual._urlopen_no_redirect") as mocked:
+                with self.assertRaisesRegex(ValueError, "Base64 não pode estar vazia"):
+                    CapacidadeVisualGeminiNixOS().gerar_ou_editar(
+                        "Edite a imagem", imagem_base64="", mime_type="image/png"
+                    )
+        mocked.assert_not_called()
+
     def test_recusa_mime_nao_permitido(self):
         with patch.dict(os.environ, {"NYXAL_GEMINI_API_KEY": "test-key"}, clear=True):
             with self.assertRaises(ValueError):
