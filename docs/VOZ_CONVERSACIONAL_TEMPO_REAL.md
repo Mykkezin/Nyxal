@@ -43,7 +43,7 @@ O processador de interrupção também incrementa um identificador de geração.
 - Instalar somente no ambiente virtual isolado em `~/.local/share/nyxal-voice-pipecat/venv` através de `deploy/voice/instalar_pipecat_experimental.sh`.
 - Não adicionar essas dependências ao ambiente principal `.venv` até passar os testes.
 - Pipecat baixa, no primeiro uso, seus arquivos de modelo Kokoro para `~/.cache/pipecat/kokoro-onnx`. Eles não entram no repositório, nem são incluídos em commits ou releases.
-- A captura, transcrição, geração de resposta e TTS do protótipo são locais. A primeira instalação pode precisar baixar pacotes e modelos.
+- A captura, transcrição, geração de resposta e TTS do protótipo são locais. A primeira instalação pode precisar baixar pacotes e modelos. O adaptador e o smoke test aceitam apenas uma API em localhost/loopback; se `NYXAL_API_TOKEN` estiver configurado, enviam Bearer apenas para esse endpoint local e recusam direcionar o segredo a outro host.
 - Nenhuma unidade systemd é instalada, ativada ou substituída pelo instalador experimental.
 
 ## Como testar manualmente
