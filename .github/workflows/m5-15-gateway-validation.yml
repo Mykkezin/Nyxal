@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - feat/m5-15-gateway-atuacao
+    paths:
+      - "nixal_gateway_atuacao.py"
+      - "nixal_plano_central_controle.py"
+      - "nixal_ciclo_residente.py"
+      - "executar_nyxos_residente.py"
+      - "teste_m5_15_gateway_atuacao.py"
   pull_request:
     branches:
       - main
