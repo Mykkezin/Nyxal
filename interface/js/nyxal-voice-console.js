@@ -132,6 +132,7 @@
           '<button type="button" data-nvc-view="chat" role="tab" aria-selected="true">Conversa</button>',
           '<button type="button" data-nvc-view="vps" role="tab" aria-selected="false">VPS</button>',
           '<button type="button" data-nvc-view="cyber" role="tab" aria-selected="false">Cibersegurança</button>',
+          '<button type="button" data-nvc-view="reverse" role="tab" aria-selected="false">Eng. reversa</button>',
           '<button type="button" data-nvc-view="data" role="tab" aria-selected="false">Data Science</button>',
           '<button type="button" data-nvc-view="image" role="tab" aria-selected="false">Imagens</button>',
           '<button type="button" data-nvc-view="reflection" role="tab" aria-selected="false">Filosofia</button>',
@@ -151,6 +152,11 @@
           '<h3>Cibersegurança defensiva</h3><p>Revisão de código, hardening, análise de logs, modelagem de ameaças, inventário, triagem de vulnerabilidades e plano de correção em ativos autorizados.</p>',
           '<div class="nvc-card"><strong>Limite de segurança</strong><div class="nvc-status">O modo prioriza diagnóstico e defesa. Ações intrusivas, destrutivas ou com impacto operacional exigem escopo e autorização explícitos.</div></div>',
           '<div class="nvc-row"><button id="nvcCyberStart" class="nvc-button nvc-primary" type="button">Iniciar análise defensiva</button></div>',
+        '</section>',
+        '<section class="nvc-pane" data-nvc-pane="reverse" hidden>',
+          '<h3>Engenharia reversa autorizada</h3><p>Reconstrói a arquitetura a partir de código, dependências, entradas, saídas e evidências observáveis.</p>',
+          '<div class="nvc-card"><strong>Procedimento</strong><div class="nvc-status">Inventário → mapa de módulos e fluxos → hipóteses → testes reproduzíveis → relatório com evidências e limitações. A análise respeita o escopo autorizado e reutiliza os componentes existentes da Nyxal.</div></div>',
+          '<div class="nvc-row"><button id="nvcReverseStart" class="nvc-button nvc-primary" type="button">Iniciar engenharia reversa</button></div>',
         '</section>',
         '<section class="nvc-pane" data-nvc-pane="data" hidden>',
           '<h3>Data Science</h3><p>Exploração de dados, estatística, qualidade de dados, visualização, hipóteses, experimentos, Python e relatórios reproduzíveis.</p>',
@@ -205,6 +211,7 @@
     });
     document.getElementById("nvcVpsRefresh").addEventListener("click", refreshVps);
     document.getElementById("nvcCyberStart").addEventListener("click", startCyberMode);
+    document.getElementById("nvcReverseStart").addEventListener("click", startReverseEngineeringMode);
     document.getElementById("nvcDataStart").addEventListener("click", startDataMode);
     document.getElementById("nvcImageGenerate").addEventListener("click", generateImage);
     document.getElementById("nvcReflectionDismiss").addEventListener("click", function () {
@@ -240,7 +247,7 @@
   }
 
   function setView(view) {
-    var known = ["chat", "vps", "cyber", "data", "image", "reflection"];
+    var known = ["chat", "vps", "cyber", "reverse", "data", "image", "reflection"];
     if (known.indexOf(view) < 0) view = "chat";
     activeView = view;
     document.querySelectorAll("[data-nvc-view]").forEach(function (button) {
@@ -249,7 +256,7 @@
     document.querySelectorAll("[data-nvc-pane]").forEach(function (pane) {
       pane.hidden = pane.getAttribute("data-nvc-pane") !== view;
     });
-    var titles = { chat: "Conversa", vps: "VPS", cyber: "Cibersegurança", data: "Data Science", image: "Geração visual", reflection: "Filosofia" };
+    var titles = { chat: "Conversa", vps: "VPS", cyber: "Cibersegurança", reverse: "Engenharia reversa", data: "Data Science", image: "Geração visual", reflection: "Filosofia" };
     var title = document.getElementById("nvcWorkspaceTitle");
     if (title) title.textContent = titles[view] || "Ferramentas";
     if (view === "vps") refreshVps();
@@ -275,6 +282,14 @@
     setWorkspaceOpen(false);
     sendModePrompt(
       "Ative o modo especialista de CIBERSEGURANÇA DEFENSIVA da Nyxal. Trabalhe apenas em sistemas e dados que eu possuo ou estou autorizado a avaliar. Priorize inventário, hardening, revisão de código, análise de logs, modelagem de ameaças, triagem de vulnerabilidades e plano de remediação com evidências. Antes de qualquer operação com impacto, explique o risco e peça autorização explícita. Não afirme que executou testes sem ferramentas e resultados confirmados. Comece perguntando qual ativo, código ou objetivo defensivo vamos analisar e proponha um plano verificável.",
+      "nvcChatStatus"
+    );
+  }
+
+  function startReverseEngineeringMode() {
+    setWorkspaceOpen(false);
+    sendModePrompt(
+      "Ative o modo especialista de ENGENHARIA REVERSA AUTORIZADA da Nyxal. Analise apenas código, software ou artefatos que possuo ou posso examinar. Comece inventariando os arquivos e identificando pontos de entrada, módulos, dependências, contratos, armazenamento e fluxos de dados. Separe fatos, hipóteses e lacunas; prefira análise estática e testes reproduzíveis em ambiente isolado. Não afirme que examinou artefatos ou executou testes sem evidências. Antes de ações com impacto operacional, explique o risco e peça autorização explícita. Reaproveite os componentes existentes e entregue um mapa arquitetural, evidências, limitações e correções priorizadas.",
       "nvcChatStatus"
     );
   }
@@ -634,7 +649,7 @@
     if (!event.altKey || event.ctrlKey || event.metaKey) return;
     var target = event.target;
     if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
-    var keyMap = { "1": "chat", "2": "vps", "3": "cyber", "4": "data", "5": "image", "6": "reflection" };
+    var keyMap = { "1": "chat", "2": "vps", "3": "cyber", "4": "data", "5": "image", "6": "reflection", "7": "reverse" };
     var view = keyMap[event.key];
     if (!view) return;
     event.preventDefault();
