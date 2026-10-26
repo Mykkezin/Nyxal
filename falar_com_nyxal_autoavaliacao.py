@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 from http.client import HTTPConnection, HTTPException
 
+NYXAL_ENV_FILE = Path.home() / ".config" / "nyxal" / "nyxal.env"
+
 
 MAX_RESPONSE_BYTES = 1_000_000
 MAX_SELF_ASSESSMENT_CHARS = 8_000
@@ -107,16 +109,51 @@ def extrair_resposta(payload: Any) -> str:
     raise ValueError("resposta_textual_da_nyxal_ausente")
 
 
+def _config_setting(name: str, default: str = "") -> str:
+    """Read one setting from the process environment or Nyxal's local env file.
+
+    This parser intentionally does not source/evaluate shell code. Environment
+    variables take precedence and secret values are never printed.
+    """
+    if name in os.environ:
+        return os.environ[name].strip()
+    try:
+        for line in NYXAL_ENV_FILE.read_text(encoding="utf-8").splitlines():
+            item = line.strip()
+            if not item or item.startswith("#"):
+                continue
+            if item.startswith("export "):
+                item = item[7:].lstrip()
+            key, separator, value = item.partition("=")
+            if not separator or key.strip() != name:
+                continue
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+                value = value[1:-1]
+            else:
+                value = value.split(" #", 1)[0].rstrip()
+            return value
+    except OSError:
+        pass
+    return default
+
+
 def chamar_nyxal(mensagem: str, *, sessao: str, port: int, timeout: int) -> dict[str, Any]:
     """Send one HTTP request directly to loopback; proxies and redirects are impossible."""
     port = _validar_porta_loopback(port)
+    if isinstance(timeout, bool) or not isinstance(timeout, int) or not 1 <= timeout <= 300:
+        raise ValueError("timeout_invalido")
+    if not isinstance(sessao, str) or not sessao.strip() or len(sessao) > 256:
+        raise ValueError("sessao_invalida")
+    if not isinstance(mensagem, str) or not mensagem.strip() or len(mensagem) > 20_000:
+        raise ValueError("mensagem_invalida")
     body = json.dumps({
         "mensagem": mensagem,
         "provedor": "nyxal",
         "sessao": sessao,
     }, ensure_ascii=False).encode("utf-8")
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
-    token = os.environ.get("NYXAL_API_TOKEN", "")
+    token = _config_setting("NYXAL_API_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
