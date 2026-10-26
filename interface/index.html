@@ -2290,6 +2290,18 @@
       showSubtitles(`Entendendo: "${msg}"...`);
 
       try {
+        if (typeof window.nyxalHandleImageIntent === 'function') {
+          const visual = await window.nyxalHandleImageIntent(msg);
+          if (visual && visual.handled) {
+            setHologramProcessing(false);
+            showSubtitles(visual.resposta || 'A solicitação visual foi processada.');
+            if (conversaContinua) {
+              await speakGoddessNyxVoice(visual.fala || visual.resposta || 'Concluído.', false);
+            }
+            return;
+          }
+        }
+
         const { response: res, data } = await nyxalApiPost('/api/chat', {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
@@ -3669,5 +3681,6 @@ async function fetchNyxosOperationalContext(){
   document.getElementById('nyxosOpLive').innerText='LIVE';
  }catch(e){const x=document.getElementById('nyxosOpLive');if(x){x.innerText='OFFLINE';x.className='text-[9px] font-mono text-rose-400';}}
 }
-</script></body>
+</script>  <script src="/interface/js/nyxal-voice-console.js"></script>
+</body>
 </html>
