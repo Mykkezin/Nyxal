@@ -19,6 +19,8 @@ on:
       - "nixal_capacidade_visual.py"
       - "nixal_seguranca_http.py"
       - "nixal_nucleo_conversacional.py"
+      - "nixal_transporte_conversacional.py"
+      - "nixal_integracao_sessao_transporte.py"
       - "nixal_contexto_historico_relevante.py"
       - "nixal_memoria_investigacao.py"
       - "nixal_memoria_conhecimento.py"
@@ -33,6 +35,8 @@ on:
       - "teste_nixal_integracao_gmail.py"
       - "teste_nucleo_contexto_persistente.py"
       - "teste_nucleo_conversacional.py"
+      - "teste_transporte_conversacional_56_5_2.py"
+      - "teste_integracao_sessao_transporte_56_5_4.py"
       - "teste_contexto_conversacional_56_5_5.py"
       - "teste_contexto_historico_relevante_56_4_21.py"
       - "teste_preparacao_investigacao_56_4_22.py"
@@ -67,6 +71,8 @@ on:
       - "nixal_capacidade_visual.py"
       - "nixal_seguranca_http.py"
       - "nixal_nucleo_conversacional.py"
+      - "nixal_transporte_conversacional.py"
+      - "nixal_integracao_sessao_transporte.py"
       - "nixal_contexto_historico_relevante.py"
       - "nixal_memoria_investigacao.py"
       - "nixal_memoria_conhecimento.py"
@@ -80,6 +86,8 @@ on:
       - "teste_nixal_integracao_gmail.py"
       - "teste_nucleo_contexto_persistente.py"
       - "teste_nucleo_conversacional.py"
+      - "teste_transporte_conversacional_56_5_2.py"
+      - "teste_integracao_sessao_transporte_56_5_4.py"
       - "teste_contexto_conversacional_56_5_5.py"
       - "teste_contexto_historico_relevante_56_4_21.py"
       - "teste_preparacao_investigacao_56_4_22.py"
@@ -170,6 +178,8 @@ jobs:
             deploy/voice/verificar_api_nyxal.py \
             deploy/voice/verificar_contrato_pipecat.py \
             nixal_nucleo_conversacional.py \
+            nixal_transporte_conversacional.py \
+            nixal_integracao_sessao_transporte.py \
             nixal_contexto_historico_relevante.py \
             nixal_memoria_investigacao.py \
             nixal_memoria_conhecimento.py \
@@ -178,6 +188,8 @@ jobs:
             teste_api_security_auth.py \
             teste_nucleo_contexto_persistente.py \
             teste_nucleo_conversacional.py \
+            teste_transporte_conversacional_56_5_2.py \
+            teste_integracao_sessao_transporte_56_5_4.py \
             teste_contexto_conversacional_56_5_5.py \
             teste_contexto_historico_relevante_56_4_21.py \
             teste_preparacao_investigacao_56_4_22.py \
@@ -211,6 +223,8 @@ jobs:
             teste_nucleo_contexto_persistente \
             teste_memorias_persistencia_segura
           python3 teste_nucleo_conversacional.py
+          python3 teste_transporte_conversacional_56_5_2.py
+          python3 teste_integracao_sessao_transporte_56_5_4.py
           python3 -m unittest -v teste_api_security_auth.py
           python3 teste_contexto_conversacional_56_5_5.py
           python3 teste_contexto_historico_relevante_56_4_21.py
