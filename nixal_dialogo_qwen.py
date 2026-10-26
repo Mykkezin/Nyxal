@@ -172,9 +172,11 @@ class DialogoQwenNixal:
         if hub is None and not self._agent_hub_autodiscovery_done and provider_setting != "nyxal":
             self._agent_hub_autodiscovery_done = True
             try:
-                from nixal_agent_hub import NyxalAgentHub
+                from nixal_agent_hub import NyxalAgentHub, get_shared_agent_hub
 
-                candidate = NyxalAgentHub()
+                candidate = get_shared_agent_hub()
+                if candidate is None:
+                    candidate = NyxalAgentHub()
                 if provider_setting != "auto" or any(
                     candidate.provider_configured(name) for name in remote_providers
                 ):
