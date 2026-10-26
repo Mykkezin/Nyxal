@@ -111,9 +111,26 @@ class DialogoQwenNixal:
         mensagens: list[dict[str, str]] = [
             {
                 "role": "system",
-                "content": self.PROMPT_SISTEMA,
+                "content": self.PROMPT_SISTEMA + "\\n\\nEstilo conversacional:\\n" + self.PROMPT_ESTILO_PROVEDOR,
             }
         ]
+
+        # Mantém a orientação especializada também no Qwen local, quando nenhum
+        # provedor remoto está configurado ou quando o fallback é necessário.
+        try:
+            from nixal_intent_router import classificar_intencao
+            from nixal_agent_hub import PROMPTS_ESPECIALIZADOS
+
+            intent = classificar_intencao(texto)
+            specialist_prompt = PROMPTS_ESPECIALIZADOS.get(intent["classe"])
+            if specialist_prompt:
+                mensagens[0]["content"] += (
+                    "\\n\\nDiretrizes especializadas da Nyxal:\\n" + specialist_prompt
+                )
+        except (ImportError, AttributeError, TypeError):
+            # A conversa local continua disponível caso a pilha de roteamento
+            # esteja ausente em um uso standalone ou durante testes isolados.
+            pass
 
         if historico is not None:
             for item in historico:
