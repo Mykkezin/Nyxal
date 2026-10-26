@@ -40,6 +40,6 @@ jobs:
       - name: Verify system Python 3.12
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compilar M5.19
-        run: python -m py_compile nixal_adaptador_sandbox_fisico.py nixal_auditoria_atuacao.py nixal_gateway_atuacao.py nixal_plano_central_controle.py nixal_ciclo_residente.py executar_nyxos_residente.py teste_m5_19_integracao_residente_atuacao.py
+        run: python3 -m py_compile nixal_adaptador_sandbox_fisico.py nixal_auditoria_atuacao.py nixal_gateway_atuacao.py nixal_plano_central_controle.py nixal_ciclo_residente.py executar_nyxos_residente.py teste_m5_19_integracao_residente_atuacao.py
       - name: Executar teste M5.19
-        run: python teste_m5_19_integracao_residente_atuacao.py
+        run: python3 teste_m5_19_integracao_residente_atuacao.py
