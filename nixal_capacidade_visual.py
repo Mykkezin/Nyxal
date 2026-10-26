@@ -711,6 +711,7 @@ class CapacidadeVisualGeminiNixOS:
 
         image = None
         output_image_found = False
+        invalid_image_candidate = False
         text_parts: list[str] = []
         if isinstance(result, dict):
             output_text = result.get("output_text")
@@ -718,11 +719,19 @@ class CapacidadeVisualGeminiNixOS:
                 text_parts.append(output_text.strip())
             output_image = result.get("output_image")
             if isinstance(output_image, dict):
+                output_image_data = output_image.get("data")
+                output_image_mime = output_image.get("mime_type") or "image/png"
                 image = _validar_imagem_saida(
-                    output_image.get("data"),
-                    output_image.get("mime_type") or "image/png",
+                    output_image_data,
+                    output_image_mime,
                 )
                 output_image_found = image is not None
+                if (
+                    image is None
+                    and isinstance(output_image_data, str)
+                    and output_image_data.strip()
+                ):
+                    invalid_image_candidate = True
         steps = result.get("steps", []) if isinstance(result, dict) else []
         for step in steps if isinstance(steps, list) else []:
             if not isinstance(step, dict) or step.get("type") != "model_output":
@@ -737,13 +746,20 @@ class CapacidadeVisualGeminiNixOS:
                     if isinstance(text_value, str) and text_value.strip():
                         text_parts.append(text_value.strip())
                 elif block_type == "image" and not output_image_found:
+                    candidate_data = item.get("data")
+                    candidate_mime = item.get("mime_type") or "image/png"
                     candidate_image = _validar_imagem_saida(
-                        item.get("data"),
-                        item.get("mime_type") or "image/png",
+                        candidate_data,
+                        candidate_mime,
                     )
                     if candidate_image is not None:
                         # Quando há várias imagens válidas, a última é a saída final.
                         image = candidate_image
+                    elif (
+                        isinstance(candidate_data, str)
+                        and candidate_data.strip()
+                    ):
+                        invalid_image_candidate = True
 
         # Compatibilidade defensiva com respostas antigas do endpoint Gemini.
         if image is None:
@@ -758,18 +774,31 @@ class CapacidadeVisualGeminiNixOS:
                         text_parts.append(item["text"].strip())
                     data = item.get("inlineData") or item.get("inline_data")
                     if isinstance(data, dict):
+                        candidate_data = data.get("data")
+                        candidate_mime = (
+                            data.get("mimeType")
+                            or data.get("mime_type")
+                            or "image/png"
+                        )
                         candidate_image = _validar_imagem_saida(
-                            data.get("data"),
-                            data.get("mimeType") or data.get("mime_type") or "image/png",
+                            candidate_data,
+                            candidate_mime,
                         )
                         if candidate_image is not None:
                             image = candidate_image
                             break
+                        if (
+                            isinstance(candidate_data, str)
+                            and candidate_data.strip()
+                        ):
+                            invalid_image_candidate = True
 
         if image is None:
             status = result.get("status") if isinstance(result, dict) else None
             if status in {"failed", "cancelled", "incomplete"}:
                 raise RuntimeError(f"Gemini Image não concluiu a geração (status: {status}).")
+            if invalid_image_candidate:
+                raise RuntimeError("Gemini retornou dados de imagem inválidos.")
             raise RuntimeError("Gemini respondeu sem imagem. Tente descrever melhor a edição ou consulte a cota do modelo.")
 
         try:
