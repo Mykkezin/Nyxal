@@ -219,12 +219,17 @@
           const protocolAllowed =
             destination.protocol === "http:" || destination.protocol === "https:";
           const hostAllowed = allowedHosts.has(destination.hostname.toLowerCase());
-          // The splash may only return to the Nyxal API/display port, not arbitrary localhost services.
+          // The splash may only open the local Nyxal display root, never arbitrary API paths.
           const endpointPortAllowed = destination.port === "8010";
+          const pathAllowed =
+            destination.pathname === "/" || destination.pathname === "/index.html";
+          const noExtraComponents = !destination.search && !destination.hash;
           if (
             protocolAllowed &&
             hostAllowed &&
             endpointPortAllowed &&
+            pathAllowed &&
+            noExtraComponents &&
             !destination.username &&
             !destination.password
           ) {
