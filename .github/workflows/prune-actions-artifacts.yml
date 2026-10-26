@@ -16,7 +16,7 @@ concurrency:
 jobs:
   prune-project-snapshots:
     name: Limpar snapshots redundantes do projeto
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 5
     steps:
       - name: Remover apenas pacotes completos com mais de três dias
