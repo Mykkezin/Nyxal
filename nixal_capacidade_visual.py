@@ -19,9 +19,9 @@ ALLOWED_MIME = {"image/png", "image/jpeg", "image/webp"}
 def _assinatura_compativel(binary: bytes, mime_type: str) -> bool:
     """Verifica a assinatura do conteúdo para impedir MIME/Base64 incoerentes."""
     if mime_type == "image/png":
-        return binary.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+        return binary.startswith(b"\x89PNG\r\n\x1a\n")
     if mime_type == "image/jpeg":
-        return binary.startswith(b"\\xff\\xd8\\xff")
+        return binary.startswith(b"\xff\xd8\xff")
     if mime_type == "image/webp":
         return len(binary) >= 12 and binary[:4] == b"RIFF" and binary[8:12] == b"WEBP"
     return False
