@@ -78,10 +78,15 @@ class DialogoQwenNixal:
         else:
             self.cliente = ollama
 
+        # Injetado pela API; ausente no modo de testes e no uso standalone.
+        self.agent_hub: Any | None = None
+
     def responder(
         self,
         texto: str,
         historico: list[dict[str, str]] | None = None,
+        *,
+        sessao: str | None = None,
     ) -> dict[str, Any]:
         if not isinstance(texto, str) or not texto.strip():
             return {
@@ -130,6 +135,54 @@ class DialogoQwenNixal:
                 "content": texto.strip(),
             }
         )
+
+        hub = self.agent_hub
+        provider_setting = os.environ.get("NYXAL_AGENT_PROVIDER", "auto").strip().lower() or "auto"
+        remote_providers = ("hermes", "openai", "gemini", "grok", "letta")
+        should_try_hub = hub is not None and provider_setting != "nyxal"
+        if should_try_hub and provider_setting == "auto":
+            try:
+                should_try_hub = any(hub.provider_configured(name) for name in remote_providers)
+            except Exception:
+                should_try_hub = False
+
+        if should_try_hub:
+            try:
+                external_history = [
+                    {"role": item["role"], "content": item["content"]}
+                    for item in mensagens[1:-1]
+                    if item.get("role") in {"user", "assistant"}
+                    and isinstance(item.get("content"), str)
+                    and item["content"].strip()
+                ][-20:]
+                routed = hub.responder(
+                    texto.strip(),
+                    sessao=sessao,
+                    provedor=provider_setting,
+                    historico_externo=external_history,
+                    prompt_sistema_extra=self.PROMPT_SISTEMA,
+                )
+                answer = routed.get("resposta") if isinstance(routed, dict) else None
+                if (
+                    isinstance(routed, dict)
+                    and routed.get("sucesso") is True
+                    and routed.get("fallback_local") is not True
+                    and isinstance(answer, str)
+                    and answer.strip()
+                ):
+                    return {
+                        "sucesso": True,
+                        "estado": "resposta_gerada",
+                        "origem": "nixal_agent_hub",
+                        "resposta": answer.strip(),
+                        "modelo": routed.get("provedor", "roteador_nyxal"),
+                        "roteamento": routed.get("roteamento"),
+                        "permanente": False,
+                        "versao_dialogo": self.VERSAO,
+                    }
+            except Exception:
+                # O provedor remoto não derruba a conversa; continua para o Qwen local.
+                pass
 
         try:
             resposta = self.cliente.chat(
