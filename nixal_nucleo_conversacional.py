@@ -271,6 +271,7 @@ class NucleoConversacionalNixal:
             resposta_dialogo = self.dialogo.responder(
                 texto_dialogo,
                 historico=historico,
+                sessao=sessao,
             )
 
             if resposta_dialogo.get("sucesso") is True:
