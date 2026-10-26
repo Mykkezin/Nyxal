@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - ".gitignore"
+      - "log_capacidades_nixal.json"
+      - "log_nyxal_runtime.json"
       - "nixal_capacidades.py"
       - "nixal_runtime.py"
       - "teste_limites_armazenamento.py"
@@ -22,6 +24,8 @@ on:
       - main
     paths:
       - ".gitignore"
+      - "log_capacidades_nixal.json"
+      - "log_nyxal_runtime.json"
       - "nixal_capacidades.py"
       - "nixal_runtime.py"
       - "teste_limites_armazenamento.py"
