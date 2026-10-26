@@ -41,6 +41,7 @@ class CompositorNixalStub:
 
 
 class DialogoQwenNixalStub:
+    FONTE = "dialogo_qwen_nixal"
     VERSAO = "56.5.5"
 
 
