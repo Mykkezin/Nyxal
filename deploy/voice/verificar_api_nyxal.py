@@ -12,15 +12,46 @@ import json
 import os
 import sys
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
+
+from nixal_seguranca_http import host_loopback
 
 
 API_BASE = os.environ.get("NYXAL_API_BASE", "http://127.0.0.1:8010").rstrip("/")
 TIMEOUT_SECONDS = 180
 
 
-def request_json(path: str, payload: dict | None = None) -> tuple[int, dict]:
+def _request_headers(api_base: str) -> dict[str, str]:
+    """Authenticate local smoke requests without permitting remote misrouting."""
+    try:
+        parsed = urlsplit(api_base)
+        _ = parsed.port
+    except ValueError as error:
+        raise RuntimeError("NYXAL_API_BASE não é uma URL válida.") from error
+
+    if (
+        parsed.scheme.lower() not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise RuntimeError("NYXAL_API_BASE precisa ser uma URL HTTP(S) sem credenciais, query ou fragmento.")
+
+    if not host_loopback(parsed.hostname):
+        raise RuntimeError("O smoke test só pode acessar a API local em localhost/loopback.")
+
     headers = {"Accept": "application/json"}
+    token = os.environ.get("NYXAL_API_TOKEN", "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def request_json(path: str, payload: dict | None = None) -> tuple[int, dict]:
+    headers = _request_headers(API_BASE)
     data = None
     method = "GET"
     if payload is not None:
