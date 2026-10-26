@@ -101,6 +101,9 @@ COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
 VPS_NYXOS = VpsNyxOS()
 AMD_DEVELOPER_CLOUD = AmdDeveloperCloud()
 AGENTE_NYXAL = NyxalAgentHub()
+# O chat principal usa o mesmo roteador quando há provedores remotos configurados.
+# O núcleo conversacional continua responsável por memória, contexto histórico e contrato.
+NUCLEO_CONVERSACIONAL.dialogo.agent_hub = AGENTE_NYXAL
 OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
 CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
