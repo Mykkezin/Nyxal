@@ -542,53 +542,88 @@
     });
   }
 
-  function generateImage() {
+  async function generateImage(promptOverride) {
     var promptField = document.getElementById("nvcImagePrompt");
     var status = document.getElementById("nvcImageStatus");
     var output = document.getElementById("nvcImageOutput");
-    var prompt = String(promptField.value || "").trim();
+    var prompt = String(promptOverride || (promptField && promptField.value) || "").trim();
     if (!prompt) {
-      status.textContent = "Descreva a imagem antes de gerar.";
-      return;
+      if (status) status.textContent = "Descreva a imagem antes de gerar.";
+      return { sucesso: false, mensagem: "Descreva a imagem antes de gerar." };
     }
     if (prompt.length > 4000) {
-      status.textContent = "A descrição ultrapassa o limite de 4.000 caracteres.";
-      return;
+      if (status) status.textContent = "A descrição ultrapassa o limite de 4.000 caracteres.";
+      return { sucesso: false, mensagem: "A descrição ultrapassa 4.000 caracteres." };
     }
+    if (promptField) promptField.value = prompt;
     var button = document.getElementById("nvcImageGenerate");
-    button.disabled = true;
-    status.textContent = "Solicitando geração visual ao provedor configurado…";
-    output.replaceChildren();
-    fetch(apiUrl("/api/agent/image"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: prompt })
-    }).then(function (response) {
-      return response.json().then(function (payload) {
-        if (!response.ok || payload.sucesso === false) throw new Error(payload.motivo || payload.estado || "O provedor não gerou a imagem.");
-        return payload;
+    if (button) button.disabled = true;
+    if (status) status.textContent = "Solicitando geração visual ao provedor configurado…";
+    if (output) output.replaceChildren();
+    try {
+      var response = await fetch(apiUrl("/api/agent/image"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt })
       });
-    }).then(function (payload) {
-      if (!payload.imagem_base64 || !payload.mime_type) throw new Error("A API respondeu sem dados de imagem.");
+      var payload = await response.json();
+      if (!response.ok || payload.sucesso === false) {
+        throw new Error(payload.motivo || payload.estado || "O provedor não gerou a imagem.");
+      }
+      if (!payload.imagem_base64 || !payload.mime_type) {
+        throw new Error("A API respondeu sem dados de imagem.");
+      }
       var img = document.createElement("img");
       img.alt = prompt;
       img.loading = "lazy";
       img.src = "data:" + payload.mime_type + ";base64," + payload.imagem_base64;
-      output.appendChild(img);
+      if (output) output.appendChild(img);
       var actions = element("div", "nvc-row");
       var download = element("a", "nvc-button", "Salvar imagem");
       download.href = img.src;
       download.download = "nyxal-imagem-" + new Date().toISOString().replace(/[:.]/g, "-") + "." + (payload.mime_type.indexOf("jpeg") >= 0 ? "jpg" : payload.mime_type.indexOf("webp") >= 0 ? "webp" : "png");
       download.style.textDecoration = "none";
       actions.appendChild(download);
-      output.appendChild(actions);
-      status.textContent = String(payload.mensagem || "Imagem gerada.") + (Array.isArray(payload.avisos) && payload.avisos.length ? " • " + payload.avisos.join(" • ") : "");
-    }).catch(function (error) {
-      status.textContent = "Geração indisponível: " + String(error.message || error) + " Confira a credencial do provedor visual e a conexão.";
-    }).finally(function () {
-      button.disabled = false;
-    });
+      if (output) output.appendChild(actions);
+      var successMessage = String(payload.mensagem || "Imagem gerada.");
+      if (Array.isArray(payload.avisos) && payload.avisos.length) {
+        successMessage += " • " + payload.avisos.join(" • ");
+      }
+      if (status) status.textContent = successMessage;
+      return { sucesso: true, mensagem: successMessage, payload: payload };
+    } catch (error) {
+      var errorMessage = "Geração indisponível: " + String(error.message || error) + " Confira a credencial do provedor visual e a conexão.";
+      if (status) status.textContent = errorMessage;
+      return { sucesso: false, mensagem: errorMessage };
+    } finally {
+      if (button) button.disabled = false;
+    }
   }
+
+  function extractConversationalImagePrompt(message) {
+    var text = String(message || "").trim();
+    var match = text.match(/^(?:(?:por favor|nyxal)[,;:\s!-]*)?(?:(?:gere|gera|gerar|crie|cria|criar|desenhe|desenha|desenhar|produza|produz|faça|faz)\s+|quero\s+(?:(?:criar|fazer|gerar)\s+)?|preciso\s+de\s+)(?:uma?\s+)?(?:imagem|ilustração|ilustracao|arte|figura|desenho|wallpaper|papel\s+de\s+parede|logo|logotipo|capa)\b(.*)$/i);
+    if (!match) return null;
+    var prompt = String(match[1] || "").replace(/^[\s:;,.-]*(?:(?:de|do|da|dos|das|sobre|com|mostrando|representando|para)\s+)?/i, "").trim();
+    return prompt.length ? prompt : null;
+  }
+
+  window.nyxalHandleImageIntent = async function (message) {
+    var prompt = extractConversationalImagePrompt(message);
+    if (!prompt) return { handled: false };
+    setView("image");
+    setWorkspaceOpen(true);
+    var result = await generateImage(prompt);
+    var responseText = result.sucesso
+      ? "A imagem está pronta no painel de ferramentas da Nyxal."
+      : "Não consegui gerar a imagem. " + String(result.mensagem || "O provedor visual não retornou uma imagem.");
+    return {
+      handled: true,
+      resposta: responseText,
+      fala: result.sucesso ? "Pronto. GereI a imagem e ela está visível no display." : responseText,
+      sucesso: result.sucesso
+    };
+  };
 
   function handleKeyboard(event) {
     if (event.altKey && event.code === "Space") {
