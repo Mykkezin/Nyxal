@@ -69,7 +69,6 @@ on:
       - "teste_ciclo_evolucao_ae4.py"
       - "teste_descoberta_continua_ae5.py"
       - "deploy/systemd/**"
-      - ".github/workflows/nyxal-nivel9-validation.yml"
   workflow_dispatch:
 
 permissions:
