@@ -270,7 +270,7 @@ class ContextoHistoricoRelevanteNixal:
             }
 
         consulta_normalizada = " ".join(self._tokens_consulta(consulta))
-        registros = self._memoria.listar()[-500:]
+        registros = self._memoria.listar_recent(500)
         candidatos: list[tuple[float, int, dict[str, Any]]] = []
 
         for indice, registro in enumerate(registros):
