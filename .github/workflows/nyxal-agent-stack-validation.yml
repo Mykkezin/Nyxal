@@ -9,6 +9,8 @@ on:
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
+      - "nixal_intent_router.py"
+      - "nixal_responses_api.py"
       - "nixal_observabilidade_sistema.py"
       - "nixal_integracao_gmail.py"
       - "nixal_integracao_google.py"
@@ -46,6 +48,8 @@ on:
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
+      - "nixal_intent_router.py"
+      - "nixal_responses_api.py"
       - "nixal_observabilidade_sistema.py"
       - "nixal_integracao_gmail.py"
       - "nixal_integracao_google.py"
@@ -103,6 +107,8 @@ jobs:
             nyxal_web_api.py \
             nixal_display_routes.py \
             nixal_agent_hub.py \
+            nixal_intent_router.py \
+            nixal_responses_api.py \
             nixal_observabilidade_sistema.py \
             nixal_integracao_gmail.py \
             nixal_capacidade_visual.py \
