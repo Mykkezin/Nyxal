@@ -43,8 +43,15 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('api.open-meteo.com/v1/forecast', self.console)
         self.assertIn('3 * 60 * 60 * 1000', self.console)
         self.assertIn('event.code === "Space"', self.console)
-        for mode in ('cyber', 'data', 'image', 'reflection'):
+        for mode in ('cyber', 'reverse', 'data', 'image', 'reflection'):
             self.assertIn('"' + mode + '"', self.console)
+
+    def test_reverse_engineering_has_explicit_ui_entry_and_scope(self):
+        self.assertIn('data-nvc-view="reverse"', self.console)
+        self.assertIn('id="nvcReverseStart"', self.console)
+        self.assertIn("startReverseEngineeringMode", self.console)
+        self.assertIn("ambiente isolado", self.console)
+        self.assertIn('"7": "reverse"', self.console)
 
 
 if __name__ == "__main__":
