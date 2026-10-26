@@ -83,7 +83,7 @@ jobs:
       - name: Checkout without optional submodules
         uses: actions/checkout@v4
         with:
-        persist-credentials: false
+          persist-credentials: false
           submodules: false
       - name: Verify system Python 3.12
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
@@ -97,7 +97,7 @@ jobs:
           npm run build
       - name: Compile integrations
         run: |
-          python -m compileall -q \
+          python3 -m compileall -q \
             nyxal_web_api.py \
             nixal_display_routes.py \
             nixal_agent_hub.py \
@@ -131,7 +131,7 @@ jobs:
           bash -n deploy/voice/diagnosticar_runtime_local.sh
       - name: Run focused unit tests
         run: |
-          python -m unittest -v \
+          python3 -m unittest -v \
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
             teste_nixal_observabilidade_sistema \
