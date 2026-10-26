@@ -6,8 +6,6 @@ on:
       - main
     paths:
       - ".github/workflows/actions-runner-smoke.yml"
-  workflow_dispatch:
-
 permissions:
   contents: read
 
