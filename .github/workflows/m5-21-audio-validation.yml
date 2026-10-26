@@ -17,6 +17,10 @@ on:
       - "nixal_audio_nyxos.py"
       - "teste_m5_21_audio_nyxos.py"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 

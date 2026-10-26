@@ -17,6 +17,10 @@ on:
       - "teste_llc5_evidencia_longitudinal.py"
       - ".github/workflows/llc-validation.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
