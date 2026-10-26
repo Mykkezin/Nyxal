@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
@@ -18,7 +19,35 @@ from urllib.request import Request, urlopen
 from nixal_seguranca_http import host_loopback
 
 
-API_BASE = os.environ.get("NYXAL_API_BASE", "http://127.0.0.1:8010").rstrip("/")
+ENV_FILE = Path.home() / ".config" / "nyxal" / "nyxal.env"
+
+
+def _setting(name: str, default: str = "") -> str:
+    """Read the process environment first, then a simple KEY=value env file."""
+    if name in os.environ:
+        return os.environ[name].strip()
+    try:
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+            item = line.strip()
+            if not item or item.startswith("#"):
+                continue
+            if item.startswith("export "):
+                item = item[7:].lstrip()
+            key, separator, value = item.partition("=")
+            if not separator or key.strip() != name:
+                continue
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+                value = value[1:-1]
+            else:
+                value = value.split(" #", 1)[0].rstrip()
+            return value
+    except OSError:
+        pass
+    return default
+
+
+API_BASE = _setting("NYXAL_API_BASE", "http://127.0.0.1:8010").rstrip("/")
 TIMEOUT_SECONDS = 180
 
 
@@ -44,7 +73,7 @@ def _request_headers(api_base: str) -> dict[str, str]:
         raise RuntimeError("O smoke test só pode acessar a API local em localhost/loopback.")
 
     headers = {"Accept": "application/json"}
-    token = os.environ.get("NYXAL_API_TOKEN", "").strip()
+    token = _setting("NYXAL_API_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
     return headers
