@@ -2,9 +2,14 @@ name: Nyxal Agent Stack Validation
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - feat/durable-investigation-context-20261026
   push:
-    branches: [feat/nyxal-agent-stack-current-main-20261009, fix/display-root-route-20261009]
+    branches:
+      - feat/nyxal-agent-stack-current-main-20261009
+      - fix/display-root-route-20261009
+      - fix/durable-memory-corruption-guard-20261026
   workflow_dispatch:
 
 permissions:
@@ -42,6 +47,13 @@ jobs:
             nixal_observabilidade_sistema.py \
             nixal_integracao_gmail.py \
             nixal_capacidade_visual.py \
+            nixal_nucleo_conversacional.py \
+            nixal_contexto_historico_relevante.py \
+            nixal_memoria_investigacao.py \
+            nixal_memoria_conhecimento.py \
+            nixal_dialogo_qwen.py \
+            teste_nucleo_contexto_persistente.py \
+            teste_memorias_persistencia_segura.py \
             scripts/autorizar_gmail_nyxal.py \
             scripts/configurar_hermes_whatsapp_policy.py \
             scripts/nyxal_letta_memory.py
@@ -63,4 +75,6 @@ jobs:
             teste_nixal_capacidade_visual \
             teste_nixal_integracao_google \
             teste_nixal_integracao_gmail \
-            teste_nixal_vps
+            teste_nixal_vps \
+            teste_nucleo_contexto_persistente \
+            teste_memorias_persistencia_segura
