@@ -3,7 +3,7 @@
 
   var METRICS_REFRESH_MS = 15000;
   var WEATHER_REFRESH_MS = 10 * 60 * 1000;
-  var REFLECTION_INTERVAL_MS = 3 * 60 * 60 * 1000;
+  var REFLECTION_INTERVAL_MS = 3 * 60 * 1000;
   var activeView = "chat";
   var clockTimer = null;
   var weatherTimer = null;
@@ -171,11 +171,11 @@
           '<div id="nvcImageStatus" class="nvc-status" aria-live="polite"></div><div id="nvcImageOutput" class="nvc-image-output"></div>',
         '</section>',
         '<section class="nvc-pane" data-nvc-pane="reflection" hidden>',
-          '<h3>Reflexões Nyxal</h3><p>Uma reflexão original aparece ao abrir a interface e é renovada a cada três horas enquanto ela está em execução.</p>',
+          '<h3>Reflexões Nyxal</h3><p>Uma reflexão original aparece ao abrir a interface e é renovada a cada três minutos enquanto ela está em execução.</p>',
           '<div id="nvcReflectionFull" class="nvc-card"></div><div class="nvc-row"><button id="nvcReflectionSpeak" class="nvc-button" type="button">Ouvir reflexão</button><button id="nvcReflectionNext" class="nvc-button" type="button">Próxima reflexão</button></div>',
         '</section>',
       '</section>',
-      '<aside id="nvcReflectionCard" class="nvc-reflection" aria-live="polite" hidden><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span class="nvc-muted" style="font-size:9px;letter-spacing:.16em">REFLEXÃO NYXAL • A CADA 3 HORAS</span><button id="nvcReflectionDismiss" type="button" class="nvc-close" aria-label="Dispensar reflexão">✕</button></div><div id="nvcReflectionText" class="nvc-reflection-text"></div><div class="nvc-row"><button id="nvcReflectionListen" type="button" class="nvc-button">Ouvir</button><button id="nvcReflectionOpen" type="button" class="nvc-button">Abrir filosofia</button></div></aside>'
+      '<aside id="nvcReflectionCard" class="nvc-reflection" aria-live="polite" hidden><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span class="nvc-muted" style="font-size:9px;letter-spacing:.16em">REFLEXÃO NYXAL • A CADA 3 MINUTOS</span><button id="nvcReflectionDismiss" type="button" class="nvc-close" aria-label="Dispensar reflexão">✕</button></div><div id="nvcReflectionText" class="nvc-reflection-text"></div><div class="nvc-row"><button id="nvcReflectionListen" type="button" class="nvc-button">Ouvir</button><button id="nvcReflectionOpen" type="button" class="nvc-button">Abrir filosofia</button></div></aside>'
     ].join("");
     surface.appendChild(dock);
 
