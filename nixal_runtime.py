@@ -2234,8 +2234,9 @@ class NyxalRuntime:
             dir=str(caminho.parent),
         )
         try:
-            os.fchmod(descritor, 0o600)
+            # Transfer the descriptor immediately so failures still close it.
             with os.fdopen(descritor, "w", encoding="utf-8") as arquivo:
+                os.fchmod(arquivo.fileno(), 0o600)
                 arquivo.write(payload)
                 arquivo.flush()
                 os.fsync(arquivo.fileno())
