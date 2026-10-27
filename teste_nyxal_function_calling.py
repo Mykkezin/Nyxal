@@ -204,6 +204,24 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             {"config": {"modo": "read"}, "itens": ["a", "b", "c"]},
         )[0])
 
+    def test_tipo_de_esquema_desconhecido_falha_fechado(self):
+        manager = GerenciadorCapacidades()
+        manager.registrar(
+            nome="tipo_desconhecido_teste",
+            descricao="Teste",
+            objetivo="Teste",
+            exemplos=["Teste"],
+            funcao=lambda valor: {"valor": valor},
+            argumentos={"valor": {"tipo": "object livre sem schema", "obrigatorio": True}},
+            dominios=["teste"],
+            evidencias_dominio=["teste"],
+        )
+        valido, erro = manager.validar_argumentos(
+            "tipo_desconhecido_teste", {"valor": "não tratar como string válida"},
+        )
+        self.assertFalse(valido)
+        self.assertIn("tipo não suportado", erro or "")
+
     def test_numero_nao_finito_e_politica_desconhecida_falham_fechados(self):
         manager = GerenciadorCapacidades()
         manager.registrar(
