@@ -739,6 +739,29 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(len(cliente.chamadas), 2)
         self.assertNotIn("tools", cliente.chamadas[0])
 
+    def test_revisor_recebe_proposta_com_solicitacao_de_entrada_longa(self):
+        cliente = ClienteFake([
+            {"message": {"content": "PROPOSTA_ARQUITETO_CHECAVEL: dividir em etapas e validar cada etapa."}},
+            {"message": {"content": "REVISOR_CONFIRMOU_PROPOSTA: incluir regressão e observar limites."}},
+            {"message": {"content": "Plano revisado com critérios claros."}},
+        ])
+        with patch.dict(os.environ, {"NYXAL_LLM_PROVIDER": "ollama"}):
+            dialogo = DialogoQwenNixal(cliente=cliente)
+        texto = "Use modo especialistas para revisar este plano. " + ("x" * 10000)
+
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=None):
+            resultado = dialogo.responder(texto)
+
+        self.assertTrue(resultado["sucesso"])
+        self.assertTrue(resultado["coordenacao_especialistas"]["ativa"])
+        entrada_revisor = cliente.chamadas[1]["messages"][1]["content"]
+        self.assertLessEqual(len(entrada_revisor), dialogo.MAX_SPECIALIST_INPUT_CHARS)
+        self.assertIn("Solicitação original do usuário:", entrada_revisor)
+        self.assertIn("Proposta não verificada do perfil Arquiteto:", entrada_revisor)
+        self.assertIn("PROPOSTA_ARQUITETO_CHECAVEL", entrada_revisor)
+        contexto_final = cliente.chamadas[2]["messages"][1]["content"]
+        self.assertIn("REVISOR_CONFIRMOU_PROPOSTA", contexto_final)
+
     def test_coordenacao_especialista_tem_limite_de_caracteres_por_passagem(self):
         cliente = ClienteFake([
             {"message": {"content": "A" * 2400}},
