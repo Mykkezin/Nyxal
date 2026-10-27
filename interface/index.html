@@ -464,6 +464,289 @@
     }
     #nyxalVoiceSurface #nyxalCharacterSvg { width: 100% !important; height: 100% !important; max-width: 320px; }
     #nyxalVoiceSurface #nyxalAvatarStateLabel { display: none !important; }
+
+    /* Refined voice-only composition: a larger holographic presence and one calm control surface. */
+    #nyxalVoiceSurface .nyxal-voice-content {
+      width: min(900px,94vw);
+      min-height: min(760px,96vh);
+      gap: 18px;
+      padding: clamp(16px,3vh,30px) 20px 16px;
+    }
+    #nyxalVoiceSurface .nyxal-voice-brand { color: #e9f5ff; }
+    #nyxalVoiceSurface .nyxal-voice-brand small { color: #8299b4; }
+    #nyxalVoiceSurface .nyxal-voice-center {
+      width: min(740px,96vw);
+      gap: 15px;
+    }
+    #nyxalVoiceStage {
+      width: min(430px,66vw);
+      height: min(430px,66vw);
+      max-height: 52vh;
+      max-width: 52vh;
+      min-width: 230px;
+      min-height: 230px;
+      isolation: isolate;
+    }
+    #nyxalVoiceStage::before {
+      content: "";
+      position: absolute;
+      inset: 3%;
+      z-index: 1;
+      border-radius: 50%;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 50% 43%, rgba(71,181,255,.19), rgba(37,99,235,.08) 34%, transparent 68%);
+      box-shadow: 0 0 90px rgba(28,105,185,.13);
+    }
+    #nyxalVoiceStage .nyxal-voice-ring {
+      z-index: 2;
+      border-color: rgba(125,211,252,.24);
+      box-shadow: 0 0 26px rgba(56,189,248,.035);
+    }
+    #nyxalVoiceStage .nyxal-voice-ring.ring-two {
+      border-style: dashed;
+      border-color: rgba(147,197,253,.2);
+      animation: nyxalVoiceRingDrift 32s linear infinite;
+    }
+    #nyxalVoiceStage .nyxal-voice-ring.ring-three {
+      border-color: rgba(125,211,252,.14);
+    }
+    #nyxalVoiceSurface #nyxalCharacterSvg {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 430px;
+      filter: drop-shadow(0 0 24px rgba(65,173,238,.13));
+    }
+    #nyxalVoiceSurface #nyxalAvatar { z-index: 10 !important; }
+    #nyxalVoiceSurface .nyxal-voice-face-frame {
+      position: absolute;
+      z-index: 13;
+      pointer-events: none;
+      left: 27%;
+      top: 15%;
+      width: 46%;
+      height: 60%;
+      opacity: .58;
+      background:
+        linear-gradient(#8cecff,#8cecff) left top / 21px 1px no-repeat,
+        linear-gradient(#8cecff,#8cecff) left top / 1px 21px no-repeat,
+        linear-gradient(#8cecff,#8cecff) right top / 21px 1px no-repeat,
+        linear-gradient(#8cecff,#8cecff) right top / 1px 21px no-repeat,
+        linear-gradient(#8cecff,#8cecff) left bottom / 21px 1px no-repeat,
+        linear-gradient(#8cecff,#8cecff) left bottom / 1px 21px no-repeat,
+        linear-gradient(#8cecff,#8cecff) right bottom / 21px 1px no-repeat,
+        linear-gradient(#8cecff,#8cecff) right bottom / 1px 21px no-repeat;
+      filter: drop-shadow(0 0 5px rgba(89,211,255,.3));
+      animation: nyxalVoiceFramePulse 4.8s ease-in-out infinite;
+    }
+    #nyxalVoiceSurface .nyxal-voice-scanline {
+      position: absolute;
+      z-index: 12;
+      left: 31%;
+      top: 14%;
+      width: 38%;
+      height: 61%;
+      border-radius: 48%;
+      overflow: hidden;
+      pointer-events: none;
+      opacity: .28;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(168,239,255,.22) 0,
+        rgba(168,239,255,.22) 1px,
+        transparent 1px,
+        transparent 5px
+      );
+      mask-image: radial-gradient(ellipse at center, #000 13%, transparent 78%);
+    }
+    #nyxalVoiceSurface .nyxal-voice-scanline::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -4px;
+      height: 7px;
+      background: linear-gradient(180deg, transparent, rgba(125,239,255,.8), rgba(59,130,246,.18), transparent);
+      box-shadow: 0 0 14px rgba(56,189,248,.32);
+      animation: nyxalVoiceScanSweep 3.6s ease-in-out infinite;
+    }
+    @keyframes nyxalVoiceScanSweep {
+      0% { transform: translateY(-6px); opacity: 0; }
+      14%,82% { opacity: .72; }
+      100% { transform: translateY(235px); opacity: 0; }
+    }
+    @keyframes nyxalVoiceFramePulse {
+      0%,100% { opacity: .36; }
+      50% { opacity: .82; }
+    }
+    @keyframes nyxalVoiceRingDrift { to { transform: rotate(360deg); } }
+    #nyxalVoiceSurface .nyxal-voice-control-card {
+      position: relative;
+      width: min(520px,90vw);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 17px 21px 15px;
+      border: 1px solid rgba(125,211,252,.22);
+      border-radius: 18px;
+      background: linear-gradient(145deg,rgba(9,20,36,.84),rgba(3,8,18,.78));
+      box-shadow: inset 0 1px 0 rgba(220,245,255,.045), 0 18px 56px rgba(0,0,0,.22);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+    #nyxalVoiceSurface .nyxal-voice-control-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 16%;
+      bottom: 16%;
+      width: 2px;
+      background: linear-gradient(transparent, rgba(125,211,252,.58), transparent);
+      pointer-events: none;
+    }
+    #nyxalVoiceSurface #nyxalVoicePrompt {
+      margin: 0;
+      color: #edf7ff;
+      font-size: clamp(15px,1.15vw,18px);
+      line-height: 1.45;
+      font-weight: 500;
+      text-align: center;
+      letter-spacing: .005em;
+    }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      align-self: center;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0;
+      padding: 6px 11px;
+      border: 1px solid rgba(148,163,184,.19);
+      border-radius: 999px;
+      background: rgba(5,13,25,.58);
+      color: #b5c8dc;
+      font: 500 10px/1.35 Inter,system-ui,sans-serif;
+      letter-spacing: .075em;
+      text-align: center;
+    }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: #73869c;
+      box-shadow: 0 0 7px rgba(115,134,156,.35);
+    }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus[data-state="listening"] {
+      color: #b8f7dd;
+      border-color: rgba(110,231,183,.22);
+    }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus[data-state="listening"]::before {
+      background: #6ee7b7;
+      box-shadow: 0 0 10px rgba(110,231,183,.65);
+    }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus[data-state="processing"] {
+      color: #d8c9ff;
+      border-color: rgba(196,181,253,.24);
+    }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus[data-state="processing"]::before {
+      background: #c4b5fd;
+      box-shadow: 0 0 10px rgba(196,181,253,.55);
+    }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus[data-state="speaking"] {
+      color: #b9efff;
+      border-color: rgba(125,211,252,.26);
+    }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus[data-state="speaking"]::before {
+      background: #7dd3fc;
+      box-shadow: 0 0 10px rgba(125,211,252,.65);
+    }
+    #nyxalVoiceSurface .nyxal-voice-diagnostics {
+      width: 100%;
+      gap: 8px;
+      margin: 0;
+      color: #93a9c0;
+      font: 10px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing: .055em;
+    }
+    #nyxalVoiceSurface .nyxal-voice-diagnostics-row { gap: 16px; }
+    #nyxalVoiceSurface .nyxal-voice-diagnostics-row > span { color: #8fa8c2; }
+    #nyxalVoiceSurface #nyxalVoiceRms { color: #dbf6ff; font-size: 10px; }
+    #nyxalVoiceSurface .nyxal-voice-rms-track {
+      height: 4px;
+      background: rgba(148,163,184,.14);
+    }
+    #nyxalVoiceSurface #nyxalVoiceRmsFill {
+      background: linear-gradient(90deg,#38bdf8,#6ee7b7);
+      box-shadow: 0 0 12px rgba(56,189,248,.33);
+    }
+    #nyxalVoiceSurface #nyxalVoiceActivity {
+      min-height: 14px;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: .045em;
+      color: #859ab2;
+    }
+    #nyxalVoiceSurface #nyxalVoiceActivity[data-active="true"] { color: #8ef3ca; }
+    #nyxalVoiceSurface #nyxalVoiceSubtitleMount {
+      width: min(100%,680px);
+      min-height: 0;
+      margin-top: 2px;
+    }
+    #nyxalVoiceSurface #nyxalVoiceSubtitleMount:empty { display: none; }
+    #nyxalVoiceSurface #aiSubtitlesText {
+      color: #d8e7f5 !important;
+      font-size: 14px !important;
+      line-height: 1.55 !important;
+    }
+    #nyxalVoiceSurface .nyxal-voice-footer {
+      width: min(880px,94vw);
+      color: #71849a;
+      padding-top: 8px;
+    }
+    #nyxalVoiceSurface #nyxalVoiceStop {
+      padding: 9px 15px;
+      background: rgba(5,14,27,.72);
+      border-color: rgba(125,211,252,.25);
+    }
+    #nyxalVoiceSurface #nyxalVoiceStop:hover {
+      color: #eaf8ff;
+      border-color: rgba(125,211,252,.5);
+      background: rgba(11,31,50,.82);
+    }
+    @media (max-height: 560px) {
+      #nyxalVoiceSurface .nyxal-voice-content { min-height: 100vh; padding-top: 10px; padding-bottom: 10px; gap: 8px; }
+      #nyxalVoiceStage {
+        width: min(300px,44vh);
+        height: min(300px,44vh);
+        min-width: 180px;
+        min-height: 180px;
+        max-height: 46vh;
+        max-width: 46vh;
+      }
+      #nyxalVoiceSurface .nyxal-voice-control-card { padding: 12px 15px 11px; gap: 7px; }
+      #nyxalVoiceSurface #nyxalVoicePrompt { font-size: 13px; }
+      #nyxalVoiceSurface #nyxalVoiceActivity { display: none; }
+    }
+    @media (max-width: 520px) {
+      #nyxalVoiceSurface .nyxal-voice-content { padding-left: 12px; padding-right: 12px; }
+      #nyxalVoiceStage { width: min(340px,74vw); height: min(340px,74vw); min-width: 210px; min-height: 210px; }
+      #nyxalVoiceSurface .nyxal-voice-control-card { width: min(520px,94vw); padding: 14px 14px 12px; }
+      #nyxalVoiceSurface .nyxal-voice-diagnostics { font-size: 9px; }
+      #nyxalVoiceSurface .nyxal-voice-footer { width: 94vw; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #nyxalVoiceStage .nyxal-voice-ring,
+      #nyxalVoiceSurface .nyxal-voice-face-frame,
+      #nyxalVoiceSurface .nyxal-voice-scanline,
+      #nyxalVoiceSurface .nyxal-voice-scanline::after {
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 
@@ -905,7 +1188,7 @@
           <div id="nyxalAvatar" class="nyxal-avatar relative z-10 flex h-full w-full items-center justify-center" data-state="idle" role="img" aria-label="Nyxal, presença digital autônoma">
             <svg id="nyxalCharacterSvg" viewBox="0 0 360 320" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-labelledby="nyxalCharacterTitle nyxalCharacterDesc" xmlns="http://www.w3.org/2000/svg">
               <title id="nyxalCharacterTitle">Nyxal — presença digital autônoma</title>
-              <desc id="nyxalCharacterDesc">Avatar vetorial da Nyxal com contornos de energia azul e ciano.</desc>
+              <desc id="nyxalCharacterDesc">Rosto holográfico feminino da Nyxal, com mapeamento facial ciano, pontos de telemetria e feixe de varredura.</desc>
               <defs>
                 <radialGradient id="nyxalHalo" cx="50%" cy="42%" r="60%">
                   <stop offset="0" stop-color="#7dd3fc" stop-opacity=".54"/>
@@ -913,10 +1196,22 @@
                   <stop offset="1" stop-color="#020617" stop-opacity="0"/>
                 </radialGradient>
                 <linearGradient id="nyxalSkin" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#f5e8f3"/>
-                  <stop offset=".55" stop-color="#a8c3e3"/>
-                  <stop offset="1" stop-color="#4b7097"/>
+                  <stop offset="0" stop-color="#dffbff" stop-opacity=".96"/>
+                  <stop offset=".48" stop-color="#6bd5f4" stop-opacity=".88"/>
+                  <stop offset="1" stop-color="#174d7b" stop-opacity=".86"/>
                 </linearGradient>
+                <linearGradient id="nyxalFaceScan" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#a5f3fc" stop-opacity="0"/>
+                  <stop offset=".45" stop-color="#a5f3fc" stop-opacity=".46"/>
+                  <stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
+                </linearGradient>
+                <filter id="nyxalHoloFaceGlow" x="-30%" y="-20%" width="160%" height="150%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="1.05" result="faceGlow"/>
+                  <feMerge><feMergeNode in="faceGlow"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+                <clipPath id="nyxalFaceDataClip">
+                  <path d="M143 111 Q145 84 180 81 Q215 84 217 111 L211 156 Q205 187 180 194 Q155 187 149 156 Z"/>
+                </clipPath>
                 <linearGradient id="nyxalHair" x1="0" y1="0" x2="1" y2="1">
                   <stop offset="0" stop-color="#d8efff"/>
                   <stop offset=".46" stop-color="#7299c5"/>
@@ -933,10 +1228,15 @@
                   @keyframes nyxalAvatarFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
                   @keyframes nyxalAvatarPulse { 0%,100% { opacity: .2; transform: scale(.96); } 50% { opacity: .62; transform: scale(1.05); } }
                   @keyframes nyxalOrbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                  @keyframes nyxalFaceScanSweep { 0% { transform: translateY(-18px); opacity: 0; } 16%,78% { opacity: .72; } 100% { transform: translateY(112px); opacity: 0; } }
+                  @keyframes nyxalFaceCircuitPulse { 0%,100% { opacity: .24; } 50% { opacity: .68; } }
                   .nyxal-avatar-float { transform-box: fill-box; transform-origin: center; animation: nyxalAvatarFloat 4.6s ease-in-out infinite; }
                   .nyxal-avatar-aura { transform-box: fill-box; transform-origin: center; animation: nyxalAvatarPulse 3.3s ease-in-out infinite; }
                   .nyxal-avatar-orbit { transform-box: fill-box; transform-origin: center; animation: nyxalOrbitSpin 30s linear infinite; }
-                  @media (prefers-reduced-motion: reduce) { .nyxal-avatar-float,.nyxal-avatar-aura,.nyxal-avatar-orbit { animation: none; } }
+                  .nyxal-face-data-line { fill:none; stroke:#a5f3fc; stroke-width:1.15; stroke-linecap:round; stroke-linejoin:round; animation:nyxalFaceCircuitPulse 4.1s ease-in-out infinite; }
+                  .nyxal-face-data-node { fill:#d9fbff; filter:url(#nyxalHoloFaceGlow); animation:nyxalFaceCircuitPulse 2.8s ease-in-out infinite; }
+                  .nyxal-face-scan-beam { transform-box:fill-box; transform-origin:center; animation:nyxalFaceScanSweep 3.8s ease-in-out infinite; }
+                  @media (prefers-reduced-motion: reduce) { .nyxal-avatar-float,.nyxal-avatar-aura,.nyxal-avatar-orbit,.nyxal-face-data-line,.nyxal-face-data-node,.nyxal-face-scan-beam { animation: none; } }
                 </style>
               </defs>
               <circle cx="180" cy="145" r="128" fill="url(#nyxalHalo)" class="nyxal-avatar-aura avatar-aura"/>
@@ -951,7 +1251,7 @@
                 <path d="M143 202 L180 253 L217 202 L205 290 L155 290 Z" fill="#071426" stroke="#8bdcff" stroke-opacity=".62" stroke-width="1"/>
                 <path d="M155 202 L180 231 L205 202" fill="none" stroke="#b5eaff" stroke-opacity=".72" stroke-width="2"/>
                 <path d="M160 185 L160 213 Q180 231 200 213 L200 185" fill="url(#nyxalSkin)"/>
-                <path d="M129 116 Q131 67 180 65 Q231 68 232 119 L224 162 Q217 193 180 201 Q143 193 136 162 Z" fill="url(#nyxalSkin)" stroke="#d8f2ff" stroke-opacity=".84" stroke-width="1.2"/>
+                <path d="M129 116 Q131 67 180 65 Q231 68 232 119 L224 162 Q217 193 180 201 Q143 193 136 162 Z" fill="url(#nyxalSkin)" fill-opacity=".9" stroke="#bdf7ff" stroke-opacity=".96" stroke-width="1.35" filter="url(#nyxalHoloFaceGlow)"/>
                 <path d="M128 130 Q115 91 139 65 Q159 43 190 52 Q227 50 238 88 Q243 109 231 138 L218 106 Q199 102 184 84 Q168 105 143 111 L140 150 Z" fill="url(#nyxalHair)" stroke="#b8e8ff" stroke-opacity=".72" stroke-width="1.2"/>
                 <path d="M141 130 Q155 119 169 130" fill="none" stroke="#172d4c" stroke-width="4" stroke-linecap="round"/>
                 <path d="M191 130 Q205 119 219 130" fill="none" stroke="#172d4c" stroke-width="4" stroke-linecap="round"/>
@@ -968,6 +1268,20 @@
                 <path d="M180 237 L180 274" stroke="#7dd3fc" stroke-opacity=".8" stroke-width="1.5"/>
                 <circle cx="180" cy="240" r="8" fill="#0b223c" stroke="#83ddff" stroke-width="1.2"/>
                 <path d="M180 233 L185 240 L180 247 L175 240 Z" fill="#a5f3fc"/>
+                <g class="nyxal-holo-face-data" clip-path="url(#nyxalFaceDataClip)" pointer-events="none">
+                  <path class="nyxal-face-data-line" d="M143 112 H157 L166 121 H194 L203 112 H217" opacity=".42"/>
+                  <path class="nyxal-face-data-line" d="M147 149 H164 L173 155 H187 L196 149 H213" opacity=".3" style="animation-delay:-1.2s"/>
+                  <path class="nyxal-face-data-line" d="M157 174 H170 L180 179 L190 174 H203" opacity=".35" style="animation-delay:-2.1s"/>
+                  <path class="nyxal-face-data-line" d="M180 83 V190" opacity=".18"/>
+                  <rect class="nyxal-face-scan-beam" x="141" y="81" width="78" height="15" fill="url(#nyxalFaceScan)" opacity=".86"/>
+                  <g>
+                    <circle class="nyxal-face-data-node" cx="148" cy="112" r="1.8"/>
+                    <circle class="nyxal-face-data-node" cx="212" cy="112" r="1.8" style="animation-delay:-.7s"/>
+                    <circle class="nyxal-face-data-node" cx="150" cy="150" r="1.5" style="animation-delay:-1.4s"/>
+                    <circle class="nyxal-face-data-node" cx="210" cy="150" r="1.5" style="animation-delay:-2.1s"/>
+                    <circle class="nyxal-face-data-node" cx="180" cy="181" r="1.8" style="animation-delay:-1s"/>
+                  </g>
+                </g>
               </g>
               <text x="180" y="308" font-family="Orbitron, sans-serif" font-size="10" letter-spacing="4" text-anchor="middle" fill="#a9d8f1">NYXAL · RESIDENTE</text>
             </svg>
@@ -2794,6 +3108,9 @@
         status.textContent = voiceConversationActive
           ? (voiceConversationBusy ? 'PROCESSANDO ÁUDIO' : 'MICROFONE ATIVO • ESCUTA LOCAL')
           : 'MICROFONE DESATIVADO';
+        status.dataset.state = !voiceConversationActive
+          ? 'idle'
+          : (voiceConversationBusy ? 'processing' : (voiceUiDormant ? 'standby' : 'listening'));
       }
       if (stop) stop.hidden = !voiceConversationActive;
     }
@@ -2807,17 +3124,21 @@
         '<div class="nyxal-voice-content">' +
           '<header class="nyxal-voice-brand"><span class="nyxal-voice-brand-dot"></span><span>NYXAL</span><small>VOICE · RESIDENTE</small></header>' +
           '<section class="nyxal-voice-center">' +
-            '<div id="nyxalVoiceStage" aria-label="Núcleo de voz">' +
+            '<div id="nyxalVoiceStage" aria-label="Núcleo holográfico da Nyxal">' +
               '<span class="nyxal-voice-ring ring-one"></span><span class="nyxal-voice-ring ring-two"></span><span class="nyxal-voice-ring ring-three"></span>' +
+              '<span class="nyxal-voice-face-frame" aria-hidden="true"></span>' +
+              '<span class="nyxal-voice-scanline" aria-hidden="true"></span>' +
             '</div>' +
-            '<p id="nyxalVoicePrompt">Toque no núcleo para ativar a conversa por voz</p>' +
-            '<div id="nyxalVoiceMiniStatus">MICROFONE DESATIVADO</div>' +
-            '<section class="nyxal-voice-diagnostics" aria-label="Diagnóstico do microfone" aria-live="polite">' +
-              '<div class="nyxal-voice-diagnostics-row"><span>NÍVEL DO MICROFONE</span><output id="nyxalVoiceRms">RMS —</output></div>' +
-              '<div class="nyxal-voice-rms-track" role="meter" aria-label="Nível RMS capturado" aria-valuemin="0" aria-valuemax="0.08"><span id="nyxalVoiceRmsFill"></span></div>' +
-              '<div id="nyxalVoiceActivity" data-active="false">AGUARDANDO CAPTURA DO MICROFONE</div>' +
+            '<section class="nyxal-voice-control-card" aria-label="Controles da conversa por voz">' +
+              '<p id="nyxalVoicePrompt">Toque no núcleo para iniciar a conversa</p>' +
+              '<div id="nyxalVoiceMiniStatus" data-state="idle">MICROFONE DESATIVADO</div>' +
+              '<section class="nyxal-voice-diagnostics" aria-label="Diagnóstico do microfone" aria-live="polite">' +
+                '<div class="nyxal-voice-diagnostics-row"><span>NÍVEL DO MICROFONE</span><output id="nyxalVoiceRms">RMS —</output></div>' +
+                '<div class="nyxal-voice-rms-track" role="meter" aria-label="Nível RMS capturado" aria-valuemin="0" aria-valuemax="0.08"><span id="nyxalVoiceRmsFill"></span></div>' +
+                '<div id="nyxalVoiceActivity" data-active="false">AGUARDANDO CAPTURA DO MICROFONE</div>' +
+              '</section>' +
+              '<div id="nyxalVoiceSubtitleMount"></div>' +
             '</section>' +
-            '<div id="nyxalVoiceSubtitleMount"></div>' +
           '</section>' +
           '<footer class="nyxal-voice-footer"><span>NYXOS · ESCUTA LOCAL</span><button id="nyxalVoiceStop" type="button" hidden>Pausar escuta</button></footer>' +
         '</div>';
@@ -2845,6 +3166,10 @@
 
     function setGlobeVoiceState(state) {
       setNyxalAvatarState(state);
+      const stage = document.getElementById('nyxalVoiceStage');
+      const miniStatus = document.getElementById('nyxalVoiceMiniStatus');
+      if (stage) stage.dataset.state = state;
+      if (miniStatus) miniStatus.dataset.state = state;
       const globe = document.getElementById('globeContainer');
       const hud = document.getElementById('globeVoiceState');
       const label = document.getElementById('globeVoiceStateText');
