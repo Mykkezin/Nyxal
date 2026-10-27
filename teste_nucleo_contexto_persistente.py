@@ -350,6 +350,19 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         self.assertNotIn("CONTEXTO DE INVESTIGAÇÕES ANTERIORES", texto_usuario)
         self.assertEqual(caminho_corrompido.read_text(encoding="utf-8"), conteudo_original)
 
+    def test_sanitizacao_de_contexto_redige_bearer_e_token_generico(self) -> None:
+        entrada = (
+            "Authorization: Bearer bearer_secret_123 "
+            "token=plain_secret_456 refresh_token=refresh_secret_789"
+        )
+        saida = NucleoConversacionalNixal._texto_curto_contexto(entrada)
+        self.assertNotIn("bearer_secret_123", saida)
+        self.assertNotIn("plain_secret_456", saida)
+        self.assertNotIn("refresh_secret_789", saida)
+        self.assertIn("Bearer [REDACTED]", saida)
+        self.assertIn("token=[REDACTED]", saida)
+        self.assertIn("authorization=[REDACTED]", saida)
+
     def test_consulta_lexical_rejeita_limite_invalido(self) -> None:
         for limite in (0, -1, 6, True, "3"):
             with self.subTest(limite=limite):
