@@ -103,5 +103,14 @@ class VpsNyxOSTest(unittest.TestCase):
             )
 
 
+    def test_cloud_init_sink_rejeita_chave_maliciosa_antes_de_invocar_ferramentas(self) -> None:
+        with self.assertRaisesRegex(ValueError, "ssh_public_key_invalida"):
+            VpsNyxOS()._criar_cloud_init(
+                nome="vps-teste",
+                username="ubuntu",
+                ssh_public_key=_ed25519_fixture() + "\n  runcmd: [malicious]",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
