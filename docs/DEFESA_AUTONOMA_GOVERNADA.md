@@ -10,7 +10,7 @@ A defesa não pode dar à Nyxal autoridade irrestrita apenas por detectar uma am
 
 O módulo `nixal_defesa_autonoma.py` implementa uma política determinística isolada. Ele recebe eventos estruturados e devolve recomendações auditáveis. **Não executa nenhuma recomendação**: não altera firewall, não mata processos, não revoga credenciais, não isola serviços, não modifica arquivos e não faz conexões de rede.
 
-O workflow dedicado executa os testes unitários dessa política. A conexão com API, observabilidade, AE/LLC ou o executor do host permanece trabalho futuro, dependente de revisão e validação.
+O workflow dedicado executa os testes unitários dessa política e cobre a fronteira HTTP da integração inicial. A API observa falhas de Bearer autenticadas no próprio handler e mantém apenas metadados mínimos em memória; não há executor nem persistência dessa trilha. A integração com outros sensores e qualquer executor do host permanecem trabalho futuro, dependente de revisão e validação.
 
 ## Ciclo de resposta
 
@@ -92,3 +92,12 @@ python -m unittest teste_defesa_autonoma.py -v
 ```
 
 Os testes cobrem os limiares, expiração da janela, exceção para loopback, confiança, allowlists, aprovação humana, identificadores e ausência de efeitos colaterais. Um teste aprovado valida o comportamento determinístico do motor, não demonstra que a Nyxal inteira esteja protegida nem que alguma defesa esteja ativa no host.
+
+
+## Integração inicial com a API — observação, não contenção
+
+A API conecta falhas de Bearer observadas dentro do próprio handler ao motor determinístico. O cliente não pode escolher a fonte do sinal, confiança, decisão ou alvo. A trilha mantém no máximo 256 registros em memória; `GET /api/agent/defesa` usa a política de acesso das rotas internas e retorna até 50 registros recentes.
+
+O evento usa somente o endereço do peer TCP observado pelo servidor. `Forwarded`, `X-Forwarded-For` e `X-Real-IP` não são aceitos como identidade. Com proxy local, o peer pode ser o próprio proxy; até existir configuração explícita de proxy confiável e testes correspondentes, a origem remota não é inferida. O histórico é volátil e não registra tokens, corpos, query strings ou cabeçalhos.
+
+Esta etapa apenas calcula e expõe recomendações auditáveis. A API não bloqueia IPs, limita taxa, reinicia serviços, revoga credenciais ou altera arquivos. `executor_ativo=false`, `executor_autorizado=false` e `efeito_executado=false` permanecem invariantes. Um executor separado depende de revisão de segurança, aprovação explícita, idempotência, expiração e rollback.
