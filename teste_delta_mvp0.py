@@ -90,7 +90,7 @@ class TesteDeltaMVP0(unittest.TestCase):
                 return_value=CompletedProcess(
                     args=["getfacl", "-cp", str(self.storage)],
                     returncode=0,
-                    stdout="user:libvirt-qemu:rwx\\ndefault:user:libvirt-qemu:rwx\\n",
+                    stdout="user:libvirt-qemu:rwx\ndefault:user:libvirt-qemu:rwx\n",
                     stderr="",
                 ),
             ))
