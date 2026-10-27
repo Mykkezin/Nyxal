@@ -723,5 +723,61 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         status_route.assert_not_called()
 
 
+    def test_falhas_autenticacao_alimentam_defesa_sem_segredos(self) -> None:
+        api.API_TOKEN = "token-secreto-de-teste"
+        defesa_original = api.DEFESA_AUTONOMA_NYXAL
+        eventos_originais = list(api.DEFESA_EVENTOS_RECIENTES)
+        def restaurar_defesa() -> None:
+            api.DEFESA_AUTONOMA_NYXAL = defesa_original
+            api.DEFESA_EVENTOS_RECIENTES.clear()
+            api.DEFESA_EVENTOS_RECIENTES.extend(eventos_originais)
+        self.addCleanup(restaurar_defesa)
+        api.DEFESA_AUTONOMA_NYXAL = api.DefesaAutonoma()
+        api.DEFESA_EVENTOS_RECIENTES.clear()
+
+        status, _ = self.request("GET", "/api/agent/contexto")
+        self.assertEqual(status, 401)
+        status, _ = self.request(
+            "GET", "/api/agent/contexto",
+            headers={
+                "Authorization": "Bearer TOKEN-INCORRETO",
+                "X-Forwarded-For": "203.0.113.99",
+                "Forwarded": "for=203.0.113.99",
+            },
+        )
+        self.assertEqual(status, 403)
+
+        status, body = self.request(
+            "GET", "/api/agent/defesa",
+            headers={"Authorization": "Bearer token-secreto-de-teste"},
+        )
+        self.assertEqual(status, 200, body)
+        payload = json.loads(body)
+        eventos = payload.get("eventos", [])
+        self.assertEqual(len(eventos), 2)
+        self.assertEqual(payload.get("executor_ativo"), False)
+        self.assertEqual(payload.get("persistencia"), False)
+        self.assertEqual(payload.get("eventos_em_memoria_maximo"), 256)
+        self.assertNotIn("token-secreto-de-teste", body)
+        self.assertNotIn("TOKEN-INCORRETO", body)
+        for evento in eventos:
+            self.assertEqual(evento.get("tipo"), "falha_autenticacao")
+            self.assertEqual(evento.get("fonte_sinal"), "api-auth")
+            self.assertEqual(evento.get("origem_ip"), "127.0.0.1")
+            self.assertFalse(evento.get("executor_autorizado"))
+            self.assertFalse(evento.get("efeito_executado"))
+            self.assertNotIn("headers", evento)
+            self.assertFalse(any(
+                recomendacao.get("tipo") in {
+                    "limitar_taxa_origem",
+                    "bloqueio_temporario_origem",
+                }
+                for recomendacao in evento.get("recomendacoes", [])
+            ))
+            for recomendacao in evento.get("recomendacoes", []):
+                self.assertFalse(recomendacao.get("executor_autorizado"))
+                self.assertFalse(recomendacao.get("efeito_executado"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
