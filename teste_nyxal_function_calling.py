@@ -89,7 +89,10 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             item["function"]["name"]
             for item in dialogo._especificacoes_ferramentas(manager)
         }
-        self.assertTrue({"obter_hora", "pesquisar_web", "consultar_metar_taf", "executar_diagnostico"} <= nomes)
+        self.assertTrue({
+            "obter_hora", "pesquisar_web", "consultar_metar_taf",
+            "consultar_notam_aisweb", "consultar_cartas_aisweb", "executar_diagnostico",
+        } <= nomes)
         for proibida in (
             "listar_arquivos", "ler_arquivo", "ler_estado_corpo", "ler_memoria_corporal",
             "buscar_arquivos", "ler_arquivo_usuario", "consultar_emails_google",
@@ -126,16 +129,69 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             argumentos={"titulo": {"tipo": "string", "obrigatorio": True}, "conteudo": {"tipo": "string", "obrigatorio": True}},
             dominios=["teste"],
             evidencias_dominio=["teste"],
+            politica="acao_com_pedido_explicito",
         )
         dialogo = DialogoQwenNixal(cliente=ClienteFake([]))
-        resultado = dialogo._executar_chamada_ferramenta(
-            manager,
-            mensagem_tool("salvar_nota", {"titulo": "segredo", "conteudo": "não gravar"})["message"]["tool_calls"][0],
-            "Por favor, anote isso.",
-        )
+        with patch.dict(os.environ, {"NYXAL_ENABLE_MUTABLE_TOOLS": "1"}):
+            resultado = dialogo._executar_chamada_ferramenta(
+                manager,
+                mensagem_tool("salvar_nota", {"titulo": "segredo", "conteudo": "não gravar"})["message"]["tool_calls"][0],
+                "Não anote isso.",
+            )
         self.assertFalse(resultado["ok"])
-        self.assertIn("mutável desativada", resultado["resultado"])
+        self.assertIn("falta pedido explícito", resultado["resultado"])
         self.assertEqual(efeitos, [])
+
+    def test_politica_do_registro_bloqueia_escrita_sem_autorizacao(self):
+        manager = GerenciadorCapacidades()
+        efeitos = []
+        manager.registrar(
+            nome="acao_teste",
+            descricao="Teste",
+            objetivo="Teste",
+            exemplos=["Teste"],
+            funcao=lambda conteudo: efeitos.append(conteudo) or {"ok": True},
+            argumentos={"conteudo": {"tipo": "string", "obrigatorio": True}},
+            dominios=["teste"],
+            evidencias_dominio=["teste"],
+            politica="acao_com_pedido_explicito",
+        )
+        bloqueado = manager.executar("acao_teste", conteudo="não executar")
+        self.assertFalse(bloqueado.sucesso)
+        self.assertEqual(efeitos, [])
+        permitido = manager.executar(
+            "acao_teste", autorizacao_explicita=True, conteudo="executar após autorização",
+        )
+        self.assertTrue(permitido.sucesso)
+        self.assertEqual(efeitos, ["executar após autorização"])
+
+    def test_pedido_de_anotacao_permite_negacao_dentro_do_conteudo(self):
+        self.assertTrue(
+            DialogoQwenNixal._pedido_explicitamente_autorizou(
+                "salvar_nota", "Anote que não quero esquecer a data da prova."
+            )
+        )
+        self.assertFalse(
+            DialogoQwenNixal._pedido_explicitamente_autorizou(
+                "salvar_nota", "Não anote nada."
+            )
+        )
+
+    def test_salvar_nota_com_opt_in_e_ordem_explicita(self):
+        manager = GerenciadorCapacidades()
+        with tempfile.TemporaryDirectory() as tmp:
+            store = tools.NotasLembretesNixOS(Path(tmp) / "notas.json")
+            registrar_capacidades_operacionais(manager, incluir_acoes=True, store=store)
+            dialogo = DialogoQwenNixal(cliente=ClienteFake([]))
+            chamada = mensagem_tool(
+                "salvar_nota", {"titulo": "Prova", "conteudo": "Não esquecer a data"},
+            )["message"]["tool_calls"][0]
+            with patch.dict(os.environ, {"NYXAL_ENABLE_MUTABLE_TOOLS": "1"}):
+                result = dialogo._executar_chamada_ferramenta(
+                    manager, chamada, "Anote que não quero esquecer a data da prova.",
+                )
+            self.assertTrue(result["ok"])
+            self.assertEqual(store.listar("notas")["notas"][0]["titulo"], "Prova")
 
     def test_ferramenta_desconhecida_nao_e_executada(self):
         manager = self.manager()
@@ -149,7 +205,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(resultado["resultado"], "Ferramenta não registrada/permitida.")
 
     def test_loop_de_ferramentas_tem_limite_global_de_chamadas(self):
-        respostas = [mensagem_tool("obter_hora", {}, f"call-{i}") for i in range(4)]
+        respostas = [mensagem_tool("obter_hora", {}, f"call-{i}") for i in range(3)]
         respostas.append({"message": {"content": "Resposta final sem nova ferramenta."}})
         cliente = ClienteFake(respostas)
         dialogo = DialogoQwenNixal(cliente=cliente)
@@ -158,9 +214,9 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             resultado = dialogo.responder("Que horas são?")
         self.assertTrue(resultado["sucesso"])
         self.assertEqual(resultado["quantidade_ferramentas"], dialogo.MAX_TOOL_CALLS)
-        self.assertEqual(len(cliente.chamadas), dialogo.MAX_TOOL_CALLS + 2)
+        self.assertEqual(len(cliente.chamadas), dialogo.MAX_TOOL_CALLS + 1)
         self.assertEqual(resultado["resposta"], "Resposta final sem nova ferramenta.")
-        self.assertNotIn("tool_calls", cliente.chamadas[-1]["messages"][-1])
+        self.assertNotIn("tools", cliente.chamadas[-1])
 
     def test_resultado_de_ferramenta_e_limitado(self):
         cliente = ClienteFake([mensagem_tool("obter_hora", {}), {"message": {"content": "final"}}])
