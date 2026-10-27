@@ -162,6 +162,30 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         )
 
 
+    def test_limite_nao_faz_chamada_de_modelo_extra(self):
+        cliente = ClienteFake([mensagem_tool("obter_hora", {}) for _ in range(10)])
+        dialogo = DialogoQwenNixal(cliente=cliente)
+        manager = GerenciadorCapacidades()
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=manager):
+            result = dialogo.responder("Que horas são?")
+        self.assertTrue(result["sucesso"])
+        self.assertEqual(len(result["ferramentas_executadas"]), dialogo.MAX_TOOL_CALLS)
+        self.assertEqual(len(cliente.chamadas), dialogo.MAX_TOOL_CALLS + 1)
+        self.assertNotIn("tools", cliente.chamadas[-1])
+        self.assertIn("limite", result["resposta"].lower())
+
+    def test_pergunta_que_menciona_acao_nao_autoriza(self):
+        exemplos = [
+            ("salvar_nota", "Como faço para salvar nota?"),
+            ("salvar_nota", "Não anote nada."),
+            ("criar_lembrete", "Você pode me lembrar de estudar?"),
+            ("abrir_aplicativo", "Como abrir o terminal?"),
+            ("abrir_aplicativo", "Não abra o navegador."),
+        ]
+        for nome, texto in exemplos:
+            with self.subTest(nome=nome, texto=texto):
+                self.assertFalse(DialogoQwenNixal._pedido_explicitamente_autorizou(nome, texto))
+
     def test_escrita_bloqueada_sem_autorizacao_no_gerenciador(self):
         manager = GerenciadorCapacidades()
         manager.registrar(
