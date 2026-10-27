@@ -12,6 +12,7 @@ import asyncio
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -24,11 +25,21 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from nixal_seguranca_http import host_loopback
+from nyxal_voice_prosody import (
+    choose_speech_profile,
+    clean_speech_text,
+    prepare_spoken_reply,
+)
 
 # Load user-local settings without overriding values injected by systemd/shell.
 import aiohttp
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import TranscriptionFrame, TTSSpeakFrame, VADUserStartedSpeakingFrame
+from pipecat.frames.frames import (
+    TranscriptionFrame,
+    TTSSpeakFrame,
+    TTSUpdateSettingsFrame,
+    VADUserStartedSpeakingFrame,
+)
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import (
     PipelineParams,
@@ -64,14 +75,8 @@ def _clamped_float(name: str, default: float, low: float, high: float) -> float:
 
 
 def _spoken_text(value: str) -> str:
-    """Remove common Markdown decoration before local TTS, preserving wording."""
-    text = re.sub(r"```.*?```", " Omiti um bloco de código da resposta. ", value, flags=re.S)
-    text = re.sub(r"`([^\`]+)`", r"\1", text)
-    text = re.sub(r"!?\[([^\]]+)\]\([^)]*\)", r"\1", text)
-    text = re.sub(r"(?m)^\s{0,3}(?:[-*+]\s+|\d+[.)]\s+)", "", text)
-    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s+", "", text)
-    text = re.sub(r"[*_~]{1,3}", "", text)
-    return re.sub(r"\s+", " ", text).strip()
+    """Clean Markdown and preserve phrase boundaries for natural speech."""
+    return clean_speech_text(value)
 
 
 def _extract_reply(payload: Any) -> str:
@@ -197,6 +202,8 @@ class NyxalChatProcessor(FrameProcessor):
         self,
         api_base: str,
         turn_state: TurnState,
+        tts: KokoroTTSService,
+        base_speed: float,
         session_id: str | None = None,
     ) -> None:
         super().__init__()
@@ -204,6 +211,8 @@ class NyxalChatProcessor(FrameProcessor):
         # A session must be created by /api/chat before the agent can reuse it.
         self._session_id: str | None = session_id
         self._turn_state = turn_state
+        self._tts = tts
+        self._base_speed = base_speed
         self._http: aiohttp.ClientSession | None = None
 
     async def setup(self, setup: FrameProcessorSetup) -> None:
@@ -263,6 +272,7 @@ class NyxalChatProcessor(FrameProcessor):
                 return
 
             generation_at_request = self._turn_state.generation
+            api_request_started_at = time.perf_counter()
             logger.info("[nyxal-voz] transcrição concluída; consultando o núcleo conversacional")
             try:
                 reply = await self._ask_nyxal(utterance)
@@ -274,6 +284,9 @@ class NyxalChatProcessor(FrameProcessor):
                 )
                 reply = "Não consegui acessar o núcleo da Nyxal agora. Tente falar novamente."
 
+            elapsed_ms = round((time.perf_counter() - api_request_started_at) * 1000)
+            logger.info("[nyxal-voz] tempo até resposta completa do núcleo: {} ms", elapsed_ms)
+
             # A newer voice turn may have started while the API was responding.
             # Never play an answer to an utterance that the user has already interrupted.
             if generation_at_request != self._turn_state.generation:
@@ -281,9 +294,28 @@ class NyxalChatProcessor(FrameProcessor):
                 return
 
             if reply:
+                profile = choose_speech_profile(
+                    utterance,
+                    reply,
+                    self._base_speed,
+                )
+                spoken_reply = prepare_spoken_reply(reply, utterance, profile)
+                logger.info(
+                    "[nyxal-voz] perfil de fala={} velocidade={}",
+                    profile.style,
+                    profile.speed,
+                )
+                # Settings updates are routed to this TTS service before its next utterance.
+                await self.push_frame(
+                    TTSUpdateSettingsFrame(
+                        delta=KokoroTTSService.Settings(speed=profile.speed),
+                        service=self._tts,
+                    ),
+                    FrameDirection.DOWNSTREAM,
+                )
                 logger.info("[nyxal-voz] iniciando reprodução de voz")
                 await self.push_frame(
-                    TTSSpeakFrame(reply),
+                    TTSSpeakFrame(spoken_reply),
                     FrameDirection.DOWNSTREAM,
                 )
             return
@@ -351,7 +383,6 @@ async def main() -> None:
             initial_prompt="Conversa natural em português brasileiro sobre a assistente Nyxal e o sistema NyxOS.",
         ),
     )
-    chat = NyxalChatProcessor(api_base, turn_state)
     tts = KokoroTTSService(
         settings=KokoroTTSService.Settings(
             voice=voice,
@@ -359,6 +390,7 @@ async def main() -> None:
             speed=speed,
         ),
     )
+    chat = NyxalChatProcessor(api_base, turn_state, tts, speed)
 
     pipeline = Pipeline(
         [
