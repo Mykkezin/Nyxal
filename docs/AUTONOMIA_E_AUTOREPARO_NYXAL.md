@@ -39,6 +39,23 @@ bash deploy/systemd/diagnosticar_nyxos_local.sh
 
 O instalador recarrega as unidades e reinicia explicitamente a API e o residente. Ele desativa apenas a unidade legada `nyxal-desktop.service`, responsável pelo orbe flutuante que sobrepunha os aplicativos, e mantém `nyxos-interface.service` habilitado como a interface correta da Nyxal no navegador. O launcher principal abre uma janela normal, sem modo quiosque. O auto-reparo continua podendo recuperar essa interface principal porque ela permanece habilitada.
 
+### Perfil de baixo consumo da interface
+
+A interface principal reduz o custo visual sem retirar seus controles: o núcleo WebGL fica limitado a cerca de 30 FPS, com resolução e geometria reduzidas; o fundo animado trabalha perto de 20 FPS e pausa quando a página está oculta. Os loops de análise de voz rodam a 25 Hz e reutilizam buffers de amostras para evitar alocações repetidas. O polling de status, observabilidade e contexto foi espaçado e protegido contra requisições sobrepostas com timeout.
+
+No modo de voz, a tela mostra o estado real da API e, quando o backend fornece os dados, CPU e RAM com a hora da última resposta. O painel operacional também sinaliza falha de consulta com horário, sem continuar a afirmar `LIVE`.
+
+### Recuperação da interface a cada duas horas
+
+O serviço `nyxos-interface-reset.service` usa `systemctl --user try-restart nyxos-interface.service` e é acionado por `nyxos-interface-reset.timer` a cada duas horas. Ele reinicia **somente a interface do navegador**, não o computador, a API ou o residente. O uso de `try-restart` é intencional: se a interface tiver sido parada manualmente, o timer não a reativa. A reciclagem encerra a sessão de voz que estiver em andamento e abre novamente a interface configurada pelo serviço.
+
+Para verificar a programação e os estados instalados:
+
+```bash
+systemctl --user list-timers nyxos-interface-reset.timer
+systemctl --user status nyxos-interface-reset.timer nyxos-interface-reset.service nyxos-interface.service --no-pager
+```
+
 Se a API ou o residente continuar falhando, colete o diagnóstico sem exibir o arquivo de segredos:
 
 ```bash
