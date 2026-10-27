@@ -58,8 +58,9 @@ def _texto_seguro(valor: Any, limite: int = _MAX_TEXTO_CANDIDATO) -> str:
     if not isinstance(valor, str):
         return ""
     texto = re.sub(r"\s+", " ", valor).strip()
+    texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
     texto = re.sub(
-        r"(?i)(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|password|senha|secret|credential)\s*[:=]\s*[^\s,;]+",
+        r"(?i)\b(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)\b\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+",
         r"\1=[REDACTED]",
         texto,
     )
