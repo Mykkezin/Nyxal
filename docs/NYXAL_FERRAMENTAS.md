@@ -36,6 +36,7 @@ Para ativar, peça explicitamente, por exemplo: `Use modo especialistas para pla
 - Cada passagem tem entrada limitada a 8.000 caracteres e saída limitada a 1.500 caracteres. São no máximo duas passagens extra por pedido.
 - Os resumos são tratados como rascunhos não confiáveis. A resposta final usa o ciclo atual de function calling, limites, opt-ins e autorização; a coordenação não concede permissões e não executa ações por si só.
 - Falhas em qualquer passagem são fail-open: a resposta normal continua, sem bloquear o diálogo.
+- A resposta estruturada do núcleo expõe apenas um resumo allowlisted do modo (`estado`, perfis, quantidade de passagens e flags de execução das passagens). Os resumos completos, prompts e textos internos não são retornados pela API.
 
 ### Opt-ins do function calling
 
