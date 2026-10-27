@@ -69,6 +69,14 @@ class VoiceProsodyTests(unittest.TestCase):
             clean_speech_text("## Status\n- Voz **feminina** ativada."),
             "Status. Voz feminina ativada.",
         )
+        self.assertEqual(
+            clean_speech_text("## Status!\n- Já está pronto."),
+            "Status! Já está pronto.",
+        )
+        self.assertEqual(
+            clean_speech_text("1. Primeiro item.\n2. Segundo item!"),
+            "Primeiro item. Segundo item!",
+        )
 
     def test_intentional_ellipses_are_preserved_as_pause_cues(self):
         self.assertEqual(
