@@ -361,6 +361,40 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             ["call-1", "call-2", "call-3"],
         )
 
+    def test_esquema_da_ferramenta_preserva_objetos_e_arrays_aninhados(self):
+        schema = DialogoQwenNixal._esquema_json_argumento({
+            "tipo": "object",
+            "properties": {
+                "config": {
+                    "tipo": "object",
+                    "obrigatorio": True,
+                    "properties": {
+                        "modo": {"tipo": "string", "enum": ["read", "safe"], "obrigatorio": True},
+                        "tentativas": {"tipo": "integer", "minimo": 1, "maximo": 3},
+                    },
+                    "required": ["modo"],
+                },
+                "itens": {
+                    "tipo": "array",
+                    "max_items": 2,
+                    "items": {"tipo": "string", "max_length": 12},
+                },
+            },
+            "required": ["config"],
+        })
+
+        self.assertEqual(schema["type"], "object")
+        self.assertEqual(schema["required"], ["config"])
+        self.assertFalse(schema["additionalProperties"])
+        config = schema["properties"]["config"]
+        self.assertEqual(config["required"], ["modo"])
+        self.assertFalse(config["additionalProperties"])
+        self.assertEqual(config["properties"]["modo"]["enum"], ["read", "safe"])
+        self.assertEqual(config["properties"]["tentativas"]["minimum"], 1)
+        self.assertEqual(config["properties"]["tentativas"]["maximum"], 3)
+        self.assertEqual(schema["properties"]["itens"]["maxItems"], 2)
+        self.assertEqual(schema["properties"]["itens"]["items"]["maxLength"], 12)
+
     def test_resultado_de_ferramenta_e_limitado(self):
         cliente = ClienteFake([mensagem_tool("obter_hora", {}), {"message": {"content": "final"}}])
         dialogo = DialogoQwenNixal(cliente=cliente)
