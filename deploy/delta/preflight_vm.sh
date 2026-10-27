@@ -7,11 +7,13 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 PASS=0
 WARN=0
+BLOCKED=0
 FAIL=0
 
 ok()   { printf 'PASS  %s\n' "$1"; PASS=$((PASS + 1)); }
 warn() { printf 'WARN  %s\n' "$1"; WARN=$((WARN + 1)); }
 fail() { printf 'FAIL  %s\n' "$1"; FAIL=$((FAIL + 1)); }
+block() { printf 'BLOCK %s\n' "$1"; BLOCKED=$((BLOCKED + 1)); }
 info() { printf 'INFO  %s\n' "$1"; }
 
 has_cmd() { command -v "$1" >/dev/null 2>&1; }
@@ -92,21 +94,26 @@ else
   warn 'Comando df não encontrado; espaço livre não avaliado'
 fi
 
-# VM provisioning dependencies already used by NyxOS VPS management.
-for tool in virsh virt-install virt-host-validate cloud-localds ssh-keygen; do
+# Required VM provisioning dependencies already used by NyxOS VPS management.
+for tool in virsh virt-install cloud-localds ssh-keygen; do
   if has_cmd "$tool"; then
     ok "Ferramenta disponível: ${tool}"
   else
-    warn "Ferramenta ausente: ${tool}"
+    block "Ferramenta necessária para criar a VM ausente: ${tool}"
   fi
 done
+if has_cmd virt-host-validate; then
+  ok 'Ferramenta opcional disponível: virt-host-validate'
+else
+  warn 'Ferramenta opcional ausente: virt-host-validate'
+fi
 
 # Read-only checks: verify the system libvirt connection and default NAT network.
 if has_cmd virsh; then
   if virsh -c qemu:///system list --all >/dev/null 2>&1; then
     ok 'Conexão libvirt qemu:///system operacional'
   else
-    warn 'virsh não conseguiu consultar qemu:///system; verificar serviço/permissões antes de criar uma VM'
+    block 'virsh não conseguiu consultar qemu:///system; verificar serviço/permissões antes de criar uma VM'
   fi
 
   net_info="$(virsh -c qemu:///system net-info default 2>/dev/null || true)"
@@ -114,18 +121,20 @@ if has_cmd virsh; then
     if printf '%s\n' "${net_info}" | grep -Eq '^Active:[[:space:]]+yes'; then
       ok 'Rede libvirt default existe e está ativa'
     else
-      warn 'Rede libvirt default existe, mas não parece ativa; não a iniciaremos automaticamente'
+      block 'Rede libvirt default existe, mas não está ativa; não a iniciaremos automaticamente'
     fi
   else
-    warn 'Rede libvirt default não encontrada ou indisponível'
+    block 'Rede libvirt default não encontrada ou indisponível'
   fi
+else
+  block 'virsh ausente; libvirt não pode ser verificado'
 fi
 
 # SSH public keys are needed by the existing cloud-init provisioner. Do not print key contents.
 if compgen -G "${HOME}/.ssh/*.pub" >/dev/null; then
   ok 'Pelo menos uma chave pública SSH existe em ~/.ssh'
 else
-  warn 'Nenhuma chave pública SSH encontrada em ~/.ssh; a VM não pode ser provisionada com o método cloud-init atual'
+  block 'Nenhuma chave pública SSH encontrada em ~/.ssh; a VM não pode ser provisionada com o método cloud-init atual'
 fi
 
 BASE_IMAGE="${NYXOS_VPS_BASE_IMAGE:-${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}/ubuntu-24.04-server-cloudimg-amd64.img}"
@@ -150,8 +159,8 @@ else
   warn 'bootc-image-builder ausente: ferramenta de imagem Fedora bootc não detectada'
 fi
 
-printf '\nResumo: %d PASS | %d WARN | %d FAIL\n' "$PASS" "$WARN" "$FAIL"
-if (( FAIL > 0 )); then
+printf '\nResumo: %d PASS | %d WARN | %d BLOQUEIOS | %d FAIL\n' "$PASS" "$WARN" "$BLOCKED" "$FAIL"
+if (( FAIL > 0 || BLOCKED > 0 )); then
   printf '%s\n' 'RESULTADO=BLOCKED — corrija os requisitos essenciais antes do spike de VM.'
   exit 2
 elif (( WARN > 0 )); then
