@@ -79,19 +79,26 @@ else
 fi
 
 if has_cmd df; then
-  avail_kib="$(df -Pk "${ROOT}" | awk 'NR==2 {print $4}')"
+  VM_STORAGE="${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}"
+  STORAGE_PROBE="${VM_STORAGE}"
+  while [[ ! -d "${STORAGE_PROBE}" && "${STORAGE_PROBE}" != "/" ]]; do
+    STORAGE_PROBE="$(dirname -- "${STORAGE_PROBE}")"
+  done
+  avail_kib="$(df -Pk "${STORAGE_PROBE}" | awk 'NR==2 {print $4}')"
   if [[ "${avail_kib:-}" =~ ^[0-9]+$ ]]; then
     disk_gib=$((avail_kib / 1024 / 1024))
-    if (( disk_gib >= 30 )); then
-      ok "Espaço livre no filesystem do checkout: ${disk_gib} GiB (recomendado >= 30 GiB)"
+    if (( disk_gib < 10 )); then
+      block "Espaço livre no filesystem do armazenamento VM ${STORAGE_PROBE}: ${disk_gib} GiB; mínimo do provisionador: 10 GiB"
+    elif (( disk_gib >= 30 )); then
+      ok "Espaço livre no armazenamento VM ${STORAGE_PROBE}: ${disk_gib} GiB"
     else
-      warn "Espaço livre: ${disk_gib} GiB; reservar espaço para imagem e snapshots antes de baixar/buildar imagens grandes"
+      warn "Espaço livre no armazenamento VM ${STORAGE_PROBE}: ${disk_gib} GiB; reservar espaço extra para atualizações/snapshots"
     fi
   else
-    warn 'Não foi possível medir o espaço livre do filesystem do checkout'
+    block 'Não foi possível medir o espaço livre do armazenamento VM'
   fi
 else
-  warn 'Comando df não encontrado; espaço livre não avaliado'
+  block 'Comando df não encontrado; espaço livre do armazenamento VM não pode ser garantido'
 fi
 
 # Required VM provisioning dependencies already used by NyxOS VPS management.
