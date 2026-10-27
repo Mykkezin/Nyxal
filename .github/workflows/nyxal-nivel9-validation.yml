@@ -124,9 +124,10 @@ jobs:
         id: decision_policy
         run: python3 teste_decisao_autonoma_ci.py
 
-      - name: Suite Nível 9
       - name: Compile explicit authorization boundary
         run: python3 -m py_compile nixal_integracao_controlada.py nixal_proposta_integracao.py teste_nivel_9_integracao_autorizada.py
+
+      - name: Suite Nível 9
         run: python3 teste_nivel_9_suite_final.py
 
       - name: Test explicit authorization before integration
