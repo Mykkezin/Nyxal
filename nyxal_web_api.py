@@ -901,14 +901,20 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             motivos = motivos if isinstance(motivos, list) else []
             recomendacoes = decisao.get("recomendacoes")
             recomendacoes = recomendacoes if isinstance(recomendacoes, list) else []
+            # Cada recomendação é preparada exatamente uma vez para evitar
+            # criar duplicação idempotente durante a construção do mesmo evento.
+            planos_dry_run = preparar_planos_defesa_dry_run(recomendacoes)
             resumo_recomendacoes = []
+            indice_plano = 0
             for recomendacao in recomendacoes[:8]:
                 if not isinstance(recomendacao, dict):
                     continue
-                # O gate de preparação é a autoridade para requisitos de aprovação,
-                # não os campos declarados dentro da recomendação.
-                resultado_preparacao = preparar_planos_defesa_dry_run([recomendacao])
-                resumo_plano = resultado_preparacao[0] if resultado_preparacao else {}
+                resumo_plano = (
+                    planos_dry_run[indice_plano]
+                    if indice_plano < len(planos_dry_run)
+                    else {}
+                )
+                indice_plano += 1
                 resumo_recomendacoes.append({
                     "tipo": str(recomendacao.get("tipo", ""))[:80],
                     "escopo": str(recomendacao.get("escopo", ""))[:128],
@@ -930,7 +936,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 "severidade": severidade,
                 "motivos": [str(motivo)[:80] for motivo in motivos[:8]],
                 "recomendacoes": resumo_recomendacoes,
-                "planos_dry_run": preparar_planos_defesa_dry_run(recomendacoes),
+                "planos_dry_run": planos_dry_run,
                 "executor_autorizado": False,
                 "efeito_executado": False,
             }
