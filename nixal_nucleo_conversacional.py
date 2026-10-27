@@ -610,7 +610,7 @@ class NucleoConversacionalNixal:
         }
 
     @staticmethod
-    def _texto_curto_contexto(self, valor: Any, limite: int = 320) -> str:
+    def _texto_curto_contexto(valor: Any, limite: int = 320) -> str:
         if not isinstance(valor, str):
             return ""
         return sanitizar_texto_memoria(valor, limite)
