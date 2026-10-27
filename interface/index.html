@@ -822,7 +822,9 @@
       background:
         radial-gradient(ellipse at 50% 42%, rgba(70,194,255,.17), rgba(27,83,185,.09) 31%, transparent 67%),
         radial-gradient(ellipse at 50% 83%, rgba(31,116,225,.12), transparent 48%);
-      box-shadow: 0 0 140px rgba(28,105,185,.16);
+      opacity: var(--voice-glow,.45);
+      box-shadow: 0 0 var(--voice-bloom,140px) rgba(28,105,185,.18);
+      transition: opacity .08s linear, box-shadow .08s linear;
     }
     #nyxalVoiceStage::after {
       content: "";
@@ -923,6 +925,8 @@
       background:#657b94;box-shadow:0 0 9px rgba(101,123,148,.4);
     }
     #nyxalVoiceSurface .nyxal-side-dot-blue { background:#75cfff;box-shadow:0 0 10px rgba(117,207,255,.7); }
+    #nyxalVoiceSurface .nyxal-side-dot[data-state="active"] { background:#6ee7b7;box-shadow:0 0 12px rgba(110,231,183,.8); }
+    #nyxalVoiceSurface .nyxal-side-dot-blue[data-state="active"] { background:#a5f3fc;box-shadow:0 0 14px rgba(165,243,252,.95);animation:nyxalCorePulse 1.4s ease-in-out infinite; }
     #nyxalVoiceSurface .nyxal-sidepanel-title {
       margin-top: 20px;
       color: #edf7ff;
@@ -3754,7 +3758,12 @@
       const sideSignal = document.getElementById('nyxalSideSignal');
       if (sideSignal) sideSignal.dataset.active = String(Boolean(sampleAvailable && voiceConversationActive && !voiceConversationBusy));
       const stage = document.getElementById('nyxalVoiceStage');
-      if (stage) stage.style.setProperty('--voice-level', sampleAvailable ? String(Math.max(0, Math.min(1, voiceRmsAtual / maximum))) : '0');
+      if (stage) {
+        const levelRatio = sampleAvailable ? Math.max(0, Math.min(1, voiceRmsAtual / maximum)) : 0;
+        stage.style.setProperty('--voice-level', levelRatio.toFixed(3));
+        stage.style.setProperty('--voice-glow', (0.3 + levelRatio * 0.62).toFixed(3));
+        stage.style.setProperty('--voice-bloom', (72 + levelRatio * 105).toFixed(0) + 'px');
+      }
       const track = fill?.parentElement;
       if (track) {
         if (sampleAvailable) track.setAttribute('aria-valuenow', voiceRmsAtual.toFixed(3));
