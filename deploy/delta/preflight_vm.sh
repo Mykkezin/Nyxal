@@ -79,7 +79,7 @@ else
 fi
 
 if has_cmd df; then
-  VM_STORAGE="${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}"
+  VM_STORAGE="${NYXOS_DELTA_VM_STORAGE:-${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}}"
   STORAGE_PROBE="${VM_STORAGE}"
   while [[ ! -d "${STORAGE_PROBE}" && "${STORAGE_PROBE}" != "/" ]]; do
     STORAGE_PROBE="$(dirname -- "${STORAGE_PROBE}")"
@@ -152,7 +152,7 @@ else
   block 'Nenhuma chave pública SSH válida encontrada em ~/.ssh; a VM não pode ser provisionada com o método cloud-init atual'
 fi
 
-BASE_IMAGE="${NYXOS_VPS_BASE_IMAGE:-${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}/ubuntu-24.04-server-cloudimg-amd64.img}"
+BASE_IMAGE="${NYXOS_VPS_BASE_IMAGE:-${HOME}/NyxOS/VPS/ubuntu-24.04-server-cloudimg-amd64.img}"
 if [[ -f "${BASE_IMAGE}" ]]; then
   ok "Imagem cloud base encontrada: ${BASE_IMAGE}"
 else
