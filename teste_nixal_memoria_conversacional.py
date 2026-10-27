@@ -244,7 +244,8 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
         self.assertEqual(self.caminho.read_text(encoding="utf-8"), original)
 
     def test_busca_relevante_em_modo_volatil_nao_afirma_persistencia(self) -> None:
-        memoria = MemoriaConversacionalNixal()
+        with patch.dict(os.environ, {"NYXAL_CONVERSATION_MEMORY_PATH": ""}):
+            memoria = MemoriaConversacionalNixal()
         memoria.registrar("sessao-velha", "user", "O agente local usa memória contextual persistente no disco.")
         resultado = memoria.buscar_relevante("Como funciona a memória contextual do agente local?")
         self.assertTrue(resultado["sucesso"])
