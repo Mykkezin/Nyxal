@@ -280,7 +280,7 @@ jobs:
 
   validate-delta-mvp:
     if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 5
     steps:
       - name: Checkout without optional submodules
@@ -288,10 +288,8 @@ jobs:
         with:
           persist-credentials: false
           submodules: false
-      - name: Configure Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Check shell script syntax
         run: |
           for script in \
