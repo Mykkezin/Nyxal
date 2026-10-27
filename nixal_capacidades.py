@@ -549,6 +549,7 @@ class GerenciadorCapacidades:
             "evidencias_dominio": (
                 capacidade.evidencias_dominio
             ),
+            "politica": capacidade.politica,
         }
 
     # ============================================================
@@ -790,6 +791,7 @@ class GerenciadorCapacidades:
                     "evidencias_dominio": (
                         capacidade.evidencias_dominio
                     ),
+                    "politica": capacidade.politica,
                 }
             )
 
