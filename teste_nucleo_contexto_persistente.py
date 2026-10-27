@@ -132,6 +132,10 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
     def test_core_compartilha_catalogo_de_capacidades_com_dialogo(self) -> None:
         cliente = FakeChatClient()
         dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
+        # Simula um diálogo já inicializado com outro catálogo.
+        dialogo.gerenciador_capacidades = Mock()
+        dialogo._ferramentas_operacionais_registradas = True
+
         nucleo = NucleoConversacionalNixal(dialogo=dialogo)
 
         self.assertIs(nucleo.dialogo, dialogo)
@@ -139,6 +143,7 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
             dialogo.gerenciador_capacidades,
             nucleo.agente.capacidades,
         )
+        self.assertFalse(dialogo._ferramentas_operacionais_registradas)
 
     def test_core_ignores_legacy_remote_provider_and_preserves_canonical_session_history(self) -> None:
         cliente = FakeChatClient()
