@@ -2726,10 +2726,16 @@
     const VOICE_RESUME_GUARD_MS = 320;
 
     function setVoiceMicrophoneEnabled(enabled) {
-      if (!voiceStream) return;
+      if (!voiceStream) {
+        updateVoiceDiagnostics(null, voiceActivityThreshold(), false);
+        return;
+      }
       voiceStream.getAudioTracks().forEach(track => {
         track.enabled = enabled;
       });
+      // Ao pausar/reabrir a faixa, descarte o último RMS para não exibi-lo
+      // como leitura atual até que o analisador entregue uma nova amostra.
+      updateVoiceDiagnostics(null, voiceActivityThreshold(), false);
     }
 
     function updateVoiceConversationButton() {
