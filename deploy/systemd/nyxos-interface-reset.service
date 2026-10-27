@@ -1,0 +1,8 @@
+[Unit]
+Description=NyxOS — recuperação periódica da interface principal
+Documentation=https://github.com/Mykkezin/Nyxal
+
+[Service]
+Type=oneshot
+# Reinicia somente se já estiver ativo; nunca ressuscita uma interface desativada manualmente.
+ExecStart=/usr/bin/systemctl --user try-restart nyxos-interface.service
