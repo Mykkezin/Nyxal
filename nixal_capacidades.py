@@ -309,4 +309,11 @@ class GerenciadorCapacidades:
             pass
 
 
-__all__ = ["GerenciadorCapacidades", "ResultadoCapacidade", "Capacidade"]
+def ativar_ferramentas_operacionais(capacidades: GerenciadorCapacidades | None = None, *, incluir_acoes: bool = True) -> GerenciadorCapacidades:
+    """Registra os adaptadores existentes no catálogo e retorna o gerenciador usado."""
+    from nixal_tool_use import registrar_capacidades_operacionais
+    alvo = capacidades if capacidades is not None else GerenciadorCapacidades()
+    registrar_capacidades_operacionais(alvo, incluir_acoes=incluir_acoes)
+    return alvo
+
+__all__ = ["GerenciadorCapacidades", "ResultadoCapacidade", "Capacidade", "ativar_ferramentas_operacionais"]
