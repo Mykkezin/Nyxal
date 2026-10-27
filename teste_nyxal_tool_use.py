@@ -16,6 +16,13 @@ from nixal_tool_use import (
 
 
 class TestFerramentasNyxal(unittest.TestCase):
+    def test_instancias_de_notas_compartilham_lock_de_gravacao(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "notas.json"
+            primeiro = NotasLembretesNixOS(path)
+            segundo = NotasLembretesNixOS(path)
+            self.assertIs(primeiro._lock, segundo._lock)
+
     def test_anotacao_persistida_com_permissoes_restritas(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = NotasLembretesNixOS(Path(tmp) / "notas.json")
