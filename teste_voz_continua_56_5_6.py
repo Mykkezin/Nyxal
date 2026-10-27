@@ -179,9 +179,18 @@ def main() -> None:
     # ------------------------------------------------------------
 
     verificar(
-        "KOKORO_SPEED" in api
-        and "speed=KOKORO_SPEED" in api,
-        "velocidade do Kokoro é configurável e aplicada",
+        "choose_speech_profile" in api
+        and "prepare_spoken_reply" in api
+        and "contexto_usuario" in api
+        and "speed=velocidade" in api,
+        "API principal aplica prosódia contextual e velocidade adaptativa",
+    )
+
+    verificar(
+        "contexto_usuario: String(userContext ||" in interface
+        and "speakBrowserFallback(text, userContext)" in interface
+        and "tomAcolhedor" in interface,
+        "interface compartilha contexto apenas com o TTS local e adapta o fallback",
     )
 
     verificar(
