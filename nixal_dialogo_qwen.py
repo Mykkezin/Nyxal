@@ -246,30 +246,56 @@ class DialogoQwenNixal:
             if not isinstance(calls, list) or not calls:
                 break
             if rodadas >= self.MAX_TOOL_CALLS:
-                # Chegou ao limite: não executar mais ações. Peça ao modelo uma
-                # resposta textual final sem ferramentas para encerrar o turno.
-                atual.append({"role": "system", "content": "Limite de chamadas de ferramentas atingido. Responda agora com os resultados já obtidos; não solicite outras ferramentas."})
-                try:
-                    resposta = self.cliente.chat(model=self.modelo, messages=atual, options={"temperature": 0.2})
-                except TypeError:
-                    resposta = {"message": {"content": "Concluí a quantidade máxima de chamadas de ferramentas. Os resultados executados estão disponíveis no histórico desta interação."}}
-                if not self._valor_mensagem(self._extrair_mensagem(resposta), "content"):
-                    resposta = {"message": {"content": "Concluí a quantidade máxima de chamadas de ferramentas. Não executei novas ferramentas depois do limite."}}
+                # No limite, nunca execute mais ferramentas. Não dependa de
+                # outra chamada do modelo para devolver uma resposta final.
+                resposta = {"message": {"content": "Atingi o limite de chamadas de ferramentas para esta mensagem. Nenhuma ferramenta adicional foi executada. Resultados já observados: " + json.dumps(chamadas_executadas, ensure_ascii=False, default=str)[:6000]}}
                 break
-            assistant_msg = {"role": "assistant", "content": self._valor_mensagem(msg, "content", "") or "", "tool_calls": []}
+
+            assistant_msg = {
+                "role": "assistant",
+                "content": self._valor_mensagem(msg, "content", "") or "",
+                "tool_calls": [],
+            }
+            normalizadas = []
             for call in calls[:8]:
                 fn = self._valor_mensagem(call, "function", {})
-                assistant_msg["tool_calls"].append({"function": {
-                    "name": self._valor_mensagem(fn, "name", ""),
-                    "arguments": self._valor_mensagem(fn, "arguments", {}),
-                }})
+                call_id = self._valor_mensagem(call, "id", "") or ""
+                nome = self._valor_mensagem(fn, "name", "")
+                args = self._valor_mensagem(fn, "arguments", {})
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except json.JSONDecodeError:
+                        args = {}
+                assistant_msg["tool_calls"].append({
+                    "id": call_id,
+                    "type": "function",
+                    "function": {"name": nome, "arguments": args},
+                })
+                normalizadas.append(call)
             atual.append(assistant_msg)
-            for call in calls[:8]:
+            for call in normalizadas:
                 result = self._executar_chamada_ferramenta(gerenciador, call, texto_usuario)
                 chamadas_executadas.append(result)
-                atual.append({"role": "tool", "content": result["resultado"]})
+                # Formato Ollama: cada resposta de ferramenta identifica a função.
+                atual.append({
+                    "role": "tool",
+                    "tool_name": result["name"],
+                    "content": result["resultado"],
+                })
             rodadas += 1
-            resposta = self.cliente.chat(model=self.modelo, messages=atual, tools=ferramentas, options={"temperature": 0.2})
+            try:
+                resposta = self.cliente.chat(
+                    model=self.modelo, messages=atual, tools=ferramentas,
+                    options={"temperature": 0.2},
+                )
+            except TypeError:
+                # Cliente antigo sem tool calling: fallback textual, sem executar
+                # ferramentas extras nem tentar interpretar código do modelo.
+                resposta = self.cliente.chat(
+                    model=self.modelo, messages=atual, options={"temperature": 0.4},
+                )
+                break
         return resposta, chamadas_executadas
 
     def responder(
