@@ -746,11 +746,8 @@ class GerenciadorCapacidades:
                 )
             )
 
-            print(
-                "\n[Nixal] Erro durante execução:"
-            )
-
-            traceback.print_exc()
+            # Avoid logging exception text/tracebacks that can contain credentials or private data.
+            print(f"[Nixal] Falha na capacidade '{nome}': {type(erro).__name__}")
 
         self._registrar_execucao(
             resultado
