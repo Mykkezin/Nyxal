@@ -79,7 +79,7 @@ class VpsNyxOSTest(unittest.TestCase):
             VpsNyxOS().provisionar(
                 nome="vps-teste",
                 image_path="/caminho/inexistente.img",
-                ssh_public_key="ssh-ed25519\\n  runcmd: [malicious]",
+                ssh_public_key=_ed25519_fixture() + "\n  runcmd: [malicious]",
             )
 
 
