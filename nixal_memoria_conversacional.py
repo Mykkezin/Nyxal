@@ -53,11 +53,11 @@ def _normalizar_termos_memoria(texto: str) -> list[str]:
 
 
 def _sanitizar_texto_memoria(texto: str, limite: int = 900) -> str:
-    texto = re.sub(r"\\s+", " ", texto).strip()
-    texto = re.sub(r"(?i)\\bBearer\\s+\\S+", "Bearer [REDACTED]", texto)
+    texto = re.sub(r"\s+", " ", texto).strip()
+    texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
     texto = re.sub(
-        r"(?i)\\b(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)\\b\\s*[:=]\\s*(?:Bearer\\s+)?[^\\s,;]+",
-        r"\\1=[REDACTED]",
+        r"(?i)\b(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)\b\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+",
+        r"\1=[REDACTED]",
         texto,
     )
     return texto[:limite]
