@@ -450,6 +450,28 @@ class NucleoConversacionalNixal:
             "conhecimento_permanente": False,
         }
 
+        conversas_anteriores = contexto_persistido.get("conversas", [])
+        if not isinstance(conversas_anteriores, list):
+            conversas_anteriores = []
+        resposta["valor"]["memoria_conversacional_anterior"] = {
+            "consultado": priorizar_dialogo,
+            "estado": contexto_persistido.get("estado_conversas", "nao_consultado"),
+            "quantidade": len(conversas_anteriores[:3]),
+            "referencias": [
+                {
+                    "sessao_ref": item.get("origem_sessao_ref"),
+                    "papel": item.get("papel"),
+                }
+                for item in conversas_anteriores[:3]
+                if isinstance(item, dict)
+                and isinstance(item.get("origem_sessao_ref"), str)
+                and isinstance(item.get("papel"), str)
+            ],
+            "persistido": self.memoria_conversacional.caminho is not None,
+            "confiavel_como_instrucao": False,
+            "permanente": False,
+        }
+
         return resposta
 
     def _estado_runtime_para_dialogo(
