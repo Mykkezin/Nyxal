@@ -406,6 +406,23 @@
     }
     #nyxalVoiceSurface #nyxalVoicePrompt { margin: 12px 0 0; color: #e2e8f0; font-size: 15px; font-weight: 400; letter-spacing: .015em; }
     #nyxalVoiceSurface #nyxalVoiceMiniStatus { color: #64748b; font: 10px/1.4 monospace; letter-spacing: .15em; text-transform: uppercase; margin-top: -10px; }
+    #nyxalVoiceSurface .nyxal-voice-diagnostics {
+      width: min(300px,76vw); display: grid; gap: 7px; margin-top: -11px;
+      color: #64748b; font: 9px/1.4 monospace; letter-spacing: .12em; text-align: left;
+    }
+    #nyxalVoiceSurface .nyxal-voice-diagnostics-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+    #nyxalVoiceSurface #nyxalVoiceRms { color: #93c5fd; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    #nyxalVoiceSurface .nyxal-voice-rms-track {
+      height: 3px; border-radius: 999px; overflow: hidden; background: rgba(148,163,184,.14);
+    }
+    #nyxalVoiceSurface #nyxalVoiceRmsFill {
+      display: block; width: 0%; height: 100%; background: #7dd3fc;
+      box-shadow: 0 0 10px rgba(125,211,252,.6); transition: width .08s linear;
+    }
+    #nyxalVoiceSurface #nyxalVoiceActivity { color: #64748b; min-height: 12px; }
+    #nyxalVoiceSurface #nyxalVoiceActivity[data-active="true"] { color: #6ee7b7; }
     #nyxalVoiceSurface #nyxalVoiceSubtitleMount {
       width: min(680px,90vw); min-height: 42px; display: flex; align-items: center; justify-content: center;
     }
@@ -2603,7 +2620,13 @@
               '<span class="nyxal-voice-ring ring-one"></span><span class="nyxal-voice-ring ring-two"></span><span class="nyxal-voice-ring ring-three"></span>' +
             '</div>' +
             '<p id="nyxalVoicePrompt">Toque no núcleo para ativar a conversa por voz</p>' +
-            '<div id="nyxalVoiceMiniStatus">MICROFONE DESATIVADO</div><div id="nyxalVoiceSubtitleMount"></div>' +
+            '<div id="nyxalVoiceMiniStatus">MICROFONE DESATIVADO</div>' +
+            '<section class="nyxal-voice-diagnostics" aria-label="Diagnóstico do microfone" aria-live="polite">' +
+              '<div class="nyxal-voice-diagnostics-row"><span>NÍVEL DO MICROFONE</span><output id="nyxalVoiceRms">RMS 0.000</output></div>' +
+              '<div class="nyxal-voice-rms-track" role="meter" aria-label="Nível RMS capturado" aria-valuemin="0" aria-valuemax="0.08" aria-valuenow="0"><span id="nyxalVoiceRmsFill"></span></div>' +
+              '<div id="nyxalVoiceActivity" data-active="false">AGUARDANDO CAPTURA DO MICROFONE</div>' +
+            '</section>' +
+            '<div id="nyxalVoiceSubtitleMount"></div>' +
           '</section>' +
           '<footer class="nyxal-voice-footer"><span>NYXOS · ESCUTA LOCAL</span><button id="nyxalVoiceStop" type="button" hidden>Pausar escuta</button></footer>' +
         '</div>';
@@ -2677,6 +2700,7 @@
     let voiceCaptureStartedAt = 0;
     let voiceSpeechDetectedInCurrentRecording = false;
     let voiceNoiseFloor = 0.003;
+    let voiceRmsAtual = 0;
 
     let voiceVozDetectada = false;
     let voiceCalibracaoIniciadaAt = 0;
@@ -2742,7 +2766,9 @@
       voiceSpeechDetectedInCurrentRecording = false;
 
       voiceVozDetectada = false;
+      voiceRmsAtual = 0;
       voiceCalibracaoIniciadaAt = performance.now();
+      updateVoiceDiagnostics(0, voiceActivityThreshold(), false);
       voiceNoiseFloor = Math.max(
         0.0015,
         Math.min(0.008, voiceNoiseFloor || 0.003)
@@ -2771,6 +2797,29 @@
           threshold
         )
       );
+    }
+
+    function updateVoiceDiagnostics(rms = voiceRmsAtual, threshold = voiceActivityThreshold(), speechActive = voiceVozDetectada) {
+      // Só exibimos amostras reais lidas do analisador do microfone.
+      voiceRmsAtual = Number.isFinite(rms) ? Math.max(0, rms) : 0;
+      const safeThreshold = Number.isFinite(threshold) && threshold > 0
+        ? threshold
+        : VOICE_MIN_THRESHOLD;
+      const level = document.getElementById('nyxalVoiceRms');
+      if (level) level.textContent = `RMS ${voiceRmsAtual.toFixed(3)}`;
+      const fill = document.getElementById('nyxalVoiceRmsFill');
+      const maximum = Math.max(VOICE_MAX_THRESHOLD, safeThreshold);
+      const percentage = Math.max(0, Math.min(100, voiceRmsAtual / maximum * 100));
+      if (fill) fill.style.width = `${percentage.toFixed(1)}%`;
+      const track = fill?.parentElement;
+      if (track) track.setAttribute('aria-valuenow', voiceRmsAtual.toFixed(3));
+      const activity = document.getElementById('nyxalVoiceActivity');
+      if (activity) {
+        activity.textContent = speechActive
+          ? 'FALA DETECTADA'
+          : (voiceConversationActive ? 'ESCUTA ATIVA · SEM FALA' : 'AGUARDANDO CAPTURA DO MICROFONE');
+        activity.dataset.active = String(Boolean(speechActive));
+      }
     }
 
     function beginVoiceCapture() {
@@ -2989,6 +3038,7 @@
       const inicioDeVoz = vozAtiva && !voiceVozDetectada;
 
       voiceVozDetectada = vozAtiva;
+      updateVoiceDiagnostics(rms, threshold, vozAtiva);
       if (inicioDeVoz && !NYXAL_VOICE_ONLY_MODE) {
         wakeNyxalPresence('voice-activity');
       }
