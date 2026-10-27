@@ -33,6 +33,8 @@ on:
       - "executar_nyxal_api.sh"
       - "nixal_agente_qwen.py"
       - "nixal_capacidades.py"
+      - "nixal_runtime.py"
+      - "teste_limites_armazenamento.py"
       - "nixal_tool_use.py"
       - "nyxal_mcp_tools.py"
       - "teste_mcp_stdio.py"
@@ -170,6 +172,8 @@ jobs:
             nixal_nucleo_conversacional.py \
             nixal_agente_qwen.py \
             nixal_capacidades.py \
+            nixal_runtime.py \
+            teste_limites_armazenamento.py \
             nixal_vps.py \
             nixal_tool_use.py \
             teste_nixal_tool_use.py \
@@ -246,7 +250,8 @@ jobs:
             teste_nucleo_contexto_persistente \
             teste_nixal_recuperador_contexto \
             teste_nixal_memoria_conversacional \
-            teste_memorias_persistencia_segura
+            teste_memorias_persistencia_segura \
+            teste_limites_armazenamento
           python3 teste_nucleo_conversacional.py
           python3 teste_transporte_conversacional_56_5_2.py
           python3 teste_integracao_sessao_transporte_56_5_4.py

@@ -1139,14 +1139,15 @@ class GerenciadorCapacidades:
                 try:
                     with ARQUIVO_LOG.open("rb") as arquivo:
                         existente = arquivo.read(MAX_TAMANHO_ARQUIVO + 1)
-                    if len(existente) > MAX_TAMANHO_ARQUIVO:
-                        return
-                    dados = json.loads(existente.decode("utf-8"))
+                    if len(existente) <= MAX_TAMANHO_ARQUIVO:
+                        dados = json.loads(existente.decode("utf-8"))
+                        if not isinstance(dados, list) or not all(isinstance(item, dict) for item in dados):
+                            return
+                        historico = dados
+                    # Histórico legado acima do teto não pode bloquear a escrita
+                    # para sempre. A próxima gravação o substitui por um log limitado.
                 except Exception:
                     return
-                if not isinstance(dados, list) or not all(isinstance(item, dict) for item in dados):
-                    return
-                historico = dados
 
             try:
                 registro = asdict(resultado)
