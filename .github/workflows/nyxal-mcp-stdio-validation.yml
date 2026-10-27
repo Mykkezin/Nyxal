@@ -20,7 +20,9 @@ on:
       - "docs/NYXAL_FERRAMENTAS.md"
       - ".github/workflows/nyxal-mcp-stdio-validation.yml"
   push:
-    branches: [main]
+    branches:
+      - main
+      - feat/nyxal-governed-tools-aisweb-20261027
     paths:
       - "nyxal_mcp_tools.py"
       - "teste_mcp_stdio.py"
