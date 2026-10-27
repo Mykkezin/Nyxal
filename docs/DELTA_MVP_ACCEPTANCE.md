@@ -48,9 +48,13 @@ Este MVP não pretende executar todos os aplicativos Windows/macOS/Android. O ob
 Antes de comparar bases finais, usar a imagem cloud oficial do Ubuntu Server 24.04 como um **teste temporário do hipervisor e do fluxo de boot**. Isto valida o ambiente KVM/libvirt e reduz o risco de depurar simultaneamente a base do sistema e a infraestrutura da VM; não elege Ubuntu como distribuição definitiva do DELTA.
 
 Ferramentas adicionadas para este fluxo:
-- `deploy/delta/preflight_vm.sh` — pré-voo somente de leitura, incluindo conexão libvirt, rede default, cloud-init e disponibilidade de chave pública SSH;
+- `deploy/delta/preflight_vm.sh` — pré-voo somente de leitura para QEMU/KVM, rede libvirt, chave pública SSH e espaço de armazenamento;
+- `deploy/delta/diagnosticar_vm_mvp0.sh` — diagnóstico somente de leitura de eventual domínio parcial após falha de `virt-install`;
 - `deploy/vps/preparar_base_ubuntu.sh` — baixa a imagem cloud e valida seu SHA-256 contra a lista publicada no diretório oficial antes de aceitar o arquivo;
-- `deploy/delta/criar_vm_mvp0.py` — chama o provisionador KVM já existente (`nixal_vps.py`) depois de validar a imagem, espaço, domínio, rede e chave pública, exigindo confirmação interativa.
+- `deploy/delta/preparar_storage_mvp0.sh` — exige confirmação para criar um diretório dedicado dentro de um pool libvirt ativo do tipo diretório e aplica ACL apenas nesse destino; não modifica permissões da home;
+- `deploy/delta/criar_vm_mvp0.py` — chama o provisionador KVM já existente (`nixal_vps.py`) depois de validar a imagem, espaço, domínio, rede e chave pública, exigindo confirmação interativa. Recusa armazenamento de VM dentro da home.
+
+A primeira tentativa falhou porque `libvirt-qemu` não podia pesquisar `/home/nyxal`; não se deve usar `chmod 777` nem abrir permissões globais na home. Primeiro inspecionar o estado do domínio, porque `virt-install` pode deixar uma definição parcial. Em seguida, usar um diretório dedicado em um pool libvirt acessível e manter a imagem base na home, somente para leitura pelo provisionador.
 
 Configuração inicial: VM `delta-mvp0`, 2 vCPUs, 2048 MiB de RAM, disco QCOW2 de 16 GiB virtuais e rede NAT libvirt default. Autostart do host fica desligado por padrão. O provisionador existente cria um usuário `ubuntu` com chave SSH e sudo sem senha dentro da VM; tratar como ambiente descartável, não copiar segredos nem dados pessoais do host e não expor a VM por bridge público.
 
