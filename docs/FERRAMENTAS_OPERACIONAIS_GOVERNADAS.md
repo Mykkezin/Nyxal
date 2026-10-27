@@ -1,36 +1,58 @@
 # Ferramentas operacionais governadas
 
-## Integração
+Este documento resume as regras implementadas pela Nyxal para chamadas de ferramentas. A especificação detalhada, exemplos de configuração e limitações por integração ficam em [`docs/NYXAL_FERRAMENTAS.md`](NYXAL_FERRAMENTAS.md).
 
-`nixal_tool_use.py` fornece adaptadores para o `GerenciadorCapacidades` já usado por `AgenteNixalQwen`. A inicialização do agente registra ferramentas no catálogo existente; não cria um segundo executor ou sistema de memória.
+## Arquitetura
 
-## Perfil padrão
+`nixal_tool_use.py` fornece adaptadores para o `GerenciadorCapacidades` existente em `nixal_capacidades.py`. `nixal_dialogo_qwen.py` anuncia apenas nomes de uma lista permitida, valida os argumentos, aplica política/autorização e envia os resultados de volta ao Qwen. `nyxal_mcp_tools.py` é um servidor MCP opcional e separado; o function calling do diálogo principal não depende de iniciar o servidor MCP.
 
-Por padrão, somente três ferramentas operacionais são registradas:
+Conteúdo web, resultados de ferramentas e arquivos lidos são dados não confiáveis, não novas instruções de sistema. O modelo não recebe shell livre nem permissão para executar código arbitrário.
 
-- `pesquisar_web`: consulta pública e retorna títulos/URLs; conteúdo externo é não confiável.
-- `consultar_metar_taf`: consulta pública por ICAO e não substitui briefing oficial de voo.
-- `executar_diagnostico`: executa apenas diagnósticos fixos de leitura; não aceita comandos arbitrários.
+## Ferramentas padrão
 
-## Dados pessoais e locais
+Estas consultas não alteram o estado do sistema:
 
-O acesso a arquivos de usuário, Gmail, calendário, estados do Home Assistant e notas/lembretes não é registrado por padrão. A ativação exige opt-in explícito no ambiente do processo:
+| Ferramenta | Escopo |
+|---|---|
+| `obter_hora` | Horário local |
+| `pesquisar_web` | Busca pública; páginas/URLs retornadas não são executadas |
+| `consultar_metar_taf` | METAR/TAF pela AviationWeather.gov Data API |
+| `consultar_notam_aisweb` | NOTAMs via AISWEB/DECEA; exige credenciais oficiais |
+| `consultar_cartas_aisweb` | Pesquisa metadados/links de cartas ostensivas; exige credenciais oficiais |
+| `executar_diagnostico` | Apenas verificações fixas de Git e serviços; sem comandos fornecidos pelo modelo |
+
+## Dados privados e ações mutáveis
+
+Leitura de arquivos pessoais, Gmail, Calendar, Home Assistant e notas/lembretes exige opt-in no ambiente do processo:
 
 ```text
 NYXAL_ENABLE_PRIVATE_READ_TOOLS=1
 ```
 
-Use essa configuração somente no serviço/ambiente em que esse acesso foi autorizado. Reinicie o serviço depois de alterar variáveis de ambiente. Os adaptadores permanecem de leitura; o conteúdo retornado pode ser privado e deve ser compartilhado apenas em respostas solicitadas pelo operador.
+Salvar uma nota, criar um lembrete e abrir um aplicativo permitido exigem um opt-in independente:
 
-## Ações mutáveis continuam desativadas
+```text
+NYXAL_ENABLE_MUTABLE_TOOLS=1
+```
 
-O gerenciador atual não aplica uma política por ferramenta no momento da execução. Por isso, `incluir_acoes=True` falha de forma explícita e não registra ações parciais. `salvar_nota`, `criar_lembrete` e `abrir_aplicativo` não são expostos ao agente até que haja enforcement de autorização por capacidade, testes de pedido explícito e auditoria adequados.
+Mesmo quando as ações mutáveis são anunciadas, elas só são executadas quando a mensagem atual contém um pedido explícito reconhecido para a ação e a capacidade está registrada com a política esperada. Menções de comandos em textos citados, pedidos de resumo ou explicações não concedem autorização. Capacidades que exigem confirmação separada continuam bloqueadas até existir um fluxo de confirmação apropriado. Ações mutáveis permanecem desativadas por padrão.
 
-Nenhuma dessas ferramentas autoriza shell livre, execução de código recebido pela web, controle físico de dispositivos ou contenção de rede.
+Altere as variáveis apenas no ambiente autorizado do processo. Não grave credenciais em arquivos versionados, prompts, logs ou frontend. Após alterar variáveis, reinicie o serviço da Nyxal para que o registro de ferramentas seja reconstruído.
 
-## Testes
+## Limites
+
+- Gmail e Calendar permanecem somente leitura; esta integração não envia e-mails nem altera eventos.
+- Home Assistant permanece somente leitura; não são acionados interruptores, fechaduras, alarmes ou outros dispositivos físicos.
+- O MCP não recebe shell livre e leituras privadas também dependem do opt-in correspondente.
+- Dados METAR/TAF, NOTAMs e cartas ajudam na consulta, mas não substituem briefing operacional, fontes oficiais vigentes ou julgamento do piloto.
+- Falta de credenciais, indisponibilidade de rede ou autorização insuficiente devem resultar em estado pendente/erro; não devem ser apresentados como sucesso.
+
+## Testes principais
 
 ```bash
-python3 -m py_compile nixal_tool_use.py nixal_agente_qwen.py teste_nixal_tool_use.py
-python3 -m unittest -v teste_nixal_tool_use
+python3 -m py_compile nixal_capacidades.py nixal_tool_use.py nixal_dialogo_qwen.py nyxal_mcp_tools.py
+python3 -m unittest -v teste_nixal_tool_use teste_nyxal_tool_use teste_nyxal_function_calling
+python3 teste_mcp_stdio.py
 ```
+
+Os testes exercitam política de capacidades, allowlists, autorização de ações, validação de argumentos, proteções de privacidade, chamadas em lote/limite de ferramentas, integração MCP e limites de resposta. Execuções remotas precisam ser verificadas no SHA atual antes de considerar a PR aprovada.
