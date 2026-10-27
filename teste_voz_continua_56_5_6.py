@@ -191,7 +191,8 @@ def main() -> None:
     verificar(
         "contexto_usuario: String(userContext ||" in interface
         and "speakBrowserFallback(text, userContext)" in interface
-        and "tomAcolhedor" in interface,
+        and "tomAcolhedor" in interface
+        and "tomPressa" in interface,
         "interface compartilha contexto apenas com o TTS local e adapta o fallback",
     )
 
