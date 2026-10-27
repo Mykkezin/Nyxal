@@ -46,6 +46,8 @@ on:
       - "nixal_memoria_investigacao.py"
       - "nixal_memoria_conhecimento.py"
       - "nixal_runtime.py"
+      - "teste_limites_armazenamento.py"
+      - "docs/OTIMIZACAO_ARMAZENAMENTO.md"
       - "nixal_aprendizado_persistente.py"
       - "teste_integracao_memoria_conhecimento_runtime.py"
       - "nixal_dialogo_qwen.py"
