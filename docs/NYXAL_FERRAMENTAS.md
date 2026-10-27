@@ -99,7 +99,7 @@ cd ~/Nyxal
 
 O processo usa transporte stdio do `MCPServer`. No cliente MCP, configure `command` com o caminho absoluto de `~/Nyxal/.venv/bin/python` e `args` com o caminho absoluto de `~/Nyxal/nyxal_mcp_tools.py`. Não coloque credenciais no arquivo de configuração do cliente.
 
-O MCP expõe consultas web, METAR/TAF, NOTAMs, cartas, Home Assistant somente leitura, busca/leitura limitada de arquivos, Gmail/Calendar, notas e diagnósticos. O servidor não expõe ações para escrita de notas, criação de lembretes ou abertura de aplicativos.
+O MCP expõe consultas web, METAR/TAF, NOTAMs, cartas, Home Assistant somente leitura, busca/leitura limitada de arquivos, Gmail/Calendar, notas e diagnósticos. As ferramentas que leem arquivos pessoais, sensores, Gmail/Calendar ou notas retornam bloqueio até que `NYXAL_ENABLE_PRIVATE_READ_TOOLS=1` esteja definido no ambiente do processo MCP. O servidor não expõe ações para escrita de notas, criação de lembretes ou abertura de aplicativos.
 
 Para executar os testes locais da branch:
 
