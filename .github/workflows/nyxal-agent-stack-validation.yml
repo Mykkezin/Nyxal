@@ -22,6 +22,8 @@ on:
       - "nixal_agente_qwen.py"
       - "nixal_capacidades.py"
       - "nixal_tool_use.py"
+      - "teste_mcp_stdio.py"
+      - "deploy/agent/requirements-mcp.txt"
       - "nyxal_mcp_tools.py"
       - "teste_nixal_tool_use.py"
       - "teste_nyxal_tool_use.py"
@@ -92,6 +94,8 @@ on:
       - "nixal_agente_qwen.py"
       - "nixal_capacidades.py"
       - "nixal_tool_use.py"
+      - "teste_mcp_stdio.py"
+      - "deploy/agent/requirements-mcp.txt"
       - "nyxal_mcp_tools.py"
       - "teste_nixal_tool_use.py"
       - "teste_nyxal_tool_use.py"
@@ -287,3 +291,10 @@ jobs:
           python3 teste_preparacao_investigacao_56_4_22.py
           python3 teste_auto_evolucao_ae1.py
           python3 teste_m5_15_presenca_maquina.py
+      - name: Validate optional MCP stdio implementation on the self-hosted runner
+        run: |
+          MCP_VENV="$RUNNER_TEMP/nyxal-mcp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python3 -m venv "$MCP_VENV"
+          "$MCP_VENV/bin/python" -m pip install --disable-pip-version-check --no-input -r deploy/agent/requirements-mcp.txt
+          "$MCP_VENV/bin/python" -m py_compile nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py nixal_integracao_gmail.py nixal_amd_developer_cloud.py
+          "$MCP_VENV/bin/python" teste_mcp_stdio.py
