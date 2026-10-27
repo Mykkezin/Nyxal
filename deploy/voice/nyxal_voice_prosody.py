@@ -39,6 +39,12 @@ _DISTRESS_CUES = (
     "desesperada", "nao aguento", "perdi alguem", "alguem morreu",
     "estou chorando", "to chorando", "me sinto sozinho", "me sinto sozinha",
 )
+_HURRY_CUES = (
+    "estou com pressa", "to com pressa", "tenho pressa",
+    "responda rapido", "responde rapido", "seja breve",
+    "vai direto ao ponto", "rapidinho", "to atrasado", "estou atrasado",
+    "tenho pouco tempo", "sem enrolacao", "resuma rapido", "resume rapido",
+)
 _EMPATHY_CUES = (
     "sinto muito", "entendo", "estou aqui", "to aqui", "vamos com calma",
     "respira", "lamento", "pode contar comigo", "nao precisa passar por isso",
@@ -86,10 +92,12 @@ def choose_speech_profile(
     # A clear safety instruction should remain measured and easy to understand.
     if _contains_any(reply_text, _FOCUSED_CUES):
         style, factor = "focused", 0.97
+    elif _contains_any(user_text, _HURRY_CUES):
+        style, factor = "brisk", 1.08
     elif (
         _contains_any(user_text, _DISTRESS_CUES)
-        and _contains_any(reply_text, _EMPATHY_CUES)
-    ) or _contains_any(reply_text, _EMPATHY_CUES):
+        or _contains_any(reply_text, _EMPATHY_CUES)
+    ):
         style, factor = "gentle", 0.94
     elif (
         _contains_any(reply_text, _POSITIVE_CUES)
