@@ -318,7 +318,14 @@ def ativar_ferramentas_operacionais(capacidades: GerenciadorCapacidades | None =
 
 
 def _obter_gerenciador_capacidades() -> GerenciadorCapacidades:
-    """Usado pelo diálogo para compartilhar a mesma instância e os contratos."""
-    return ativar_ferramentas_operacionais(GerenciadorCapacidades(), incluir_acoes=True)
+    """Usado pelo diálogo; inicializa uma única instância do registro e seus conectores."""
+    global _GERENCIADOR_CAPACIDADES_COMPARTILHADO
+    try:
+        return _GERENCIADOR_CAPACIDADES_COMPARTILHADO
+    except NameError:
+        _GERENCIADOR_CAPACIDADES_COMPARTILHADO = ativar_ferramentas_operacionais(
+            GerenciadorCapacidades(), incluir_acoes=True
+        )
+        return _GERENCIADOR_CAPACIDADES_COMPARTILHADO
 
 __all__ = ["GerenciadorCapacidades", "ResultadoCapacidade", "Capacidade", "ativar_ferramentas_operacionais", "_obter_gerenciador_capacidades"]
