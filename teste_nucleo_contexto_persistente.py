@@ -367,7 +367,7 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
                 self.assertNotIn(segredo, saida)
         self.assertIn("Bearer [REDACTED]", saida)
         self.assertIn("token=[REDACTED]", saida)
-        self.assertIn("authorization=[REDACTED]", saida)
+        self.assertIn("Authorization=[REDACTED]", saida)
 
     def test_consulta_lexical_rejeita_limite_invalido(self) -> None:
         for limite in (0, -1, 6, True, "3"):
