@@ -160,6 +160,35 @@ class TestNyxalVoiceConsole(unittest.TestCase):
             self.assertIn(name + '.innerText = "—";', catch_block)
         self.assertIn('condicao.innerText = "Clima indisponível";', catch_block)
 
+    def test_music_widget_opens_spotify_safely_without_faking_playback(self):
+        self.assertIn('id="spotifyStatus"', self.html)
+        self.assertIn('aria-label="Abrir Spotify Web"', self.html)
+        start = self.html.index("function togglePlayMusic()")
+        end = self.html.index("function addNewEventPrompt()", start)
+        music = self.html[start:end]
+        self.assertIn("window.open('about:blank', '_blank')", music)
+        self.assertIn("popup.opener = null", music)
+        self.assertIn("popup.location.replace('https://open.spotify.com/')", music)
+        self.assertIn("window.__nyxosSpotifyWindow", music)
+        self.assertIn("Pop-up bloqueado", music)
+        self.assertIn("'BLOQUEADO'", music)
+        self.assertNotIn("Reprodução iniciada", music)
+
+    def test_infinity_drag_handles_cancel_resize_storage_and_viewport_bounds(self):
+        self.assertIn("z-index: 9999 !important", self.html)
+        start = self.html.index("function initInfinityDrag()")
+        end = self.html.index("function toggleInfinityHub()", start)
+        drag = self.html[start:end]
+        self.assertIn("document.body.appendChild(hub)", drag)
+        self.assertIn("core.style.touchAction = 'none'", drag)
+        self.assertIn("core.addEventListener('pointercancel', finishDrag)", drag)
+        self.assertIn("core.addEventListener('lostpointercapture'", drag)
+        self.assertIn("window.addEventListener('resize'", drag)
+        self.assertIn("function clampCoordinate(value, viewportSize)", drag)
+        self.assertIn("sessionStorage.setItem(STORAGE_KEY", drag)
+        self.assertIn("passive: false", drag)
+        self.assertIn("core.dataset.dragSuppressed", drag)
+
     def test_main_dashboard_rotates_reflections_every_three_minutes(self):
         self.assertIn('function rotacionarReflexao()', self.html)
         self.assertIn('window.setInterval(rotacionarReflexao, 3 * 60 * 1000)', self.html)
