@@ -17,10 +17,14 @@ def _ed25519_fixture() -> str:
 
 
 def _ecdsa_fixture() -> str:
+    ponto_gerador_p256 = bytes.fromhex(
+        "046b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296"
+        "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5"
+    )
     blob = (
         _ssh_string(b"ecdsa-sha2-nistp256")
         + _ssh_string(b"nistp256")
-        + _ssh_string(b"\x04" + bytes(range(64)))
+        + _ssh_string(ponto_gerador_p256)
     )
     return "ecdsa-sha2-nistp256 " + base64.b64encode(blob).decode("ascii")
 
@@ -85,6 +89,16 @@ class VpsNyxOSTest(unittest.TestCase):
         malicious = key + "\n  runcmd:\n    - touch /tmp/nyxal-ssh-injection"
         with self.assertRaisesRegex(ValueError, "ssh_public_key_invalida"):
             VpsNyxOS._validar_chave_ssh(malicious)
+
+    def test_rejeita_ponto_ecdsa_fora_da_curva(self) -> None:
+        blob = (
+            _ssh_string(b"ecdsa-sha2-nistp256")
+            + _ssh_string(b"nistp256")
+            + _ssh_string(b"\\x04" + bytes(range(64)))
+        )
+        key = "ecdsa-sha2-nistp256 " + base64.b64encode(blob).decode("ascii")
+        with self.assertRaisesRegex(ValueError, "ssh_public_key_invalida"):
+            VpsNyxOS._validar_chave_ssh(key)
 
     def test_rejeita_base64_invalido_e_tipo_de_chave_incoerente(self) -> None:
         with self.assertRaisesRegex(ValueError, "ssh_public_key_invalida"):
