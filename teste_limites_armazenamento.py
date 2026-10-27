@@ -78,7 +78,7 @@ class TestLimitesArmazenamento(unittest.TestCase):
             self.assertTrue(dados[-1]["valor"]["resumo_truncado"])
 
 
-    def test_log_capacidades_descarta_historico_preexistente_acima_do_teto(self) -> None:
+    def test_log_capacidades_arquiva_historico_preexistente_acima_do_teto(self) -> None:
         with tempfile.TemporaryDirectory() as diretorio:
             caminho_log = Path(diretorio) / "log_capacidades_nixal.json"
             registro_antigo = {
