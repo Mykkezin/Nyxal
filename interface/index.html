@@ -1331,10 +1331,11 @@
           .replace(/[\u0300-\u036f]/g, '')
           .toLowerCase();
         const alertaDireta = /\b(perigo|urgente|emergencia|imediatamente|afaste-se|nao toque)\b/.test(perfilTexto);
-        const tomAcolhedor = /\b(sinto muito|estou aqui|lamento|vamos com calma|respira)\b/.test(perfilTexto);
+        const tomPressa = /\b(estou com pressa|to com pressa|tenho pressa|responda rapido|responde rapido|seja breve|vai direto ao ponto|rapidinho|to atrasado|estou atrasado|tenho pouco tempo|sem enrolacao)\b/.test(perfilTexto);
+        const tomAcolhedor = /\b(sinto muito|estou aqui|lamento|vamos com calma|respira|estou triste|to triste|estou mal|to mal|com medo|tenho medo|me sinto sozinho|me sinto sozinha|perdi alguem|alguem morreu)\b/.test(perfilTexto);
         const tomPositivo = /\b(parabens|conseguiu|deu certo|boa noticia|mandou bem|excelente)\b/.test(perfilTexto);
         utterance.pitch = 0.96;
-        utterance.rate = alertaDireta ? 0.98 : tomAcolhedor ? 0.93 : tomPositivo ? 1.03 : 0.98;
+        utterance.rate = alertaDireta ? 0.98 : tomPressa ? 1.08 : tomAcolhedor ? 0.93 : tomPositivo ? 1.03 : 0.98;
         utterance.volume = 1.0;
 
         let concluido = false;
