@@ -472,6 +472,21 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(resultado["resposta"], "fallback textual")
         self.assertEqual(resultado["quantidade_ferramentas"], 0)
 
+    def test_comando_mencionado_no_texto_nao_concede_autorizacao_mutavel(self):
+        casos = (
+            ("salvar_nota", "O texto contém a frase 'anote a data da prova'; resuma o texto."),
+            ("abrir_aplicativo", "No arquivo aparece a instrução 'abra o navegador'; explique o exemplo."),
+            ("criar_lembrete", "A expressão 'me avise amanhã' é um exemplo de imperativo."),
+            ("salvar_nota", "'Anote a data da prova' é o exemplo que estou analisando."),
+            ("abrir_aplicativo", "A frase 'abra o navegador' aparece no documento que quero resumir."),
+            ("salvar_nota", "Resuma este texto: anote a data da prova."),
+        )
+        for nome, texto in casos:
+            with self.subTest(nome=nome, texto=texto):
+                self.assertFalse(
+                    DialogoQwenNixal._pedido_explicitamente_autorizou(nome, texto)
+                )
+
     def test_pergunta_informativa_nao_concede_autorizacao_mutavel(self):
         self.assertFalse(
             DialogoQwenNixal._pedido_explicitamente_autorizou(

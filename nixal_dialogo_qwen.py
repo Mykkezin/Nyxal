@@ -259,25 +259,35 @@ class DialogoQwenNixal:
         return disponiveis
 
     @staticmethod
+    @staticmethod
     def _pedido_explicitamente_autorizou(nome: str, texto: str) -> bool:
         original = texto.strip().casefold()
-        if not original or "?" in original:
+        if (
+            not original
+            or "?" in original
+            or original.startswith("'")
+            or original.startswith('"')
+            or original.startswith("“")
+            or original.startswith("‘")
+            or original.startswith("«")
+        ):
             return False
         informativos = (
             "como ", "o que ", "qual ", "quais ", "por que ", "porque ",
             "posso ", "poderia ", "devo ", "me explique ", "explique como ",
             "quero saber ", "gostaria de saber ", "me ensine ",
+            "resuma ", "resumir ", "explique ", "analise ", "analise o ",
+            "traduza ", "corrija ", "revise ", "classifique ",
         )
         if original.startswith(informativos):
             return False
         normalizado = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", original).strip()
         # Bloqueia negação direta e indireta antes de autorizar qualquer mutação.
-        # A negação no conteúdo de uma nota ("Anote que não quero esquecer")
-        # não é uma negação do comando de anotar.
+        # A negação no conteúdo da nota ("Anote que não quero esquecer") é permitida.
         comandos_negaveis = {
             "salvar_nota": r"(?:anote|anota|salve|salvar|registre|registra|guarde|guarda)",
             "criar_lembrete": r"(?:lembre|lembra|avise|avisa|crie|criar|agende|agendar|programe|programar)",
-            "abrir_aplicativo": r"(?:abra|abre|inicie|iniciar)",
+            "abrir_aplicativo": r"(?:abra|abre|inicie|iniciar|abrir)",
         }.get(nome)
         if comandos_negaveis:
             if re.search(r"\b(?:nao|não|nunca)\s+(?:me\s+)?" + comandos_negaveis + r"\b", normalizado):
@@ -288,21 +298,31 @@ class DialogoQwenNixal:
                 normalizado,
             ):
                 return False
-        if nome == "salvar_nota":
-            return any(x in normalizado for x in (
-                "anote ", "anota ", "salve esta nota", "salvar nota ",
-                "registre esta nota", "registra esta nota", "guarde esta nota",
-            ))
-        if nome == "criar_lembrete":
-            return any(x in normalizado for x in (
-                "me lembre ", "me lembra ", "crie um lembrete",
-                "criar lembrete ", "agende um lembrete", "me avise ", "lembre me ",
-            ))
-        if nome == "abrir_aplicativo":
-            return any(x in normalizado for x in (
-                "abra ", "abre ", "inicie o aplicativo", "inicie o ", "inicie a ",
-            ))
-        return False
+
+        # O comando precisa ser a intenção central do turno. Uma instrução
+        # citada ou mencionada no meio de outro pedido nunca autoriza mutação.
+        comando = re.sub(r"^(?:por favor|por gentileza)\s+", "", normalizado).strip()
+        padroes = {
+            "salvar_nota": (
+                r"^(?:anote|anota)\s+\S",
+                r"^(?:salve|salvar|registre|registra|guarde|guarda)\s+(?:(?:a|esta|essa)\s+)?nota\s+\S",
+                r"^(?:eu\s+)?quero\s+que\s+(?:voce\s+)?(?:me\s+)?(?:anote|anota|salve|registre|guarde)\s+\S",
+                r"^(?:pode|poderia)\s+(?:anotar|salvar|registrar|guardar)\s+\S",
+            ),
+            "criar_lembrete": (
+                r"^(?:me\s+lembre|me\s+lembra|me\s+avise|lembre\s+me)\s+\S",
+                r"^(?:crie\s+um\s+lembrete|criar\s+lembrete|agende\s+um\s+lembrete)\s+\S",
+                r"^(?:eu\s+)?quero\s+que\s+(?:voce\s+)?(?:me\s+)?(?:lembre|avise|crie|agende)\s+\S",
+                r"^(?:pode|poderia)\s+(?:me\s+lembrar|me\s+avisar|criar\s+um\s+lembrete|agendar\s+um\s+lembrete)\s+\S",
+            ),
+            "abrir_aplicativo": (
+                r"^(?:abra|abre)\s+\S",
+                r"^inicie\s+(?:o\s+aplicativo|o|a)\s+\S",
+                r"^(?:eu\s+)?quero\s+que\s+(?:voce\s+)?(?:abra|abre|inicie)\s+\S",
+                r"^(?:pode|poderia)\s+(?:abrir|iniciar)\s+\S",
+            ),
+        }
+        return any(re.search(padrao, comando) for padrao in padroes.get(nome, ()))
 
     def _executar_chamada_ferramenta(
         self, gerenciador: Any, chamada: Any, pedido_usuario: str,
