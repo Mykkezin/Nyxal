@@ -29,6 +29,16 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         chat_request = self.html.index("nyxalApiPost('/api/chat'", image_handler)
         self.assertLess(image_handler, chat_request)
 
+    def test_chat_surfaces_http_errors_and_recovers_sessions_instead_of_reporting_connection_failure(self):
+        client = (ROOT / "interface" / "js" / "nyxal-api-client.js").read_text(encoding="utf-8")
+        self.assertIn("throwOnError = true", client)
+        self.assertIn("if (!response.ok && throwOnError)", client)
+        chat_call = self.html.index("nyxalApiPost('/api/chat'")
+        recovery = self.html.index("sessaoConversacionalRecuperavel(data)", chat_call)
+        catch_block = self.html.index("Chat API fetch error:", recovery)
+        self.assertIn("throwOnError: false", self.html[chat_call:recovery])
+        self.assertLess(recovery, catch_block)
+
     def test_console_uses_existing_real_telemetry(self):
         self.assertIn('"/api/agent/contexto"', self.console)
         self.assertIn('"/api/public/status"', self.console)
