@@ -291,7 +291,7 @@ esac
 
     def test_diagnostico_permanece_somente_leitura_e_cobre_storage_dedicado(self) -> None:
         diagnostic = (ROOT / "deploy" / "delta" / "diagnosticar_vm_mvp0.sh").read_text(encoding="utf-8")
-        self.assertIn('DOMAIN_EXISTS="unknown"', diagnostic)
+        self.assertIn("DOMAIN_EXISTS=unknown", diagnostic)
         self.assertIn('virsh -c qemu:///system list --all --name', diagnostic)
         self.assertIn('NYXOS_DELTA_VM_STORAGE', diagnostic)
         self.assertIn('delta-mvp0-storage', diagnostic)
