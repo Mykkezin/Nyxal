@@ -92,14 +92,48 @@ else
   warn 'Comando df não encontrado; espaço livre não avaliado'
 fi
 
-# Optional virtualization management and candidate image toolchains.
-for tool in virsh virt-install virt-host-validate; do
+# VM provisioning dependencies already used by NyxOS VPS management.
+for tool in virsh virt-install virt-host-validate cloud-localds ssh-keygen; do
   if has_cmd "$tool"; then
-    ok "Ferramenta opcional disponível: ${tool}"
+    ok "Ferramenta disponível: ${tool}"
   else
-    warn "Ferramenta opcional ausente: ${tool}"
+    warn "Ferramenta ausente: ${tool}"
   fi
 done
+
+# Read-only checks: verify the system libvirt connection and default NAT network.
+if has_cmd virsh; then
+  if virsh -c qemu:///system list --all >/dev/null 2>&1; then
+    ok 'Conexão libvirt qemu:///system operacional'
+  else
+    warn 'virsh não conseguiu consultar qemu:///system; verificar serviço/permissões antes de criar uma VM'
+  fi
+
+  net_info="$(virsh -c qemu:///system net-info default 2>/dev/null || true)"
+  if [[ -n "${net_info}" ]]; then
+    if printf '%s\n' "${net_info}" | grep -Eq '^Active:[[:space:]]+yes'; then
+      ok 'Rede libvirt default existe e está ativa'
+    else
+      warn 'Rede libvirt default existe, mas não parece ativa; não a iniciaremos automaticamente'
+    fi
+  else
+    warn 'Rede libvirt default não encontrada ou indisponível'
+  fi
+fi
+
+# SSH public keys are needed by the existing cloud-init provisioner. Do not print key contents.
+if compgen -G "${HOME}/.ssh/*.pub" >/dev/null; then
+  ok 'Pelo menos uma chave pública SSH existe em ~/.ssh'
+else
+  warn 'Nenhuma chave pública SSH encontrada em ~/.ssh; a VM não pode ser provisionada com o método cloud-init atual'
+fi
+
+BASE_IMAGE="${NYXOS_VPS_BASE_IMAGE:-${HOME}/NyxOS/VPS/ubuntu-24.04-server-cloudimg-amd64.img}"
+if [[ -f "${BASE_IMAGE}" ]]; then
+  ok "Imagem cloud base encontrada: ${BASE_IMAGE}"
+else
+  info "Imagem cloud base ainda não existe; o script de preparação fará download e verificação SHA-256"
+fi
 if has_cmd nix; then
   ok 'Nix disponível para protótipo NixOS'
 else
