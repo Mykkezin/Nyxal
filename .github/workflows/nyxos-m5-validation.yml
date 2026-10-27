@@ -32,6 +32,7 @@ on:
       - "auditar_evidencias_ae5.py"
       - "teste_ae5_coletor_dual.py"
       - "teste_m5_*.py"
+      - ".github/workflows/nyxos-m5-validation.yml"
   workflow_dispatch:
 
 concurrency:
