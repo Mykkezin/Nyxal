@@ -444,7 +444,7 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
             "sessao": "sessao-teste",
             "valor": {"transporte": {"resposta": resposta_nucleo}},
         }
-        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="gemini"):
+        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="nyxal"):
             with patch.object(
                 api.INTEGRACAO_CONVERSACIONAL,
                 "processar_mensagem",
@@ -461,7 +461,7 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("nao-retornar", body)
         processar.assert_called_once()
-        self.assertEqual(processar.call_args.kwargs["provedor"], "gemini")
+        self.assertEqual(processar.call_args.kwargs["provedor"], "nyxal")
         self.assertEqual(processar.call_args.kwargs["sessao_id"], "sessao-teste")
         responder_direto.assert_not_called()
 
@@ -492,7 +492,7 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("/root/nyxal.env", body)
 
-    def test_agent_chat_uses_core_session_integration_for_remote_provider(self) -> None:
+    def test_agent_chat_uses_core_session_integration_and_forces_local_provider(self) -> None:
         api.PROXY_MODE = True
         api.API_TOKEN = "token-de-teste"
         answer = {
@@ -517,7 +517,7 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
             "Authorization": "Bearer token-de-teste",
             "Content-Type": "application/json",
         }
-        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="openai"):
+        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="nyxal"):
             with patch.object(
                 api.INTEGRACAO_CONVERSACIONAL,
                 "processar_mensagem",
@@ -537,7 +537,7 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         kwargs = processar.call_args.kwargs
         self.assertEqual(kwargs["texto"], "Olá")
         self.assertEqual(kwargs["sessao_id"], "sessao-core-123")
-        self.assertEqual(kwargs["provedor"], "openai")
+        self.assertEqual(kwargs["provedor"], "nyxal")
         self.assertEqual(kwargs["contexto_sistema"], {})
         responder_direto.assert_not_called()
 

@@ -1318,60 +1318,62 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             if provedor_solicitado is not None and not isinstance(provedor_solicitado, str):
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": "O campo provedor precisa ser texto."})
                 return
-            # Conversa somente pela Nyxal local: ignora configurações antigas de Gemini
-            # e seleções enviadas pelo cliente; geração visual possui rota separada.
+            # O chat textual é sempre local. O valor enviado pelo cliente não pode
+            # reativar provedores externos; contexto operacional continua sendo
+            # coletado em modo somente leitura para que o Qwen responda com dados atuais.
             provedor = "nyxal"
             try:
                 provedor_resolvido = AGENTE_NYXAL.resolve_provider(provedor)
-                provedor_conversa = provedor.strip().lower() or "auto"
                 if provedor_resolvido != "nyxal":
-                    contexto_sistema_conversa = {}
-                    if _precisa_contexto_sistema(mensagem):
-                        contexto_sistema_conversa["observabilidade"] = OBSERVABILIDADE_NYXOS.snapshot()
-                        contexto_sistema_conversa["residencia"] = residencia_snapshot()
-                    if _precisa_contexto_email(mensagem):
-                        try:
-                            status_google = GMAIL_NYXOS.status()
-                            contexto_sistema_conversa["gmail"] = (
-                                GMAIL_NYXOS.listar_mensagens(query="is:unread newer_than:7d", limite=10)
-                                if status_google.get("servicos_disponiveis", {}).get("gmail")
-                                and status_google.get("estado") == "configurado"
-                                else status_google
-                            )
-                        except Exception:
-                            contexto_sistema_conversa["gmail"] = {
-                                "estado": "gmail_indisponivel",
-                                "somente_leitura": True,
-                                "motivo": "Não foi possível consultar o Gmail nesta solicitação.",
-                            }
-                    if _precisa_contexto_agenda(mensagem):
-                        try:
-                            contexto_sistema_conversa["agenda"] = GMAIL_NYXOS.listar_eventos(limite=12, dias=14)
-                        except Exception:
-                            contexto_sistema_conversa["agenda"] = {
-                                "estado": "agenda_indisponivel", "somente_leitura": True,
-                            }
-                    if _precisa_contexto_contatos(mensagem):
-                        try:
-                            contexto_sistema_conversa["contatos"] = GMAIL_NYXOS.listar_contatos(limite=25)
-                        except Exception:
-                            contexto_sistema_conversa["contatos"] = {
-                                "estado": "contatos_indisponiveis", "somente_leitura": True,
-                            }
-                    if _precisa_contexto_drive(mensagem):
-                        try:
-                            contexto_sistema_conversa["google_drive"] = GMAIL_NYXOS.listar_arquivos_drive(limite=25)
-                        except Exception:
-                            contexto_sistema_conversa["google_drive"] = {
-                                "estado": "drive_indisponivel", "somente_leitura": True,
-                            }
+                    raise RuntimeError("A política de conversa local foi violada.")
+                provedor_conversa = "nyxal"
+                contexto_sistema_conversa = {}
+                if _precisa_contexto_sistema(mensagem):
+                    contexto_sistema_conversa["observabilidade"] = OBSERVABILIDADE_NYXOS.snapshot()
+                    contexto_sistema_conversa["residencia"] = residencia_snapshot()
+                if _precisa_contexto_email(mensagem):
+                    try:
+                        status_google = GMAIL_NYXOS.status()
+                        contexto_sistema_conversa["gmail"] = (
+                            GMAIL_NYXOS.listar_mensagens(query="is:unread newer_than:7d", limite=10)
+                            if status_google.get("servicos_disponiveis", {}).get("gmail")
+                            and status_google.get("estado") == "configurado"
+                            else status_google
+                        )
+                    except Exception:
+                        contexto_sistema_conversa["gmail"] = {
+                            "estado": "gmail_indisponivel",
+                            "somente_leitura": True,
+                            "motivo": "Não foi possível consultar o Gmail nesta solicitação.",
+                        }
+                if _precisa_contexto_agenda(mensagem):
+                    try:
+                        contexto_sistema_conversa["agenda"] = GMAIL_NYXOS.listar_eventos(limite=12, dias=14)
+                    except Exception:
+                        contexto_sistema_conversa["agenda"] = {
+                            "estado": "agenda_indisponivel", "somente_leitura": True,
+                        }
+                if _precisa_contexto_contatos(mensagem):
+                    try:
+                        contexto_sistema_conversa["contatos"] = GMAIL_NYXOS.listar_contatos(limite=25)
+                    except Exception:
+                        contexto_sistema_conversa["contatos"] = {
+                            "estado": "contatos_indisponiveis", "somente_leitura": True,
+                        }
+                if _precisa_contexto_drive(mensagem):
+                    try:
+                        contexto_sistema_conversa["google_drive"] = GMAIL_NYXOS.listar_arquivos_drive(limite=25)
+                    except Exception:
+                        contexto_sistema_conversa["google_drive"] = {
+                            "estado": "drive_indisponivel", "somente_leitura": True,
+                        }
             except ValueError as erro:
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": str(erro)})
                 return
             except RuntimeError:
                 self._send_json(503, {
                     "estado": "provedor_indisponivel",
-                    "motivo": "O provedor selecionado não está disponível.",
+                    "motivo": "A conversa local não está disponível.",
                 })
                 return
             except Exception as erro:
