@@ -407,7 +407,7 @@ def consultar_home_assistant(entidade_id: str = "", dominio: str = "seguro") -> 
         return {
             "sucesso": True, "estado": "configuracao_pendente",
             "integracao": "Home Assistant", "modo": "somente_leitura",
-            "proximo_passo": "Configure NYXAL_HOME_ASSISTANT_URL e NYXAL_HOME_ASSISTANT_TOKEN no ambiente do serviço local.",
+            "proximo_passo": "Configure a URL local e as credenciais do Home Assistant no ambiente do processo; não coloque segredos no repositório.",
             "acoes_fisicas_habilitadas": False,
         }
     base, token = config
@@ -821,8 +821,9 @@ def registrar_capacidades_operacionais(
     diagnósticos locais de leitura. Capacidades que acessam arquivos,
     e-mail, agenda, notas ou sensores da casa exigem opt-in explícito.
 
-    Ações que mudam estado ficam desativadas: GerenciadorCapacidades atual
-    não aplica uma política por capacidade no método executar().
+    Leituras privadas e ações mutáveis são opt-in independentes. Ações que
+    alteram estado recebem política explícita no registro de capacidades e o
+    executor exige autorização explícita antes de chamar a função.
     """
     if not hasattr(capacidades, "registrar") or not hasattr(capacidades, "capacidades"):
         raise TypeError("É necessário fornecer o GerenciadorCapacidades existente.")
