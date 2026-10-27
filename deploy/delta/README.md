@@ -66,6 +66,24 @@ Primeiro execute o diagnóstico, que é somente de leitura:
 bash deploy/delta/diagnosticar_vm_mvp0.sh
 ```
 
+O diagnóstico também emite `GUEST_AGENT_CHANNEL` e `GUEST_AGENT_PING`:
+- `GUEST_AGENT_CHANNEL=present`: o XML libvirt contém `org.qemu.guest_agent.0`.
+- `GUEST_AGENT_CHANNEL=absent`: a definição da VM não declara esse canal.
+- `GUEST_AGENT_CHANNEL=unknown`: não foi possível ler/interpretar o XML, ou o domínio não foi confirmado.
+- `GUEST_AGENT_PING=success`: o QEMU Guest Agent respondeu a um `guest-ping` somente de leitura.
+- `GUEST_AGENT_PING=failed`: canal presente e VM executando, mas o agente não respondeu.
+- `not_attempted` ou `not_running`: o ping não foi executado porque faltava uma pré-condição.
+
+O ping não instala, reinicia, inicia ou para serviços. Se falhar, use o console da VM para inspecionar manualmente (sem alterar estado):
+
+```bash
+systemctl is-active qemu-guest-agent
+dpkg-query -W -f='${Status} ${Version}\n' qemu-guest-agent
+test -e /dev/virtio-ports/org.qemu.guest_agent.0 && echo GUEST_AGENT_DEVICE_PRESENT
+```
+
+Não reinicie o agente automaticamente a partir do host. Primeiro diferencie ausência do canal no XML, dispositivo virtio ausente dentro da VM e serviço instalado mas inativo.
+
 Se ele indicar `DOMAIN_EXISTS=yes`, **não crie outra VM ainda**. Inspecione o estado e os caminhos com os comandos exibidos; não desregistre um domínio até confirmar que é a tentativa descartável e não uma VM anterior do usuário. O diagnóstico não remove nem altera nada.
 
 Se indicar `DOMAIN_EXISTS=unknown`, a conexão/listagem do libvirt não permitiu determinar o estado. **Não crie outra VM nem remova discos**; corrija a conexão/permissões e repita o diagnóstico. O script só informa `DOMAIN_EXISTS=no` depois de uma listagem bem-sucedida confirmar que o nome não existe.
