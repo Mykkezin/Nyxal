@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from nixal_tool_use import (
     NotasLembretesNixOS, consultar_home_assistant, consultar_metar_taf,
+    consultar_notam_aisweb, consultar_cartas_aisweb,
     ler_arquivo_usuario, buscar_arquivos, executar_diagnostico, _DuckDuckGoResults,
 )
 
@@ -37,6 +38,77 @@ class TestFerramentasNyxal(unittest.TestCase):
         result = consultar_metar_taf("SB")
         self.assertFalse(result["sucesso"])
         self.assertEqual(result["estado"], "icao_invalido")
+
+    def test_notam_rejeita_icao_invalido_sem_rede(self):
+        result = consultar_notam_aisweb("SBSP,!!")
+        self.assertFalse(result["sucesso"])
+        self.assertEqual(result["estado"], "icao_invalido")
+
+    def test_cartas_valida_filtros_antes_de_rede(self):
+        self.assertEqual(consultar_cartas_aisweb().get("estado"), "filtro_obrigatorio")
+        self.assertEqual(
+            consultar_cartas_aisweb(especie="IFR").get("estado"),
+            "tipo_obrigatorio",
+        )
+        self.assertEqual(
+            consultar_cartas_aisweb(icao="SBSP", especie="IFR", tipo="WAC").get("estado"),
+            "tipo_invalido",
+        )
+        self.assertEqual(
+            consultar_cartas_aisweb(icao="SB").get("estado"),
+            "icao_invalido",
+        )
+
+    def test_aisweb_sem_credenciais_retorna_configuracao_pendente(self):
+        with patch.dict(os.environ, {
+            "NYXAL_AISWEB_API_KEY": "",
+            "NYXAL_AISWEB_API_PASS": "",
+        }, clear=True):
+            notams = consultar_notam_aisweb("SBSP")
+            cartas = consultar_cartas_aisweb(icao="SBSP")
+        self.assertEqual(notams["estado"], "configuracao_pendente")
+        self.assertEqual(cartas["estado"], "configuracao_pendente")
+        serializados = json.dumps([notams, cartas], ensure_ascii=False).lower()
+        self.assertNotIn("apikey=", serializados)
+        self.assertNotIn("apipass=", serializados)
+
+    def test_aisweb_xml_parseia_resultados_e_nao_devolve_credenciais(self):
+        from unittest.mock import MagicMock
+        from urllib.parse import parse_qs, urlsplit
+
+        class FakeResponse:
+            status = 200
+            def __enter__(self):
+                return self
+            def __exit__(self, *_args):
+                return False
+            def read(self, _limit):
+                return (
+                    b'<?xml version="1.0" encoding="UTF-8"?>'
+                    b'<root><notams>'
+                    b'<notam><icaoCode>SBSP</icaoCode><id>B1234/26</id></notam>'
+                    b'<notam><icaoCode>SBGR</icaoCode><id>B1235/26</id></notam>'
+                    b'</notams></root>'
+                )
+
+        opener = MagicMock()
+        opener.open.return_value = FakeResponse()
+        with patch.dict(os.environ, {
+            "NYXAL_AISWEB_API_KEY": "test-key",
+            "NYXAL_AISWEB_API_PASS": "test-pass",
+        }, clear=True), patch("nixal_tool_use.build_opener", return_value=opener):
+            result = consultar_notam_aisweb("SBSP,SBGR")
+        self.assertTrue(result["sucesso"])
+        records = result["dados"]["notams"]["notam"]
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]["icaoCode"], "SBSP")
+        request = opener.open.call_args.args[0]
+        params = parse_qs(urlsplit(request.full_url).query)
+        self.assertEqual(params["area"], ["notam"])
+        self.assertEqual(params["icaoCode"], ["SBSP,SBGR"])
+        serializados = json.dumps(result, ensure_ascii=False)
+        self.assertNotIn("test-key", serializados)
+        self.assertNotIn("test-pass", serializados)
 
     def test_home_assistant_sem_token_nao_expoe_segredos(self):
         with patch.dict(os.environ, {"NYXAL_HOME_ASSISTANT_URL": "", "NYXAL_HOME_ASSISTANT_TOKEN": ""}):
@@ -83,6 +155,8 @@ class TestFerramentasNyxal(unittest.TestCase):
         nomes = set(manager.capacidades)
         self.assertIn("pesquisar_web", nomes)
         self.assertIn("consultar_metar_taf", nomes)
+        self.assertIn("consultar_notam_aisweb", nomes)
+        self.assertIn("consultar_cartas_aisweb", nomes)
         self.assertIn("executar_diagnostico", nomes)
         for nome in (
             "buscar_arquivos", "ler_arquivo_usuario", "consultar_emails_google",
