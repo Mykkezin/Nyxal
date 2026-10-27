@@ -73,7 +73,7 @@ class MemoriaConversacionalNixal:
         pasta.mkdir(mode=0o700, parents=True, exist_ok=True)
         candidato = pasta
         while True:
-            if candidato.exists() and candidato.is_symlink():
+            if candidato.is_symlink():
                 raise OSError("ancestral_de_memoria_nao_pode_ser_link_simbolico")
             if candidato.parent == candidato:
                 break
@@ -252,10 +252,15 @@ class MemoriaConversacionalNixal:
 
     def _erro_degradacao(self, motivo: str) -> dict[str, Any]:
         self._erro_persistencia = motivo
+        preservado = self.caminho is not None and self.caminho.exists()
         return self._erro(
-            f"memoria_degradada:{motivo}; arquivo original preservado.",
+            (
+                f"memoria_degradada:{motivo}; arquivo original preservado."
+                if preservado
+                else f"memoria_degradada:{motivo}; gravação recusada."
+            ),
             estado="memoria_degradada",
-            arquivo_original_preservado=True,
+            arquivo_original_preservado=preservado,
         )
 
     def _registrar_volatil(
@@ -320,9 +325,10 @@ class MemoriaConversacionalNixal:
                     erro = self._salvar_persistencia_sem_lock(dados)
                     if erro:
                         return self._erro_degradacao(erro)
-                    self._historicos = deepcopy(sessoes)
+                    self._historicos = deepcopy(dados["sessoes"])
                     self._erro_persistencia = None
-                    return self._resultado_registro(sessao_normalizada, historico)
+                    historico_atual = self._historicos.get(sessao_normalizada, [])
+                    return self._resultado_registro(sessao_normalizada, historico_atual)
             except OSError:
                 return self._erro_degradacao("persistencia_indisponivel")
 
@@ -423,11 +429,14 @@ class MemoriaConversacionalNixal:
         dados, erro = self._ler_persistencia()
         if erro or dados is None:
             self._erro_persistencia = erro or "estrutura_de_memoria_invalida"
-            return {
+            degradacao: dict[str, Any] = {
                 "sucesso": False, "estado": "memoria_degradada",
                 "persistencia_ativa": True, "motivo": self._erro_persistencia,
-                "arquivo_original_preservado": True, "permanente": False,
+                "permanente": False,
             }
+            if self.caminho is not None and self.caminho.exists():
+                degradacao["arquivo_original_preservado"] = True
+            return degradacao
         self._historicos = deepcopy(dados["sessoes"])
         self._erro_persistencia = None
         return {
