@@ -157,6 +157,57 @@ class DialogoQwenNixal:
             return resposta.get("message", {})
         return getattr(resposta, "message", {})
 
+    @staticmethod
+    def _esquema_json_argumento(especificacao: dict[str, Any], profundidade: int = 0) -> dict[str, Any]:
+        if profundidade > 8:
+            # O executor recusará este esquema, em vez de promover um objeto profundo.
+            return {"type": "string", "description": "Esquema aninhado excede o limite permitido."}
+        tipo = especificacao.get("tipo", "string")
+        tipo_schema = {
+            "integer": "integer", "int": "integer", "number": "number",
+            "float": "number", "boolean": "boolean", "bool": "boolean",
+            "object": "object", "array": "array",
+        }.get(tipo, "string")
+        propriedade: dict[str, Any] = {
+            "type": tipo_schema,
+            "description": str(especificacao.get("descricao", ""))[:240],
+        }
+        enum = especificacao.get("enum")
+        if isinstance(enum, list) and len(enum) <= 100:
+            propriedade["enum"] = enum
+        for origem, destino in (
+            ("minimo", "minimum"), ("maximo", "maximum"),
+            ("min_length", "minLength"), ("max_length", "maxLength"),
+            ("min_items", "minItems"), ("max_items", "maxItems"),
+        ):
+            valor = especificacao.get(origem)
+            if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+                propriedade[destino] = valor
+        propriedades = especificacao.get("properties")
+        if tipo_schema == "object" and isinstance(propriedades, dict):
+            subpropriedades: dict[str, Any] = {}
+            obrigatorios = especificacao.get("required", [])
+            if not isinstance(obrigatorios, list):
+                obrigatorios = []
+            obrigatorios = [x for x in obrigatorios if isinstance(x, str)]
+            for nome, subespecificacao in propriedades.items():
+                if not isinstance(nome, str) or not isinstance(subespecificacao, dict):
+                    continue
+                subpropriedades[nome] = DialogoQwenNixal._esquema_json_argumento(
+                    subespecificacao, profundidade + 1,
+                )
+                if subespecificacao.get("obrigatorio") is True and nome not in obrigatorios:
+                    obrigatorios.append(nome)
+            propriedade["properties"] = subpropriedades
+            propriedade["required"] = obrigatorios
+            propriedade["additionalProperties"] = False
+        itens = especificacao.get("items")
+        if tipo_schema == "array" and isinstance(itens, dict):
+            propriedade["items"] = DialogoQwenNixal._esquema_json_argumento(
+                itens, profundidade + 1,
+            )
+        return propriedade
+
     def _especificacoes_ferramentas(self, gerenciador: Any) -> list[dict[str, Any]]:
         privadas_ativas = os.environ.get(
             "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
@@ -181,24 +232,7 @@ class DialogoQwenNixal:
             for nome_argumento, especificacao in argumentos.items():
                 if not isinstance(nome_argumento, str) or not isinstance(especificacao, dict):
                     continue
-                tipo = especificacao.get("tipo", "string")
-                tipo_schema = {
-                    "integer": "integer", "int": "integer", "number": "number",
-                    "float": "number", "boolean": "boolean", "bool": "boolean",
-                    "object": "object", "array": "array",
-                }.get(tipo, "string")
-                propriedade: dict[str, Any] = {
-                    "type": tipo_schema,
-                    "description": str(especificacao.get("descricao", ""))[:240],
-                }
-                enum = especificacao.get("enum")
-                if isinstance(enum, list) and len(enum) <= 100:
-                    propriedade["enum"] = enum
-                for origem, destino in (("minimo", "minimum"), ("maximo", "maximum")):
-                    valor = especificacao.get(origem)
-                    if isinstance(valor, (int, float)) and not isinstance(valor, bool):
-                        propriedade[destino] = valor
-                propriedades[nome_argumento] = propriedade
+                propriedades[nome_argumento] = self._esquema_json_argumento(especificacao)
                 if especificacao.get("obrigatorio") is True:
                     obrigatorios.append(nome_argumento)
             disponiveis.append({
@@ -210,6 +244,7 @@ class DialogoQwenNixal:
                         "type": "object",
                         "properties": propriedades,
                         "required": obrigatorios,
+                        "additionalProperties": False,
                     },
                 },
             })
