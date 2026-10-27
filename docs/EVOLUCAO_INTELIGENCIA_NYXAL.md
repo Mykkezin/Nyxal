@@ -15,7 +15,7 @@ O OpenJarvis é uma referência de arquitetura, não um modelo de linguagem que 
 ### P0 — experiência e capacidades visíveis
 
 - Recuperar indicadores do sistema no modo de voz: CPU, RAM, disco, GPU e temperaturas, sempre exibindo “—”/indisponível quando o hardware ou driver não fornecer leitura.
-- Recuperar clima com atualização periódica, relógio e reflexões originais a cada três horas.
+- Recuperar clima com atualização periódica, relógio e reflexões originais a cada três minutos.
 - Expor conversa por texto, acesso rápido à VPS, modos de trabalho de cibersegurança defensiva e Data Science, e geração visual na própria interface.
 - Manter a captura de voz, a interrupção por fala e o recolhimento visual independentes dos painéis auxiliares.
 
