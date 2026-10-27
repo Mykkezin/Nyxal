@@ -25,6 +25,9 @@ ela serve, mas também EM QUAL DOMÍNIO ela opera.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
+import threading
 import time
 import traceback
 from dataclasses import asdict, dataclass
@@ -45,6 +48,7 @@ ARQUIVO_LOG = (
 MAX_TAMANHO_ARQUIVO = (
     1 * 1024 * 1024
 )
+_AUDIT_LOCK = threading.Lock()
 
 
 # ================================================================
@@ -86,6 +90,8 @@ class GerenciadorCapacidades:
             Capacidade,
         ] = {}
 
+        # A corrupção de um catálogo existente nunca autoriza substituí-lo por defaults.
+        self._preservar_catalogo_corrompido = False
         self.registro_anterior = (
             self._carregar_registro()
         )
@@ -288,60 +294,69 @@ class GerenciadorCapacidades:
             return []
 
         try:
-
-            with ARQUIVO_CAPACIDADES.open(
-                "r",
-                encoding="utf-8",
-            ) as f:
-
-                dados = json.load(f)
-
-            if isinstance(dados, list):
-                return dados
-
-            return []
-
+            with ARQUIVO_CAPACIDADES.open("rb") as arquivo:
+                conteudo = arquivo.read(MAX_TAMANHO_ARQUIVO + 1)
+            if len(conteudo) > MAX_TAMANHO_ARQUIVO:
+                raise ValueError("O catálogo ultrapassa o limite de tamanho.")
+            dados = json.loads(conteudo.decode("utf-8"))
+            if not isinstance(dados, list) or not all(isinstance(item, dict) for item in dados):
+                raise ValueError("Formato de catálogo inválido.")
+            return dados
         except Exception as erro:
-
+            self._preservar_catalogo_corrompido = True
             print(
-                "[Nixal] Não foi possível carregar "
-                f"o registro de capacidades: {erro}"
+                "[Nixal] Catálogo inválido; preservando o arquivo original "
+                f"sem sobrescrever: {type(erro).__name__}"
             )
-
             return []
 
     def _salvar_registro(
         self,
     ) -> None:
 
-        dados = (
-            self.listar_capacidades()
-        )
+        if self._preservar_catalogo_corrompido:
+            return
 
+        temporario: str | None = None
         try:
-
-            with ARQUIVO_CAPACIDADES.open(
-                "w",
-                encoding="utf-8",
-            ) as f:
-
-                json.dump(
-                    dados,
-                    f,
-                    ensure_ascii=False,
-                    indent=2,
-                )
-
-        except Exception as erro:
-
-            print(
-                "[Nixal] Não foi possível salvar "
-                f"o registro de capacidades: {erro}"
+            ARQUIVO_CAPACIDADES.parent.mkdir(parents=True, exist_ok=True)
+            dados = self.listar_capacidades()
+            payload = json.dumps(
+                dados, ensure_ascii=False, indent=2, allow_nan=False
             )
-
-    # ============================================================
-    # REGISTRAR
-    # ============================================================
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=ARQUIVO_CAPACIDADES.parent,
+                prefix=".capacidades-nixal-",
+                suffix=".tmp",
+                delete=False,
+            ) as arquivo:
+                temporario = arquivo.name
+                try:
+                    os.fchmod(arquivo.fileno(), 0o600)
+                except OSError:
+                    pass
+                arquivo.write(payload)
+                arquivo.flush()
+                os.fsync(arquivo.fileno())
+            os.replace(temporario, ARQUIVO_CAPACIDADES)
+            temporario = None
+            try:
+                os.chmod(ARQUIVO_CAPACIDADES, 0o600)
+            except OSError:
+                pass
+        except Exception as erro:
+            print(
+                "[Nixal] Não foi possível salvar o registro de capacidades: "
+                f"{type(erro).__name__}"
+            )
+        finally:
+            if temporario is not None:
+                try:
+                    os.unlink(temporario)
+                except OSError:
+                    pass
 
     def registrar(
         self,
@@ -1071,97 +1086,64 @@ class GerenciadorCapacidades:
         self,
         resultado: ResultadoCapacidade,
     ) -> None:
-
-        historico: list[
-            dict[str, Any]
-        ] = []
-
-        if ARQUIVO_LOG.exists():
+        # Serialize read-modify-write within this process. Keep invalid or oversized
+        # existing logs intact instead of treating them as empty and destroying evidence.
+        with _AUDIT_LOCK:
+            historico: list[dict[str, Any]] = []
+            if ARQUIVO_LOG.exists():
+                try:
+                    with ARQUIVO_LOG.open("rb") as arquivo:
+                        existente = arquivo.read(MAX_TAMANHO_ARQUIVO + 1)
+                    if len(existente) > MAX_TAMANHO_ARQUIVO:
+                        return
+                    dados = json.loads(existente.decode("utf-8"))
+                except Exception:
+                    return
+                if not isinstance(dados, list) or not all(isinstance(item, dict) for item in dados):
+                    return
+                historico = dados
 
             try:
-                # Limita também a leitura do histórico legado. Um log antigo
-                # maior que o teto não pode consumir memória antes da nova gravação.
-                with ARQUIVO_LOG.open("rb") as f:
-                    conteudo_existente = f.read(MAX_TAMANHO_ARQUIVO + 1)
-
-                if len(conteudo_existente) <= MAX_TAMANHO_ARQUIVO:
-                    dados = json.loads(conteudo_existente.decode("utf-8"))
-                    if isinstance(dados, list):
-                        historico = dados
-
-            except Exception:
-                historico = []
-
-        try:
-
-            registro = asdict(resultado)
-            tamanho_registro = len(
-                json.dumps(
-                    registro,
-                    ensure_ascii=False,
-                    indent=2,
-                ).encode("utf-8")
-            )
-
-            # Um único resultado não pode consumir todo o orçamento
-            # do log. Preserve metadados e marque o conteúdo omitido.
-            if tamanho_registro > MAX_TAMANHO_ARQUIVO // 2:
-
-                registro["resultado"] = {
-                    "truncado": True,
-                    "motivo": (
-                        "Resultado omitido para respeitar "
-                        "o limite de armazenamento do log."
-                    ),
-                    "tamanho_original_bytes": tamanho_registro,
+                registro = asdict(resultado)
+                capacidades_privadas = {
+                    "listar_arquivos", "ler_estado_corpo", "ler_memoria_corporal",
+                    "ler_arquivo", "buscar_arquivos", "ler_arquivo_usuario",
+                    "consultar_emails_google", "ler_email_google",
+                    "consultar_agenda_google", "consultar_home_assistant",
+                    "listar_notas_lembretes", "salvar_nota", "criar_lembrete",
                 }
+                if resultado.capacidade in capacidades_privadas:
+                    registro["resultado"] = {
+                        "conteudo_omitido": True,
+                        "motivo": "Resultado privado omitido do log de execução.",
+                    }
+                    if registro.get("erro") is not None:
+                        registro["erro"] = "Falha de capacidade privada; detalhes omitidos."
 
-                registro["capacidade"] = str(
-                    registro.get("capacidade", "")
-                )[:256]
-
-                if registro.get("erro") is not None:
-                    registro["erro"] = str(
-                        registro["erro"]
-                    )[:2048]
-
-            historico.append(registro)
-            historico = historico[-200:]
-
-            payload = json.dumps(
-                historico,
-                ensure_ascii=False,
-                indent=2,
-            )
-
-            # Limite rígido em bytes UTF-8, e não só em quantidade
-            # de execuções. Remove primeiro os registros mais antigos.
-            while (
-                len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO
-                and len(historico) > 1
-            ):
-
-                historico.pop(0)
-
-                payload = json.dumps(
-                    historico,
-                    ensure_ascii=False,
-                    indent=2,
+                tamanho_registro = len(
+                    json.dumps(registro, ensure_ascii=False, indent=2).encode("utf-8")
                 )
+                if tamanho_registro > MAX_TAMANHO_ARQUIVO // 2:
+                    registro["resultado"] = {
+                        "truncado": True,
+                        "motivo": "Resultado omitido para respeitar o limite do log.",
+                        "tamanho_original_bytes": tamanho_registro,
+                    }
+                    registro["capacidade"] = str(registro.get("capacidade", ""))[:256]
+                    if registro.get("erro") is not None:
+                        registro["erro"] = str(registro["erro"])[:1024]
 
-            if len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO:
-
-                historico = [
-                    {
+                historico.append(registro)
+                historico = historico[-200:]
+                payload = json.dumps(historico, ensure_ascii=False, indent=2, allow_nan=False)
+                while len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO and len(historico) > 1:
+                    historico.pop(0)
+                    payload = json.dumps(historico, ensure_ascii=False, indent=2, allow_nan=False)
+                if len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO:
+                    historico = [{
                         "sucesso": bool(registro.get("sucesso")),
-                        "capacidade": str(
-                            registro.get("capacidade", "")
-                        )[:256],
-                        "erro": (
-                            str(registro.get("erro"))[:1024]
-                            if registro.get("erro") is not None
-                            else None
-                        ),
+                        "capacidade": str(registro.get("capacidade", ""))[:256],
+                        "erro": str(registro.get("erro"))[:1024] if registro.get("erro") is not None else None,
                         "timestamp": registro.get("timestamp", 0.0),
                         "duracao_ms": registro.get("duracao_ms", 0.0),
                         "resultado": {
@@ -1169,34 +1151,48 @@ class GerenciadorCapacidades:
                             "motivo": "Limite rígido de armazenamento",
                             "tamanho_original_bytes": tamanho_registro,
                         },
-                    }
-                ]
+                    }]
+                    payload = json.dumps(historico, ensure_ascii=False, indent=2, allow_nan=False)
+                if len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO:
+                    return
 
-                payload = json.dumps(
-                    historico,
-                    ensure_ascii=False,
-                    indent=2,
+                ARQUIVO_LOG.parent.mkdir(parents=True, exist_ok=True)
+                temporario: str | None = None
+                try:
+                    with tempfile.NamedTemporaryFile(
+                        mode="w",
+                        encoding="utf-8",
+                        dir=ARQUIVO_LOG.parent,
+                        prefix=".log-capacidades-nixal-",
+                        suffix=".tmp",
+                        delete=False,
+                    ) as arquivo:
+                        temporario = arquivo.name
+                        try:
+                            os.fchmod(arquivo.fileno(), 0o600)
+                        except OSError:
+                            pass
+                        arquivo.write(payload)
+                        arquivo.flush()
+                        os.fsync(arquivo.fileno())
+                    os.replace(temporario, ARQUIVO_LOG)
+                    temporario = None
+                    try:
+                        os.chmod(ARQUIVO_LOG, 0o600)
+                    except OSError:
+                        pass
+                finally:
+                    if temporario is not None:
+                        try:
+                            os.unlink(temporario)
+                        except OSError:
+                            pass
+            except Exception as erro:
+                print(
+                    "[Nixal] Não foi possível salvar log de capacidade: "
+                    f"{type(erro).__name__}"
                 )
 
-            if len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO:
-                payload = "[]"
-
-            ARQUIVO_LOG.parent.mkdir(
-                parents=True,
-                exist_ok=True,
-            )
-
-            ARQUIVO_LOG.write_text(
-                payload,
-                encoding="utf-8",
-            )
-
-        except Exception as erro:
-
-            print(
-                "[Nixal] Não foi possível salvar "
-                f"log de capacidade: {erro}"
-            )
 
 
 # ================================================================
