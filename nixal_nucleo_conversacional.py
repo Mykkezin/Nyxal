@@ -182,6 +182,15 @@ class NucleoConversacionalNixal:
             else ContextoHistoricoRelevanteNixal(self.memoria_investigacao)
         )
 
+        # Registra adaptadores somente no catálogo já pertencente ao agente.
+        # O diálogo usa o mesmo singleton; o Core continua responsável por memória.
+        try:
+            from nixal_capacidades import _obter_gerenciador_capacidades
+            self.agente.capacidades = _obter_gerenciador_capacidades()
+        except Exception:
+            # A falha de um conector opcional não deve derrubar a conversa normal.
+            pass
+
         self.capacidades = {
             capacidade["nome"]: capacidade
             for capacidade
