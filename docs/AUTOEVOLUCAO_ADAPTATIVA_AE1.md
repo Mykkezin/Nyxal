@@ -22,4 +22,4 @@ Permitir que a Nyxal identifique oportunidades de melhoria a partir das necessid
 
 ## Persistência
 
-As oportunidades são gravadas no diretório existente `Nyxal-evolution-opportunities`. Cada oportunidade contém a origem, prioridade, hipótese provisória, ciclos observados e estado de governança. A implementação reaproveita a AE1 existente; não introduz outro sistema de memória.
+As oportunidades são gravadas no diretório existente `Nyxal-evolution-opportunities`. Cada oportunidade contém a origem, prioridade, hipótese provisória, ciclos observados e estado de governança. Antes da persistência, os campos da necessidade observada passam por uma lista de permissões e limites de tamanho; campos extras do Runtime não são copiados. O JSON é escrito num temporário exclusivo com permissões restritas, sincronizado e substituído atomicamente para evitar que leitores vejam um arquivo parcial. Isso não concede autorização de integração nem substitui os gates AE2/AE3. A implementação reaproveita a AE1 existente; não introduz outro sistema de memória.
