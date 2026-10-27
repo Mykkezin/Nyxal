@@ -103,6 +103,8 @@ def main() -> None:
     assert 'systemctl --user restart "${unidade}"' in instalador
     assert 'for unidade in nyxal-api.service nyxos-residente.service; do' in instalador
     assert "diagnosticar_nyxos_local.sh" in instalador
+    assert "nyxos-interface-reset.timer" in diagnostico
+    assert "nyxos-interface-reset.service" in diagnostico
     assert "systemctl --user show" in diagnostico
     assert "prazo = time.monotonic() + 15.0" in diagnostico
     assert 'time.sleep(0.5)' in diagnostico
@@ -133,6 +135,9 @@ def main() -> None:
     assert "senha" not in instalador.lower()
     assert "token" not in instalador.lower()
 
+    assert "systemctl --user disable --now nyxos-interface-reset.timer" in desinstalador
+    assert "nyxos-interface-reset.service" in desinstalador
+    assert "nyxos-interface-reset.timer" in desinstalador
     assert "systemctl --user disable --now nyxos.target" in desinstalador
     assert "rm -f" in desinstalador
     assert "main" not in desinstalador.lower()
