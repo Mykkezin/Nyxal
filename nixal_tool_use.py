@@ -830,12 +830,6 @@ def registrar_capacidades_operacionais(
         raise TypeError("incluir_acoes precisa ser booleano.")
     if not isinstance(incluir_dados_privados, bool):
         raise TypeError("incluir_dados_privados precisa ser booleano.")
-    if incluir_acoes:
-        raise RuntimeError(
-            "Ações mutáveis permanecem desativadas: o GerenciadorCapacidades "
-            "não aplica autorização por ferramenta durante executar()."
-        )
-
     notas = store or NotasLembretesNixOS()
 
     def adicionar(
@@ -934,92 +928,134 @@ def registrar_capacidades_operacionais(
         ["diagnóstico de serviço", "serviço falhou", "serviços falhados", "git status", "unidades systemd"],
     )
 
-    if not incluir_dados_privados:
-        return
+    if incluir_dados_privados:
+        # Dados pessoais/locais não entram no espaço de ferramentas sem opt-in.
+        adicionar(
+            "buscar_arquivos",
+            "Busca arquivos por nome em pastas permitidas; ignora caminhos sensíveis.",
+            "Encontrar arquivos locais sem executar seu conteúdo.",
+            ["Encontre o arquivo orçamento", "Busque o PDF de aviação"],
+            buscar_arquivos,
+            {
+                "termo": {"tipo": "string", "obrigatorio": True, "descricao": "Termo de busca"},
+                "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de resultados", "minimo": 1, "maximo": 20},
+            },
+            "arquivos_locais",
+            ["buscar arquivo", "encontrar arquivo", "localizar arquivo"],
+        )
+        adicionar(
+            "ler_arquivo_usuario",
+            "Lê texto de arquivo em pastas permitidas; bloqueia credenciais e arquivos grandes.",
+            "Ler um documento local solicitado.",
+            ["Leia o documento em Downloads", "Abra o README do projeto"],
+            ler_arquivo_usuario,
+            {"caminho": {"tipo": "string", "obrigatorio": True, "descricao": "Caminho relativo permitido"}},
+            "arquivos_locais",
+            ["ler arquivo", "ler documento", "conteúdo do arquivo"],
+        )
+        adicionar(
+            "consultar_emails_google",
+            "Busca mensagens Gmail via OAuth, somente leitura.",
+            "Consultar mensagens autorizadas pelo operador.",
+            ["Veja meus e-mails não lidos", "Busque e-mails sobre a reunião"],
+            consultar_emails_google,
+            {
+                "consulta": {"tipo": "string", "obrigatorio": False, "descricao": "Consulta Gmail"},
+                "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de mensagens", "minimo": 1, "maximo": 20},
+            },
+            "google_workspace",
+            ["gmail", "e-mail", "email", "mensagens"],
+        )
+        adicionar(
+            "ler_email_google",
+            "Lê texto de um e-mail pelo ID exato; não altera a conta.",
+            "Abrir conteúdo de mensagem previamente selecionada.",
+            ["Leia o e-mail de ID ...", "Resuma esta mensagem"],
+            ler_email_google,
+            {"message_id": {"tipo": "string", "obrigatorio": True, "descricao": "ID exato retornado pela busca Gmail"}},
+            "google_workspace",
+            ["ler e-mail", "abrir mensagem", "corpo do e-mail"],
+        )
+        adicionar(
+            "consultar_agenda_google",
+            "Consulta eventos Google Calendar em janela limitada, somente leitura.",
+            "Responder perguntas sobre compromissos existentes.",
+            ["O que tenho na agenda?", "Quais eventos tenho esta semana?"],
+            consultar_agenda_google,
+            {
+                "dias": {"tipo": "integer", "obrigatorio": False, "descricao": "Janela em dias", "minimo": 1, "maximo": 31},
+                "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de eventos", "minimo": 1, "maximo": 50},
+            },
+            "google_workspace",
+            ["agenda", "calendário", "compromisso", "evento"],
+        )
+        adicionar(
+            "consultar_home_assistant",
+            "Consulta estados Home Assistant por entidade/domínio, apenas HTTP GET.",
+            "Consultar dispositivos autorizados sem acioná-los.",
+            ["Quais luzes estão ligadas?", "Consulte o sensor de temperatura da casa"],
+            consultar_home_assistant,
+            {
+                "entidade_id": {"tipo": "string", "obrigatorio": False, "descricao": "ID como light.sala"},
+                "dominio": {"tipo": "string", "obrigatorio": False, "descricao": "Filtro", "enum": ["seguro", "luz", "interruptor", "sensor", "clima", "midia", "todos"]},
+            },
+            "casa_inteligente",
+            ["home assistant", "dispositivos", "luzes", "sensor de casa"],
+        )
+        adicionar(
+            "listar_notas_lembretes",
+            "Lista notas e lembretes locais sem alterar registros.",
+            "Ver notas e lembretes registrados pelo operador.",
+            ["Liste minhas notas", "Quais lembretes tenho?"],
+            notas.listar,
+            {"tipo": {"tipo": "string", "obrigatorio": False, "descricao": "notas, lembretes ou todos", "enum": ["notas", "lembretes", "todos"]}},
+            "produtividade",
+            ["notas", "lembretes", "anotações", "tarefas futuras"],
+        )
 
-    # Dados pessoais/locais não entram no espaço de ferramentas sem opt-in.
-    adicionar(
-        "buscar_arquivos",
-        "Busca arquivos por nome em pastas permitidas; ignora caminhos sensíveis.",
-        "Encontrar arquivos locais sem executar seu conteúdo.",
-        ["Encontre o arquivo orçamento", "Busque o PDF de aviação"],
-        buscar_arquivos,
-        {
-            "termo": {"tipo": "string", "obrigatorio": True, "descricao": "Termo de busca"},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de resultados", "minimo": 1, "maximo": 20},
-        },
-        "arquivos_locais",
-        ["buscar arquivo", "encontrar arquivo", "localizar arquivo"],
-    )
-    adicionar(
-        "ler_arquivo_usuario",
-        "Lê texto de arquivo em pastas permitidas; bloqueia credenciais e arquivos grandes.",
-        "Ler um documento local solicitado.",
-        ["Leia o documento em Downloads", "Abra o README do projeto"],
-        ler_arquivo_usuario,
-        {"caminho": {"tipo": "string", "obrigatorio": True, "descricao": "Caminho relativo permitido"}},
-        "arquivos_locais",
-        ["ler arquivo", "ler documento", "conteúdo do arquivo"],
-    )
-    adicionar(
-        "consultar_emails_google",
-        "Busca mensagens Gmail via OAuth, somente leitura.",
-        "Consultar mensagens autorizadas pelo operador.",
-        ["Veja meus e-mails não lidos", "Busque e-mails sobre a reunião"],
-        consultar_emails_google,
-        {
-            "consulta": {"tipo": "string", "obrigatorio": False, "descricao": "Consulta Gmail"},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de mensagens", "minimo": 1, "maximo": 20},
-        },
-        "google_workspace",
-        ["gmail", "e-mail", "email", "mensagens"],
-    )
-    adicionar(
-        "ler_email_google",
-        "Lê texto de um e-mail pelo ID exato; não altera a conta.",
-        "Abrir conteúdo de mensagem previamente selecionada.",
-        ["Leia o e-mail de ID ...", "Resuma esta mensagem"],
-        ler_email_google,
-        {"message_id": {"tipo": "string", "obrigatorio": True, "descricao": "ID exato retornado pela busca Gmail"}},
-        "google_workspace",
-        ["ler e-mail", "abrir mensagem", "corpo do e-mail"],
-    )
-    adicionar(
-        "consultar_agenda_google",
-        "Consulta eventos Google Calendar em janela limitada, somente leitura.",
-        "Responder perguntas sobre compromissos existentes.",
-        ["O que tenho na agenda?", "Quais eventos tenho esta semana?"],
-        consultar_agenda_google,
-        {
-            "dias": {"tipo": "integer", "obrigatorio": False, "descricao": "Janela em dias", "minimo": 1, "maximo": 31},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de eventos", "minimo": 1, "maximo": 50},
-        },
-        "google_workspace",
-        ["agenda", "calendário", "compromisso", "evento"],
-    )
-    adicionar(
-        "consultar_home_assistant",
-        "Consulta estados Home Assistant por entidade/domínio, apenas HTTP GET.",
-        "Consultar dispositivos autorizados sem acioná-los.",
-        ["Quais luzes estão ligadas?", "Consulte o sensor de temperatura da casa"],
-        consultar_home_assistant,
-        {
-            "entidade_id": {"tipo": "string", "obrigatorio": False, "descricao": "ID como light.sala"},
-            "dominio": {"tipo": "string", "obrigatorio": False, "descricao": "Filtro", "enum": ["seguro", "luz", "interruptor", "sensor", "clima", "midia", "todos"]},
-        },
-        "casa_inteligente",
-        ["home assistant", "dispositivos", "luzes", "sensor de casa"],
-    )
-    adicionar(
-        "listar_notas_lembretes",
-        "Lista notas e lembretes locais sem alterar registros.",
-        "Ver notas e lembretes registrados pelo operador.",
-        ["Liste minhas notas", "Quais lembretes tenho?"],
-        notas.listar,
-        {"tipo": {"tipo": "string", "obrigatorio": False, "descricao": "notas, lembretes ou todos", "enum": ["notas", "lembretes", "todos"]}},
-        "produtividade",
-        ["notas", "lembretes", "anotações", "tarefas futuras"],
-    )
+    if incluir_acoes:
+        adicionar(
+            "salvar_nota",
+            "Salva uma nota local persistente apenas após pedido explícito do operador.",
+            "Guardar informação expressamente solicitada.",
+            ["Anote que a reunião mudou para sexta", "Salve esta nota"],
+            notas.salvar_nota,
+            {
+                "titulo": {"tipo": "string", "obrigatorio": True, "descricao": "Título", "max_length": 120},
+                "conteudo": {"tipo": "string", "obrigatorio": True, "descricao": "Conteúdo", "max_length": 4000},
+            },
+            "produtividade",
+            ["anotar", "salvar nota", "registrar nota", "guardar"],
+            "acao_com_pedido_explicito",
+        )
+        adicionar(
+            "criar_lembrete",
+            "Cria um lembrete local com data/hora ISO 8601 após pedido explícito.",
+            "Agendar uma notificação local solicitada pelo operador.",
+            ["Me lembre às 19h de estudar", "Crie um lembrete para amanhã"],
+            notas.criar_lembrete,
+            {
+                "texto": {"tipo": "string", "obrigatorio": True, "descricao": "O que lembrar", "max_length": 500},
+                "data_hora": {"tipo": "string", "obrigatorio": True, "descricao": "ISO 8601 com fuso quando possível", "max_length": 80},
+            },
+            "produtividade",
+            ["me lembre", "lembrete", "recordar", "avisar depois"],
+            "acao_com_pedido_explicito",
+        )
+        adicionar(
+            "abrir_aplicativo",
+            "Abre somente um aplicativo permitido após pedido explícito.",
+            "Abrir navegador, gestor de arquivos, terminal ou calculadora.",
+            ["Abra o navegador", "Abra a calculadora"],
+            abrir_aplicativo,
+            {
+                "aplicativo": {"tipo": "string", "obrigatorio": True, "descricao": "Nome permitido",
+                    "enum": ["navegador", "arquivos", "terminal", "calculadora"]},
+            },
+            "controle_local",
+            ["abrir aplicativo", "iniciar aplicativo", "abrir navegador", "abrir terminal"],
+            "acao_com_pedido_explicito",
+        )
 
 
 __all__ = [
