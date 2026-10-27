@@ -135,7 +135,7 @@ class TesteRecuperadorContextoNixal(unittest.TestCase):
                 self.assertNotIn(valor, texto_seguro)
         self.assertIn("access_token=[REDACTED]", texto_seguro)
         self.assertIn("Bearer [REDACTED]", texto_seguro)
-        self.assertIn("authorization=[REDACTED]", texto_seguro)
+        self.assertIn("Authorization=[REDACTED]", texto_seguro)
         self.assertIn("token=[REDACTED]", texto_seguro)
 
     def test_consulta_vazia_e_bloqueada_e_limites_ficam_bem_delimitados(self) -> None:
