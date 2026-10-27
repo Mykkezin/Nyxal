@@ -8,6 +8,8 @@ separados. A operação de alteração continua explícita na API.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import re
@@ -58,6 +60,82 @@ class VpsNyxOS:
         if not isinstance(nome, str) or not self.NAME_RE.fullmatch(nome):
             raise ValueError("nome_vps_invalido")
         return nome
+
+    @staticmethod
+    def _validar_chave_ssh(chave: str) -> str:
+        """Valida a estrutura de uma chave pública OpenSSH e remove comentários.
+
+        O valor é inserido no cloud-init YAML: aceitar CR/LF aqui permitiria
+        acrescentar novas diretivas ao user-data. O comentário não é necessário
+        para autenticação, por isso a forma normalizada mantém apenas tipo/Base64.
+        """
+        if not isinstance(chave, str) or not chave.strip():
+            raise ValueError("ssh_public_key_obrigatoria")
+        valor = chave.strip()
+        if len(valor) > 16384 or "\n" in valor or "\r" in valor:
+            raise ValueError("ssh_public_key_invalida")
+
+        correspondencia = re.fullmatch(
+            r"(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|"
+            r"ecdsa-sha2-nistp521|sk-ssh-ed25519@openssh\\.com|"
+            r"sk-ecdsa-sha2-nistp256@openssh\\.com)[ \\t]+"
+            r"([A-Za-z0-9+/]+={0,2})(?:[ \\t]+[^\\r\\n]*)?",
+            valor,
+        )
+        if not correspondencia:
+            raise ValueError("ssh_public_key_invalida")
+        tipo = correspondencia.group(1)
+        try:
+            blob = base64.b64decode(correspondencia.group(2), validate=True)
+        except (ValueError, binascii.Error) as erro:
+            raise ValueError("ssh_public_key_invalida") from erro
+
+        def ler_campo(dados: bytes, posicao: int) -> tuple[bytes, int]:
+            if posicao + 4 > len(dados):
+                raise ValueError("ssh_public_key_invalida")
+            tamanho = int.from_bytes(dados[posicao:posicao + 4], "big")
+            inicio = posicao + 4
+            fim = inicio + tamanho
+            if tamanho <= 0 or fim > len(dados):
+                raise ValueError("ssh_public_key_invalida")
+            return dados[inicio:fim], fim
+
+        try:
+            nome_blob, posicao = ler_campo(blob, 0)
+            if nome_blob.decode("ascii") != tipo:
+                raise ValueError("ssh_public_key_invalida")
+            if tipo in {"ssh-ed25519", "sk-ssh-ed25519@openssh.com"}:
+                public_key, posicao = ler_campo(blob, posicao)
+                if len(public_key) != 32:
+                    raise ValueError("ssh_public_key_invalida")
+                if tipo.startswith("sk-"):
+                    aplicacao, posicao = ler_campo(blob, posicao)
+                    if not aplicacao:
+                        raise ValueError("ssh_public_key_invalida")
+            elif tipo == "ssh-rsa":
+                expoente, posicao = ler_campo(blob, posicao)
+                modulo, posicao = ler_campo(blob, posicao)
+                if not expoente or len(modulo) < 128:
+                    raise ValueError("ssh_public_key_invalida")
+            else:
+                curva, posicao = ler_campo(blob, posicao)
+                ponto, posicao = ler_campo(blob, posicao)
+                curva_esperada = tipo.rsplit("nistp", 1)[-1]
+                if curva.decode("ascii") != "nistp" + curva_esperada:
+                    raise ValueError("ssh_public_key_invalida")
+                tamanho_ponto = {"256": 65, "384": 97, "521": 133}[curva_esperada]
+                if len(ponto) != tamanho_ponto or not ponto.startswith(b"\\x04"):
+                    raise ValueError("ssh_public_key_invalida")
+                if tipo.startswith("sk-"):
+                    aplicacao, posicao = ler_campo(blob, posicao)
+                    if not aplicacao:
+                        raise ValueError("ssh_public_key_invalida")
+            if posicao != len(blob):
+                raise ValueError("ssh_public_key_invalida")
+        except (UnicodeDecodeError, ValueError, KeyError) as erro:
+            raise ValueError("ssh_public_key_invalida") from erro
+
+        return f"{tipo} {correspondencia.group(2)}"
 
     def _virsh_available(self) -> bool:
         return self._tool("virsh") is not None
@@ -297,6 +375,7 @@ class VpsNyxOS:
             raise ValueError("usuario_vps_invalido")
         if not isinstance(ssh_public_key, str) or not ssh_public_key.strip():
             raise ValueError("ssh_public_key_obrigatoria")
+        ssh_public_key = self._validar_chave_ssh(ssh_public_key)
 
         source = Path(image_path).expanduser().resolve()
         if not source.is_file():
