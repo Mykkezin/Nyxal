@@ -79,7 +79,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(result["ferramentas_executadas"][0]["resultado"], "Ferramenta não registrada/permitida.")
 
     def test_catalogo_nao_expoe_privados_ou_mutaveis_por_padrao(self):
-        manager = self.manager()
+        manager = GerenciadorCapacidades()
         dialogo = DialogoQwenNixal(cliente=ClienteFake([]))
         with patch.dict(os.environ, {}, clear=True):
             names = {
