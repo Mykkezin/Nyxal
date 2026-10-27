@@ -5,7 +5,7 @@ set -uo pipefail
 
 VM_NAME="${NYXOS_DELTA_VM_NAME:-delta-mvp0}"
 POOL="${NYXOS_DELTA_VM_POOL:-default}"
-OLD_STORAGE="${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS"
+OLD_STORAGE="${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}"
 
 section() { printf '\n=== %s ===\n' "$1"; }
 has_cmd() { command -v "$1" >/dev/null 2>&1; }
