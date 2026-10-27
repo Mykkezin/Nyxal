@@ -757,6 +757,335 @@
         animation: none !important;
       }
     }
+
+    /* Immersive Nyxal 2.0: deep field, three-column spatial console, and live signal state. */
+    #nyxalVoiceSurface {
+      background:
+        radial-gradient(ellipse at 50% 47%, rgba(24,91,170,.25) 0, rgba(13,37,80,.12) 22%, transparent 47%),
+        radial-gradient(ellipse at 13% 50%, rgba(14,97,155,.11), transparent 29%),
+        radial-gradient(ellipse at 88% 48%, rgba(62,39,150,.1), transparent 28%),
+        linear-gradient(180deg,#030711 0%,#02050c 52%,#030610 100%);
+    }
+    #nyxalVoiceSurface::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .13;
+      background-image:
+        linear-gradient(rgba(85,169,222,.15) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(85,169,222,.15) 1px,transparent 1px);
+      background-size: 62px 62px;
+      mask-image: radial-gradient(ellipse at center, #000 10%, transparent 77%);
+    }
+    #nyxalVoiceSurface .nyxal-voice-content {
+      width: min(1760px,99vw);
+      min-height: 100vh;
+      gap: clamp(10px,2vh,22px);
+      padding: 22px clamp(16px,2.5vw,46px) 15px;
+      justify-content: space-between;
+    }
+    #nyxalVoiceSurface .nyxal-voice-brand {
+      align-self: center;
+      font-size: 12px;
+      letter-spacing: .32em;
+      text-shadow: 0 0 20px rgba(125,211,252,.2);
+    }
+    #nyxalVoiceSurface .nyxal-voice-brand small { font-size: 10px; }
+    #nyxalVoiceSurface .nyxal-voice-center {
+      display: grid;
+      grid-template-columns: minmax(210px,1fr) minmax(460px,620px) minmax(210px,1fr);
+      grid-template-rows: auto auto;
+      align-items: center;
+      justify-items: center;
+      gap: 12px clamp(18px,3.2vw,60px);
+      width: min(1560px,96vw);
+      flex: 1 1 auto;
+      margin: 0 auto;
+      text-align: left;
+    }
+    #nyxalVoiceStage {
+      grid-column: 2;
+      grid-row: 1;
+      width: min(600px,64vw);
+      height: min(600px,64vw);
+      max-height: 64vh;
+      max-width: 64vh;
+      min-width: 390px;
+      min-height: 390px;
+      isolation: isolate;
+      filter: drop-shadow(0 18px 70px rgba(16,85,180,.12));
+    }
+    #nyxalVoiceStage::before {
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 42%, rgba(70,194,255,.17), rgba(27,83,185,.09) 31%, transparent 67%),
+        radial-gradient(ellipse at 50% 83%, rgba(31,116,225,.12), transparent 48%);
+      box-shadow: 0 0 140px rgba(28,105,185,.16);
+    }
+    #nyxalVoiceStage::after {
+      content: "";
+      position: absolute;
+      z-index: 3;
+      inset: 7%;
+      border-radius: 50%;
+      border: 1px solid rgba(130,209,255,.13);
+      border-left-color: rgba(130,209,255,.48);
+      border-right-color: rgba(167,139,250,.3);
+      box-shadow: 0 0 36px rgba(56,189,248,.045),inset 0 0 48px rgba(37,99,235,.045);
+      pointer-events: none;
+      animation: nyxalVoiceOuterOrbit 34s linear infinite;
+    }
+    @keyframes nyxalVoiceOuterOrbit { to { transform: rotate(360deg); } }
+    #nyxalVoiceStage .nyxal-voice-ring { inset: 2%; border-color: rgba(125,211,252,.23); }
+    #nyxalVoiceStage .nyxal-voice-ring.ring-two { inset: 10%; border-color: rgba(147,197,253,.21); }
+    #nyxalVoiceStage .nyxal-voice-ring.ring-three { inset: 19%; border-color: rgba(125,211,252,.13); }
+    #nyxalVoiceSurface #nyxalCharacterSvg {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none;
+      overflow: visible;
+      filter: drop-shadow(0 0 34px rgba(65,173,238,.2));
+    }
+    #nyxalVoiceSurface #nyxalAvatar { overflow: visible !important; }
+    #nyxalVoiceSurface .nyxal-voice-face-frame {
+      left: 24%;
+      top: 12%;
+      width: 52%;
+      height: 65%;
+      opacity: .44;
+      border-radius: 2px;
+      background:
+        linear-gradient(#99efff,#99efff) left top / 30px 1px no-repeat,
+        linear-gradient(#99efff,#99efff) left top / 1px 30px no-repeat,
+        linear-gradient(#99efff,#99efff) right top / 30px 1px no-repeat,
+        linear-gradient(#99efff,#99efff) right top / 1px 30px no-repeat,
+        linear-gradient(#99efff,#99efff) left bottom / 30px 1px no-repeat,
+        linear-gradient(#99efff,#99efff) left bottom / 1px 30px no-repeat,
+        linear-gradient(#99efff,#99efff) right bottom / 30px 1px no-repeat,
+        linear-gradient(#99efff,#99efff) right bottom / 1px 30px no-repeat;
+      filter: drop-shadow(0 0 9px rgba(89,211,255,.42));
+    }
+    #nyxalVoiceSurface .nyxal-voice-scanline {
+      left: 29%;
+      top: 9%;
+      width: 42%;
+      height: 68%;
+      opacity: .2;
+      background: repeating-linear-gradient(to bottom,rgba(168,239,255,.2) 0,rgba(168,239,255,.2) 1px,transparent 1px,transparent 4px);
+    }
+    #nyxalVoiceSurface .nyxal-voice-scanline::after {
+      height: 12px;
+      background: linear-gradient(180deg,transparent,rgba(125,239,255,.9),rgba(59,130,246,.26),transparent);
+      box-shadow: 0 0 22px rgba(56,189,248,.42);
+    }
+    #nyxalVoiceSurface .nyxal-voice-sidepanel {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-self: center;
+      width: min(100%,264px);
+      min-width: 0;
+      padding: 19px 17px 15px;
+      border: 1px solid rgba(111,183,231,.2);
+      border-radius: 15px;
+      background: linear-gradient(150deg,rgba(9,24,44,.74),rgba(3,8,19,.55) 72%);
+      box-shadow: inset 0 1px 0 rgba(215,240,255,.04),0 24px 75px rgba(0,0,0,.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      overflow: hidden;
+      text-align: left;
+    }
+    #nyxalVoiceSurface .nyxal-voice-sidepanel::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 17px;
+      right: 17px;
+      height: 1px;
+      background: linear-gradient(90deg,transparent,rgba(125,211,252,.7),transparent);
+    }
+    #nyxalVoiceSurface .nyxal-voice-sidepanel-left { grid-column: 1; grid-row: 1 / span 2; }
+    #nyxalVoiceSurface .nyxal-voice-sidepanel-right { grid-column: 3; grid-row: 1 / span 2; }
+    #nyxalVoiceSurface .nyxal-sidepanel-kicker {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #7796b6;
+      font: 9px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing: .13em;
+      white-space: nowrap;
+    }
+    #nyxalVoiceSurface .nyxal-sidepanel-kicker > span:first-child { color: #85dfff; }
+    #nyxalVoiceSurface .nyxal-side-dot {
+      width: 5px;height: 5px;margin-left:auto;flex:0 0 auto;border-radius:50%;
+      background:#657b94;box-shadow:0 0 9px rgba(101,123,148,.4);
+    }
+    #nyxalVoiceSurface .nyxal-side-dot-blue { background:#75cfff;box-shadow:0 0 10px rgba(117,207,255,.7); }
+    #nyxalVoiceSurface .nyxal-sidepanel-title {
+      margin-top: 20px;
+      color: #edf7ff;
+      font: 500 clamp(19px,1.4vw,24px)/1.1 Inter,system-ui,sans-serif;
+      letter-spacing: .06em;
+    }
+    #nyxalVoiceSurface .nyxal-sidepanel-title span { color:#75cfff; }
+    #nyxalVoiceSurface .nyxal-sidepanel-subtitle {
+      margin: 7px 0 0;
+      color:#718ca8;
+      font:9px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.08em;
+    }
+    #nyxalVoiceSurface .nyxal-signal-visual {
+      height: 91px;
+      margin: 24px 0 15px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:4px;
+      padding: 9px 1px;
+      border-top:1px solid rgba(125,211,252,.12);
+      border-bottom:1px solid rgba(125,211,252,.12);
+      background:linear-gradient(90deg,transparent,rgba(34,119,178,.07),transparent);
+    }
+    #nyxalVoiceSurface .nyxal-signal-visual i {
+      display:block;
+      flex:1 1 0;
+      height:var(--bar);
+      min-height:4px;
+      border-radius:3px;
+      transform:scaleY(.35);
+      transform-origin:center;
+      background:linear-gradient(180deg,#a5f3fc,#38bdf8 55%,rgba(37,99,235,.4));
+      opacity:.32;
+      box-shadow:0 0 8px rgba(56,189,248,.12);
+    }
+    #nyxalVoiceSurface #nyxalSideSignal[data-active="true"] i {
+      opacity:.9;
+      animation:nyxalSignalWave 1.12s ease-in-out infinite alternate;
+      animation-delay:var(--delay);
+      box-shadow:0 0 12px rgba(56,189,248,.22);
+    }
+    @keyframes nyxalSignalWave {
+      from { transform:scaleY(.28); }
+      to { transform:scaleY(1); }
+    }
+    #nyxalVoiceSurface .nyxal-sidepanel-readout {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      min-height:34px;
+      border-bottom:1px solid rgba(125,211,252,.09);
+      color:#7992ad;
+      font:9px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+      letter-spacing:.04em;
+    }
+    #nyxalVoiceSurface .nyxal-sidepanel-readout b {
+      color:#d7eafa;
+      font-size:10px;
+      font-weight:500;
+      text-align:right;
+    }
+    #nyxalVoiceSurface #nyxalSideCaptureState[data-state="active"] { color:#86f0cc; }
+    #nyxalVoiceSurface .nyxal-sidepanel-foot {
+      display:flex;align-items:center;gap:7px;margin-top:16px;
+      color:#57738e;font:8px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;
+    }
+    #nyxalVoiceSurface .nyxal-side-mini-dot { width:4px;height:4px;border-radius:50%;background:#68e6b6;box-shadow:0 0 8px rgba(104,230,182,.6); }
+    #nyxalVoiceSurface .nyxal-side-mini-dot-blue { background:#7dd3fc;box-shadow:0 0 8px rgba(125,211,252,.6); }
+    #nyxalVoiceSurface .nyxal-core-visual {
+      position:relative;
+      height:98px;
+      margin:17px 0 14px;
+      display:grid;
+      place-items:center;
+      overflow:hidden;
+      border-top:1px solid rgba(125,211,252,.1);
+      border-bottom:1px solid rgba(125,211,252,.1);
+      background:radial-gradient(ellipse at center,rgba(37,99,235,.12),transparent 65%);
+    }
+    #nyxalVoiceSurface .nyxal-core-ring {
+      position:absolute;
+      width:58px;height:58px;border:1px solid rgba(125,211,252,.3);
+      border-radius:50%; transform:rotateX(68deg);
+      box-shadow:0 0 20px rgba(56,189,248,.07);
+    }
+    #nyxalVoiceSurface .nyxal-core-ring.ring-b { width:84px;height:84px;border-color:rgba(125,211,252,.2);transform:rotateX(68deg) rotateZ(36deg); }
+    #nyxalVoiceSurface .nyxal-core-ring.ring-c { width:112px;height:112px;border-color:rgba(167,139,250,.2);transform:rotateX(68deg) rotateZ(-24deg); }
+    #nyxalVoiceSurface .nyxal-core-center {
+      width:12px;height:12px;border:1px solid #a5f3fc;border-radius:3px;
+      transform:rotate(45deg);background:rgba(56,189,248,.32);
+      box-shadow:0 0 21px rgba(56,189,248,.75);
+      animation:nyxalCorePulse 2.8s ease-in-out infinite;
+    }
+    #nyxalVoiceSurface .nyxal-core-visual .node {
+      position:absolute;width:4px;height:4px;border-radius:50%;background:#cffafe;
+      box-shadow:0 0 8px rgba(125,211,252,.9);
+    }
+    #nyxalVoiceSurface .nyxal-core-visual .node-a { top:22%;left:27%; }
+    #nyxalVoiceSurface .nyxal-core-visual .node-b { right:22%;top:42%; }
+    #nyxalVoiceSurface .nyxal-core-visual .node-c { bottom:18%;left:44%; }
+    @keyframes nyxalCorePulse { 0%,100%{transform:rotate(45deg) scale(.86);opacity:.68}50%{transform:rotate(45deg) scale(1.22);opacity:1} }
+    #nyxalVoiceSurface .nyxal-pipeline { display:grid;gap:8px;margin-top:13px; }
+    #nyxalVoiceSurface .nyxal-pipeline-step {
+      display:grid;grid-template-columns:22px 6px 1fr;align-items:center;gap:8px;
+      color:#5b728d;font:9px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.07em;
+    }
+    #nyxalVoiceSurface .nyxal-pipeline-step > span { color:#64829e; }
+    #nyxalVoiceSurface .nyxal-pipeline-step > i { width:5px;height:5px;border-radius:50%;background:#3f5268; }
+    #nyxalVoiceSurface .nyxal-pipeline-step[data-phase="done"] { color:#8fb5cf; }
+    #nyxalVoiceSurface .nyxal-pipeline-step[data-phase="done"] > i { background:#68c9f3; }
+    #nyxalVoiceSurface .nyxal-pipeline-step[data-phase="active"] { color:#d5f7ff; }
+    #nyxalVoiceSurface .nyxal-pipeline-step[data-phase="active"] > i { background:#8cecff;box-shadow:0 0 10px rgba(140,236,255,.8);animation:nyxalCorePulse 1.1s ease-in-out infinite; }
+    #nyxalVoiceSurface .nyxal-voice-control-card {
+      grid-column:2;
+      grid-row:2;
+      width:min(600px,100%);
+      padding:16px 22px 14px;
+      gap:10px;
+      background:linear-gradient(150deg,rgba(7,18,34,.91),rgba(3,8,17,.86));
+      border-color:rgba(125,211,252,.27);
+      box-shadow:inset 0 1px 0 rgba(220,245,255,.055),0 24px 82px rgba(0,0,0,.27),0 0 45px rgba(16,95,175,.07);
+    }
+    #nyxalVoiceSurface #nyxalVoicePrompt { font-size:clamp(16px,1.15vw,19px); }
+    #nyxalVoiceSurface #nyxalVoiceMiniStatus { font-size:10px;padding:7px 12px; }
+    #nyxalVoiceSurface .nyxal-voice-diagnostics { gap:9px;margin-top:2px; }
+    #nyxalVoiceSurface .nyxal-voice-diagnostics-row { font-size:10px; }
+    #nyxalVoiceSurface #nyxalVoiceRmsFill { transition:width .07s linear; }
+    #nyxalVoiceSurface .nyxal-voice-footer { width:min(1560px,96vw); }
+    @media (max-width:1180px) {
+      #nyxalVoiceSurface .nyxal-voice-center {
+        grid-template-columns:minmax(0,1fr);
+        grid-template-rows:auto auto;
+        width:min(760px,96vw);
+        gap:8px;
+      }
+      #nyxalVoiceSurface .nyxal-voice-sidepanel { display:none; }
+      #nyxalVoiceStage {
+        grid-column:1;grid-row:1;
+        width:min(560px,68vw);height:min(560px,68vw);
+        min-width:320px;min-height:320px;max-height:62vh;max-width:62vh;
+      }
+      #nyxalVoiceSurface .nyxal-voice-control-card { grid-column:1;grid-row:2;width:min(600px,92vw); }
+      #nyxalVoiceSurface .nyxal-voice-content { padding-left:12px;padding-right:12px; }
+    }
+    @media (max-width:520px) {
+      #nyxalVoiceSurface .nyxal-voice-center { width:96vw; }
+      #nyxalVoiceStage { width:min(420px,88vw);height:min(420px,88vw);min-width:260px;min-height:260px;max-height:50vh;max-width:50vh; }
+      #nyxalVoiceSurface .nyxal-voice-control-card { width:94vw;padding:14px 14px 12px; }
+      #nyxalVoiceSurface .nyxal-voice-footer { width:94vw; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #nyxalVoiceSurface::after,
+      #nyxalVoiceStage::after,
+      #nyxalVoiceSurface .nyxal-signal-visual i,
+      #nyxalVoiceSurface .nyxal-core-center,
+      #nyxalVoiceSurface .nyxal-pipeline-step[data-phase="active"] > i {
+        animation:none!important;
+      }
+    }
+
   </style>
 </head>
 
@@ -1196,7 +1525,7 @@
 
           <!-- Presença vetorial autônoma: não depende de vídeo, arquivo local ou serviço externo. -->
           <div id="nyxalAvatar" class="nyxal-avatar relative z-10 flex h-full w-full items-center justify-center" data-state="idle" role="img" aria-label="Nyxal, presença digital autônoma">
-            <svg id="nyxalCharacterSvg" viewBox="0 0 360 320" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-labelledby="nyxalCharacterTitle nyxalCharacterDesc" xmlns="http://www.w3.org/2000/svg">
+            <svg id="nyxalCharacterSvg" viewBox="48 0 264 320" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-labelledby="nyxalCharacterTitle nyxalCharacterDesc" xmlns="http://www.w3.org/2000/svg">
               <title id="nyxalCharacterTitle">Nyxal — presença digital autônoma</title>
               <desc id="nyxalCharacterDesc">Rosto holográfico feminino da Nyxal, com mapeamento facial ciano, pontos de telemetria e feixe de varredura.</desc>
               <defs>
@@ -1283,6 +1612,12 @@
                   <path class="nyxal-face-data-line" d="M147 149 H164 L173 155 H187 L196 149 H213" opacity=".3" style="animation-delay:-1.2s"/>
                   <path class="nyxal-face-data-line" d="M157 174 H170 L180 179 L190 174 H203" opacity=".35" style="animation-delay:-2.1s"/>
                   <path class="nyxal-face-data-line" d="M180 83 V190" opacity=".18"/>
+                  <path class="nyxal-face-data-line" d="M151 103 Q180 91 209 103" opacity=".3" style="animation-delay:-.8s"/>
+                  <path class="nyxal-face-data-line" d="M145 128 Q180 141 215 128" opacity=".22" style="animation-delay:-1.7s"/>
+                  <path class="nyxal-face-data-line" d="M151 161 Q180 168 209 161" opacity=".25" style="animation-delay:-2.4s"/>
+                  <path class="nyxal-face-data-line" d="M160 94 L168 113 L160 143 L174 160" opacity=".2"/>
+                  <path class="nyxal-face-data-line" d="M200 94 L192 113 L200 143 L186 160" opacity=".2" style="animation-delay:-1.1s"/>
+                  <path class="nyxal-face-data-line" d="M143 135 L158 145 L158 162 M217 135 L202 145 L202 162" opacity=".32"/>
                   <rect class="nyxal-face-scan-beam" x="141" y="81" width="78" height="15" fill="url(#nyxalFaceScan)" opacity=".86"/>
                   <g>
                     <circle class="nyxal-face-data-node" cx="148" cy="112" r="1.8"/>
@@ -3134,6 +3469,18 @@
         '<div class="nyxal-voice-content">' +
           '<header class="nyxal-voice-brand"><span class="nyxal-voice-brand-dot"></span><span>NYXAL</span><small>VOICE · RESIDENTE</small></header>' +
           '<section class="nyxal-voice-center">' +
+            '<aside class="nyxal-voice-sidepanel nyxal-voice-sidepanel-left" aria-label="Canal de entrada de voz">' +
+              '<div class="nyxal-sidepanel-kicker"><span>01</span><span>INPUT CHANNEL</span><span class="nyxal-side-dot" id="nyxalSideInputDot"></span></div>' +
+              '<div class="nyxal-sidepanel-title">SINAL <span>DE VOZ</span></div>' +
+              '<p class="nyxal-sidepanel-subtitle">CAPTURA LOCAL · PT-BR</p>' +
+              '<div class="nyxal-signal-visual" id="nyxalSideSignal" data-active="false" aria-hidden="true">' +
+                '<i style="--bar:18%;--delay:-.2s"></i><i style="--bar:34%;--delay:-1.1s"></i><i style="--bar:54%;--delay:-.6s"></i><i style="--bar:28%;--delay:-1.8s"></i><i style="--bar:72%;--delay:-.9s"></i><i style="--bar:44%;--delay:-1.4s"></i><i style="--bar:86%;--delay:-.4s"></i><i style="--bar:36%;--delay:-1.6s"></i><i style="--bar:62%;--delay:-.7s"></i><i style="--bar:30%;--delay:-1.2s"></i><i style="--bar:76%;--delay:-.3s"></i><i style="--bar:42%;--delay:-1.9s"></i><i style="--bar:58%;--delay:-.8s"></i><i style="--bar:24%;--delay:-1.5s"></i><i style="--bar:68%;--delay:-.5s"></i><i style="--bar:38%;--delay:-1.7s"></i><i style="--bar:52%;--delay:-.1s"></i>' +
+              '</div>' +
+              '<div class="nyxal-sidepanel-readout"><span>CANAL</span><b>MIC / LOCAL</b></div>' +
+              '<div class="nyxal-sidepanel-readout"><span>ESTADO</span><b id="nyxalSideCaptureState">STANDBY</b></div>' +
+              '<div class="nyxal-sidepanel-readout"><span>NÍVEL RMS</span><b id="nyxalSideRmsValue">—</b></div>' +
+              '<div class="nyxal-sidepanel-foot"><span class="nyxal-side-mini-dot"></span> ENTRADA DE ÁUDIO</div>' +
+            '</aside>' +
             '<div id="nyxalVoiceStage" aria-label="Núcleo holográfico da Nyxal">' +
               '<span class="nyxal-voice-ring ring-one"></span><span class="nyxal-voice-ring ring-two"></span><span class="nyxal-voice-ring ring-three"></span>' +
               '<span class="nyxal-voice-face-frame" aria-hidden="true"></span>' +
@@ -3149,6 +3496,19 @@
               '</section>' +
               '<div id="nyxalVoiceSubtitleMount"></div>' +
             '</section>' +
+            '<aside class="nyxal-voice-sidepanel nyxal-voice-sidepanel-right" aria-label="Estado do núcleo neural">' +
+              '<div class="nyxal-sidepanel-kicker"><span>02</span><span>NEURAL CORE</span><span class="nyxal-side-dot nyxal-side-dot-blue" id="nyxalSideCoreDot"></span></div>' +
+              '<div class="nyxal-sidepanel-title">NYXAL <span>CORE</span></div>' +
+              '<p class="nyxal-sidepanel-subtitle">RUNTIME · CONVERSAÇÃO</p>' +
+              '<div class="nyxal-core-visual" aria-hidden="true"><span class="nyxal-core-ring ring-a"></span><span class="nyxal-core-ring ring-b"></span><span class="nyxal-core-ring ring-c"></span><span class="nyxal-core-center"></span><i class="node node-a"></i><i class="node node-b"></i><i class="node node-c"></i></div>' +
+              '<div class="nyxal-sidepanel-readout"><span>ESTADO DO NÚCLEO</span><b id="nyxalSideCoreState">EM ESPERA</b></div>' +
+              '<div class="nyxal-pipeline">' +
+                '<div class="nyxal-pipeline-step" data-nyxal-step="input"><span>01</span><i></i><b>PERCEPÇÃO</b></div>' +
+                '<div class="nyxal-pipeline-step" data-nyxal-step="context"><span>02</span><i></i><b>CONTEXTO</b></div>' +
+                '<div class="nyxal-pipeline-step" data-nyxal-step="voice"><span>03</span><i></i><b>VOZ</b></div>' +
+              '</div>' +
+              '<div class="nyxal-sidepanel-foot"><span class="nyxal-side-mini-dot nyxal-side-mini-dot-blue"></span> SISTEMA RESIDENTE</div>' +
+            '</aside>' +
           '</section>' +
           '<footer class="nyxal-voice-footer"><span>NYXOS · ESCUTA LOCAL</span><button id="nyxalVoiceStop" type="button" hidden>Pausar escuta</button></footer>' +
         '</div>';
