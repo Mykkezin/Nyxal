@@ -203,6 +203,50 @@ class TesteExecutorDefesaGovernada(unittest.TestCase):
         self.assertEqual(primeira["plano_id"], segunda["plano_id"])
         self.assertEqual(len(self.executor.listar_registros()), 1)
 
+    def test_plano_expirado_nao_pode_ser_aprovado_tardiamente(self) -> None:
+        executor = ExecutorDefesaGovernada(
+            ttl_segundos=5,
+            janela_idempotencia_segundos=30,
+            relogio=self.relogio,
+            verificador_aprovacao=lambda comprovante: comprovante.get("assinatura") == "valida",
+        )
+        pendente = executor.preparar(recomendacao())
+        self.assertEqual(pendente["estado"], "aguardando_aprovacao")
+
+        self.relogio.avancar(6)
+        tardio = executor.preparar(
+            recomendacao(),
+            aprovacao={"assinatura": "valida", "aprovador": "operador-teste"},
+        )
+        self.assertEqual(tardio["estado"], "expirado")
+        self.assertEqual(tardio["plano_id"], pendente["plano_id"])
+        self.assertFalse(tardio["executor_ativo"])
+        self.assertFalse(tardio["executor_autorizado"])
+        self.assertFalse(tardio["efeito_executado"])
+        registro = executor.listar_registros()[0]
+        self.assertEqual(registro["estado"], "expirado")
+        self.assertFalse(registro["aprovacao_verificada"])
+
+    def test_plano_ja_aprovado_tambem_expira_na_listagem(self) -> None:
+        executor = ExecutorDefesaGovernada(
+            ttl_segundos=5,
+            janela_idempotencia_segundos=30,
+            relogio=self.relogio,
+            verificador_aprovacao=lambda comprovante: comprovante.get("assinatura") == "valida",
+        )
+        preparado = executor.preparar(
+            recomendacao(),
+            aprovacao={"assinatura": "valida", "aprovador": "operador-teste"},
+        )
+        self.assertEqual(preparado["estado"], "simulacao_preparada")
+
+        self.relogio.avancar(6)
+        registro = executor.listar_registros()[0]
+        self.assertEqual(registro["estado"], "expirado")
+        self.assertFalse(registro["executor_ativo"])
+        self.assertFalse(registro["executor_autorizado"])
+        self.assertFalse(registro["efeito_executado"])
+
     def test_idempotencia_expira_e_permite_novo_plano(self) -> None:
         primeira = self.executor.preparar(recomendacao())
         self.relogio.avancar(31)
