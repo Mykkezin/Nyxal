@@ -37,6 +37,7 @@ O Qwen nunca executa código diretamente.
 from __future__ import annotations
 
 import json
+import os
 import re
 import unicodedata
 from dataclasses import asdict
@@ -48,6 +49,7 @@ import ollama
 from nixal_capacidades import (
     GerenciadorCapacidades,
 )
+from nixal_tool_use import registrar_capacidades_operacionais
 
 
 MODELO = "qwen2:7b"
@@ -118,8 +120,13 @@ class AgenteNixalQwen:
 
     def __init__(self) -> None:
 
-        self.capacidades = (
-            GerenciadorCapacidades()
+        self.capacidades = GerenciadorCapacidades()
+        incluir_dados_privados = os.environ.get(
+            "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        registrar_capacidades_operacionais(
+            self.capacidades,
+            incluir_dados_privados=incluir_dados_privados,
         )
 
     # ============================================================
