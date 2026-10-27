@@ -8,6 +8,7 @@ pelo diálogo local e pelo servidor MCP.
 from __future__ import annotations
 
 import ipaddress
+import inspect
 import json
 import os
 import re
@@ -235,7 +236,7 @@ def consultar_home_assistant(entidade_id: str = "", dominio: str = "seguro") -> 
         return {
             "sucesso": True, "estado": "configuracao_pendente",
             "integracao": "Home Assistant", "modo": "somente_leitura",
-            "proximo_passo": "Configure NYXAL_HOME_ASSISTANT_URL e NYXAL_HOME_ASSISTANT_TOKEN no ambiente do serviço local.",
+            "proximo_passo": "Configure a URL-base e uma credencial de acesso no ambiente do serviço local; nunca a grave no repositório.",
             "acoes_fisicas_habilitadas": False,
         }
     base, token = config
@@ -643,178 +644,124 @@ def registrar_capacidades_operacionais(
     incluir_dados_privados: bool = False,
     store: NotasLembretesNixOS | None = None,
 ) -> None:
-    """Registra ferramentas operacionais com escopo conservador.
+    """Registra ferramentas com perfil seguro por padrão.
 
-    Por padrão, só registra pesquisa pública, consulta METAR/TAF e
-    diagnósticos locais de leitura. Capacidades que acessam arquivos,
-    e-mail, agenda, notas ou sensores da casa exigem opt-in explícito.
-
-    Ações que mudam estado ficam desativadas: GerenciadorCapacidades atual
-    não aplica uma política por capacidade no método executar().
+    Pesquisa pública, METAR/TAF e diagnósticos fixos ficam disponíveis por
+    padrão. Arquivos pessoais, Gmail, agenda, Home Assistant e notas exigem
+    opt-in; escrita/notificações/abertura de aplicativos exigem outro opt-in.
     """
     if not hasattr(capacidades, "registrar") or not hasattr(capacidades, "capacidades"):
         raise TypeError("É necessário fornecer o GerenciadorCapacidades existente.")
-    if not isinstance(incluir_acoes, bool):
-        raise TypeError("incluir_acoes precisa ser booleano.")
-    if not isinstance(incluir_dados_privados, bool):
-        raise TypeError("incluir_dados_privados precisa ser booleano.")
-    if incluir_acoes:
-        raise RuntimeError(
-            "Ações mutáveis permanecem desativadas: o GerenciadorCapacidades "
-            "não aplica autorização por ferramenta durante executar()."
-        )
+    if not isinstance(incluir_acoes, bool) or not isinstance(incluir_dados_privados, bool):
+        raise TypeError("Os opt-ins precisam ser booleanos.")
+    if os.environ.get("NYXAL_ENABLE_PRIVATE_READ_TOOLS", "").strip().lower() in {"1", "true", "yes", "on"}:
+        incluir_dados_privados = True
+    if os.environ.get("NYXAL_ENABLE_MUTABLE_TOOLS", "").strip().lower() in {"1", "true", "yes", "on"}:
+        incluir_acoes = True
 
+    ferramentas_privadas = {
+        "buscar_arquivos",
+        "ler_arquivo_usuario",
+        "consultar_emails_google",
+        "ler_email_google",
+        "consultar_agenda_google",
+        "consultar_home_assistant",
+        "listar_notas_lembretes",
+    }
     notas = store or NotasLembretesNixOS()
 
-    def adicionar(
-        nome: str,
-        descricao: str,
-        objetivo: str,
-        exemplos: list[str],
-        funcao: Any,
-        argumentos: dict[str, dict[str, Any]],
-        dominio: str,
-        evidencias: list[str],
-    ) -> None:
+    try:
+        assinatura_registrar = inspect.signature(capacidades.registrar).parameters
+        assinatura_executar = inspect.signature(capacidades.executar).parameters
+    except (TypeError, ValueError, AttributeError):
+        assinatura_registrar, assinatura_executar = {}, {}
+    possui_politica = "politica" in assinatura_registrar
+    possui_guarda = "autorizacao_explicita" in assinatura_executar
+
+    def adicionar(nome: str, descricao: str, objetivo: str, exemplos: list[str], funcao: Any,
+                  argumentos: dict[str, dict[str, Any]], dominio: str, evidencias: list[str],
+                  politica: str = "somente_leitura") -> None:
         if nome in capacidades.capacidades:
             return
-        capacidades.registrar(
-            nome=nome,
-            descricao=descricao,
-            objetivo=objetivo,
-            exemplos=exemplos,
-            funcao=funcao,
-            argumentos=argumentos,
-            dominios=[dominio],
-            evidencias_dominio=evidencias,
-        )
+        if nome in ferramentas_privadas and not incluir_dados_privados:
+            return
+        # Nunca registra escrita no registro legado que não consiga aplicar a guarda.
+        if politica != "somente_leitura" and not (possui_politica and possui_guarda):
+            return
+        kwargs = {
+            "nome": nome, "descricao": descricao, "objetivo": objetivo, "exemplos": exemplos,
+            "funcao": funcao, "argumentos": argumentos, "dominios": [dominio],
+            "evidencias_dominio": evidencias,
+        }
+        if possui_politica:
+            kwargs["politica"] = politica
+        capacidades.registrar(**kwargs)
 
-    # Ferramentas de baixo impacto; não recebem credenciais nem alteram estado.
-    adicionar(
-        "pesquisar_web",
-        "Busca resultados na web e retorna títulos/URLs; não executa páginas.",
-        "Encontrar fontes externas para uma pergunta.",
-        ["Pesquise a documentação oficial do Ollama", "Encontre fontes sobre METAR"],
-        pesquisar_web,
-        {
-            "consulta": {"tipo": "string", "obrigatorio": True, "descricao": "Consulta"},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Número de resultados", "minimo": 1, "maximo": 8},
-        },
-        "web",
-        ["pesquisar na web", "buscar na internet", "pesquisar online", "fontes web"],
-    )
-    adicionar(
-        "consultar_metar_taf",
-        "Consulta METAR/TAF públicos por ICAO; apoio, não substitui briefing oficial.",
-        "Consultar observação e previsão meteorológica de aeródromo.",
-        ["METAR e TAF de SBGR", "Consulte o METAR SBSP"],
-        consultar_metar_taf,
-        {
-            "icao": {"tipo": "string", "obrigatorio": True, "descricao": "ICAO com quatro caracteres"},
-            "produto": {"tipo": "string", "obrigatorio": False, "descricao": "metar, taf ou ambos", "enum": ["metar", "taf", "ambos"]},
-        },
-        "aviacao",
-        ["metar", "taf", "meteorologia aeronáutica", "aeroporto ICAO"],
-    )
-    adicionar(
-        "executar_diagnostico",
-        "Verifica git status ou lista unidades de serviço de usuário com falha; sem shell livre.",
-        "Diagnosticar o estado do Git ou serviços Nyxal com falha.",
-        ["Verifique o git status", "Liste os serviços de usuário que falharam"],
-        executar_diagnostico,
-        {
-            "tipo": {"tipo": "string", "obrigatorio": True, "descricao": "Use git_status ou servicos_nyxal", "enum": ["git_status", "servicos_nyxal"]},
-        },
-        "diagnostico_local",
-        ["diagnóstico de serviço", "serviço falhou", "serviços falhados", "git status", "unidades systemd"],
-    )
-
-    if not incluir_dados_privados:
-        return
-
-    # Dados pessoais/locais não entram no espaço de ferramentas sem opt-in.
-    adicionar(
-        "buscar_arquivos",
-        "Busca arquivos por nome em pastas permitidas; ignora caminhos sensíveis.",
-        "Encontrar arquivos locais sem executar seu conteúdo.",
-        ["Encontre o arquivo orçamento", "Busque o PDF de aviação"],
-        buscar_arquivos,
-        {
-            "termo": {"tipo": "string", "obrigatorio": True, "descricao": "Termo de busca"},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de resultados", "minimo": 1, "maximo": 20},
-        },
-        "arquivos_locais",
-        ["buscar arquivo", "encontrar arquivo", "localizar arquivo"],
-    )
-    adicionar(
-        "ler_arquivo_usuario",
-        "Lê texto de arquivo em pastas permitidas; bloqueia credenciais e arquivos grandes.",
-        "Ler um documento local solicitado.",
-        ["Leia o documento em Downloads", "Abra o README do projeto"],
-        ler_arquivo_usuario,
-        {"caminho": {"tipo": "string", "obrigatorio": True, "descricao": "Caminho relativo permitido"}},
-        "arquivos_locais",
-        ["ler arquivo", "ler documento", "conteúdo do arquivo"],
-    )
-    adicionar(
-        "consultar_emails_google",
-        "Busca mensagens Gmail via OAuth, somente leitura.",
-        "Consultar mensagens autorizadas pelo operador.",
-        ["Veja meus e-mails não lidos", "Busque e-mails sobre a reunião"],
-        consultar_emails_google,
-        {
-            "consulta": {"tipo": "string", "obrigatorio": False, "descricao": "Consulta Gmail"},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de mensagens", "minimo": 1, "maximo": 20},
-        },
-        "google_workspace",
-        ["gmail", "e-mail", "email", "mensagens"],
-    )
-    adicionar(
-        "ler_email_google",
-        "Lê texto de um e-mail pelo ID exato; não altera a conta.",
-        "Abrir conteúdo de mensagem previamente selecionada.",
-        ["Leia o e-mail de ID ...", "Resuma esta mensagem"],
-        ler_email_google,
-        {"message_id": {"tipo": "string", "obrigatorio": True, "descricao": "ID exato retornado pela busca Gmail"}},
-        "google_workspace",
-        ["ler e-mail", "abrir mensagem", "corpo do e-mail"],
-    )
-    adicionar(
-        "consultar_agenda_google",
-        "Consulta eventos Google Calendar em janela limitada, somente leitura.",
-        "Responder perguntas sobre compromissos existentes.",
-        ["O que tenho na agenda?", "Quais eventos tenho esta semana?"],
-        consultar_agenda_google,
-        {
-            "dias": {"tipo": "integer", "obrigatorio": False, "descricao": "Janela em dias", "minimo": 1, "maximo": 31},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de eventos", "minimo": 1, "maximo": 50},
-        },
-        "google_workspace",
-        ["agenda", "calendário", "compromisso", "evento"],
-    )
-    adicionar(
-        "consultar_home_assistant",
-        "Consulta estados Home Assistant por entidade/domínio, apenas HTTP GET.",
-        "Consultar dispositivos autorizados sem acioná-los.",
-        ["Quais luzes estão ligadas?", "Consulte o sensor de temperatura da casa"],
-        consultar_home_assistant,
-        {
-            "entidade_id": {"tipo": "string", "obrigatorio": False, "descricao": "ID como light.sala"},
-            "dominio": {"tipo": "string", "obrigatorio": False, "descricao": "Filtro", "enum": ["seguro", "luz", "interruptor", "sensor", "clima", "midia", "todos"]},
-        },
-        "casa_inteligente",
-        ["home assistant", "dispositivos", "luzes", "sensor de casa"],
-    )
-    adicionar(
-        "listar_notas_lembretes",
-        "Lista notas e lembretes locais sem alterar registros.",
-        "Ver notas e lembretes registrados pelo operador.",
-        ["Liste minhas notas", "Quais lembretes tenho?"],
-        notas.listar,
-        {"tipo": {"tipo": "string", "obrigatorio": False, "descricao": "notas, lembretes ou todos", "enum": ["notas", "lembretes", "todos"]}},
-        "produtividade",
-        ["notas", "lembretes", "anotações", "tarefas futuras"],
-    )
+    adicionar("buscar_arquivos", "Busca arquivos por nome no projeto e em Documents, Downloads e Desktop; ignora caminhos sensíveis.",
+        "Encontrar arquivos locais sem executar seu conteúdo.", ["Encontre o arquivo orçamento", "Busque o PDF de aviação"],
+        buscar_arquivos, {"termo": {"tipo": "string", "obrigatorio": True, "descricao": "Termo de busca"},
+        "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de resultados", "minimo": 1, "maximo": 20}},
+        "arquivos_locais", ["buscar arquivo", "encontrar arquivo", "localizar arquivo"])
+    adicionar("ler_arquivo_usuario", "Lê texto de arquivo dentro das pastas permitidas; bloqueia credenciais e arquivos grandes.",
+        "Ler um documento local solicitado.", ["Leia o documento em Downloads", "Abra o README do projeto"],
+        ler_arquivo_usuario, {"caminho": {"tipo": "string", "obrigatorio": True, "descricao": "Caminho relativo permitido"}},
+        "arquivos_locais", ["ler arquivo", "ler documento", "conteúdo do arquivo"])
+    adicionar("consultar_emails_google", "Busca mensagens Gmail via OAuth em modo somente leitura.",
+        "Consultar metadados e prévias de mensagens autorizadas.", ["Veja meus e-mails não lidos", "Busque e-mails sobre a reunião"],
+        consultar_emails_google, {"consulta": {"tipo": "string", "obrigatorio": False, "descricao": "Consulta Gmail"},
+        "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de mensagens", "minimo": 1, "maximo": 20}},
+        "google_workspace", ["gmail", "e-mail", "email", "mensagens"])
+    adicionar("ler_email_google", "Lê texto de um e-mail pelo ID exato; não altera a conta.",
+        "Abrir conteúdo de mensagem previamente selecionada pelo usuário.", ["Leia o e-mail de ID ...", "Resuma esta mensagem"],
+        ler_email_google, {"message_id": {"tipo": "string", "obrigatorio": True, "descricao": "ID exato retornado pela busca Gmail"}},
+        "google_workspace", ["ler e-mail", "abrir mensagem", "corpo do e-mail"])
+    adicionar("consultar_agenda_google", "Consulta eventos Google Calendar em janela limitada, somente leitura.",
+        "Responder perguntas sobre compromissos existentes.", ["O que tenho na agenda?", "Quais eventos tenho esta semana?"],
+        consultar_agenda_google, {"dias": {"tipo": "integer", "obrigatorio": False, "descricao": "Janela em dias", "minimo": 1, "maximo": 31},
+        "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de eventos", "minimo": 1, "maximo": 50}},
+        "google_workspace", ["agenda", "calendário", "compromisso", "evento"])
+    adicionar("pesquisar_web", "Busca resultados na web e retorna títulos/URLs; não abre nem executa as páginas.",
+        "Encontrar fontes externas para a pergunta.", ["Pesquise a documentação oficial do Ollama", "Encontre fontes sobre METAR"],
+        pesquisar_web, {"consulta": {"tipo": "string", "obrigatorio": True, "descricao": "Consulta"},
+        "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Número de resultados", "minimo": 1, "maximo": 8}},
+        "web", ["pesquisar na web", "buscar na internet", "pesquisar online", "fontes web"])
+    adicionar("consultar_metar_taf", "Consulta METAR/TAF públicos por ICAO; apoio e não substitui briefing oficial.",
+        "Consultar observação e previsão meteorológica de aeródromo.", ["METAR e TAF de SBGR", "Consulte o METAR SBSP"],
+        consultar_metar_taf, {"icao": {"tipo": "string", "obrigatorio": True, "descricao": "ICAO com quatro caracteres"},
+        "produto": {"tipo": "string", "obrigatorio": False, "descricao": "metar, taf ou ambos", "enum": ["metar", "taf", "ambos"]}},
+        "aviacao", ["metar", "taf", "meteorologia aeronáutica", "aeroporto ICAO"])
+    adicionar("consultar_home_assistant", "Consulta estados Home Assistant por entidade/domínio, apenas HTTP GET.",
+        "Consultar dispositivos autorizados sem acioná-los.", ["Quais luzes estão ligadas?", "Consulte o sensor de temperatura da casa"],
+        consultar_home_assistant, {"entidade_id": {"tipo": "string", "obrigatorio": False, "descricao": "ID como light.sala"},
+        "dominio": {"tipo": "string", "obrigatorio": False, "descricao": "Filtro", "enum": ["seguro", "luz", "interruptor", "sensor", "clima", "midia", "todos"]}},
+        "casa_inteligente", ["home assistant", "dispositivos", "luzes", "sensor de casa"])
+    adicionar("listar_notas_lembretes", "Lista notas e lembretes locais sem alterar registros.",
+        "Ver notas guardadas e lembretes registrados.", ["Liste minhas notas", "Quais lembretes tenho?"],
+        notas.listar, {"tipo": {"tipo": "string", "obrigatorio": False, "descricao": "notas, lembretes ou todos", "enum": ["notas", "lembretes", "todos"]}},
+        "produtividade", ["notas", "lembretes", "anotações", "tarefas futuras"])
+    adicionar("executar_diagnostico", "Realiza diagnósticos fixos somente leitura; não aceita shell livre.",
+        "Verificar estado do Git, serviços, processos, disco e memória.", ["Verifique o git status", "Confira o uso de disco"],
+        executar_diagnostico, {"tipo": {"tipo": "string", "obrigatorio": True, "descricao": "Diagnóstico permitido",
+        "enum": ["git_status", "servicos_nyxal", "sistema", "processos", "disco", "memoria"]}},
+        "diagnostico_local", ["diagnóstico", "git status", "disco", "memória do sistema", "processos"])
+    if incluir_acoes:
+        adicionar("salvar_nota", "Salva nota local persistente apenas após pedido explícito do usuário.",
+            "Preservar conteúdo solicitado pelo operador.", ["Anote que a reunião mudou para sexta", "Salve esta nota"],
+            notas.salvar_nota, {"titulo": {"tipo": "string", "obrigatorio": True, "descricao": "Título"},
+            "conteudo": {"tipo": "string", "obrigatorio": True, "descricao": "Conteúdo"}},
+            "produtividade", ["anotar", "salvar nota", "registrar nota", "guardar"], "acao_com_pedido_explicito")
+        adicionar("criar_lembrete", "Cria lembrete local após pedido explícito, com data/hora ISO 8601.",
+            "Agendar notificação local solicitada pelo operador.", ["Me lembre às 19h de estudar", "Crie um lembrete para amanhã"],
+            notas.criar_lembrete, {"texto": {"tipo": "string", "obrigatorio": True, "descricao": "O que lembrar"},
+            "data_hora": {"tipo": "string", "obrigatorio": True, "descricao": "ISO 8601, com fuso quando possível"}},
+            "produtividade", ["me lembre", "lembrete", "recordar", "avisar depois"], "acao_com_pedido_explicito")
+        adicionar("abrir_aplicativo", "Abre um app de allowlist, sem aceitar argumentos de shell.",
+            "Abrir navegador, gestor de arquivos, terminal ou calculadora, se solicitado explicitamente.",
+            ["Abra o navegador", "Abra a calculadora"],
+            abrir_aplicativo, {"aplicativo": {"tipo": "string", "obrigatorio": True, "descricao": "Nome permitido",
+            "enum": ["navegador", "arquivos", "terminal", "calculadora"]}},
+            "controle_local", ["abrir aplicativo", "iniciar aplicativo", "abrir navegador", "abrir terminal"],
+            "acao_com_pedido_explicito")
 
 
 __all__ = [
