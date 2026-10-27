@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import base64
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from nixal_vps import VpsNyxOS
 
@@ -146,6 +149,81 @@ class VpsNyxOSTest(unittest.TestCase):
                 username="ubuntu",
                 ssh_public_key=_ed25519_fixture() + "\n  runcmd: [malicious]",
             )
+
+
+    def test_provisionar_recusa_link_simbolico_pendente_no_disco(self) -> None:
+        with tempfile.TemporaryDirectory() as diretorio:
+            raiz = Path(diretorio)
+            storage = raiz / "storage"
+            storage.mkdir()
+            imagem = raiz / "base.img"
+            imagem.write_bytes(b"fixture image")
+            disco = storage / "vps-teste.qcow2"
+            destino = storage / "destino-ausente.qcow2"
+            disco.symlink_to(destino)
+
+            with patch.object(VpsNyxOS, "STORAGE", storage):
+                vps = VpsNyxOS()
+                with (
+                    patch.object(vps, "_tool", return_value="/usr/bin/fake-tool"),
+                    patch("nixal_vps.subprocess.run") as run,
+                ):
+                    with self.assertRaisesRegex(FileExistsError, "artefato_vps_ja_existe"):
+                        vps.provisionar(
+                            nome="vps-teste",
+                            image_path=str(imagem),
+                            ssh_public_key=_ed25519_fixture(),
+                        )
+                    run.assert_not_called()
+
+            self.assertTrue(disco.is_symlink())
+            self.assertFalse(destino.exists())
+
+    def test_cloud_init_recusa_links_simbolicos_pendentes_nos_artefatos(self) -> None:
+        for indice, nome_artefato in enumerate((
+            "vps-teste-seed.img",
+            "vps-teste-user-data.yaml",
+            "vps-teste-meta-data.yaml",
+        )):
+            with self.subTest(artefato=nome_artefato), tempfile.TemporaryDirectory() as diretorio:
+                storage = Path(diretorio)
+                alvo = storage / f"alvo-ausente-{indice}"
+                artefato = storage / nome_artefato
+                artefato.symlink_to(alvo)
+
+                with patch.object(VpsNyxOS, "STORAGE", storage):
+                    vps = VpsNyxOS()
+                    with patch.object(vps, "_tool") as tool:
+                        with self.assertRaisesRegex(FileExistsError, "artefato_cloud_init_ja_existe"):
+                            vps._criar_cloud_init(
+                                nome="vps-teste",
+                                username="ubuntu",
+                                ssh_public_key=_ed25519_fixture(),
+                            )
+                        tool.assert_not_called()
+
+                self.assertTrue(artefato.is_symlink())
+                self.assertFalse(alvo.exists())
+
+    def test_cloud_init_recusa_diretorio_de_armazenamento_simbolico(self) -> None:
+        with tempfile.TemporaryDirectory() as diretorio:
+            raiz = Path(diretorio)
+            storage_real = raiz / "storage-real"
+            storage_real.mkdir()
+            storage_link = raiz / "storage-link"
+            storage_link.symlink_to(storage_real, target_is_directory=True)
+
+            with patch.object(VpsNyxOS, "STORAGE", storage_link):
+                vps = VpsNyxOS()
+                with patch.object(vps, "_tool") as tool:
+                    with self.assertRaisesRegex(RuntimeError, "storage_vps_link_simbolico"):
+                        vps._criar_cloud_init(
+                            nome="vps-teste",
+                            username="ubuntu",
+                            ssh_public_key=_ed25519_fixture(),
+                        )
+                    tool.assert_not_called()
+                self.assertFalse(any(storage_real.iterdir()))
 
 
 if __name__ == "__main__":
