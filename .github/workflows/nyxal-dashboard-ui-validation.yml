@@ -59,16 +59,16 @@ jobs:
           from pathlib import Path
 
           html = Path("interface/index.html").read_text(encoding="utf-8")
-          pattern = re.compile(r"<script\\b([^>]*)>(.*?)</script\\s*>", re.IGNORECASE | re.DOTALL)
+          pattern = re.compile(r"<script\b([^>]*)>(.*?)</script\s*>", re.IGNORECASE | re.DOTALL)
           valid_types = {"", "text/javascript", "application/javascript", "module"}
           checked = 0
           with tempfile.TemporaryDirectory(prefix="nyxal-ui-js-") as temp:
               root = Path(temp)
               for index, match in enumerate(pattern.finditer(html), start=1):
                   attrs, body = match.group(1), match.group(2)
-                  if re.search(r"\\bsrc\\s*=", attrs, re.IGNORECASE):
+                  if re.search(r"\bsrc\s*=", attrs, re.IGNORECASE):
                       continue
-                  type_match = re.search(r"""\\btype\\s*=\\s*["']([^"']+)["']""", attrs, re.IGNORECASE)
+                  type_match = re.search(r"""\btype\s*=\s*["']([^"']+)["']""", attrs, re.IGNORECASE)
                   script_type = type_match.group(1).casefold() if type_match else ""
                   if script_type not in valid_types or not body.strip():
                       continue
