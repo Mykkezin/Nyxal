@@ -443,6 +443,11 @@ class DescobertaContinuaGovernadaAE5:
             "estado_economico": resultado.get("estado_economico"),
             "valor_economico_identificado": resultado.get("valor_economico_identificado"),
             "fontes": sinal.get("fontes", []),
+            "motivos_sinal": copy.deepcopy(
+                sinal.get("motivos")
+                or sinal.get("erros_valor")
+                or []
+            ),
             "possivel_duplicata_semantica": semantica,
             "similaridade_textual_indicativa": similaridade,
             "linha_semelhante": linha_similar,
@@ -562,6 +567,23 @@ class DescobertaContinuaGovernadaAE5:
                 "valor_economico_identificado": False,
                 "motivos": erros,
             })
+            # A ausência de oportunidade também precisa ser observável.
+            # Sem este registro, a AE5 pode ser chamada a cada ciclo e ainda
+            # deixar a pasta de auditoria vazia, ocultando a causa do silêncio.
+            self._auditar(
+                resultado=resultado,
+                sinal={
+                    "ciclo_id": ciclo_id,
+                    "oportunidade_id": None,
+                    "fontes": [],
+                    "motivos": erros,
+                },
+                nova_linha=False,
+                linha_id=None,
+                motivo="sinal_ae1_ausente_ou_incompleto",
+                tipo_valor="desconhecido",
+                digest=None,
+            )
             self._ultimo_resultado = copy.deepcopy(resultado)
             return resultado
 
