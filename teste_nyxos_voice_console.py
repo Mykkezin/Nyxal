@@ -104,6 +104,8 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('fetch(window.NYXAL_API_BASE + "/api/agent/contexto"', self.html)
         self.assertIn('function atualizarClima()', self.html)
         self.assertIn('api.open-meteo.com/v1/forecast', self.html)
+        self.assertIn('id="weatherIcon"', self.html)
+        self.assertIn("icone.className", self.html)
         self.assertIn('window.setInterval(atualizarClima, 10 * 60 * 1000)', self.html)
         self.assertIn('window.setInterval(fetchNyxalObservability, 15000)', self.html)
 
