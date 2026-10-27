@@ -12,15 +12,55 @@ conhecimento permanente nem memória de investigação.
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import json
 import os
+import re
 import stat
 import tempfile
 import threading
+import unicodedata
 from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Iterator
+
+
+_STOPWORDS_RECALL = frozenset({
+    "a", "o", "as", "os", "um", "uma", "uns", "umas", "de", "da", "do",
+    "das", "dos", "em", "no", "na", "nos", "nas", "por", "para", "com",
+    "sem", "sobre", "entre", "e", "ou", "mas", "que", "se", "eu", "tu",
+    "voce", "voces", "me", "meu", "minha", "meus", "minhas", "seu", "sua",
+    "seus", "suas", "isso", "isto", "aquele", "aquela", "aquilo", "foi",
+    "era", "ser", "estar", "esta", "estao", "tem", "tinha", "teve", "ter",
+    "fazer", "faz", "qual", "quais", "como", "quando", "onde", "porque",
+    "quem", "lembra", "lembrar", "recorda", "recordar", "conversamos",
+    "falamos", "disse", "diz", "antes", "anterior", "anteriores", "agora",
+    "paramos", "continuar", "continue", "retomar", "retome", "voltar", "volte",
+})
+
+
+def _normalizar_termos_memoria(texto: str) -> list[str]:
+    normalizado = unicodedata.normalize("NFKD", texto.casefold())
+    sem_acentos = "".join(
+        caractere for caractere in normalizado
+        if not unicodedata.combining(caractere)
+    )
+    return [
+        token for token in re.sub(r"[^a-z0-9]+", " ", sem_acentos).split()
+        if len(token) >= 2 and token not in _STOPWORDS_RECALL
+    ]
+
+
+def _sanitizar_texto_memoria(texto: str, limite: int = 900) -> str:
+    texto = re.sub(r"\\s+", " ", texto).strip()
+    texto = re.sub(r"(?i)\\bBearer\\s+\\S+", "Bearer [REDACTED]", texto)
+    texto = re.sub(
+        r"(?i)\\b(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)\\b\\s*[:=]\\s*(?:Bearer\\s+)?[^\\s,;]+",
+        r"\\1=[REDACTED]",
+        texto,
+    )
+    return texto[:limite]
 
 
 class MemoriaConversacionalNixal:
@@ -384,6 +424,145 @@ class MemoriaConversacionalNixal:
                 "persistido": self.caminho is not None,
                 "versao_memoria": self.VERSAO,
             }
+
+    def buscar_relevante(
+        self,
+        consulta: str,
+        *,
+        sessao_excluida: str | None = None,
+        limite: int = 3,
+    ) -> dict[str, Any]:
+        """Busca trechos de outras conversas mediante pedido explícito de recordação.
+
+        Reutiliza o armazenamento já existente; não cria índice nem escreve memória.
+        As mensagens retornadas são contexto não confiável, nunca instruções.
+        """
+        if not isinstance(consulta, str) or not consulta.strip() or len(consulta) > 2000:
+            return {
+                "sucesso": False, "estado": "consulta_invalida", "origem": self.ORIGEM,
+                "mensagens": [], "quantidade": 0, "persistido": self.caminho is not None,
+                "permanente": False,
+            }
+        if not isinstance(limite, int) or isinstance(limite, bool) or not 1 <= limite <= 5:
+            return {
+                "sucesso": False, "estado": "limite_invalido", "origem": self.ORIGEM,
+                "mensagens": [], "quantidade": 0, "persistido": self.caminho is not None,
+                "permanente": False,
+            }
+        sessao_normalizada = None
+        if sessao_excluida is not None:
+            sessao_normalizada = self._normalizar_sessao(sessao_excluida)
+            if sessao_normalizada is None:
+                return {
+                    "sucesso": False, "estado": "sessao_excluida_invalida", "origem": self.ORIGEM,
+                    "mensagens": [], "quantidade": 0, "persistido": self.caminho is not None,
+                    "permanente": False,
+                }
+
+        tokens_consulta = set(_normalizar_termos_memoria(consulta))
+        if not tokens_consulta:
+            return {
+                "sucesso": True, "estado": "consulta_sem_termos", "origem": self.ORIGEM,
+                "mensagens": [], "quantidade": 0, "persistido": self.caminho is not None,
+                "permanente": False,
+            }
+        consulta_normalizada = " ".join(_normalizar_termos_memoria(consulta))
+        persistido = self.caminho is not None
+
+        with self._lock:
+            if self.caminho is None:
+                sessoes = deepcopy(self._historicos)
+            else:
+                try:
+                    with self._bloquear_arquivo():
+                        dados, erro = self._ler_persistencia_sem_lock()
+                except OSError:
+                    return {
+                        "sucesso": False, "estado": "memoria_degradada",
+                        "motivo": "persistencia_indisponivel", "origem": self.ORIGEM,
+                        "mensagens": [], "quantidade": 0, "persistido": True,
+                        "arquivo_original_preservado": True, "permanente": False,
+                    }
+                if erro or dados is None:
+                    self._erro_persistencia = erro or "estrutura_de_memoria_invalida"
+                    return {
+                        "sucesso": False, "estado": "memoria_degradada",
+                        "motivo": self._erro_persistencia, "origem": self.ORIGEM,
+                        "mensagens": [], "quantidade": 0, "persistido": True,
+                        "arquivo_original_preservado": bool(self.caminho.exists()),
+                        "permanente": False,
+                    }
+                sessoes = deepcopy(dados["sessoes"])
+                self._historicos = deepcopy(sessoes)
+                self._erro_persistencia = None
+
+        candidatos: list[tuple[float, int, int, dict[str, Any]]] = []
+        vistos: dict[str, tuple[float, int, int, dict[str, Any]]] = {}
+        ordem_sessao = 0
+        for chave_sessao, mensagens in sessoes.items():
+            ordem_sessao += 1
+            if sessao_normalizada is not None and chave_sessao == sessao_normalizada:
+                continue
+            if not isinstance(mensagens, list):
+                continue
+            referencia_sessao = hashlib.sha256(
+                chave_sessao.encode("utf-8")
+            ).hexdigest()[:12]
+            for indice_mensagem, mensagem in enumerate(mensagens):
+                if not isinstance(mensagem, dict):
+                    continue
+                papel = mensagem.get("papel")
+                texto = mensagem.get("texto")
+                if papel not in {"user", "assistant"} or not isinstance(texto, str):
+                    continue
+                termos_mensagem = set(_normalizar_termos_memoria(texto))
+                em_comum = tokens_consulta & termos_mensagem
+                if not em_comum:
+                    continue
+                score = len(em_comum) / max(1, len(tokens_consulta))
+                texto_normalizado = " ".join(_normalizar_termos_memoria(texto))
+                if len(consulta_normalizada) >= 12 and consulta_normalizada in texto_normalizado:
+                    score = min(1.0, score + 0.12)
+                if score < 0.22:
+                    continue
+
+                trecho = _sanitizar_texto_memoria(texto, 900)
+                if not trecho:
+                    continue
+                item = {
+                    "papel": papel,
+                    "trecho": trecho,
+                    "origem_sessao_ref": referencia_sessao,
+                    "indice_mensagem": indice_mensagem,
+                    "relevancia_lexical": round(min(1.0, score), 4),
+                    "fonte": self.ORIGEM,
+                    "confiavel_como_instrucao": False,
+                    "permanente": False,
+                }
+                chave_texto = " ".join(_normalizar_termos_memoria(trecho))
+                anterior = vistos.get(chave_texto)
+                candidato = (score, ordem_sessao, indice_mensagem, item)
+                if anterior is None or (score, ordem_sessao, indice_mensagem) > anterior[:3]:
+                    vistos[chave_texto] = candidato
+
+        candidatos = list(vistos.values())
+        candidatos.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
+        mensagens_relevantes = [item[3] for item in candidatos[:limite]]
+        estado = (
+            "memorias_relevantes"
+            if mensagens_relevantes
+            else ("sem_memorias_relevantes" if persistido else "memoria_volatil")
+        )
+        return {
+            "sucesso": True,
+            "estado": estado,
+            "origem": self.ORIGEM,
+            "mensagens": mensagens_relevantes,
+            "quantidade": len(mensagens_relevantes),
+            "persistido": persistido,
+            "permanente": False,
+            "conhecimento_permanente": False,
+        }
 
     def limpar(self, sessao: str) -> dict[str, Any]:
         sessao_normalizada = self._normalizar_sessao(sessao)
