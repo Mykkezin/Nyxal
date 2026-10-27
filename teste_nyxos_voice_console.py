@@ -180,7 +180,9 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         end = self.html.index("function toggleInfinityHub()", start)
         drag = self.html[start:end]
         self.assertIn("document.body.appendChild(hub)", drag)
+        self.assertIn("core.style.touchAction = 'none'", drag)
         self.assertIn("core.addEventListener('pointercancel', finishDrag)", drag)
+        self.assertIn("core.addEventListener('lostpointercapture'", drag)
         self.assertIn("window.addEventListener('resize'", drag)
         self.assertIn("function clampCoordinate(value, viewportSize)", drag)
         self.assertIn("sessionStorage.setItem(STORAGE_KEY", drag)
