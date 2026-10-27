@@ -39,6 +39,19 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn("throwOnError: false", self.html[chat_call:recovery])
         self.assertLess(recovery, catch_block)
 
+    def test_voice_only_screen_has_a_prominent_holographic_face_and_clean_control_card(self):
+        # Keep the top HUD understated while improving the centrepiece and microphone panel.
+        self.assertIn('nyxal-voice-control-card', self.html)
+        self.assertIn('nyxal-voice-face-frame', self.html)
+        self.assertIn('nyxal-voice-scanline', self.html)
+        self.assertIn('nyxalFaceDataClip', self.html)
+        self.assertIn('nyxal-face-data-line', self.html)
+        self.assertIn('max-height: 52vh', self.html)
+        self.assertIn('status.dataset.state', self.html)
+        self.assertIn('font-size:11px', self.console)
+        self.assertIn('min-height:30px', self.console)
+        self.assertIn('rgba(145,190,225,.25)', self.console)
+
     def test_console_uses_existing_real_telemetry(self):
         self.assertIn('"/api/agent/contexto"', self.console)
         self.assertIn('"/api/public/status"', self.console)
