@@ -95,6 +95,7 @@ class TestLimitesArmazenamento(unittest.TestCase):
                 + b" " * (nixal_capacidades.MAX_TAMANHO_ARQUIVO + 64)
                 + b"]"
             )
+            evidencia_antiga = caminho_log.read_bytes()
             with patch.object(nixal_capacidades, "ARQUIVO_LOG", caminho_log):
                 gerenciador = GerenciadorCapacidades()
                 gerenciador._registrar_execucao(
@@ -114,6 +115,15 @@ class TestLimitesArmazenamento(unittest.TestCase):
             dados = json.loads(caminho_log.read_text(encoding="utf-8"))
             self.assertEqual(len(dados), 1)
             self.assertEqual(dados[0]["capacidade"], "novo_registro")
+
+            backups = list(caminho_log.parent.glob(caminho_log.name + ".oversized-*"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(
+                backups[0].read_bytes(),
+                evidencia_antiga,
+                "o histórico legado deve ser preservado sem bloquear o novo log",
+            )
+            self.assertEqual(backups[0].stat().st_mode & 0o777, 0o600)
 
     def test_log_runtime_descarta_historico_preexistente_acima_do_teto(self) -> None:
         with tempfile.TemporaryDirectory() as diretorio:
