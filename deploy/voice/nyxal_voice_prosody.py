@@ -141,7 +141,8 @@ def clean_speech_text(value: str) -> str:
     # Collapse layout whitespace only after headings/list boundaries gained punctuation.
     text = re.sub(r"\s+", " ", text).strip()
     text = re.sub(r"\s+([,.;:!?])", r"\1", text)
-    text = re.sub(r"\.{2,}", ".", text)
+    # Preserve deliberate ellipses: TTS can interpret them as a longer pause.
+    text = re.sub(r"\.{4,}", "...", text)
     text = re.sub(r",{2,}", ",", text)
     text = re.sub(r"([,;:])\s*([.!?])", r"\2", text)
     text = re.sub(r"\s{2,}", " ", text).strip()
