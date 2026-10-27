@@ -8,6 +8,7 @@ pelo diálogo local e pelo servidor MCP.
 from __future__ import annotations
 
 import ipaddress
+import inspect
 import json
 import os
 import re
@@ -643,14 +644,30 @@ def registrar_capacidades_operacionais(capacidades: Any, *, incluir_acoes: bool 
         raise TypeError("É necessário fornecer o GerenciadorCapacidades existente.")
     notas = store or NotasLembretesNixOS()
 
+    try:
+        assinatura_registrar = inspect.signature(capacidades.registrar).parameters
+        assinatura_executar = inspect.signature(capacidades.executar).parameters
+    except (TypeError, ValueError, AttributeError):
+        assinatura_registrar, assinatura_executar = {}, {}
+    possui_politica = "politica" in assinatura_registrar
+    possui_guarda = "autorizacao_explicita" in assinatura_executar
+
     def adicionar(nome: str, descricao: str, objetivo: str, exemplos: list[str], funcao: Any,
                   argumentos: dict[str, dict[str, Any]], dominio: str, evidencias: list[str],
                   politica: str = "somente_leitura") -> None:
         if nome in capacidades.capacidades:
             return
-        capacidades.registrar(nome=nome, descricao=descricao, objetivo=objetivo, exemplos=exemplos,
-            funcao=funcao, argumentos=argumentos, dominios=[dominio], evidencias_dominio=evidencias,
-            politica=politica)
+        # Nunca registra escrita no registro legado que não consiga aplicar a guarda.
+        if politica != "somente_leitura" and not (possui_politica and possui_guarda):
+            return
+        kwargs = {
+            "nome": nome, "descricao": descricao, "objetivo": objetivo, "exemplos": exemplos,
+            "funcao": funcao, "argumentos": argumentos, "dominios": [dominio],
+            "evidencias_dominio": evidencias,
+        }
+        if possui_politica:
+            kwargs["politica"] = politica
+        capacidades.registrar(**kwargs)
 
     adicionar("buscar_arquivos", "Busca arquivos por nome no projeto e em Documents, Downloads e Desktop; ignora caminhos sensíveis.",
         "Encontrar arquivos locais sem executar seu conteúdo.", ["Encontre o arquivo orçamento", "Busque o PDF de aviação"],
