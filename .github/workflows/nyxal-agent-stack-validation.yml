@@ -30,6 +30,7 @@ on:
       - "nixal_memoria_investigacao.py"
       - "nixal_memoria_conhecimento.py"
       - "nixal_dialogo_qwen.py"
+      - "teste_nyxal_function_calling.py"
       - "nixal_auto_evolucao.py"
       - "nixal_ciclo_residente.py"
       - "nixal_presenca_maquina.py"
@@ -96,6 +97,7 @@ on:
       - "nixal_memoria_investigacao.py"
       - "nixal_memoria_conhecimento.py"
       - "nixal_dialogo_qwen.py"
+      - "teste_nyxal_function_calling.py"
       - "nixal_auto_evolucao.py"
       - "nixal_ciclo_residente.py"
       - "nixal_presenca_maquina.py"
@@ -224,6 +226,7 @@ jobs:
             teste_auto_evolucao_ae1.py \
             teste_m5_15_presenca_maquina.py \
             nixal_dialogo_qwen.py \
+            teste_nyxal_function_calling.py \
             teste_nixal_dialogo_router.py \
             teste_nyxos_voice_console.py \
             teste_api_security_auth.py \
@@ -255,6 +258,7 @@ jobs:
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
             teste_nixal_tool_use \
+            teste_nyxal_function_calling \
             teste_nyxos_voice_console \
             teste_nixal_responses_api \
             teste_nixal_dialogo_router \
