@@ -65,7 +65,7 @@ class TestFerramentasNyxal(unittest.TestCase):
             "NYXAL_AISWEB_API_PASS": "",
         }, clear=True):
             notams = consultar_notam_aisweb("SBSP")
-            cartas = consultar_cartas_aisweb(icao="SBSP")
+            cartas = consultar_cartas_aisweb(icao="SBSP", especie="IFR", tipo="IAC")
         self.assertEqual(notams["estado"], "configuracao_pendente")
         self.assertEqual(cartas["estado"], "configuracao_pendente")
         serializados = json.dumps([notams, cartas], ensure_ascii=False).lower()
