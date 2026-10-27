@@ -68,6 +68,8 @@ on:
       - "teste_ae3_ciclo_residente.py"
       - "teste_ciclo_evolucao_ae4.py"
       - "teste_descoberta_continua_ae5.py"
+      - "teste_ativacao_ae5_residente.py"
+      - ".github/workflows/nyxal-nivel9-validation.yml"
       - "deploy/systemd/**"
       - ".github/workflows/nyxal-nivel9-validation.yml"
   pull_request:
@@ -135,6 +137,8 @@ on:
       - "teste_ae3_ciclo_residente.py"
       - "teste_ciclo_evolucao_ae4.py"
       - "teste_descoberta_continua_ae5.py"
+      - "teste_ativacao_ae5_residente.py"
+      - ".github/workflows/nyxal-nivel9-validation.yml"
       - "deploy/systemd/**"
   workflow_dispatch:
 
@@ -338,3 +342,22 @@ jobs:
           )
           PY
           python3 nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
+
+  ae5-resident-smoke:
+    name: AE5 resident wiring (hosted)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile focused activation test
+        run: python -m py_compile teste_ativacao_ae5_residente.py
+      - name: Verify AE5 wiring and guardrails
+        run: python -m unittest -v teste_ativacao_ae5_residente.py
+
