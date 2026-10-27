@@ -54,8 +54,8 @@ Exemplos de consultas:
 - NOTAM de um ou mais aeródromos: `consultar_notam_aisweb(localidades="SBSP,SBGR")`.
 - NOTAM filtrado por FIR: `consultar_notam_aisweb(localidades="SBSP", fir="SBBS")` (use o código FIR aplicável à consulta).
 - Buscar cartas ostensivas de procedimento de um aeródromo: `consultar_cartas_aisweb(icao="SBSP", especie="IFR", tipo="IAC")`.
-- Buscar um tipo de carta: `consultar_cartas_aisweb(icao="SBSP", especie="IFR", tipo="IAC")`.
-- Consultar o ciclo vigente ou um ciclo especificado: `dt="last_amdt"` ou `dt="AAAA-MM-DD"`.
+- Buscar por nome dentro do tipo selecionado: `consultar_cartas_aisweb(icao="SBSP", especie="IFR", tipo="IAC", nome="ILS")`.
+- Consultar um ciclo específico: `consultar_cartas_aisweb(icao="SBSP", especie="IFR", tipo="IAC", dt="last_amdt")` ou usar uma data válida em `AAAA-MM-DD`.
 
 As consultas são limitadas por tamanho, volume e tipos de parâmetros; a API só é chamada sobre HTTPS, redirecionamentos são recusados e respostas XML com declarações DOCTYPE/ENTITY são bloqueadas. As ferramentas retornam metadados/dados estruturados e não executam nem seguem instruções contidas no conteúdo externo.
 
