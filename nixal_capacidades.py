@@ -71,6 +71,7 @@ class Capacidade:
     argumentos: dict[str, dict[str, Any]]
     dominios: list[str]
     evidencias_dominio: list[str]
+    politica: str = "somente_leitura"
 
 
 # ================================================================
@@ -356,6 +357,7 @@ class GerenciadorCapacidades:
         ] | None = None,
         dominios: list[str] | None = None,
         evidencias_dominio: list[str] | None = None,
+        politica: str = "somente_leitura",
     ) -> None:
 
         if not nome:
@@ -473,6 +475,9 @@ class GerenciadorCapacidades:
                 "uma evidência de domínio."
             )
 
+        if politica not in {"somente_leitura", "acao_com_pedido_explicito", "requer_confirmacao"}:
+            raise ValueError("Política de execução da capacidade inválida.")
+
         if nome in self.capacidades:
             raise ValueError(
                 f"A capacidade '{nome}' "
@@ -496,6 +501,7 @@ class GerenciadorCapacidades:
                 evidencias_dominio=(
                     evidencias_normalizadas
                 ),
+                politica=politica,
             )
         )
 
@@ -527,6 +533,7 @@ class GerenciadorCapacidades:
             "evidencias_dominio": (
                 capacidade.evidencias_dominio
             ),
+            "politica": capacidade.politica,
         }
 
     # ============================================================
@@ -613,36 +620,41 @@ class GerenciadorCapacidades:
                 )
 
         # --------------------------------------------------------
-        # Tipos
+        # Tipos, enumerações e limites do contrato
         # --------------------------------------------------------
-
-        for (
-            nome_argumento,
-            valor,
-        ) in argumentos.items():
-
-            esperado = (
-                especificacao[
-                    nome_argumento
-                ].get("tipo")
-            )
-
-            if esperado == "string":
-
-                if not isinstance(
-                    valor,
-                    str,
-                ):
-
-                    return (
-                        False,
-                        (
-                            f"O argumento "
-                            f"'{nome_argumento}' "
-                            "precisa ser string."
-                        ),
-                    )
-
+        for nome_argumento, valor in argumentos.items():
+            dados = especificacao[nome_argumento]
+            esperado = dados.get("tipo")
+            valido = True
+            if esperado in {"string", "str"}:
+                valido = isinstance(valor, str)
+            elif esperado in {"integer", "int", "inteiro"}:
+                valido = isinstance(valor, int) and not isinstance(valor, bool)
+            elif esperado in {"number", "float", "numero"}:
+                valido = isinstance(valor, (int, float)) and not isinstance(valor, bool)
+            elif esperado in {"boolean", "bool", "booleano"}:
+                valido = isinstance(valor, bool)
+            elif esperado in {"object", "dict", "objeto"}:
+                valido = isinstance(valor, dict)
+            elif esperado in {"array", "list", "lista"}:
+                valido = isinstance(valor, list)
+            if not valido:
+                return False, f"O argumento '{nome_argumento}' precisa ser {esperado}."
+            enum = dados.get("enum")
+            if isinstance(enum, list) and valor not in enum:
+                return False, f"O argumento '{nome_argumento}' não está entre os valores permitidos."
+            if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+                minimo = dados.get("minimo", dados.get("minimum"))
+                maximo = dados.get("maximo", dados.get("maximum"))
+                if minimo is not None and valor < minimo:
+                    return False, f"O argumento '{nome_argumento}' está abaixo do mínimo permitido."
+                if maximo is not None and valor > maximo:
+                    return False, f"O argumento '{nome_argumento}' excede o máximo permitido."
+            if isinstance(valor, str):
+                if dados.get("min_length") is not None and len(valor) < dados["min_length"]:
+                    return False, f"O argumento '{nome_argumento}' é curto demais."
+                if dados.get("max_length") is not None and len(valor) > dados["max_length"]:
+                    return False, f"O argumento '{nome_argumento}' é longo demais."
         return True, None
 
     # ============================================================
@@ -652,11 +664,28 @@ class GerenciadorCapacidades:
     def executar(
         self,
         nome: str,
+        *,
+        autorizacao_explicita: bool = False,
+        confirmacao: bool = False,
         **argumentos: Any,
     ) -> ResultadoCapacidade:
 
         inicio = time.perf_counter()
         timestamp = time.time()
+        capacidade_existente = self.capacidades.get(nome)
+        if capacidade_existente is not None:
+            bloqueio = None
+            if capacidade_existente.politica == "acao_com_pedido_explicito" and not autorizacao_explicita:
+                bloqueio = "Ação bloqueada: falta pedido explícito do usuário."
+            elif capacidade_existente.politica == "requer_confirmacao" and not (autorizacao_explicita and confirmacao):
+                bloqueio = "Ação bloqueada: requer autorização explícita e confirmação separada."
+            if bloqueio:
+                resultado = ResultadoCapacidade(
+                    sucesso=False, capacidade=nome, erro=bloqueio, timestamp=timestamp,
+                    duracao_ms=(time.perf_counter() - inicio) * 1000,
+                )
+                self._registrar_execucao(resultado)
+                return resultado
 
         valido, erro_validacao = (
             self.validar_argumentos(
@@ -776,6 +805,7 @@ class GerenciadorCapacidades:
                     "evidencias_dominio": (
                         capacidade.evidencias_dominio
                     ),
+                    "politica": capacidade.politica,
                 }
             )
 
@@ -980,14 +1010,22 @@ class GerenciadorCapacidades:
                 and base_final
                 not in caminho_final.parents
             ):
-
                 return {
                     "sucesso": False,
-                    "erro": (
-                        "O arquivo precisa estar "
-                        "dentro do projeto Nixal."
-                    ),
+                    "erro": "O arquivo precisa estar dentro do projeto Nyxal.",
                 }
+            relativo = caminho_final.relative_to(base_final)
+            partes_sensiveis = {".git", ".venv", "venv", ".ssh", ".config", ".hermes", "secrets", "secret", "credentials", "credential", "tokens", "token"}
+            nome_sensivel = caminho_final.name.lower()
+            caminho_sensivel = (
+                any(parte.lower() in partes_sensiveis or parte.lower().startswith(".env") for parte in relativo.parts)
+                or nome_sensivel.startswith(".env")
+                or nome_sensivel in {".bashrc", ".profile", "id_rsa", "id_ed25519", "authorized_keys", "known_hosts"}
+                or caminho_final.suffix.lower() in {".pem", ".key", ".p12", ".pfx", ".kdbx"}
+                or any(marcador in nome_sensivel for marcador in ("secret", "credential", "private_key", "access_token", "refresh_token"))
+            )
+            if caminho_sensivel:
+                return {"sucesso": False, "erro": "Leitura bloqueada pela política de proteção de credenciais."}
 
             if not caminho_final.exists():
 
@@ -1095,6 +1133,15 @@ class GerenciadorCapacidades:
         try:
 
             registro = asdict(resultado)
+            capacidades_privadas = {
+                "ler_arquivo", "ler_arquivo_usuario", "consultar_emails_google",
+                "ler_email_google", "consultar_agenda_google", "listar_notas_lembretes",
+                "salvar_nota", "criar_lembrete", "consultar_home_assistant",
+            }
+            if registro.get("capacidade") in capacidades_privadas:
+                registro["resultado"] = {"conteudo_omitido": True, "motivo": "Resultado privado omitido do log."}
+                if registro.get("erro"):
+                    registro["erro"] = "Erro de ferramenta omitido do log por privacidade."
             tamanho_registro = len(
                 json.dumps(
                     registro,
@@ -1250,6 +1297,32 @@ def main() -> None:
     print("=" * 60)
     print("MICROETAPA 56.3.8")
     print("=" * 60)
+
+
+
+def ativar_ferramentas_operacionais(
+    capacidades: GerenciadorCapacidades | None = None,
+    *,
+    incluir_acoes: bool = True,
+) -> GerenciadorCapacidades:
+    """Registra adaptadores no catálogo existente sem duplicar o executor."""
+    alvo = capacidades if capacidades is not None else GerenciadorCapacidades()
+    from nixal_tool_use import registrar_capacidades_operacionais
+    registrar_capacidades_operacionais(alvo, incluir_acoes=incluir_acoes)
+    return alvo
+
+
+_GERENCIADOR_CAPACIDADES_COMPARTILHADO: GerenciadorCapacidades | None = None
+
+
+def _obter_gerenciador_capacidades() -> GerenciadorCapacidades:
+    """Retorna uma instância do registro compartilhada entre Core e diálogo."""
+    global _GERENCIADOR_CAPACIDADES_COMPARTILHADO
+    if _GERENCIADOR_CAPACIDADES_COMPARTILHADO is None:
+        _GERENCIADOR_CAPACIDADES_COMPARTILHADO = ativar_ferramentas_operacionais(
+            GerenciadorCapacidades(), incluir_acoes=True
+        )
+    return _GERENCIADOR_CAPACIDADES_COMPARTILHADO
 
 
 if __name__ == "__main__":
