@@ -337,6 +337,14 @@ class NucleoConversacionalNixal:
                 texto
             )
 
+        telemetria_execucao_ferramentas = {
+            "origem": "nao_aplicavel",
+            "estado": "nenhuma",
+            "quantidade": 0,
+            "itens": [],
+            "argumentos_e_resultados_omitidos": True,
+        }
+
         if resultado["atendida"]:
 
             resposta_textual = (
@@ -344,6 +352,7 @@ class NucleoConversacionalNixal:
                     resultado
                 )
             )
+            telemetria_execucao_ferramentas = self._resumir_capacidade_direta(resultado)
 
             estado_resposta = "resposta_capacidade"
 
@@ -381,6 +390,9 @@ class NucleoConversacionalNixal:
                 texto_dialogo,
                 **argumentos_responder,
             )
+            telemetria_execucao_ferramentas = self._resumir_execucao_ferramentas(
+                resposta_dialogo
+            )
 
             if resposta_dialogo.get("sucesso") is True:
 
@@ -416,6 +428,7 @@ class NucleoConversacionalNixal:
         )
         # Expor somente estado resumido: nunca caminho local nem conteúdo das sessões.
         resposta["valor"]["memoria_conversacional_estado"] = self.memoria_conversacional.estado()
+        resposta["valor"]["execucao_ferramentas"] = telemetria_execucao_ferramentas
         resposta["valor"]["conhecimento_permanente"] = False
         resposta["valor"]["arquitetura_modificada"] = False
         contextos_persistidos = contexto_persistido.get("contextos", [])
@@ -445,6 +458,82 @@ class NucleoConversacionalNixal:
         }
 
         return resposta
+
+    @staticmethod
+    def _nome_ferramenta_publico(valor: Any) -> str:
+        """Permite apenas um identificador curto; nunca publica argumentos ou resultados."""
+        if isinstance(valor, str) and re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", valor):
+            return valor
+        return "ferramenta_nao_identificada"
+
+    @classmethod
+    def _resumir_execucao_ferramentas(cls, resposta_dialogo: Any) -> dict[str, Any]:
+        """Converte a trilha bruta do Qwen em telemetria pública sem payloads privados."""
+        base = {
+            "origem": "dialogo_qwen",
+            "quantidade": 0,
+            "itens": [],
+            "argumentos_e_resultados_omitidos": True,
+        }
+        if not isinstance(resposta_dialogo, dict):
+            return {**base, "estado": "telemetria_indisponivel"}
+
+        chamadas = resposta_dialogo.get("ferramentas_executadas")
+        if chamadas is None:
+            return {**base, "estado": "telemetria_indisponivel"}
+        if not isinstance(chamadas, list):
+            return {**base, "estado": "telemetria_invalida"}
+        if not chamadas:
+            return {**base, "estado": "nenhuma"}
+
+        itens: list[dict[str, Any]] = []
+        for chamada in chamadas[:3]:
+            if not isinstance(chamada, dict):
+                continue
+            sucesso_execucao = chamada.get("ok") is True
+            itens.append({
+                "nome": cls._nome_ferramenta_publico(chamada.get("name")),
+                "execucao_ok": sucesso_execucao,
+                "estado": "concluida" if sucesso_execucao else "falha_ou_recusa",
+            })
+        if not itens:
+            return {**base, "estado": "telemetria_invalida"}
+        return {
+            **base,
+            "estado": (
+                "concluida"
+                if all(item["execucao_ok"] for item in itens)
+                else "parcial_ou_falha"
+            ),
+            "quantidade": len(itens),
+            "itens": itens,
+            "truncado": len(chamadas) > len(itens),
+        }
+
+    @classmethod
+    def _resumir_capacidade_direta(cls, resultado: Any) -> dict[str, Any]:
+        """Registra a capacidade do caminho direto sem expor argumento nem payload."""
+        if not isinstance(resultado, dict):
+            return {
+                "origem": "agente_capacidade",
+                "estado": "telemetria_indisponivel",
+                "quantidade": 0,
+                "itens": [],
+                "argumentos_e_resultados_omitidos": True,
+            }
+        nome = cls._nome_ferramenta_publico(resultado.get("capacidade_escolhida"))
+        sucesso = resultado.get("atendida") is True
+        return {
+            "origem": "agente_capacidade",
+            "estado": "concluida" if sucesso else "falha_ou_recusa",
+            "quantidade": 1,
+            "itens": [{
+                "nome": nome,
+                "execucao_ok": sucesso,
+                "estado": "concluida" if sucesso else "falha_ou_recusa",
+            }],
+            "argumentos_e_resultados_omitidos": True,
+        }
 
     def _estado_runtime_para_dialogo(
         self,
