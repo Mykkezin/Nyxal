@@ -3,6 +3,8 @@
 import json
 import mimetypes
 import os
+from collections import deque
+from datetime import datetime, timezone
 import socket
 import subprocess
 import sys
@@ -11,7 +13,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from secrets import compare_digest, token_urlsafe
-from threading import BoundedSemaphore
+from threading import BoundedSemaphore, Lock
 
 VOICE_MODULE_DIR = Path(__file__).resolve().parent / "deploy" / "voice"
 if str(VOICE_MODULE_DIR) not in sys.path:
@@ -31,6 +33,7 @@ from nixal_integracao_sessao_transporte import (
 from nixal_habitat import HabitatNixOS
 from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
+from nixal_defesa_autonoma import DefesaAutonoma
 from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_estado_presenca import compor_presenca_efetiva
@@ -113,6 +116,12 @@ NUCLEO_CONVERSACIONAL.dialogo.agent_hub = AGENTE_NYXAL
 OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
 CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
+
+# Fase inicial da defesa: eventos estruturados em memória, sem executor nem persistência.
+DEFESA_AUTONOMA_NYXAL = DefesaAutonoma()
+DEFESA_EVENTOS_RECIENTES = deque(maxlen=256)
+DEFESA_EVENTOS_LOCK = Lock()
+
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -823,6 +832,64 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _registrar_falha_autenticacao(self) -> None:
+        """Registra apenas metadados da falha; nunca captura token, corpo ou cabeçalhos."""
+        try:
+            endereco = self.client_address[0] if self.client_address else ""
+            decisao = DEFESA_AUTONOMA_NYXAL.avaliar({
+                "tipo": "falha_autenticacao",
+                "fonte_sinal": "api-auth",
+                "origem_ip": endereco,
+            })
+            if decisao.get("estado") != "avaliado":
+                return
+
+            evento = decisao.get("evento")
+            evento = evento if isinstance(evento, dict) else {}
+            severidade = decisao.get("severidade")
+            if severidade not in {"informativa", "baixa", "media", "alta", "critica"}:
+                severidade = "informativa"
+            motivos = decisao.get("motivos")
+            motivos = motivos if isinstance(motivos, list) else []
+            recomendacoes = decisao.get("recomendacoes")
+            recomendacoes = recomendacoes if isinstance(recomendacoes, list) else []
+            resumo_recomendacoes = []
+            for recomendacao in recomendacoes[:8]:
+                if not isinstance(recomendacao, dict):
+                    continue
+                resumo_recomendacoes.append({
+                    "tipo": str(recomendacao.get("tipo", ""))[:80],
+                    "escopo": str(recomendacao.get("escopo", ""))[:128],
+                    "motivo": str(recomendacao.get("motivo", ""))[:160],
+                    "exige_aprovacao_humana": bool(
+                        recomendacao.get("exige_aprovacao_humana", True)
+                    ),
+                    "executor_autorizado": False,
+                    "efeito_executado": False,
+                })
+
+            registro = {
+                "id": token_urlsafe(12),
+                "observado_em": datetime.now(timezone.utc).isoformat(),
+                "tipo": "falha_autenticacao",
+                "fonte_sinal": "api-auth",
+                "origem_ip": evento.get("origem_ip"),
+                "estado": "avaliado",
+                "severidade": severidade,
+                "motivos": [str(motivo)[:80] for motivo in motivos[:8]],
+                "recomendacoes": resumo_recomendacoes,
+                "executor_autorizado": False,
+                "efeito_executado": False,
+            }
+            with DEFESA_EVENTOS_LOCK:
+                DEFESA_EVENTOS_RECIENTES.append(registro)
+        except Exception as erro:
+            # A telemetria não pode derrubar a barreira de autenticação.
+            print(
+                f"[NYXAL_DEFESA] falha_observacao={type(erro).__name__}",
+                file=sys.stderr,
+            )
+
     def _authorized(self) -> bool:
         if not API_TOKEN:
             self._send_json(
@@ -840,6 +907,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         )
 
         if not authorization.startswith("Bearer "):
+            self._registrar_falha_autenticacao()
             self._send_json(
                 401,
                 {
@@ -851,6 +919,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         token = authorization.removeprefix("Bearer ").strip()
 
         if not compare_digest(token.encode("utf-8"), API_TOKEN.encode("utf-8")):
+            self._registrar_falha_autenticacao()
             self._send_json(
                 403,
                 {
@@ -1507,7 +1576,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         elif parsed_path.startswith("/api/") and not self._local_ou_autorizado():
             return
         is_agent_or_workspace = (
-            parsed_path in {"/api/agent/status", "/api/agent/contexto", "/api/integracoes/google/status", "/api/integracoes/gmail/status"}
+            parsed_path in {"/api/agent/status", "/api/agent/contexto", "/api/agent/defesa", "/api/integracoes/google/status", "/api/integracoes/gmail/status"}
             or parsed_path.startswith("/api/integracoes/google/")
             or parsed_path.startswith("/api/integracoes/gmail/")
         )
@@ -1581,6 +1650,20 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 "origem": "nyxal_agent_context",
                 "observabilidade": OBSERVABILIDADE_NYXOS.snapshot(),
                 "residencia": residencia_snapshot(),
+            })
+            return
+
+        if parsed_path == "/api/agent/defesa":
+            with DEFESA_EVENTOS_LOCK:
+                eventos = [dict(item) for item in list(DEFESA_EVENTOS_RECIENTES)[-50:]]
+            self._send_json(200, {
+                "sucesso": True,
+                "estado": "defesa_governada_observacao",
+                "eventos": eventos,
+                "limite": 50,
+                "eventos_em_memoria_maximo": 256,
+                "persistencia": False,
+                "executor_ativo": False,
             })
             return
 
