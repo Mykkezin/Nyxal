@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - integration/nyxal-active-prs-20261027
       - feat/durable-investigation-context-20261026
     paths:
       - "nixal_mcp_runtime.py"
@@ -87,6 +88,7 @@ on:
   push:
     branches:
       - main
+      - integration/nyxal-active-prs-20261027
       - feat/nyxal-agent-stack-current-main-20261009
       - fix/display-root-route-20261009
       - fix/durable-memory-corruption-guard-20261026
