@@ -71,8 +71,15 @@ class MemoriaConversacionalNixal:
 
         pasta = self.caminho.parent
         pasta.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if pasta.is_symlink() or self.caminho.is_symlink():
-            raise OSError("caminho_de_memoria_nao_pode_ser_link_simbolico")
+        candidato = pasta
+        while True:
+            if candidato.exists() and candidato.is_symlink():
+                raise OSError("ancestral_de_memoria_nao_pode_ser_link_simbolico")
+            if candidato.parent == candidato:
+                break
+            candidato = candidato.parent
+        if self.caminho.is_symlink():
+            raise OSError("arquivo_de_memoria_nao_pode_ser_link_simbolico")
         permissoes = stat.S_IMODE(pasta.stat().st_mode)
         if permissoes & 0o077:
             # Só corrigir automaticamente a pasta de dados conhecida da Nyxal.
@@ -176,14 +183,23 @@ class MemoriaConversacionalNixal:
             dados_validados, erro = self._validar_dados(dados)
             if erro or dados_validados is None:
                 return erro or "estrutura_de_memoria_invalida"
-            serializado = json.dumps(
-                dados_validados,
-                ensure_ascii=False,
-                allow_nan=False,
-                separators=(",", ":"),
-            ).encode("utf-8")
-            if len(serializado) > self.MAX_ARQUIVO_BYTES:
-                return "arquivo_de_memoria_excede_limite"
+            # A limitação de bytes também considera UTF-8. Se o JSON ficar
+            # grande demais, remove sessões menos recentemente ativas até caber;
+            # a sessão em uso está no fim do mapa. Nunca trunca mensagens.
+            dados["sessoes"] = dados_validados["sessoes"]
+            sessoes = dados["sessoes"]
+            while True:
+                serializado = json.dumps(
+                    dados,
+                    ensure_ascii=False,
+                    allow_nan=False,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+                if len(serializado) <= self.MAX_ARQUIVO_BYTES:
+                    break
+                if len(sessoes) <= 1:
+                    return "arquivo_de_memoria_excede_limite"
+                sessoes.pop(next(iter(sessoes)))
 
             fd, nome_temporario = tempfile.mkstemp(
                 prefix=".conversa-nixal-",
