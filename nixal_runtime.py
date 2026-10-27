@@ -2065,6 +2065,9 @@ class NyxalRuntime:
                         return
                     try:
                         os.replace(self.arquivo_log, backup)
+                        if backup.is_symlink():
+                            os.replace(backup, self.arquivo_log)
+                            return
                         try:
                             os.chmod(backup, 0o600)
                         except OSError:
