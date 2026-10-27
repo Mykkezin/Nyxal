@@ -63,30 +63,25 @@ class VpsNyxOS:
 
     @staticmethod
     def _validar_chave_ssh(chave: str) -> str:
-        """Valida a estrutura de uma chave pública OpenSSH e remove comentários.
-
-        O valor é inserido no cloud-init YAML: aceitar CR/LF aqui permitiria
-        acrescentar novas diretivas ao user-data. O comentário não é necessário
-        para autenticação, por isso a forma normalizada mantém apenas tipo/Base64.
-        """
+        """Valida a estrutura OpenSSH e evita injeção de linhas no cloud-init."""
         if not isinstance(chave, str) or not chave.strip():
             raise ValueError("ssh_public_key_obrigatoria")
         valor = chave.strip()
         if len(valor) > 16384 or "\n" in valor or "\r" in valor:
             raise ValueError("ssh_public_key_invalida")
 
-        correspondencia = re.fullmatch(
+        padrao = re.fullmatch(
             r"(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|"
-            r"ecdsa-sha2-nistp521|sk-ssh-ed25519@openssh\\.com|"
-            r"sk-ecdsa-sha2-nistp256@openssh\\.com)[ \\t]+"
-            r"([A-Za-z0-9+/]+={0,2})(?:[ \\t]+[^\\r\\n]*)?",
+            r"ecdsa-sha2-nistp521|sk-ssh-ed25519@openssh\.com|"
+            r"sk-ecdsa-sha2-nistp256@openssh\.com)[ \t]+"
+            r"([A-Za-z0-9+/]+={0,2})(?:[ \t]+[^\r\n]*)?",
             valor,
         )
-        if not correspondencia:
+        if not padrao:
             raise ValueError("ssh_public_key_invalida")
-        tipo = correspondencia.group(1)
+        tipo = padrao.group(1)
         try:
-            blob = base64.b64decode(correspondencia.group(2), validate=True)
+            blob = base64.b64decode(padrao.group(2), validate=True)
         except (ValueError, binascii.Error) as erro:
             raise ValueError("ssh_public_key_invalida") from erro
 
@@ -120,11 +115,12 @@ class VpsNyxOS:
             else:
                 curva, posicao = ler_campo(blob, posicao)
                 ponto, posicao = ler_campo(blob, posicao)
-                curva_esperada = tipo.rsplit("nistp", 1)[-1]
+                tipo_ec = tipo.split("@", 1)[0]
+                curva_esperada = tipo_ec.rsplit("nistp", 1)[-1]
                 if curva.decode("ascii") != "nistp" + curva_esperada:
                     raise ValueError("ssh_public_key_invalida")
                 tamanho_ponto = {"256": 65, "384": 97, "521": 133}[curva_esperada]
-                if len(ponto) != tamanho_ponto or not ponto.startswith(b"\\x04"):
+                if len(ponto) != tamanho_ponto or not ponto.startswith(b"\x04"):
                     raise ValueError("ssh_public_key_invalida")
                 if tipo.startswith("sk-"):
                     aplicacao, posicao = ler_campo(blob, posicao)
@@ -135,7 +131,9 @@ class VpsNyxOS:
         except (UnicodeDecodeError, ValueError, KeyError) as erro:
             raise ValueError("ssh_public_key_invalida") from erro
 
-        return f"{tipo} {correspondencia.group(2)}"
+        # O comentário não é necessário para autenticação e poderia conter
+        # caracteres com semântica especial no YAML; mantenha tipo e blob.
+        return f"{tipo} {padrao.group(2)}"
 
     def _virsh_available(self) -> bool:
         return self._tool("virsh") is not None
