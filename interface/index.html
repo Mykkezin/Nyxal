@@ -464,7 +464,8 @@
     }
     #nyxalVoiceSurface #nyxalCharacterSvg { width: 100% !important; height: 100% !important; max-width: 320px; }
     #nyxalVoiceSurface #nyxalAvatarStateLabel { display: none !important; }
-</style></head>
+  </style>
+</head>
 
 <body class="min-h-screen bg-[#02050e] text-slate-100 flex flex-col justify-between relative selection:bg-hud-cyan selection:text-black">
 
@@ -865,103 +866,108 @@
             </span>
             <span id="aiStatusText" class="font-orbitron text-xs font-bold text-hud-cyan tracking-wider">NYXAL • PRESENÇA AUTÔNOMA</span>
           </div>
-          <span id="nyxalPresenceShortcut" class="text-[9px] font-mono tracking-wide text-slate-500" title="Atalho para chamar a Nyxal">CTRL + SHIFT + ESPAÇO</span>
+          <div class="flex items-center gap-3">
+            <span class="text-[10px] font-mono text-slate-400" title="Presença vetorial autônoma, sem dependência de vídeo externo"><i class="fa-solid fa-brain text-xs text-hud-cyan"></i> AUTÔNOMA</span>
+            <span id="nyxalPresenceShortcut" class="text-[9px] font-mono tracking-wide text-slate-500" title="Atalho para chamar a Nyxal">CTRL + SHIFT + ESPAÇO</span>
+          </div>
         </div>
 
-        <!-- Native autonomous Nyxal avatar. This SVG replaces the blurry video/image placeholder. -->
-        <div id="nyxalAvatarStage" class="nyxal-presence-stage relative w-full h-72 rounded-xl border border-hud-cyan/35 overflow-hidden flex items-center justify-center my-1" aria-label="Presença visual de Nyxal">
-          <div class="nyxal-stage-grid"></div>
-          <div class="nyxal-stage-ring"></div>
-          <div class="absolute inset-x-3 top-2 z-20 flex justify-between text-[8px] font-mono tracking-wider text-hud-cyan/75 pointer-events-none">
-            <span>NYXAL / DELTA</span>
-            <span id="nyxalModeBadge">MODO: PRESENÇA</span>
+        <!-- Video Hologram Container -->
+        <div class="relative w-full h-72 rounded-xl bg-slate-950/90 border border-hud-cyan/40 overflow-hidden flex items-center justify-center my-1 group">
+          
+          <!-- Goddess Nyx Voice Aura Glow -->
+          <div id="avatarVoiceAura" class="absolute w-52 h-52 rounded-full bg-gradient-to-r from-hud-cyan/20 via-hud-purple/20 to-hud-blue/20 blur-xl voice-aura-nyx pointer-events-none z-0"></div>
+
+          <!-- Futuristic Target Overlay -->
+          <div class="absolute inset-0 pointer-events-none z-20 border border-hud-cyan/20 p-2 flex flex-col justify-between text-[8px] font-mono text-hud-cyan/70">
+            <div class="flex justify-between">
+              <span>TRK: #NYXAL-DELTA</span>
+              <span id="nyxalModeBadge">MODO: PRESENÇA</span>
+            </div>
+            <div class="flex justify-between">
+              <span id="nyxalCycleBadge">CICLOS: ---</span>
+              <span id="nyxalLatencyBadge">SYNC: 100%</span>
+            </div>
           </div>
 
-          <div id="nyxalAvatar" class="nyxal-avatar" data-state="idle">
-            <svg id="nyxalCharacterSvg" viewBox="0 0 320 320" role="img" aria-labelledby="nyxalCharacterTitle nyxalCharacterDesc" xmlns="http://www.w3.org/2000/svg">
-              <title id="nyxalCharacterTitle">Nyxal — presença holográfica</title>
-              <desc id="nyxalCharacterDesc">Avatar original em estilo vetorial, com cabelos azul-noite, olhos ciano luminosos e contornos de energia.</desc>
+          <!-- Presença vetorial autônoma: não depende de vídeo, arquivo local ou serviço externo. -->
+          <div id="nyxalAvatar" class="nyxal-avatar relative z-10 flex h-full w-full items-center justify-center" data-state="idle" role="img" aria-label="Nyxal, presença digital autônoma">
+            <svg id="nyxalCharacterSvg" viewBox="0 0 360 320" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-labelledby="nyxalCharacterTitle nyxalCharacterDesc" xmlns="http://www.w3.org/2000/svg">
+              <title id="nyxalCharacterTitle">Nyxal — presença digital autônoma</title>
+              <desc id="nyxalCharacterDesc">Avatar vetorial da Nyxal com contornos de energia azul e ciano.</desc>
               <defs>
-                <radialGradient id="nyxalSpaceGlow" cx="50%" cy="43%" r="62%">
-                  <stop offset="0%" stop-color="#153f68" stop-opacity=".72"/>
-                  <stop offset="58%" stop-color="#07152d" stop-opacity=".3"/>
-                  <stop offset="100%" stop-color="#020611" stop-opacity="0"/>
+                <radialGradient id="nyxalHalo" cx="50%" cy="42%" r="60%">
+                  <stop offset="0" stop-color="#7dd3fc" stop-opacity=".54"/>
+                  <stop offset=".56" stop-color="#2563eb" stop-opacity=".16"/>
+                  <stop offset="1" stop-color="#020617" stop-opacity="0"/>
                 </radialGradient>
                 <linearGradient id="nyxalSkin" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#d7f7ff"/><stop offset="42%" stop-color="#91c7e5"/><stop offset="100%" stop-color="#506a9f"/>
+                  <stop offset="0" stop-color="#f5e8f3"/>
+                  <stop offset=".55" stop-color="#a8c3e3"/>
+                  <stop offset="1" stop-color="#4b7097"/>
                 </linearGradient>
                 <linearGradient id="nyxalHair" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#111a3c"/><stop offset="45%" stop-color="#202b61"/><stop offset="75%" stop-color="#101b3b"/><stop offset="100%" stop-color="#090f26"/>
+                  <stop offset="0" stop-color="#d8efff"/>
+                  <stop offset=".46" stop-color="#7299c5"/>
+                  <stop offset="1" stop-color="#182c4c"/>
                 </linearGradient>
-                <linearGradient id="nyxalHairLight" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stop-color="#a26cff" stop-opacity=".05"/><stop offset="48%" stop-color="#6cdfff" stop-opacity=".84"/><stop offset="100%" stop-color="#9374ff" stop-opacity=".12"/>
+                <linearGradient id="nyxalCloak" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#24476a"/>
+                  <stop offset="1" stop-color="#040813"/>
                 </linearGradient>
-                <linearGradient id="nyxalMantle" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#153b65"/><stop offset="50%" stop-color="#080f28"/><stop offset="100%" stop-color="#241644"/>
-                </linearGradient>
-                <linearGradient id="nyxalCyanLine" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stop-color="#00f2fe" stop-opacity=".12"/><stop offset="50%" stop-color="#8ffcff"/><stop offset="100%" stop-color="#7c6cff" stop-opacity=".25"/>
-                </linearGradient>
-                <filter id="nyxalNeon" x="-80%" y="-80%" width="260%" height="260%">
-                  <feGaussianBlur stdDeviation="2.8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                <filter id="nyxalSoftGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="5"/>
                 </filter>
-                <filter id="nyxalSoftGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
+                <style>
+                  @keyframes nyxalAvatarFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+                  @keyframes nyxalAvatarPulse { 0%,100% { opacity: .2; transform: scale(.96); } 50% { opacity: .62; transform: scale(1.05); } }
+                  @keyframes nyxalOrbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                  .nyxal-avatar-float { transform-box: fill-box; transform-origin: center; animation: nyxalAvatarFloat 4.6s ease-in-out infinite; }
+                  .nyxal-avatar-aura { transform-box: fill-box; transform-origin: center; animation: nyxalAvatarPulse 3.3s ease-in-out infinite; }
+                  .nyxal-avatar-orbit { transform-box: fill-box; transform-origin: center; animation: nyxalOrbitSpin 30s linear infinite; }
+                  @media (prefers-reduced-motion: reduce) { .nyxal-avatar-float,.nyxal-avatar-aura,.nyxal-avatar-orbit { animation: none; } }
+                </style>
               </defs>
-
-              <rect width="320" height="320" fill="url(#nyxalSpaceGlow)"/>
-              <g opacity=".55" fill="#8af7ff">
-                <circle cx="63" cy="81" r="1.3"/><circle cx="247" cy="65" r="1.1"/><circle cx="73" cy="185" r="1"/>
-                <circle cx="254" cy="177" r="1.4"/><circle cx="102" cy="42" r=".8"/><circle cx="219" cy="35" r=".9"/>
-                <circle cx="49" cy="137" r=".8"/><circle cx="276" cy="119" r=".8"/>
+              <circle cx="180" cy="145" r="128" fill="url(#nyxalHalo)" class="nyxal-avatar-aura avatar-aura"/>
+              <g class="nyxal-avatar-orbit" fill="none" stroke="#7dd3fc" stroke-opacity=".38">
+                <ellipse cx="180" cy="145" rx="107" ry="42" stroke-width="1.1" transform="rotate(-28 180 145)"/>
+                <ellipse cx="180" cy="145" rx="106" ry="42" stroke-width=".7" transform="rotate(54 180 145)"/>
+                <circle cx="279" cy="108" r="3" fill="#d9f5ff" stroke="none"/>
+                <circle cx="82" cy="177" r="2.5" fill="#d9f5ff" stroke="none"/>
               </g>
-              <ellipse class="avatar-aura" cx="160" cy="150" rx="94" ry="117" fill="#00eaff" opacity=".4" filter="url(#nyxalSoftGlow)"/>
-              <g class="avatar-breath">
-                <path d="M76 320 C78 267 88 232 121 216 L143 203 L177 203 L201 216 C235 234 244 268 246 320 Z" fill="url(#nyxalMantle)" stroke="#467ea8" stroke-opacity=".7" stroke-width="1.2"/>
-                <path d="M119 229 L145 215 L160 232 L176 215 L202 230 L190 320 L130 320 Z" fill="#061329" stroke="#00e7ff" stroke-opacity=".36"/>
-                <path d="M139 208 L160 238 L181 208" fill="none" stroke="url(#nyxalCyanLine)" stroke-width="2.1"/>
-                <path d="M111 246 L91 289 M209 246 L229 289" class="avatar-circuit"/>
-                <path d="M128 257 L145 272 L143 320 M192 257 L175 272 L177 320" class="avatar-circuit" opacity=".5"/>
-                <path d="M127 221 L160 260 L193 221" fill="none" stroke="#9a86ff" stroke-opacity=".48" stroke-width="1.1"/>
-                <circle cx="160" cy="269" r="5" fill="#06152c" stroke="#00f2fe" stroke-width="1.4"/><circle cx="160" cy="269" r="1.8" fill="#b7ffff" filter="url(#nyxalNeon)"/>
-                <path d="M100 111 C80 69 103 25 149 23 C198 16 237 41 239 91 C248 129 235 188 246 250 C225 239 215 207 214 181 L103 186 C102 226 90 253 72 266 C85 213 77 166 83 132 Z" fill="url(#nyxalHair)" stroke="#39528c" stroke-width="1.2"/>
-                <path d="M104 107 C92 72 116 38 147 32 C117 58 122 92 126 131 C128 171 120 218 103 240" fill="none" stroke="url(#nyxalHairLight)" stroke-width="2.2" opacity=".8"/>
-                <path d="M215 75 C237 121 211 186 231 228" class="avatar-hair-strand"/><path d="M226 97 C221 146 232 177 239 201" class="avatar-hair-strand" opacity=".5"/>
-                <path d="M139 166 L137 209 L160 229 L183 208 L180 166 Z" fill="url(#nyxalSkin)" stroke="#8eeaff" stroke-opacity=".45"/>
-                <path d="M111 79 C113 53 135 42 160 42 C188 42 208 59 210 85 L207 128 C204 158 184 183 160 188 C137 183 117 159 113 129 Z" fill="url(#nyxalSkin)" stroke="#c8f8ff" stroke-opacity=".75" stroke-width="1"/>
-                <path d="M116 91 C121 69 137 54 157 51 C140 66 143 86 143 106 C144 133 136 152 130 158 C120 145 116 122 116 91 Z" fill="#d9f8ff" opacity=".18"/>
-                <path d="M160 92 L154 122 L162 127" fill="none" stroke="#567caa" stroke-opacity=".82" stroke-width="1.2" stroke-linecap="round"/>
-                <path d="M114 105 C105 96 105 117 117 126 M205 105 C216 96 215 117 204 126" fill="none" stroke="#6fdfff" stroke-width="2"/>
-                <path d="M109 111 L116 115 L110 119 M211 111 L204 115 L210 119" fill="none" stroke="#00f2fe" stroke-width="1.2"/>
-                <path d="M119 103 Q136 93 150 104 M170 104 Q185 93 201 103" fill="none" stroke="#17254e" stroke-width="3.2" stroke-linecap="round"/>
-                <g class="avatar-eye-glow">
-                  <path d="M120 115 Q136 103 151 115 Q136 129 120 115 Z" fill="#06142d" stroke="#2befff" stroke-width="1.2"/>
-                  <path d="M169 115 Q185 103 201 115 Q185 129 169 115 Z" fill="#06142d" stroke="#2befff" stroke-width="1.2"/>
-                  <ellipse cx="136" cy="116" rx="4.4" ry="6.5" fill="#00f2fe" class="avatar-eye-core"/>
-                  <ellipse cx="185" cy="116" rx="4.4" ry="6.5" fill="#00f2fe" class="avatar-eye-core"/>
-                  <circle cx="137" cy="114" r="1.5" fill="#ffffff"/><circle cx="186" cy="114" r="1.5" fill="#ffffff"/>
-                </g>
-                <path d="M119 133 Q135 141 148 132 M172 132 Q186 141 201 133" fill="none" stroke="#5b80b2" stroke-opacity=".6" stroke-width="1.1"/>
-                <path class="avatar-mouth-line" d="M147 153 Q160 159 173 153" fill="none" stroke="#31517f" stroke-width="2" stroke-linecap="round"/>
-                <ellipse class="avatar-mouth-open" cx="160" cy="155" rx="7" ry="4" fill="#15284b" stroke="#8df8ff" stroke-width="1"/>
-                <path d="M145 161 Q160 166 175 161" fill="none" stroke="#b6edff" stroke-opacity=".45" stroke-width="1"/>
-                <path d="M103 107 C93 79 107 44 141 33 C165 25 190 35 205 56 C188 46 170 45 154 53 C137 61 132 83 124 103 C121 80 124 66 134 54 C118 62 113 84 113 105 Z" fill="url(#nyxalHair)" stroke="#41598e" stroke-width="1"/>
-                <path d="M105 94 C96 134 110 170 101 212 C95 236 87 248 83 253" fill="none" stroke="#172750" stroke-width="12" stroke-linecap="round"/>
-                <path d="M105 94 C96 134 110 170 101 212 C95 236 87 248 83 253" fill="none" stroke="url(#nyxalHairLight)" stroke-width="1.7" stroke-linecap="round"/>
-                <path d="M207 94 C218 131 203 168 217 208 C221 224 228 238 235 245" fill="none" stroke="#101a3d" stroke-width="13" stroke-linecap="round"/>
-                <path d="M207 94 C218 131 203 168 217 208 C221 224 228 238 235 245" fill="none" stroke="url(#nyxalHairLight)" stroke-width="1.7" stroke-linecap="round"/>
-                <path d="M132 45 Q159 30 188 47" fill="none" stroke="#a5faff" stroke-opacity=".58" stroke-width="1.2"/>
-                <path d="M129 41 L124 32 M139 37 L137 26 M198 44 L204 35" fill="none" stroke="#00f2fe" stroke-opacity=".6" stroke-width="1.1"/>
+              <g class="nyxal-avatar-float avatar-breath">
+                <path d="M83 290 Q89 228 121 210 L145 198 L216 198 L241 211 Q275 236 278 290 Z" fill="url(#nyxalCloak)" stroke="#7dd3fc" stroke-opacity=".56" stroke-width="1.5"/>
+                <path d="M143 202 L180 253 L217 202 L205 290 L155 290 Z" fill="#071426" stroke="#8bdcff" stroke-opacity=".62" stroke-width="1"/>
+                <path d="M155 202 L180 231 L205 202" fill="none" stroke="#b5eaff" stroke-opacity=".72" stroke-width="2"/>
+                <path d="M160 185 L160 213 Q180 231 200 213 L200 185" fill="url(#nyxalSkin)"/>
+                <path d="M129 116 Q131 67 180 65 Q231 68 232 119 L224 162 Q217 193 180 201 Q143 193 136 162 Z" fill="url(#nyxalSkin)" stroke="#d8f2ff" stroke-opacity=".84" stroke-width="1.2"/>
+                <path d="M128 130 Q115 91 139 65 Q159 43 190 52 Q227 50 238 88 Q243 109 231 138 L218 106 Q199 102 184 84 Q168 105 143 111 L140 150 Z" fill="url(#nyxalHair)" stroke="#b8e8ff" stroke-opacity=".72" stroke-width="1.2"/>
+                <path d="M141 130 Q155 119 169 130" fill="none" stroke="#172d4c" stroke-width="4" stroke-linecap="round"/>
+                <path d="M191 130 Q205 119 219 130" fill="none" stroke="#172d4c" stroke-width="4" stroke-linecap="round"/>
+                <path d="M146 139 Q157 132 169 139" fill="none" stroke="#76e4ff" stroke-width="2.4" stroke-linecap="round"/>
+                <path d="M191 139 Q203 132 215 139" fill="none" stroke="#76e4ff" stroke-width="2.4" stroke-linecap="round"/>
+                <circle class="avatar-eye-core" cx="158" cy="138" r="2.3" fill="#e8fbff"/>
+                <circle class="avatar-eye-core" cx="203" cy="138" r="2.3" fill="#e8fbff"/>
+                <path d="M180 140 L176 160 L183 162" fill="none" stroke="#6688a9" stroke-width="1.7" stroke-linecap="round"/>
+                <path class="avatar-mouth-line" d="M165 174 Q180 181 195 174" fill="none" stroke="#355c7e" stroke-width="1.8" stroke-linecap="round"/>
+                <ellipse class="avatar-mouth-open" cx="180" cy="176" rx="5.5" ry="2.5" fill="#15284b" stroke="#8df8ff" stroke-width="1"/>
+                <path d="M133 106 Q140 72 171 68 Q201 60 223 92" fill="none" stroke="#e3f7ff" stroke-opacity=".8" stroke-width="2"/>
+                <path d="M121 113 L106 144 L124 137 M235 112 L252 144 L234 138" fill="none" stroke="#7dd3fc" stroke-opacity=".6" stroke-width="2"/>
+                <path d="M130 214 L109 251 L132 246 M230 214 L251 251 L228 246" fill="none" stroke="#6cccf2" stroke-opacity=".65" stroke-width="2"/>
+                <path d="M180 237 L180 274" stroke="#7dd3fc" stroke-opacity=".8" stroke-width="1.5"/>
+                <circle cx="180" cy="240" r="8" fill="#0b223c" stroke="#83ddff" stroke-width="1.2"/>
+                <path d="M180 233 L185 240 L180 247 L175 240 Z" fill="#a5f3fc"/>
               </g>
+              <text x="180" y="308" font-family="Orbitron, sans-serif" font-size="10" letter-spacing="4" text-anchor="middle" fill="#a9d8f1">NYXAL · RESIDENTE</text>
             </svg>
           </div>
 
-          <div class="absolute inset-x-3 bottom-8 z-20 flex justify-between text-[8px] font-mono tracking-wide text-hud-cyan/55 pointer-events-none">
-            <span id="nyxalCycleBadge">CICLOS: ---</span><span id="nyxalLatencyBadge">SYNC: LOCAL</span>
+          <!-- Subtitle / Voice Output Overlay -->
+          <div id="voiceDiagnostics" class="fixed bottom-2 left-2 z-50 hidden px-2 py-1 rounded bg-black/70 border border-hud-cyan/20 text-[9px] font-mono text-hud-cyan pointer-events-none"></div>
+      <div id="aiSubtitlesBox" class="absolute bottom-2 left-2 right-2 z-30 bg-slate-950/95 border border-hud-cyan/60 p-2.5 rounded-lg text-center shadow-lg backdrop-blur-md hidden">
+            <p id="aiSubtitlesText" class="text-xs font-rajdhani text-hud-cyan font-semibold leading-tight">"Sistemas operacionais iniciados, Nyxal ao seu dispor."</p>
           </div>
-          <div id="aiSubtitlesBox" class="absolute bottom-8 left-2 right-2 z-30 bg-slate-950/95 border border-hud-cyan/60 p-2.5 rounded-lg text-center shadow-lg backdrop-blur-md hidden">
-            <p id="aiSubtitlesText" class="text-xs font-rajdhani text-hud-cyan font-semibold leading-tight">"Nyxal está pronta."</p>
-          </div>
-          <div id="nyxalAvatarStateLabel" class="nyxal-avatar-state">EM REPOUSO · CTRL+SHIFT+ESPAÇO</div>
+          <div id="nyxalAvatarStateLabel" class="nyxal-avatar-state" aria-live="polite">EM REPOUSO · CTRL+SHIFT+ESPAÇO</div>
         </div>
 
         <!-- Telemetry Details Footer -->
@@ -2436,6 +2442,9 @@
 
         const { response: res, data } = await nyxalApiPost('/api/chat', {
           headers: { 'Content-Type': 'application/json' },
+          // HTTP 4xx/5xx são respostas da API, não falhas de conexão.
+          // O chamador precisa ler estado/erro para recuperar sessão ou mostrar o motivo real.
+          throwOnError: false,
           body: JSON.stringify(
             nyxalSessionId
               ? { mensagem: msg, sessao: nyxalSessionId }
@@ -3823,6 +3832,7 @@ async function fetchNyxosOperationalContext(){
   document.getElementById('nyxosOpLive').innerText='LIVE';
  }catch(e){const x=document.getElementById('nyxosOpLive');if(x){x.innerText='OFFLINE';x.className='text-[9px] font-mono text-rose-400';}}
 }
-</script>  <script src="/interface/js/nyxal-voice-console.js"></script>
+</script>
+  <script src="/interface/js/nyxal-voice-console.js"></script>
 </body>
 </html>
