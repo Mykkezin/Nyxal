@@ -25,6 +25,16 @@ def _ecdsa_fixture() -> str:
     return "ecdsa-sha2-nistp256 " + base64.b64encode(blob).decode("ascii")
 
 
+def _rsa_fixture(bits: int = 2048, exponent: bytes = b"\x01\x00\x01") -> str:
+    modulus_bytes = (bits + 7) // 8
+    modulus_value = (1 << (bits - 1)) | 1
+    modulus = modulus_value.to_bytes(modulus_bytes, "big")
+    if modulus[0] & 0x80:
+        modulus = b"\x00" + modulus
+    blob = _ssh_string(b"ssh-rsa") + _ssh_string(exponent) + _ssh_string(modulus)
+    return "ssh-rsa " + base64.b64encode(blob).decode("ascii")
+
+
 class VpsNyxOSTest(unittest.TestCase):
     def test_contexto(self) -> None:
         contexto = VpsNyxOS().contexto()
@@ -59,6 +69,16 @@ class VpsNyxOSTest(unittest.TestCase):
     def test_aceita_chave_ecdsa_p256_estruturalmente_valida(self) -> None:
         key = _ecdsa_fixture()
         self.assertEqual(VpsNyxOS._validar_chave_ssh(key), key)
+
+    def test_aceita_rsa_com_minimo_de_2048_bits_e_expoente_valido(self) -> None:
+        chave = _rsa_fixture(2048)
+        self.assertEqual(VpsNyxOS._validar_chave_ssh(chave), chave)
+
+    def test_rejeita_rsa_fraco_ou_expoente_invalido(self) -> None:
+        with self.assertRaisesRegex(ValueError, "ssh_public_key_invalida"):
+            VpsNyxOS._validar_chave_ssh(_rsa_fixture(1024))
+        with self.assertRaisesRegex(ValueError, "ssh_public_key_invalida"):
+            VpsNyxOS._validar_chave_ssh(_rsa_fixture(2048, b"\x02"))
 
     def test_rejeita_quebras_de_linha_que_poderiam_injetar_cloud_init(self) -> None:
         key = _ed25519_fixture()
