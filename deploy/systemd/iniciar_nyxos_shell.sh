@@ -2,7 +2,7 @@
 set -euo pipefail
 
 NYXAL_DIR="${HOME}/Nyxal"
-# Abra o painel completo em uma janela normal, não em uma miniatura/kiosk sempre cobrindo os outros apps.
+# Abra o painel completo em janela normal, sem a miniatura sempre cobrindo os outros apps.
 # O modo simplificado de voz continua disponível por configuração explícita, mas não é mais o padrão.
 INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/}"
 STARTUP_PAGE="${NYXAL_DIR}/interface/startup.html"
@@ -71,7 +71,7 @@ if [[ "${INTERFACE_URL}" != *"modo=voz"* && -f "${STARTUP_PAGE}" && ! -f "${STAR
     fi
 fi
 
-# Sem --kiosk: a janela pode ser movida/minimizada e deixa de se impor sobre o desktop.
+# A janela pode ser movida/minimizada e deixa de se impor sobre o desktop.
 case "$(basename "${BROWSER}")" in
     firefox)
         exec "${BROWSER}" --new-window "${LAUNCH_URL}"
