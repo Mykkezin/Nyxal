@@ -12,6 +12,7 @@ import asyncio
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -271,6 +272,7 @@ class NyxalChatProcessor(FrameProcessor):
                 return
 
             generation_at_request = self._turn_state.generation
+            api_request_started_at = time.perf_counter()
             logger.info("[nyxal-voz] transcrição concluída; consultando o núcleo conversacional")
             try:
                 reply = await self._ask_nyxal(utterance)
@@ -281,6 +283,9 @@ class NyxalChatProcessor(FrameProcessor):
                     detail[:240] if detail else type(error).__name__,
                 )
                 reply = "Não consegui acessar o núcleo da Nyxal agora. Tente falar novamente."
+
+            elapsed_ms = round((time.perf_counter() - api_request_started_at) * 1000)
+            logger.info("[nyxal-voz] tempo até resposta completa do núcleo: {} ms", elapsed_ms)
 
             # A newer voice turn may have started while the API was responding.
             # Never play an answer to an utterance that the user has already interrupted.
