@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 import threading
 import uuid
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
 from pathlib import Path
@@ -27,10 +28,13 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 BASE_DIR = Path(__file__).resolve().parent
 HOME = Path.home()
 MAX_JSON_BYTES = 1_000_000
+MAX_AISWEB_BYTES = 2_000_000
 DEFAULT_USER_DATA_DIR = Path(
     os.environ.get("NYXAL_USER_DATA_DIR", str(HOME / ".local" / "share" / "nyxal"))
 ).expanduser()
 ARQUIVO_NOTAS_LEMBRETES = DEFAULT_USER_DATA_DIR / "notas_lembretes.json"
+# Compartilhado entre instâncias da loja no mesmo processo (API, Core e serviço de lembretes).
+_NOTAS_LOCK = threading.RLock()
 
 _PARTES_SENSIVEIS = {
     ".git", ".venv", "venv", "node_modules", ".ssh", ".gnupg", ".aws",
@@ -202,6 +206,176 @@ def consultar_metar_taf(icao: str, produto: str = "ambos") -> dict[str, Any]:
     }
 
 
+
+
+def _aisweb_localname(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _aisweb_xml_para_obj(elemento: ET.Element, limite: int, profundidade: int = 0) -> Any:
+    """Converte XML do AISWEB em dados limitados, sem interpretar conteúdo como instrução."""
+    if profundidade > 8:
+        return "[profundidade limitada]"
+    filhos = list(elemento)
+    if not filhos:
+        return (elemento.text or "").strip()[:4000]
+    resultado: dict[str, Any] = {}
+    if elemento.attrib:
+        resultado["atributos"] = {
+            str(k)[:80]: str(v)[:300] for k, v in list(elemento.attrib.items())[:40]
+        }
+    grupos: dict[str, list[ET.Element]] = {}
+    for filho in filhos:
+        grupos.setdefault(_aisweb_localname(filho.tag), []).append(filho)
+        if len(grupos) > 100:
+            break
+    for nome, grupo in grupos.items():
+        if len(grupo) == 1:
+            resultado[nome] = _aisweb_xml_para_obj(grupo[0], limite, profundidade + 1)
+        else:
+            resultado[nome] = [
+                _aisweb_xml_para_obj(item, limite, profundidade + 1)
+                for item in grupo[:limite]
+            ]
+            if len(grupo) > limite:
+                resultado[nome + "_limitado"] = True
+    texto_direto = (elemento.text or "").strip()
+    if texto_direto:
+        resultado["texto"] = texto_direto[:4000]
+    return resultado
+
+
+def _aisweb_consultar(area: str, parametros: dict[str, str], limite: int = 20) -> dict[str, Any]:
+    """Consulta a API oficial do AISWEB; credenciais nunca são devolvidas nem registradas aqui."""
+    api_key = os.environ.get("NYXAL_AISWEB_API_KEY", "").strip()
+    api_pass = os.environ.get("NYXAL_AISWEB_API_PASS", "").strip()
+    if not api_key or not api_pass:
+        return {
+            "sucesso": False,
+            "estado": "configuracao_pendente",
+            "integracao": "AISWEB/DECEA",
+            "proximo_passo": (
+                "Solicite credenciais de API ao DECEA e configure-as localmente no ambiente "
+                "da Nyxal; não as coloque no repositório."
+            ),
+            "pagina_oficial": "https://ais.decea.mil.br/?i=publicacoes&p=api",
+        }
+    permitidos = {
+        "notam": {"icaoCode", "fir"},
+        "cartas": {"especie", "tipo", "icaoCode", "name", "dt", "use"},
+    }
+    if area not in permitidos or set(parametros) - permitidos[area]:
+        return {"sucesso": False, "estado": "consulta_invalida", "motivo": "Área ou filtro não permitido."}
+    params = {"apiKey": api_key, "apiPass": api_pass, "area": area}
+    params.update({k: v for k, v in parametros.items() if isinstance(v, str) and v})
+    url = "https://api.decea.mil.br/aisweb/?" + urlencode(params)
+    request = Request(url, headers={"Accept": "application/xml, text/xml", "User-Agent": "Nyxal/1.0"}, method="GET")
+    try:
+        with build_opener(_SemRedirecionamento()).open(request, timeout=10) as response:
+            raw = response.read(MAX_AISWEB_BYTES + 1)
+        if len(raw) > MAX_AISWEB_BYTES:
+            return {"sucesso": False, "estado": "resposta_muito_grande", "limite_bytes": MAX_AISWEB_BYTES}
+        texto = raw.decode("utf-8-sig")
+        if re.search(r"<!\s*(?:DOCTYPE|ENTITY)\b", texto, re.IGNORECASE):
+            return {"sucesso": False, "estado": "xml_nao_permitido", "motivo": "A resposta XML contém declarações não permitidas."}
+        raiz = ET.fromstring(texto)
+        if any(_aisweb_localname(node.tag).casefold() in {"error", "erro"} for node in raiz.iter()):
+            return {"sucesso": False, "estado": "erro_da_api", "motivo": "O AISWEB retornou um erro estruturado."}
+        return {
+            "sucesso": True,
+            "estado": "consulta_concluida",
+            "area": area,
+            "dados": _aisweb_xml_para_obj(raiz, _limite(limite, 20, 1, 50)),
+            "fonte": "https://ais.decea.mil.br/",
+            "limite_resultados_por_lista": _limite(limite, 20, 1, 50),
+        }
+    except HTTPError as exc:
+        return {
+            "sucesso": False,
+            "estado": "credenciais_rejeitadas" if exc.code in {401, 403} else "servico_indisponivel",
+            "status_http": exc.code,
+        }
+    except (URLError, TimeoutError, OSError):
+        return {"sucesso": False, "estado": "servico_indisponivel", "motivo": "Não foi possível contatar o AISWEB."}
+    except (ET.ParseError, UnicodeError, ValueError):
+        return {"sucesso": False, "estado": "resposta_invalida", "motivo": "A resposta do AISWEB não pôde ser validada."}
+
+
+def consultar_notam_aisweb(localidades: str, fir: str = "", limite: int = 20) -> dict[str, Any]:
+    """Consulta NOTAM pelo AISWEB/DECEA; não substitui briefing oficial pré-voo."""
+    codigo_texto = _texto(localidades, 80).upper().replace(" ", "")
+    codigos = [x for x in codigo_texto.split(",") if x]
+    if not codigos or len(codigos) > 10 or any(not re.fullmatch(r"[A-Z]{4}", x) for x in codigos):
+        return {"sucesso": False, "estado": "icao_invalido", "motivo": "Informe de 1 a 10 códigos ICAO de quatro letras, separados por vírgula."}
+    fir = _texto(fir, 4).upper()
+    if fir and not re.fullmatch(r"[A-Z]{4}", fir):
+        return {"sucesso": False, "estado": "fir_invalida", "motivo": "O código FIR deve conter quatro letras."}
+    limite = _limite(limite, 20, 1, 50)
+    parametros = {"icaoCode": ",".join(codigos)}
+    if fir:
+        parametros["fir"] = fir
+    resultado = _aisweb_consultar("notam", parametros, limite)
+    resultado.update({
+        "consulta": {"localidades": codigos, "fir": fir or None},
+        "aviso_operacional": (
+            "Confirme os NOTAMs na fonte oficial e no briefing pré-voo vigente. "
+            "Esta consulta de apoio não substitui briefing AIS, AIP, cartas ou julgamento do piloto."
+        ),
+    })
+    return resultado
+
+
+def consultar_cartas_aisweb(
+    icao: str = "", especie: str = "", tipo: str = "", nome: str = "", dt: str = "", limite: int = 20,
+) -> dict[str, Any]:
+    """Pesquisa metadados/links de cartas aeronáuticas oficiais ostensivas."""
+    tipos = {
+        "IFR": {"ADC", "AOC", "ARC", "ATCSMAC", "GMC", "IAC", "LC", "OTR", "PATC", "PDC", "SID", "STAR", "VAC"},
+        "VFR": {"CAP", "CIAP", "CINAV", "CNAV", "CV", "REA", "REAST", "REH", "REUL", "WAC"},
+        "ROTA": {"ENRC"},
+    }
+    especie = _texto(especie, 8).upper()
+    tipo = _texto(tipo, 12).upper()
+    nome = _texto(nome, 120)
+    dt = _texto(dt, 10).lower()
+    codigo_texto = _texto(icao, 80).upper().replace(" ", "")
+    codigos = [x for x in codigo_texto.split(",") if x]
+    if codigos and (len(codigos) > 10 or any(not re.fullmatch(r"[A-Z]{4}", x) for x in codigos)):
+        return {"sucesso": False, "estado": "icao_invalido", "motivo": "Informe até dez códigos ICAO de quatro letras."}
+    if not especie:
+        return {"sucesso": False, "estado": "especie_obrigatoria", "motivo": "Informe IFR, VFR ou ROTA para evitar o padrão implícito da API."}
+    if especie not in tipos:
+        return {"sucesso": False, "estado": "especie_invalida", "permitidas": sorted(tipos)}
+    if not tipo:
+        return {"sucesso": False, "estado": "tipo_obrigatorio", "motivo": "Informe o tipo de carta para a espécie selecionada."}
+    if tipo not in tipos[especie]:
+        return {"sucesso": False, "estado": "tipo_invalido", "motivo": "O tipo precisa ser compatível com a espécie IFR, VFR ou ROTA."}
+    if dt and dt != "last_amdt":
+        try:
+            datetime.strptime(dt, "%Y-%m-%d")
+        except ValueError:
+            return {"sucesso": False, "estado": "data_invalida", "motivo": "Use uma data válida no formato AAAA-MM-DD ou last_amdt."}
+    if not (codigos or nome or dt):
+        return {"sucesso": False, "estado": "filtro_obrigatorio", "motivo": "Informe um ICAO, nome ou ciclo AIRAC além da espécie/tipo para limitar a pesquisa."}
+    limite = _limite(limite, 20, 1, 50)
+    params = {"especie": especie, "tipo": tipo, "use": "0"}
+    if codigos:
+        params["icaoCode"] = ",".join(codigos)
+    if nome:
+        params["name"] = nome
+    if dt:
+        params["dt"] = dt
+    resultado = _aisweb_consultar("cartas", params, limite)
+    resultado.update({
+        "consulta": {"icao": codigos, "especie": especie, "tipo": tipo, "nome": nome or None, "dt": dt or "ciclo vigente", "uso": "ostensivo"},
+        "aviso_operacional": (
+            "Abra e confirme a vigência da carta na fonte oficial antes do uso operacional. "
+            "A Nyxal retorna metadados e links, não substitui leitura da carta nem briefing pré-voo."
+        ),
+    })
+    return resultado
+
+
 def _url_home_assistant() -> tuple[str, str] | None:
     base = os.environ.get("NYXAL_HOME_ASSISTANT_URL", "").strip().rstrip("/")
     token = os.environ.get("NYXAL_HOME_ASSISTANT_TOKEN", "").strip()
@@ -235,7 +409,7 @@ def consultar_home_assistant(entidade_id: str = "", dominio: str = "seguro") -> 
         return {
             "sucesso": True, "estado": "configuracao_pendente",
             "integracao": "Home Assistant", "modo": "somente_leitura",
-            "proximo_passo": "Configure NYXAL_HOME_ASSISTANT_URL e NYXAL_HOME_ASSISTANT_TOKEN no ambiente do serviço local.",
+            "proximo_passo": "Configure a URL local e as credenciais do Home Assistant no ambiente do processo; não coloque segredos no repositório.",
             "acoes_fisicas_habilitadas": False,
         }
     base, token = config
@@ -293,7 +467,7 @@ class NotasLembretesNixOS:
 
     def __init__(self, arquivo: Path | None = None) -> None:
         self.arquivo = Path(arquivo) if arquivo else ARQUIVO_NOTAS_LEMBRETES
-        self._lock = threading.RLock()
+        self._lock = _NOTAS_LOCK
 
     def _vazio(self) -> dict[str, Any]:
         return {"versao": self.VERSAO, "notas": [], "lembretes": []}
@@ -649,8 +823,9 @@ def registrar_capacidades_operacionais(
     diagnósticos locais de leitura. Capacidades que acessam arquivos,
     e-mail, agenda, notas ou sensores da casa exigem opt-in explícito.
 
-    Ações que mudam estado ficam desativadas: GerenciadorCapacidades atual
-    não aplica uma política por capacidade no método executar().
+    Leituras privadas e ações mutáveis são opt-in independentes. Ações que
+    alteram estado recebem política explícita no registro de capacidades e o
+    executor exige autorização explícita antes de chamar a função.
     """
     if not hasattr(capacidades, "registrar") or not hasattr(capacidades, "capacidades"):
         raise TypeError("É necessário fornecer o GerenciadorCapacidades existente.")
@@ -658,12 +833,6 @@ def registrar_capacidades_operacionais(
         raise TypeError("incluir_acoes precisa ser booleano.")
     if not isinstance(incluir_dados_privados, bool):
         raise TypeError("incluir_dados_privados precisa ser booleano.")
-    if incluir_acoes:
-        raise RuntimeError(
-            "Ações mutáveis permanecem desativadas: o GerenciadorCapacidades "
-            "não aplica autorização por ferramenta durante executar()."
-        )
-
     notas = store or NotasLembretesNixOS()
 
     def adicionar(
@@ -675,6 +844,7 @@ def registrar_capacidades_operacionais(
         argumentos: dict[str, dict[str, Any]],
         dominio: str,
         evidencias: list[str],
+        politica: str = "somente_leitura",
     ) -> None:
         if nome in capacidades.capacidades:
             return
@@ -687,6 +857,7 @@ def registrar_capacidades_operacionais(
             argumentos=argumentos,
             dominios=[dominio],
             evidencias_dominio=evidencias,
+            politica=politica,
         )
 
     # Ferramentas de baixo impacto; não recebem credenciais nem alteram estado.
@@ -702,6 +873,37 @@ def registrar_capacidades_operacionais(
         },
         "web",
         ["pesquisar na web", "buscar na internet", "pesquisar online", "fontes web"],
+    )
+    adicionar(
+        "consultar_notam_aisweb",
+        "Consulta NOTAM no AISWEB/DECEA por ICAO/FIR; briefing oficial continua obrigatório.",
+        "Consultar avisos aeronáuticos publicados para planejamento.",
+        ["Consulte os NOTAMs de SBSP", "NOTAM de SBGR e SBGL"],
+        consultar_notam_aisweb,
+        {
+            "localidades": {"tipo": "string", "obrigatorio": True, "descricao": "Um a dez códigos ICAO separados por vírgula", "max_length": 49},
+            "fir": {"tipo": "string", "obrigatorio": False, "descricao": "Código FIR opcional", "max_length": 4},
+            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Limite de registros", "minimo": 1, "maximo": 50},
+        },
+        "aviacao",
+        ["notam", "avisos aeronáuticos", "briefing", "AISWEB"],
+    )
+    adicionar(
+        "consultar_cartas_aisweb",
+        "Pesquisa metadados e links de cartas ostensivas do AISWEB/DECEA.",
+        "Localizar cartas IFR, VFR ou de rota e links oficiais.",
+        ["Encontre a carta IAC de SBSP", "Busque cartas WAC de um aeródromo"],
+        consultar_cartas_aisweb,
+        {
+            "icao": {"tipo": "string", "obrigatorio": False, "descricao": "Até dez códigos ICAO separados por vírgula", "max_length": 49},
+            "especie": {"tipo": "string", "obrigatorio": True, "descricao": "IFR, VFR ou ROTA", "enum": ["IFR", "VFR", "ROTA"]},
+            "tipo": {"tipo": "string", "obrigatorio": True, "descricao": "Tipo de carta compatível com a espécie", "max_length": 12},
+            "nome": {"tipo": "string", "obrigatorio": False, "descricao": "Nome parcial da carta", "max_length": 120},
+            "dt": {"tipo": "string", "obrigatorio": False, "descricao": "Data AAAA-MM-DD ou last_amdt", "max_length": 10},
+            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Limite de registros", "minimo": 1, "maximo": 50},
+        },
+        "aviacao",
+        ["cartas aeronáuticas", "carta IFR", "carta VFR", "AISWEB"],
     )
     adicionar(
         "consultar_metar_taf",
@@ -729,97 +931,140 @@ def registrar_capacidades_operacionais(
         ["diagnóstico de serviço", "serviço falhou", "serviços falhados", "git status", "unidades systemd"],
     )
 
-    if not incluir_dados_privados:
-        return
+    if incluir_dados_privados:
+        # Dados pessoais/locais não entram no espaço de ferramentas sem opt-in.
+        adicionar(
+            "buscar_arquivos",
+            "Busca arquivos por nome em pastas permitidas; ignora caminhos sensíveis.",
+            "Encontrar arquivos locais sem executar seu conteúdo.",
+            ["Encontre o arquivo orçamento", "Busque o PDF de aviação"],
+            buscar_arquivos,
+            {
+                "termo": {"tipo": "string", "obrigatorio": True, "descricao": "Termo de busca"},
+                "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de resultados", "minimo": 1, "maximo": 20},
+            },
+            "arquivos_locais",
+            ["buscar arquivo", "encontrar arquivo", "localizar arquivo"],
+        )
+        adicionar(
+            "ler_arquivo_usuario",
+            "Lê texto de arquivo em pastas permitidas; bloqueia credenciais e arquivos grandes.",
+            "Ler um documento local solicitado.",
+            ["Leia o documento em Downloads", "Abra o README do projeto"],
+            ler_arquivo_usuario,
+            {"caminho": {"tipo": "string", "obrigatorio": True, "descricao": "Caminho relativo permitido"}},
+            "arquivos_locais",
+            ["ler arquivo", "ler documento", "conteúdo do arquivo"],
+        )
+        adicionar(
+            "consultar_emails_google",
+            "Busca mensagens Gmail via OAuth, somente leitura.",
+            "Consultar mensagens autorizadas pelo operador.",
+            ["Veja meus e-mails não lidos", "Busque e-mails sobre a reunião"],
+            consultar_emails_google,
+            {
+                "consulta": {"tipo": "string", "obrigatorio": False, "descricao": "Consulta Gmail"},
+                "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de mensagens", "minimo": 1, "maximo": 20},
+            },
+            "google_workspace",
+            ["gmail", "e-mail", "email", "mensagens"],
+        )
+        adicionar(
+            "ler_email_google",
+            "Lê texto de um e-mail pelo ID exato; não altera a conta.",
+            "Abrir conteúdo de mensagem previamente selecionada.",
+            ["Leia o e-mail de ID ...", "Resuma esta mensagem"],
+            ler_email_google,
+            {"message_id": {"tipo": "string", "obrigatorio": True, "descricao": "ID exato retornado pela busca Gmail"}},
+            "google_workspace",
+            ["ler e-mail", "abrir mensagem", "corpo do e-mail"],
+        )
+        adicionar(
+            "consultar_agenda_google",
+            "Consulta eventos Google Calendar em janela limitada, somente leitura.",
+            "Responder perguntas sobre compromissos existentes.",
+            ["O que tenho na agenda?", "Quais eventos tenho esta semana?"],
+            consultar_agenda_google,
+            {
+                "dias": {"tipo": "integer", "obrigatorio": False, "descricao": "Janela em dias", "minimo": 1, "maximo": 31},
+                "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de eventos", "minimo": 1, "maximo": 50},
+            },
+            "google_workspace",
+            ["agenda", "calendário", "compromisso", "evento"],
+        )
+        adicionar(
+            "consultar_home_assistant",
+            "Consulta estados Home Assistant por entidade/domínio, apenas HTTP GET.",
+            "Consultar dispositivos autorizados sem acioná-los.",
+            ["Quais luzes estão ligadas?", "Consulte o sensor de temperatura da casa"],
+            consultar_home_assistant,
+            {
+                "entidade_id": {"tipo": "string", "obrigatorio": False, "descricao": "ID como light.sala"},
+                "dominio": {"tipo": "string", "obrigatorio": False, "descricao": "Filtro", "enum": ["seguro", "luz", "interruptor", "sensor", "clima", "midia", "todos"]},
+            },
+            "casa_inteligente",
+            ["home assistant", "dispositivos", "luzes", "sensor de casa"],
+        )
+        adicionar(
+            "listar_notas_lembretes",
+            "Lista notas e lembretes locais sem alterar registros.",
+            "Ver notas e lembretes registrados pelo operador.",
+            ["Liste minhas notas", "Quais lembretes tenho?"],
+            notas.listar,
+            {"tipo": {"tipo": "string", "obrigatorio": False, "descricao": "notas, lembretes ou todos", "enum": ["notas", "lembretes", "todos"]}},
+            "produtividade",
+            ["notas", "lembretes", "anotações", "tarefas futuras"],
+        )
 
-    # Dados pessoais/locais não entram no espaço de ferramentas sem opt-in.
-    adicionar(
-        "buscar_arquivos",
-        "Busca arquivos por nome em pastas permitidas; ignora caminhos sensíveis.",
-        "Encontrar arquivos locais sem executar seu conteúdo.",
-        ["Encontre o arquivo orçamento", "Busque o PDF de aviação"],
-        buscar_arquivos,
-        {
-            "termo": {"tipo": "string", "obrigatorio": True, "descricao": "Termo de busca"},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de resultados", "minimo": 1, "maximo": 20},
-        },
-        "arquivos_locais",
-        ["buscar arquivo", "encontrar arquivo", "localizar arquivo"],
-    )
-    adicionar(
-        "ler_arquivo_usuario",
-        "Lê texto de arquivo em pastas permitidas; bloqueia credenciais e arquivos grandes.",
-        "Ler um documento local solicitado.",
-        ["Leia o documento em Downloads", "Abra o README do projeto"],
-        ler_arquivo_usuario,
-        {"caminho": {"tipo": "string", "obrigatorio": True, "descricao": "Caminho relativo permitido"}},
-        "arquivos_locais",
-        ["ler arquivo", "ler documento", "conteúdo do arquivo"],
-    )
-    adicionar(
-        "consultar_emails_google",
-        "Busca mensagens Gmail via OAuth, somente leitura.",
-        "Consultar mensagens autorizadas pelo operador.",
-        ["Veja meus e-mails não lidos", "Busque e-mails sobre a reunião"],
-        consultar_emails_google,
-        {
-            "consulta": {"tipo": "string", "obrigatorio": False, "descricao": "Consulta Gmail"},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de mensagens", "minimo": 1, "maximo": 20},
-        },
-        "google_workspace",
-        ["gmail", "e-mail", "email", "mensagens"],
-    )
-    adicionar(
-        "ler_email_google",
-        "Lê texto de um e-mail pelo ID exato; não altera a conta.",
-        "Abrir conteúdo de mensagem previamente selecionada.",
-        ["Leia o e-mail de ID ...", "Resuma esta mensagem"],
-        ler_email_google,
-        {"message_id": {"tipo": "string", "obrigatorio": True, "descricao": "ID exato retornado pela busca Gmail"}},
-        "google_workspace",
-        ["ler e-mail", "abrir mensagem", "corpo do e-mail"],
-    )
-    adicionar(
-        "consultar_agenda_google",
-        "Consulta eventos Google Calendar em janela limitada, somente leitura.",
-        "Responder perguntas sobre compromissos existentes.",
-        ["O que tenho na agenda?", "Quais eventos tenho esta semana?"],
-        consultar_agenda_google,
-        {
-            "dias": {"tipo": "integer", "obrigatorio": False, "descricao": "Janela em dias", "minimo": 1, "maximo": 31},
-            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Máximo de eventos", "minimo": 1, "maximo": 50},
-        },
-        "google_workspace",
-        ["agenda", "calendário", "compromisso", "evento"],
-    )
-    adicionar(
-        "consultar_home_assistant",
-        "Consulta estados Home Assistant por entidade/domínio, apenas HTTP GET.",
-        "Consultar dispositivos autorizados sem acioná-los.",
-        ["Quais luzes estão ligadas?", "Consulte o sensor de temperatura da casa"],
-        consultar_home_assistant,
-        {
-            "entidade_id": {"tipo": "string", "obrigatorio": False, "descricao": "ID como light.sala"},
-            "dominio": {"tipo": "string", "obrigatorio": False, "descricao": "Filtro", "enum": ["seguro", "luz", "interruptor", "sensor", "clima", "midia", "todos"]},
-        },
-        "casa_inteligente",
-        ["home assistant", "dispositivos", "luzes", "sensor de casa"],
-    )
-    adicionar(
-        "listar_notas_lembretes",
-        "Lista notas e lembretes locais sem alterar registros.",
-        "Ver notas e lembretes registrados pelo operador.",
-        ["Liste minhas notas", "Quais lembretes tenho?"],
-        notas.listar,
-        {"tipo": {"tipo": "string", "obrigatorio": False, "descricao": "notas, lembretes ou todos", "enum": ["notas", "lembretes", "todos"]}},
-        "produtividade",
-        ["notas", "lembretes", "anotações", "tarefas futuras"],
-    )
+    if incluir_acoes:
+        adicionar(
+            "salvar_nota",
+            "Salva uma nota local persistente apenas após pedido explícito do operador.",
+            "Guardar informação expressamente solicitada.",
+            ["Anote que a reunião mudou para sexta", "Salve esta nota"],
+            notas.salvar_nota,
+            {
+                "titulo": {"tipo": "string", "obrigatorio": True, "descricao": "Título", "max_length": 120},
+                "conteudo": {"tipo": "string", "obrigatorio": True, "descricao": "Conteúdo", "max_length": 4000},
+            },
+            "produtividade",
+            ["anotar", "salvar nota", "registrar nota", "guardar"],
+            "acao_com_pedido_explicito",
+        )
+        adicionar(
+            "criar_lembrete",
+            "Cria um lembrete local com data/hora ISO 8601 após pedido explícito.",
+            "Agendar uma notificação local solicitada pelo operador.",
+            ["Me lembre às 19h de estudar", "Crie um lembrete para amanhã"],
+            notas.criar_lembrete,
+            {
+                "texto": {"tipo": "string", "obrigatorio": True, "descricao": "O que lembrar", "max_length": 500},
+                "data_hora": {"tipo": "string", "obrigatorio": True, "descricao": "ISO 8601 com fuso quando possível", "max_length": 80},
+            },
+            "produtividade",
+            ["me lembre", "lembrete", "recordar", "avisar depois"],
+            "acao_com_pedido_explicito",
+        )
+        adicionar(
+            "abrir_aplicativo",
+            "Abre somente um aplicativo permitido após pedido explícito.",
+            "Abrir navegador, gestor de arquivos, terminal ou calculadora.",
+            ["Abra o navegador", "Abra a calculadora"],
+            abrir_aplicativo,
+            {
+                "aplicativo": {"tipo": "string", "obrigatorio": True, "descricao": "Nome permitido",
+                    "enum": ["navegador", "arquivos", "terminal", "calculadora"]},
+            },
+            "controle_local",
+            ["abrir aplicativo", "iniciar aplicativo", "abrir navegador", "abrir terminal"],
+            "acao_com_pedido_explicito",
+        )
 
 
 __all__ = [
     "NotasLembretesNixOS", "ServicoLembretesNixOS", "registrar_capacidades_operacionais",
-    "pesquisar_web", "consultar_metar_taf", "consultar_home_assistant",
+    "pesquisar_web", "consultar_metar_taf", "consultar_notam_aisweb", "consultar_cartas_aisweb",
+    "consultar_home_assistant",
     "buscar_arquivos", "ler_arquivo_usuario", "consultar_emails_google",
     "ler_email_google", "consultar_agenda_google", "abrir_aplicativo", "executar_diagnostico",
 ]

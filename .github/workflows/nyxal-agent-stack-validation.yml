@@ -6,6 +6,9 @@ on:
       - main
       - feat/durable-investigation-context-20261026
     paths:
+      - "nixal_mcp_runtime.py"
+      - "teste_nyxal_mcp_runtime.py"
+      - "teste_mcp_http.py"
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
@@ -26,6 +29,7 @@ on:
       - "teste_mcp_stdio.py"
       - "deploy/agent/requirements-mcp.txt"
       - "teste_nixal_tool_use.py"
+      - "teste_nyxal_tool_use.py"
       - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
       - "nixal_transporte_conversacional.py"
       - "nixal_integracao_sessao_transporte.py"
@@ -77,6 +81,9 @@ on:
       - fix/durable-memory-corruption-guard-20261026
       - feat/voz-tempo-real-pipecat
     paths:
+      - "nixal_mcp_runtime.py"
+      - "teste_nyxal_mcp_runtime.py"
+      - "teste_mcp_http.py"
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
@@ -143,7 +150,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -205,6 +212,9 @@ jobs:
         run: |
           python3 -m compileall -q \
             nyxal_web_api.py \
+            nixal_mcp_runtime.py \
+            teste_nyxal_mcp_runtime.py \
+            teste_mcp_http.py \
             nixal_display_routes.py \
             nixal_agent_hub.py \
             nixal_intent_router.py \
@@ -222,6 +232,7 @@ jobs:
             nixal_capacidades.py \
             nixal_tool_use.py \
             teste_nixal_tool_use.py \
+            teste_nyxal_tool_use.py \
             nixal_transporte_conversacional.py \
             nixal_integracao_sessao_transporte.py \
             nixal_contexto_historico_relevante.py \
@@ -261,6 +272,7 @@ jobs:
             "$MCP_VENV/bin/python" -m pip install --disable-pip-version-check --no-input -r deploy/agent/requirements-mcp.txt
             "$MCP_VENV/bin/python" -m py_compile nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py
             "$MCP_VENV/bin/python" teste_mcp_stdio.py
+            "$MCP_VENV/bin/python" teste_mcp_http.py
           fi
       - name: Validate local setup scripts
         run: |
@@ -279,7 +291,9 @@ jobs:
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
             teste_nixal_tool_use \
+            teste_nyxal_tool_use \
             teste_nyxal_function_calling \
+            teste_nyxal_mcp_runtime \
             teste_nyxos_voice_console \
             teste_nixal_responses_api \
             teste_nixal_dialogo_router \

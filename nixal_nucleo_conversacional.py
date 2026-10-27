@@ -171,6 +171,13 @@ class NucleoConversacionalNixal:
             else DialogoQwenNixal()
         )
 
+        # O Core é a raiz de composição: agente e diálogo precisam compartilhar
+        # exatamente o mesmo catálogo e a mesma trilha de auditoria, mesmo se o
+        # diálogo tiver sido inicializado antes do Core com outro gerenciador.
+        self.dialogo.gerenciador_capacidades = self.agente.capacidades
+        if hasattr(self.dialogo, "_ferramentas_operacionais_registradas"):
+            self.dialogo._ferramentas_operacionais_registradas = False
+
         self.memoria_investigacao = (
             memoria_investigacao
             if memoria_investigacao is not None
