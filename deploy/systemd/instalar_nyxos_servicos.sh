@@ -76,6 +76,8 @@ fi
 install -m 0644 "${SCRIPT_DIR}/nyxal-api.service" "${USER_SYSTEMD_DIR}/nyxal-api.service"
 install -m 0644 "${SCRIPT_DIR}/nyxos-residente.service" "${USER_SYSTEMD_DIR}/nyxos-residente.service"
 install -m 0644 "${SCRIPT_DIR}/nyxos-interface.service" "${USER_SYSTEMD_DIR}/nyxos-interface.service"
+install -m 0644 "${SCRIPT_DIR}/nyxos-interface-reset.service" "${USER_SYSTEMD_DIR}/nyxos-interface-reset.service"
+install -m 0644 "${SCRIPT_DIR}/nyxos-interface-reset.timer" "${USER_SYSTEMD_DIR}/nyxos-interface-reset.timer"
 install -m 0755 "${SCRIPT_DIR}/iniciar_nyxos_interface.sh" "${USER_SYSTEMD_DIR}/iniciar_nyxos_interface.sh"
 install -m 0755 "${SCRIPT_DIR}/iniciar_nyxos_shell.sh" "${USER_SYSTEMD_DIR}/iniciar_nyxos_shell.sh"
 install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
@@ -86,6 +88,8 @@ install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
 rm -f "${AUTOSTART_DIR}/nyxos-shell.desktop"
 
 systemctl --user daemon-reload
+systemctl --user enable --now nyxos-interface-reset.timer
+echo "Recuperação periódica habilitada: interface principal a cada 2 horas (somente se estiver ativa)."
 
 # Mantém o desktop principal NyxOS no navegador e remove apenas o orbe flutuante
 # legado, que sobrepunha os aplicativos. O serviço nyxos-interface é a interface correta.
