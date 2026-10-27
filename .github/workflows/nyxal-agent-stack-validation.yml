@@ -165,6 +165,8 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund --package-lock=false
           npm run lint
           npm run build
+      - name: Check voice console JavaScript
+        run: node --check interface/js/nyxal-voice-console.js
       - name: Compile integrations
         run: |
           python3 -m compileall -q \
