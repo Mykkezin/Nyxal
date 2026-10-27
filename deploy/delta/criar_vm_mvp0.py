@@ -196,6 +196,31 @@ def main() -> int:
         )
         return 2
 
+    if not storage.is_dir():
+        print(
+            f"ERRO: diretório de armazenamento preparado não existe: {storage}. "
+            "Execute bash deploy/delta/preparar_storage_mvp0.sh primeiro.",
+            file=sys.stderr,
+        )
+        return 2
+
+    getfacl = shutil.which("getfacl")
+    if not getfacl:
+        print("ERRO: getfacl ausente; não consigo verificar a ACL do armazenamento.", file=sys.stderr)
+        return 2
+    acl_result = run([getfacl, "-cp", str(storage)])
+    acl_lines = set(acl_result.stdout.splitlines()) if acl_result.returncode == 0 else set()
+    if (
+        "user:libvirt-qemu:rwx" not in acl_lines
+        or "default:user:libvirt-qemu:rwx" not in acl_lines
+    ):
+        print(
+            "ERRO: ACL do diretório não concede acesso restrito à conta libvirt-qemu. "
+            "Execute/valide deploy/delta/preparar_storage_mvp0.sh; nenhuma VM será criada.",
+            file=sys.stderr,
+        )
+        return 2
+
     os.environ["NYXOS_VPS_STORAGE"] = str(storage)
 
     try:
