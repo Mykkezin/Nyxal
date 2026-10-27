@@ -124,13 +124,17 @@ def clean_speech_text(value: str) -> str:
     if not isinstance(value, str) or not value.strip():
         return ""
 
+    def phrase_boundary(match: re.Match[str]) -> str:
+        phrase = match.group(1).rstrip()
+        return phrase if phrase.endswith((".", "!", "?", "…")) else phrase + "."
+
     text = re.sub(
         r"\x60{3}.*?\x60{3}", " Omiti um bloco de código da resposta. ", value, flags=re.S
     )
-    # A heading or a list item is a spoken phrase boundary, not adjacent words.
-    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s+(.+?)\s*$", r"\1.", text)
-    text = re.sub(r"(?m)^\s{0,3}[-*+]\s+(.+?)\s*$", r"\1.", text)
-    text = re.sub(r"(?m)^\s{0,3}\d+[.)]\s+(.+?)\s*$", r"\1.", text)
+    # Headings and list items become spoken phrase boundaries without doubled punctuation.
+    text = re.sub(r"(?m)^\s{0,3}#{1,6}\s+(.+?)\s*$", phrase_boundary, text)
+    text = re.sub(r"(?m)^\s{0,3}[-*+]\s+(.+?)\s*$", phrase_boundary, text)
+    text = re.sub(r"(?m)^\s{0,3}\d+[.)]\s+(.+?)\s*$", phrase_boundary, text)
     text = re.sub(r"(?m)^\s{0,3}>\s?", "", text)
     text = re.sub(r"(?m)^\s*(?:---+|___+|\*\*\*+)\s*$", " ", text)
     text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)
