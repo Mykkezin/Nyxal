@@ -91,6 +91,7 @@ on:
       - "deploy/agent/**"
       - "skills/**"
       - "deploy/voice/**"
+      - "deploy/ci/**"
   workflow_dispatch:
 
 concurrency:
@@ -239,6 +240,7 @@ jobs:
           bash -n deploy/agent/verificar_nyxal_agent.sh
           bash -n deploy/voice/instalar_pipecat_experimental.sh
           bash -n deploy/voice/diagnosticar_runtime_local.sh
+          bash -n deploy/ci/diagnosticar_runner_nyxal.sh
       - name: Run focused unit tests
         run: |
           python3 -m unittest -v \
