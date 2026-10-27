@@ -304,6 +304,13 @@ class VpsNyxOS:
             }
 
     def _criar_cloud_init(self, *, nome: str, username: str, ssh_public_key: str) -> Path:
+        # Defense in depth: este sink nunca deve interpolar dados não validados
+        # em user-data YAML, mesmo se um futuro chamador contornar provisionar().
+        nome = self._nome_valido(nome)
+        if not isinstance(username, str) or not re.fullmatch(r"[a-z_][a-z0-9_-]{0,31}", username):
+            raise ValueError("usuario_vps_invalido")
+        ssh_public_key = self._validar_chave_ssh(ssh_public_key)
+
         cloud_localds = self._tool("cloud-localds")
         if not cloud_localds:
             raise RuntimeError("cloud_localds_nao_instalado")
