@@ -46,6 +46,7 @@ from nixal_agent_hub import NyxalAgentHub
 from nixal_observabilidade_sistema import ObservabilidadeSistemaNixOS
 from nixal_integracao_gmail import IntegracaoGmailNixOS
 from nixal_capacidade_visual import CapacidadeVisualGeminiNixOS
+from nixal_tool_use import NotasLembretesNixOS, ServicoLembretesNixOS
 from urllib.parse import parse_qs, urlsplit
 
 from nixal_seguranca_http import (
@@ -115,6 +116,9 @@ AGENTE_NYXAL = NyxalAgentHub()
 NUCLEO_CONVERSACIONAL.dialogo.agent_hub = AGENTE_NYXAL
 OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
+NOTAS_LEMBRETES_NYXAL = NotasLembretesNixOS()
+SERVICO_LEMBRETES_NYXAL = ServicoLembretesNixOS(NOTAS_LEMBRETES_NYXAL)
+SERVICO_LEMBRETES_NYXAL.iniciar()
 CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 
 # Observação governada: eventos em memória, sem executor nem persistência.
