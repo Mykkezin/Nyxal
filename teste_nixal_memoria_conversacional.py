@@ -149,6 +149,19 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
         self.assertFalse(caminho.exists())
         self.assertFalse(caminho.with_name(caminho.name + ".lock").exists())
 
+    def test_limite_em_bytes_preserva_a_sessao_mais_recente(self) -> None:
+        with patch.object(MemoriaConversacionalNixal, "MAX_ARQUIVO_BYTES", 3200):
+            memoria = MemoriaConversacionalNixal(caminho=self.caminho)
+            antiga = memoria.registrar("sessao-antiga", "user", "A" * 2000)
+            recente = memoria.registrar("sessao-recente", "user", "B" * 2000)
+            self.assertTrue(antiga["sucesso"])
+            self.assertTrue(recente["sucesso"])
+
+            recarregada = MemoriaConversacionalNixal(caminho=self.caminho)
+            self.assertFalse(recarregada.possui_sessao("sessao-antiga"))
+            self.assertTrue(recarregada.possui_sessao("sessao-recente"))
+            self.assertLessEqual(self.caminho.stat().st_size, 3200)
+
     def test_validacao_de_entrada_e_limites(self) -> None:
         memoria = MemoriaConversacionalNixal(caminho=self.caminho)
         self.assertFalse(memoria.registrar("", "user", "x")["sucesso"])
