@@ -39,6 +39,7 @@ Princípios:
 from __future__ import annotations
 
 import json
+import math
 import re
 import unicodedata
 from typing import Any
@@ -494,14 +495,40 @@ class NucleoConversacionalNixal:
             if not isinstance(origem, dict) or not isinstance(investigacao, dict):
                 continue
 
+            registro_id_bruto = origem.get("id")
+            registro_id = (
+                self._texto_curto_contexto(registro_id_bruto, 80)
+                if isinstance(registro_id_bruto, str)
+                else None
+            )
+            status_bruto = contexto.get("status_epistemico", {})
+            if not isinstance(status_bruto, dict):
+                status_bruto = {}
+            relevancia_bruta = contexto.get("relevancia_lexical")
+            relevancia_segura = (
+                round(relevancia_bruta, 4)
+                if (
+                    isinstance(relevancia_bruta, (int, float))
+                    and not isinstance(relevancia_bruta, bool)
+                    and 0 <= relevancia_bruta <= 1
+                    and math.isfinite(relevancia_bruta)
+                )
+                else None
+            )
+            # Não encaminhar o dicionário epistemológico bruto ao modelo:
+            # ele é metadado reconstruído com esquema fixo, nunca texto livre.
             item: dict[str, Any] = {
-                "registro_id": origem.get("id") if isinstance(origem.get("id"), str) else None,
-                "status_epistemico": contexto.get("status_epistemico", {}),
+                "registro_id": registro_id,
+                "status_epistemico": {
+                    "tipo": "historico_de_investigacao",
+                    "nao_equivale_a_verdade": True,
+                    "conhecimento_permanente": status_bruto.get("conhecimento_permanente") is True,
+                },
                 "necessidade": self._texto_curto_contexto(investigacao.get("necessidade"), 150),
                 "pergunta": self._texto_curto_contexto(investigacao.get("pergunta"), 120),
                 "hipotese": self._texto_curto_contexto(investigacao.get("hipotese"), 240),
                 "estado_atual": self._texto_curto_contexto(investigacao.get("estado_atual"), 80),
-                "relevancia_lexical": contexto.get("relevancia_lexical"),
+                "relevancia_lexical": relevancia_segura,
             }
             for campo in ("testes", "avaliacoes"):
                 dados = investigacao.get(campo, [])
