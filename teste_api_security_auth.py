@@ -492,6 +492,63 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("/root/nyxal.env", body)
 
+    def test_agent_chat_supplies_readonly_system_context_to_local_dialogue(self) -> None:
+        api.PROXY_MODE = True
+        api.API_TOKEN = "token-de-teste"
+        snapshot = {"cpu_percent": 12.5, "memoria": {"percent": 38.0}}
+        residence = {"estado": "ativo", "unidades": []}
+        answer = {
+            "sucesso": True,
+            "estado": "resposta_conversacional",
+            "origem": "nucleo_conversacional_nixal",
+            "resposta": "Uso atual recebido.",
+            "sessao": "sessao-contexto-local",
+            "valor": {
+                "texto": "Uso atual recebido.",
+                "sessao": "sessao-contexto-local",
+                "modo": "resposta_conversacional",
+            },
+        }
+        integration_result = {
+            "sucesso": True,
+            "estado": "mensagem_processada_com_sessao",
+            "sessao": "sessao-contexto-local",
+            "valor": {"transporte": {"resposta": answer}},
+        }
+        auth = {
+            "Authorization": "Bearer token-de-teste",
+            "Content-Type": "application/json",
+        }
+        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="nyxal"):
+            with patch.object(api.OBSERVABILIDADE_NYXOS, "snapshot", return_value=snapshot) as observar:
+                with patch.object(api, "residencia_snapshot", return_value=residence) as residencia:
+                    with patch.object(
+                        api.INTEGRACAO_CONVERSACIONAL,
+                        "processar_mensagem",
+                        return_value=integration_result,
+                    ) as processar:
+                        status, body = self.request(
+                            "POST",
+                            "/api/agent/chat",
+                            body=(
+                                b'{"mensagem":"Qual o uso de CPU, RAM, disco e GPU do sistema?",'
+                                b'"provedor":"gemini","sessao":"sessao-contexto-local"}'
+                            ),
+                            headers=auth,
+                        )
+
+        self.assertEqual(status, 200, body)
+        self.assertIn("Uso atual recebido.", body)
+        observar.assert_called_once()
+        residencia.assert_called_once()
+        kwargs = processar.call_args.kwargs
+        self.assertEqual(kwargs["provedor"], "nyxal")
+        self.assertEqual(kwargs["sessao_id"], "sessao-contexto-local")
+        self.assertEqual(
+            kwargs["contexto_sistema"],
+            {"observabilidade": snapshot, "residencia": residence},
+        )
+
     def test_agent_chat_uses_core_session_integration_and_forces_local_provider(self) -> None:
         api.PROXY_MODE = True
         api.API_TOKEN = "token-de-teste"
