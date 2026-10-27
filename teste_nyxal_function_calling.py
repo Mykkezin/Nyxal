@@ -147,7 +147,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(resultado["resultado"], "Ferramenta não registrada/permitida.")
 
     def test_loop_de_ferramentas_tem_limite_global_de_chamadas(self):
-        respostas = [mensagem_tool("obter_hora", {}, f"call-{i}") for i in range(dialogo_limite := 4)]
+        respostas = [mensagem_tool("obter_hora", {}, f"call-{i}") for i in range(4)]
         respostas.append({"message": {"content": "Resposta final sem nova ferramenta."}})
         cliente = ClienteFake(respostas)
         dialogo = DialogoQwenNixal(cliente=cliente)
