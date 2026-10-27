@@ -45,7 +45,7 @@ class TestFerramentasNyxal(unittest.TestCase):
         self.assertEqual(result["estado"], "icao_invalido")
 
     def test_cartas_valida_filtros_antes_de_rede(self):
-        self.assertEqual(consultar_cartas_aisweb().get("estado"), "filtro_obrigatorio")
+        self.assertEqual(consultar_cartas_aisweb().get("estado"), "especie_obrigatoria")
         self.assertEqual(
             consultar_cartas_aisweb(especie="IFR").get("estado"),
             "tipo_obrigatorio",
