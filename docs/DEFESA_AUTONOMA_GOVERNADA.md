@@ -10,7 +10,7 @@ A defesa não pode dar à Nyxal autoridade irrestrita apenas por detectar uma am
 
 O módulo `nixal_defesa_autonoma.py` implementa uma política determinística isolada. Ele recebe eventos estruturados e devolve recomendações auditáveis. **Não executa nenhuma recomendação**: não altera firewall, não mata processos, não revoga credenciais, não isola serviços, não modifica arquivos e não faz conexões de rede.
 
-O workflow dedicado executa os testes unitários dessa política. A conexão com API, observabilidade, AE/LLC ou o executor do host permanece trabalho futuro, dependente de revisão e validação.
+O workflow dedicado executa os testes unitários dessa política e do gate de preparação dry-run. A integração inicial da API com eventos autenticados de falha de Bearer já existe; o executor que efetua efeitos reais no host permanece trabalho futuro, dependente de revisão e validação.
 
 ## Ciclo de resposta
 
@@ -78,7 +78,7 @@ A política não deve gerar nem autorizar retaliação contra terceiros: explora
 
 - **Observabilidade:** transformar logs autenticados em eventos normalizados, eliminando tokens e payloads sensíveis.
 - **Motor de política:** avaliar a severidade, a confiança, a frequência e os limites de ação.
-- **Executor controlado:** implementar somente após testes específicos de autorização, idempotência, escopo e reversão.
+- **Gate de preparação:** validar e deduplicar propostas em modo dry-run; o executor que efetua efeitos reais só poderá ser considerado após testes específicos de autorização, idempotência, escopo, expiração e reversão.
 - **AE/LLC:** medir falsos positivos, tempo de contenção, recuperação e recorrência; gerar hipóteses e propostas. Aprendizado pode recomendar mudança de política, mas não deve editar ou ativar silenciosamente regras privilegiadas.
 - **Governança:** manter a trilha observar → hipótese → experimento isolado → comparação → aprendizado → proposta → autorização explícita → implantação validada.
 
@@ -87,8 +87,8 @@ A política não deve gerar nem autorizar retaliação contra terceiros: explora
 Execute localmente:
 
 ```bash
-python -m py_compile nixal_defesa_autonoma.py teste_defesa_autonoma.py
-python -m unittest teste_defesa_autonoma.py -v
+python -m py_compile nixal_defesa_autonoma.py teste_defesa_autonoma.py nixal_executor_defesa_governada.py teste_executor_defesa_governada.py
+python -m unittest teste_defesa_autonoma.py teste_executor_defesa_governada.py -v
 ```
 
 Os testes cobrem os limiares, expiração da janela, exceção para loopback, confiança, allowlists, aprovação humana, identificadores e ausência de efeitos colaterais. Um teste aprovado valida o comportamento determinístico do motor, não demonstra que a Nyxal inteira esteja protegida nem que alguma defesa esteja ativa no host.
@@ -100,3 +100,15 @@ O gate de autenticação HTTP alimenta o motor determinístico com falhas de Bea
 O evento usa o endereço do peer TCP observado pelo servidor. `Forwarded`, `X-Forwarded-For` e `X-Real-IP` não são usados como identidade. Em uma topologia com proxy, o peer pode ser o proxy local e não o cliente final; não se infere o IP remoto até existir configuração explícita de proxy confiável e testes correspondentes. O histórico é volátil, não contém tokens, corpos, query strings ou cabeçalhos e não é uma trilha forense durável.
 
 Esta integração apenas calcula e expõe recomendações auditáveis. Não bloqueia tráfego, não limita taxa, não reinicia serviços, não revoga credenciais e não altera arquivos. `executor_ativo=false`, `executor_autorizado=false` e `efeito_executado=false` permanecem invariantes. Executor separado, aprovação, idempotência, expiração, auditoria durável e rollback seguem pendentes.
+## Gate de preparação governada — dry-run
+
+`nixal_executor_defesa_governada.py` acrescenta uma fronteira separada entre recomendação e qualquer futura execução. Nesta fase ele **só prepara planos simulados**: não existe método de execução física, chamada de shell, ação de rede, escrita de arquivos operacionais, alteração de firewall, reinício de serviço, revogação de credencial ou quarentena real.
+
+Controles incluídos:
+
+- Allowlist fechada de tipos de recomendação e validação de escopo por tipo. Contenção de loopback, serviços fora da allowlist, identificadores com caminhos e durações fora do limite são rejeitados.
+- Todas as recomendações além de um simples alerta exigem aprovação humana, mesmo que o objeto de entrada tente marcar o contrário. Um verificador de aprovação opcional só pode validar um comprovante; mesmo quando retorna aprovado, a saída continua `modo=dry_run`, `executor_ativo=false`, `executor_autorizado=false` e `efeito_executado=false`.
+- Idempotência em memória por recomendação, com janela limitada; registros limitados a 256 por instância. Os planos recebem expiração, mas não existe trabalhador nem mecanismo que os aplique.
+- Campos extras da entrada não são copiados para o plano, os motivos têm tamanho limitado e credenciais óbvias em formato Bearer/`token=` são redigidas.
+
+Este gate é uma etapa de preparação e teste, não encerra a issue de defesa. Antes de qualquer efeito real, ainda será necessário um serviço de aprovação autenticada independente, executor por capacidades específicas, armazenamento de auditoria resistente a reinício, TTL/expiração efetiva dos efeitos, rollback testado e testes de replay/concorrência/proxy.
