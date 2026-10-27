@@ -86,7 +86,11 @@ class TestNyxalFunctionCalling(unittest.TestCase):
                 item["function"]["name"]
                 for item in dialogo._especificacoes_ferramentas(manager)
             }
-        self.assertTrue({"obter_hora", "pesquisar_web", "consultar_metar_taf", "executar_diagnostico"} <= names)
+        self.assertTrue({
+            "obter_hora", "pesquisar_web", "consultar_metar_taf",
+            "consultar_notam_aisweb", "consultar_cartas_aisweb",
+            "executar_diagnostico",
+        } <= names)
         for blocked in ("listar_arquivos", "ler_arquivo", "ler_estado_corpo", "consultar_emails_google",
                         "consultar_agenda_google", "consultar_home_assistant", "salvar_nota",
                         "criar_lembrete", "abrir_aplicativo"):
