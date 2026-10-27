@@ -45,6 +45,9 @@ on:
       - "nixal_contexto_historico_relevante.py"
       - "nixal_memoria_investigacao.py"
       - "nixal_memoria_conhecimento.py"
+      - "nixal_runtime.py"
+      - "nixal_aprendizado_persistente.py"
+      - "teste_integracao_memoria_conhecimento_runtime.py"
       - "nixal_dialogo_qwen.py"
       - "teste_nyxal_function_calling.py"
       - "docs/NYXAL_FERRAMENTAS.md"
@@ -179,6 +182,9 @@ jobs:
             nixal_contexto_historico_relevante.py \
             nixal_memoria_investigacao.py \
             nixal_memoria_conhecimento.py \
+            nixal_runtime.py \
+            nixal_aprendizado_persistente.py \
+            teste_integracao_memoria_conhecimento_runtime.py \
             nixal_auto_evolucao.py \
             nixal_ciclo_residente.py \
             nixal_presenca_maquina.py \
@@ -256,6 +262,8 @@ jobs:
           python3 teste_preparacao_investigacao_56_4_22.py
           python3 teste_auto_evolucao_ae1.py
           python3 teste_m5_15_presenca_maquina.py
+      - name: Verify knowledge-memory persistence through runtime
+        run: python3 teste_integracao_memoria_conhecimento_runtime.py
 
   validate-vps-public-key:
     # O runner é compartilhado: não lance este job junto com a suíte Agent Stack.
