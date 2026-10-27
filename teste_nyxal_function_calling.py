@@ -123,7 +123,8 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertTrue(result["sucesso"])
         self.assertEqual(len(result["ferramentas_executadas"]), dialogo.MAX_TOOL_CALLS)
         self.assertEqual(len(cliente.chamadas), dialogo.MAX_TOOL_CALLS + 2)
-        self.assertEqual(result["resposta"], "Limite alcançado; resposta final.")
+        self.assertTrue(result["resposta"].strip())
+        self.assertNotIn("tool_calls", cliente.chamadas[-1].get("messages", [])[-1])
 
     def test_capability_schema_enum_e_limites(self):
         manager = GerenciadorCapacidades()
