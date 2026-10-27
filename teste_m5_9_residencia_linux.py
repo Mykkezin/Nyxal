@@ -73,6 +73,13 @@ def main() -> None:
     assert "Wants=nyxal-api.service nyxos-residente.service" in target
     assert "WantedBy=default.target" in target
     interface = ler("nyxos-interface.service")
+    reset_service = ler("nyxos-interface-reset.service")
+    reset_timer = ler("nyxos-interface-reset.timer")
+    assert "Type=oneshot" in reset_service
+    assert "systemctl --user try-restart nyxos-interface.service" in reset_service
+    assert "OnActiveSec=2h" in reset_timer
+    assert "OnUnitActiveSec=2h" in reset_timer
+    assert "Unit=nyxos-interface-reset.service" in reset_timer
     assert (
         "ExecStart=/usr/bin/bash %h/Nyxal/deploy/systemd/iniciar_nyxos_shell.sh"
         in interface
@@ -84,6 +91,9 @@ def main() -> None:
     assert "systemctl --user disable --now nyxal-desktop.service" in instalador
     assert "systemctl --user disable --now nyxos-interface.service" not in instalador
     assert "systemctl --user enable nyxos-interface.service" in instalador
+    assert 'install -m 0644 "${SCRIPT_DIR}/nyxos-interface-reset.service"' in instalador
+    assert 'install -m 0644 "${SCRIPT_DIR}/nyxos-interface-reset.timer"' in instalador
+    assert "systemctl --user enable --now nyxos-interface-reset.timer" in instalador
     assert "systemctl --user restart nyxos-interface.service" in instalador
     assert 'self._unidade_habilitada(self.UNIDADE_INTERFACE)' in autoreparo
     assert '"desativada_por_configuracao"' in autoreparo
