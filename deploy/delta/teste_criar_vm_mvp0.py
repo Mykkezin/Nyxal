@@ -12,7 +12,7 @@ import sys
 import types
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 DELTA_DIR = Path(__file__).resolve().parent
 SCRIPT = DELTA_DIR / "criar_vm_mvp0.py"
@@ -159,7 +159,7 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
         storage = self.root / "storage-nao-interativo"
         fake_stdin = SimpleNamespace(isatty=lambda: False)
         fake_module = types.ModuleType("nixal_vps")
-        fake_vps_class = patcher = __import__("unittest.mock", fromlist=["Mock"]).Mock()
+        fake_vps_class = Mock()
         fake_module.VpsNyxOS = fake_vps_class
         with (
             patch.object(delta_vm.sys, "argv", [
@@ -191,13 +191,13 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
         home.mkdir()
         storage = self.root / "storage-interativo"
         key = self.root / "key.pub"
-        key.write_text("ssh-ed25519 QUJDREVGR0g= comentario-livre\\n", encoding="utf-8")
+        key.write_text("ssh-ed25519 QUJDREVGR0g= comentario-livre\n", encoding="utf-8")
         fake_stdin = SimpleNamespace(isatty=lambda: True)
         provisionar = __import__("unittest.mock", fromlist=["Mock"]).Mock(
             return_value={"sucesso": True}
         )
         instancia_vps = SimpleNamespace(provisionar=provisionar)
-        fake_vps_class = __import__("unittest.mock", fromlist=["Mock"]).Mock(return_value=instancia_vps)
+        fake_vps_class = Mock(return_value=instancia_vps)
         fake_module = types.ModuleType("nixal_vps")
         fake_module.VpsNyxOS = fake_vps_class
         with (
