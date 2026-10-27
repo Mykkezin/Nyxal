@@ -57,6 +57,51 @@ def _rsa_fixture(bits: int = 2048, exponent: bytes = b"\x01\x00\x01") -> str:
 
 
 class VpsNyxOSTest(unittest.TestCase):
+    def test_provisionar_inclui_canal_virtio_para_qemu_guest_agent(self) -> None:
+        with tempfile.TemporaryDirectory() as diretorio:
+            raiz = Path(diretorio)
+            storage = raiz / "storage"
+            storage.mkdir()
+            imagem = raiz / "base.img"
+            imagem.write_bytes(b"fixture image")
+            comandos: list[list[str]] = []
+
+            def fake_run(command: list[str], **_kwargs: object):
+                argv = list(command)
+                comandos.append(argv)
+                if argv[0] == "/usr/bin/cloud-localds":
+                    Path(argv[1]).write_bytes(b"cloud-init seed")
+                elif argv[0] == "/usr/bin/qemu-img" and "convert" in argv:
+                    Path(argv[-1]).write_bytes(b"qcow2 disk")
+                return __import__("subprocess").CompletedProcess(
+                    args=argv, returncode=0, stdout="", stderr=""
+                )
+
+            with patch.object(VpsNyxOS, "STORAGE", storage):
+                vps = VpsNyxOS()
+                with (
+                    patch.object(vps, "_tool", side_effect=lambda name: f"/usr/bin/{name}"),
+                    patch("nixal_vps.subprocess.run", side_effect=fake_run),
+                ):
+                    resultado = vps.provisionar(
+                        nome="vps-agent",
+                        image_path=str(imagem),
+                        disk_gb=8,
+                        autostart=False,
+                        ssh_public_key=_ed25519_fixture(),
+                    )
+
+            self.assertTrue(resultado["sucesso"])
+            virt_install = [cmd for cmd in comandos if cmd[0] == "/usr/bin/virt-install"]
+            self.assertEqual(len(virt_install), 1)
+            command = virt_install[0]
+            self.assertIn("--channel", command)
+            index = command.index("--channel")
+            self.assertEqual(
+                command[index + 1],
+                "unix,target.type=virtio,target.name=org.qemu.guest_agent.0",
+            )
+
     def test_contexto(self) -> None:
         contexto = VpsNyxOS().contexto()
         self.assertEqual(contexto["backend"], "libvirt_kvm")
