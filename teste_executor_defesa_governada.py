@@ -75,6 +75,42 @@ class TesteExecutorDefesaGovernada(unittest.TestCase):
         self.assertFalse(resultado["executor_autorizado"])
         self.assertFalse(resultado["efeito_executado"])
 
+    def test_aprovacao_posterior_atualiza_plano_idempotente_sem_execucao(self) -> None:
+        executor = ExecutorDefesaGovernada(
+            relogio=self.relogio,
+            verificador_aprovacao=lambda comprovante: comprovante.get("assinatura") == "valida",
+        )
+        pendente = executor.preparar(recomendacao())
+        self.assertEqual(pendente["estado"], "aguardando_aprovacao")
+
+        aprovado = executor.preparar(
+            recomendacao(),
+            aprovacao={"assinatura": "valida", "aprovador": "operador-teste"},
+        )
+        self.assertEqual(aprovado["estado"], "simulacao_preparada")
+        self.assertEqual(aprovado["plano_id"], pendente["plano_id"])
+        self.assertTrue(aprovado["plano"]["aprovacao_verificada"])
+        self.assertTrue(aprovado["plano"]["aprovacao_verificada_em"])
+        self.assertEqual(aprovado["plano"]["estado"], "simulacao_preparada")
+        self.assertFalse(aprovado["executor_ativo"])
+        self.assertFalse(aprovado["executor_autorizado"])
+        self.assertFalse(aprovado["efeito_executado"])
+        self.assertEqual(len(executor.listar_registros()), 1)
+
+        # Uma aprovação inválida/repetição não rebaixa o plano nem cria outro.
+        duplicado = executor.preparar(
+            recomendacao(),
+            aprovacao={"assinatura": "invalida"},
+        )
+        self.assertEqual(duplicado["estado"], "duplicado_idempotente")
+        registro = executor.listar_registros()[0]
+        self.assertEqual(registro["estado"], "simulacao_preparada")
+        self.assertTrue(registro["aprovacao_verificada"])
+        self.assertFalse(registro["executor_ativo"])
+        self.assertFalse(registro["executor_autorizado"])
+        self.assertFalse(registro["efeito_executado"])
+        self.assertEqual(len(executor.listar_registros()), 1)
+
     def test_recomendacao_nao_pode_rebaixar_gate_humano(self) -> None:
         for tipo in (
             "preservar_evidencia",
