@@ -93,7 +93,22 @@ def main() -> None:
     assert "systemctl --user enable nyxos-interface.service" in instalador
     assert 'install -m 0644 "${SCRIPT_DIR}/nyxos-interface-reset.service"' in instalador
     assert 'install -m 0644 "${SCRIPT_DIR}/nyxos-interface-reset.timer"' in instalador
-    assert "systemctl --user enable --now nyxos-interface-reset.timer" in instalador
+    # O timer é instalado, mas reiniciar o navegador é opt-in: pode interromper voz em andamento.
+    linhas_instalador = instalador.splitlines()
+    linha_optin = next(
+        i for i, linha in enumerate(linhas_instalador)
+        if linha.strip() == 'if [[ "${NYXOS_ENABLE_INTERFACE_RESET_TIMER:-0}" == "1" ]]; then'
+    )
+    linha_enable_timer = next(
+        i for i, linha in enumerate(linhas_instalador)
+        if linha.strip() == "systemctl --user enable --now nyxos-interface-reset.timer"
+    )
+    linha_else = next(
+        i for i, linha in enumerate(linhas_instalador[linha_optin + 1:], linha_optin + 1)
+        if linha.strip() == "else"
+    )
+    assert linha_optin < linha_enable_timer < linha_else
+    assert "não ativado automaticamente para evitar interromper a voz" in instalador
     assert "systemctl --user restart nyxos-interface.service" in instalador
     assert 'self._unidade_habilitada(self.UNIDADE_INTERFACE)' in autoreparo
     assert '"desativada_por_configuracao"' in autoreparo
