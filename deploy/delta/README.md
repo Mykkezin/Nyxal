@@ -46,31 +46,56 @@ Armazenamento padrão:
 
 A imagem cloud atual tem aproximadamente 600 MB; o tamanho e o hash podem mudar conforme a Canonical publique outro release. Mantenha espaço para o disco da VM e dados instalados, não apenas para o download.
 
-## 4. Criar a VM descartável MVP-0
+## 4. Recuperar a tentativa anterior e preparar armazenamento acessível
 
-Confirme que existe uma chave pública SSH em `~/.ssh/*.pub`, que `cloud-localds` está instalado e que a rede libvirt `default` está ativa. Nenhuma chave será gerada pelo script.
+A primeira tentativa mostrou que `libvirt-qemu` não consegue pesquisar `/home/nyxal`. Não use `chmod 777` e não altere permissões da home inteira. Vamos manter a imagem base e os dados da Nyxal na home e criar um diretório dedicado de discos dentro de um pool de armazenamento libvirt ativo.
+
+Primeiro execute o diagnóstico, que é somente de leitura:
 
 ```bash
-python3 deploy/delta/criar_vm_mvp0.py
+bash deploy/delta/diagnosticar_vm_mvp0.sh
 ```
 
-Padrões do plano, apresentados antes de uma confirmação interativa:
+Se ele indicar `DOMAIN_EXISTS=yes`, **não crie outra VM ainda**. Inspecione o estado e os caminhos com os comandos exibidos; não desregistre um domínio até confirmar que é a tentativa descartável e não uma VM anterior do usuário. O diagnóstico não remove nem altera nada.
+
+Se indicar `DOMAIN_EXISTS=no`, prepare um novo diretório somente se o pool `default` já existir, estiver ativo e for do tipo diretório:
+
+```bash
+bash deploy/delta/preparar_storage_mvp0.sh
+```
+
+O helper valida o checksum da imagem, verifica o espaço disponível e exige confirmação antes de criar somente `delta-mvp0-storage` dentro do diretório do pool libvirt. Ele aplica uma ACL específica para a conta `libvirt-qemu` nesse novo diretório — não altera a permissão da home e não ativa nem reconfigura o pool. Se o pool não existir/estiver parado ou já houver um destino com esse nome, o script interrompe sem modificar nada.
+
+## 5. Criar a VM descartável MVP-0
+
+O helper de armazenamento imprime o caminho exato e o comando para a criação. Também é possível executar o comando manualmente, passando o caminho informado pelo helper e a imagem base na home:
+
+```bash
+python3 deploy/delta/criar_vm_mvp0.py \
+  --storage "/CAMINHO/DO/POOL/delta-mvp0-storage" \
+  --image "$HOME/NyxOS/VPS/ubuntu-24.04-server-cloudimg-amd64.img"
+```
+
+A criação requer uma chave pública SSH válida, `cloud-localds`, a rede libvirt `default` ativa e pelo menos 10 GiB livres no filesystem do armazenamento VM. Nenhuma chave será gerada pelo script. O provisionador valida o hash local, a conexão libvirt, a rede default, o domínio, a chave pública e o espaço antes de apresentar a confirmação final.
+
+Padrões do plano, apresentados antes da confirmação:
 - nome `delta-mvp0`;
 - 2 vCPUs e 2048 MiB de RAM;
-- disco QCOW2 de 16 GiB virtuais, que cresce conforme os dados são escritos;
+- disco QCOW2 de 16 GiB virtuais;
 - rede NAT libvirt `default`;
 - login `ubuntu` com chave pública SSH existente;
 - autostart em boots futuros do host desligado, salvo quando `--autostart` for explicitamente informado.
 
-O script verifica o hash local da imagem, a conexão `qemu:///system`, a rede `default`, o domínio, a chave SSH e pelo menos 10 GiB livres. Ele usa o provisionador existente `nixal_vps.py`; não implementa um segundo gerenciador de VMs. A criação e o primeiro boot só acontecem depois de o operador digitar `s` no prompt.
+O provisionador reutiliza `nixal_vps.py`; não implementa um segundo gerenciador de VMs. Se qualquer pré-condição falhar, aborta em vez de instalar pacotes ou reconfigurar o host automaticamente.
 
 Se a chave pública não for a padrão, indique um caminho explícito:
 
 ```bash
-python3 deploy/delta/criar_vm_mvp0.py --ssh-key-file ~/.ssh/minha_chave.pub
+python3 deploy/delta/criar_vm_mvp0.py \
+  --ssh-key-file ~/.ssh/minha_chave.pub \
+  --storage "/CAMINHO/DO/POOL/delta-mvp0-storage" \
+  --image "$HOME/NyxOS/VPS/ubuntu-24.04-server-cloudimg-amd64.img"
 ```
-
-Se qualquer pré-condição falhar, o processo aborta em vez de instalar pacotes ou reconfigurar o host automaticamente.
 
 ## 5. Observar o primeiro boot
 
