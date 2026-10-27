@@ -134,6 +134,19 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         good = manager.executar("fake", modo="read")
         self.assertTrue(good.sucesso)
 
+    def test_escrita_bloqueada_sem_autorizacao_no_gerenciador(self):
+        manager = GerenciadorCapacidades()
+        manager.registrar(
+            nome="write", descricao="write", objetivo="write", exemplos=["write"],
+            funcao=lambda: "escrito", argumentos={}, dominios=["testes"], evidencias_dominio=["write"],
+            politica="acao_com_pedido_explicito",
+        )
+        result = manager.executar("write")
+        self.assertFalse(result.sucesso)
+        self.assertIn("falta pedido explícito", result.erro)
+        allowed = manager.executar("write", autorizacao_explicita=True)
+        self.assertTrue(allowed.sucesso)
+
     def test_servico_home_assistant_somente_leitura_e_config_pendente(self):
         with patch.dict(os.environ, {"NYXAL_HOME_ASSISTANT_URL": "", "NYXAL_HOME_ASSISTANT_TOKEN": ""}):
             result = tools.consultar_home_assistant()
