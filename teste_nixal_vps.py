@@ -153,6 +153,70 @@ class VpsNyxOSTest(unittest.TestCase):
             action.assert_called_once_with("vps-agent", "autostart")
             self.assertTrue(any(cmd[0] == "/usr/bin/virt-install" for cmd in comandos))
 
+    def test_falha_virt_install_so_remove_discos_quando_ausencia_do_dominio_e_confirmada(self) -> None:
+        for dominios, preservar in (("vps-agent\n", True), ("", False)):
+            with self.subTest(preservar=preservar), tempfile.TemporaryDirectory() as diretorio:
+                raiz = Path(diretorio)
+                storage = raiz / "storage"
+                storage.mkdir()
+                imagem = raiz / "base.img"
+                imagem.write_bytes(b"fixture image")
+
+                def fake_run(command: list[str], **_kwargs: object):
+                    argv = list(command)
+                    if argv[0] == "/usr/bin/cloud-localds":
+                        Path(argv[1]).write_bytes(b"cloud-init seed")
+                        codigo = 0
+                        stderr = ""
+                    elif argv[0] == "/usr/bin/qemu-img" and "convert" in argv:
+                        Path(argv[-1]).write_bytes(b"qcow2 disk")
+                        codigo = 0
+                        stderr = ""
+                    elif argv[0] == "/usr/bin/virt-install":
+                        codigo = 1
+                        stderr = "falha simulada ao iniciar domínio"
+                    else:
+                        codigo = 0
+                        stderr = ""
+                    return __import__("subprocess").CompletedProcess(
+                        args=argv, returncode=codigo, stdout="", stderr=stderr
+                    )
+
+                with patch.object(VpsNyxOS, "STORAGE", storage):
+                    vps = VpsNyxOS()
+                    with (
+                        patch.object(vps, "_tool", side_effect=lambda name: f"/usr/bin/{name}"),
+                        patch("nixal_vps.subprocess.run", side_effect=fake_run),
+                        patch.object(
+                            vps,
+                            "_run",
+                            return_value=__import__("subprocess").CompletedProcess(
+                                args=["virsh", "list", "--all", "--name"],
+                                returncode=0,
+                                stdout=dominios,
+                                stderr="",
+                            ),
+                        ) as list_domains,
+                    ):
+                        with self.assertRaisesRegex(RuntimeError, "falha simulada"):
+                            vps.provisionar(
+                                nome="vps-agent",
+                                image_path=str(imagem),
+                                disk_gb=8,
+                                autostart=False,
+                                ssh_public_key=_ed25519_fixture(),
+                            )
+                        list_domains.assert_called_once_with("list", "--all", "--name", timeout=10)
+
+                disco = storage / "vps-agent.qcow2"
+                seed = storage / "vps-agent-seed.img"
+                if preservar:
+                    self.assertTrue(disco.is_file())
+                    self.assertTrue(seed.is_file())
+                else:
+                    self.assertFalse(disco.exists())
+                    self.assertFalse(seed.exists())
+
     def test_contexto(self) -> None:
         contexto = VpsNyxOS().contexto()
         self.assertEqual(contexto["backend"], "libvirt_kvm")
