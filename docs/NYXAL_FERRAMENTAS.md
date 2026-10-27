@@ -71,3 +71,8 @@ METAR/TAF são consultados na API pública do [AviationWeather.gov Data API](htt
 - O controle de computador é limitado a nomes de aplicativos permitidos e diagnósticos fixos. Não existe execução de comandos arbitrários, código gerado pelo modelo ou shell livre.
 - Não há rotas para enviar e-mails, modificar Calendar ou acionar Home Assistant.
 - Não afirmar que uma ferramenta funcionou sem resultado real. Diferenciar configuração pendente, falha externa e execução concluída.
+
+## Notificações de lembretes
+
+O serviço de notificações não inicia automaticamente. Para permitir notificações locais, configure explicitamente `NYXAL_REMINDERS_ENABLED=1` no ambiente do serviço da API. Para que o modelo também possa criar notas/lembretes, é necessária a configuração separada `NYXAL_ENABLE_MUTABLE_TOOLS=1`; a escrita continua condicionada ao pedido explícito do operador. Mantenha ambas desligadas se não quiser esse comportamento. Nunca coloque tokens ou segredos no repositório.
+
