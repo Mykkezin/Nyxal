@@ -25,7 +25,7 @@ fi
 if [[ ! -f "${BASE_IMAGE}" || ! -f "${BASE_HASH}" ]]; then
     fail "imagem base ou checksum lateral ausente: ${BASE_IMAGE}; prepare e verifique a imagem primeiro"
 fi
-if ! sha256sum -c "${BASE_HASH}" >/dev/null 2>&1; then
+if ! (cd -- "$(dirname -- "${BASE_IMAGE}")" && sha256sum -c "$(basename -- "${BASE_HASH}")") >/dev/null 2>&1; then
     fail "o checksum local da imagem não confere; não vou preparar o armazenamento"
 fi
 
@@ -77,7 +77,8 @@ read -r -p "Prosseguir? Digite 's' para confirmar [s/N]: " ANSWER
     exit 0
 }
 
-sudo install -d -o "$(id -un)" -g libvirt-qemu -m 2770 -- "${TARGET}"
+QEMU_GROUP="$(id -gn libvirt-qemu)"
+sudo install -d -o "$(id -un)" -g "${QEMU_GROUP}" -m 2770 -- "${TARGET}"
 if ! sudo setfacl -m 'u:libvirt-qemu:rwx,d:u:libvirt-qemu:rwx' -- "${TARGET}"; then
     printf 'ERRO: ACL não aplicada. O diretório dedicado foi mantido para inspeção: %s\n' "${TARGET}" >&2
     exit 2
