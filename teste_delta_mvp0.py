@@ -42,6 +42,7 @@ class TesteDeltaMVP0(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="nyxal-delta-mvp0-test-")
         self.pasta = Path(self.temp.name)
         self.storage = self.pasta / "storage-dedicado"
+        self.storage.mkdir()
         self.image = self.pasta / "ubuntu-cloud.img"
         self.image.write_bytes(b"imagem-de-laboratorio-falsa")
         self.key = self.pasta / "id_ed25519.pub"
@@ -81,6 +82,18 @@ class TesteDeltaMVP0(unittest.TestCase):
             stack.enter_context(patch.dict(sys.modules, {"nixal_vps": self.fake_vps_module}))
             stack.enter_context(patch.dict("os.environ", {"NYXOS_VPS_LIBVIRT_URI": "qemu:///system"}, clear=False))
             stack.enter_context(patch.object(delta, "require_tool"))
+            # Mock the storage ACL pre-flight; tests never inspect or modify host ACLs.
+            stack.enter_context(patch.object(delta.shutil, "which", return_value="/usr/bin/getfacl"))
+            stack.enter_context(patch.object(
+                delta,
+                "run",
+                return_value=CompletedProcess(
+                    args=["getfacl", "-cp", str(self.storage)],
+                    returncode=0,
+                    stdout="user:libvirt-qemu:rwx\ndefault:user:libvirt-qemu:rwx\n",
+                    stderr="",
+                ),
+            ))
             stack.enter_context(patch.object(delta, "find_ssh_key", return_value=self.key))
             if erro_imagem is None:
                 stack.enter_context(patch.object(delta, "verify_image", return_value="a" * 64))
