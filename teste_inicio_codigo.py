@@ -33,7 +33,7 @@ def main() -> None:
     assert "hostallowed && endpointportallowed && pathallowed && noextracomponents &&" in splash_compact
     assert 'destination.pathname === "/" || destination.pathname === "/index.html"' in splash
     assert "pathallowed &&" in splash
-    assert "noextracomponents &&" in splash
+    assert "noextracomponents &&" in splash_compact
     assert "destination.search" in splash
     assert "destination.hash" in splash
     assert "destination.username" in splash
@@ -51,9 +51,16 @@ def main() -> None:
         assert ".mp4" not in script, f"{nome} ainda depende do vídeo"
         assert "mpv" not in script, f"{nome} ainda invoca mpv"
 
+    # O shell residente não deve forçar a miniatura de voz nem ocupar a tela em modo kiosk.
+    shell = (ROOT / "deploy" / "systemd" / "iniciar_nyxos_shell.sh").read_text(encoding="utf-8")
+    assert 'INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/}"' in shell
+    assert "--kiosk" not in shell, "o shell não deve forçar o modo tela cheia"
+    assert "--new-window" in shell, "a interface deve abrir em janela normal"
+
     print("NYXOS_STARTUP_CODE_ONLY_OK")
     print("NYXOS_STARTUP_NO_EXTERNAL_ASSETS_OK")
     print("NYXOS_STARTUP_REDUCED_MOTION_OK")
+    print("NYXOS_SHELL_WINDOWED_NO_VOICE_MINIATURE_OK")
 
 
 if __name__ == "__main__":
