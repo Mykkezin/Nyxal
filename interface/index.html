@@ -2595,6 +2595,7 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
       }
       const resources = data && data.habitat && data.habitat.recursos ? data.habitat.recursos : {};
       const percentage = (value, label) => {
+        if (value === null || value === undefined || value === '') return null;
         const number = Number(value);
         return Number.isFinite(number) && number >= 0 ? `${label} ${Math.round(number)}%` : null;
       };
