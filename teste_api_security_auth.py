@@ -735,6 +735,18 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         api.DEFESA_AUTONOMA_NYXAL = api.DefesaAutonoma()
         api.DEFESA_EVENTOS_RECIENTES.clear()
 
+        status, body = self.request("GET", "/api/agent/defesa")
+        self.assertEqual(status, 401)
+        self.assertNotIn('"eventos"', body)
+        status, body = self.request(
+            "GET", "/api/agent/defesa",
+            headers={"Authorization": "Bearer TOKEN-INCORRETO"},
+        )
+        self.assertEqual(status, 403)
+        self.assertNotIn('"eventos"', body)
+
+        # Isolar as duas falhas usadas para validar a ingestão de telemetria.
+        api.DEFESA_EVENTOS_RECIENTES.clear()
         status, _ = self.request("GET", "/api/agent/contexto")
         self.assertEqual(status, 401)
         status, _ = self.request(
