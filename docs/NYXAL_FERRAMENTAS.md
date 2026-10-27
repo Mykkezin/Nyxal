@@ -23,6 +23,20 @@ Por padrão, o modelo pode usar consultas de baixo impacto:
 
 Leituras de arquivos pessoais, Gmail, Calendar, Home Assistant e notas persistidas exigem opt-in independente. Escrita de nota, criação de lembrete e abertura de aplicativos têm outro opt-in e exigem solicitação explícita na mensagem atual. Capacidades que exigem uma confirmação separada permanecem bloqueadas até existir um fluxo de confirmação apropriado.
 
+### Coordenação local por papéis especializados
+
+A conversa principal possui um modo opt-in de coordenação em até duas passagens curtas: **Arquiteto** propõe objetivo, passos e critérios de validação; **Revisor de Segurança e Qualidade** examina riscos e testes. O diálogo Qwen normal faz a síntese final e, se necessário, solicita ferramentas pelo mesmo catálogo governado.
+
+Para ativar, peça explicitamente, por exemplo: `Use modo especialistas para planejar esta mudança` ou `Faça uma revisão multiagente desta arquitetura`.
+
+- O modo não é ativado em perguntas comuns; não aumenta a latência nem o uso de tokens quando não é solicitado.
+- As duas passagens extras só são executadas quando o provedor configurado é local (`ollama`, `local` ou `nyxal`). Se o provedor não for local, o diálogo segue normalmente e informa que a coordenação local não foi ativada.
+- É uma coordenação de papéis com o mesmo modelo local, não um conjunto de modelos independentes nem um CrewAI paralelo.
+- As passagens dos especialistas não recebem ferramentas; se tentarem emitir chamadas de ferramenta, a passagem é descartada e a conversa principal continua.
+- Cada passagem tem entrada limitada a 8.000 caracteres e saída limitada a 1.500 caracteres. São no máximo duas passagens extra por pedido.
+- Os resumos são tratados como rascunhos não confiáveis. A resposta final usa o ciclo atual de function calling, limites, opt-ins e autorização; a coordenação não concede permissões e não executa ações por si só.
+- Falhas em qualquer passagem são fail-open: a resposta normal continua, sem bloquear o diálogo.
+
 ### Opt-ins do function calling
 
 - Para disponibilizar arquivos pessoais, Gmail, agenda, Home Assistant e notas: `NYXAL_ENABLE_PRIVATE_READ_TOOLS=1`.
