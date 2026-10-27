@@ -110,7 +110,15 @@ class VpsNyxOS:
             elif tipo == "ssh-rsa":
                 expoente, posicao = ler_campo(blob, posicao)
                 modulo, posicao = ler_campo(blob, posicao)
-                if not expoente or len(modulo) < 128:
+                expoente_valor = int.from_bytes(expoente, "big", signed=False)
+                modulo_valor = int.from_bytes(modulo, "big", signed=False)
+                if (
+                    expoente_valor < 3
+                    or expoente_valor % 2 == 0
+                    or modulo_valor <= expoente_valor
+                    or modulo_valor % 2 == 0
+                    or modulo_valor.bit_length() < 2048
+                ):
                     raise ValueError("ssh_public_key_invalida")
             else:
                 curva, posicao = ler_campo(blob, posicao)
