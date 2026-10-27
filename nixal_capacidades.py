@@ -1005,17 +1005,33 @@ class GerenciadorCapacidades:
                     ),
                 }
 
-            segmentos = {parte.casefold() for parte in caminho_final.relative_to(base_final).parts}
+            segmentos = {
+                parte.casefold()
+                for parte in caminho_final.relative_to(base_final).parts
+            }
             nome_arquivo = caminho_final.name.casefold()
             sufixo = caminho_final.suffix.casefold()
+            diretorios_sensiveis = {
+                ".ssh", ".gnupg", ".aws", ".config", ".pki", ".hermes",
+                "keyrings", "secrets", "secret", "credentials", "credential",
+                "tokens", "token",
+            }
+            nomes_sensiveis = {
+                ".bashrc", ".profile", ".netrc", ".npmrc", ".pypirc",
+                "authorized_keys", "known_hosts", "credentials.json",
+                "token.json", "client_secret.json", "oauth.json",
+            }
             palavras_sensiveis = (
-                ".env", "secret", "credential", "token", "password", "passwd",
+                "secret", "credential", "token", "password", "passwd",
                 "private_key", "id_rsa", "id_ed25519", "oauth", "cookie", "keystore",
             )
-            extensoes_sensiveis = {".pem", ".key", ".p12", ".pfx", ".kdb", ".jks"}
+            extensoes_sensiveis = {".pem", ".key", ".p12", ".pfx", ".kdb", ".jks", ".kdbx"}
             if (
                 any(parte.startswith(".env") for parte in segmentos)
+                or any(parte in diretorios_sensiveis for parte in segmentos)
+                or any(parte in nomes_sensiveis for parte in segmentos)
                 or any(any(palavra in parte for palavra in palavras_sensiveis) for parte in segmentos)
+                or nome_arquivo in nomes_sensiveis
                 or sufixo in extensoes_sensiveis
             ):
                 return {"sucesso": False, "erro": "A leitura de arquivos de credenciais ou chaves está bloqueada."}
