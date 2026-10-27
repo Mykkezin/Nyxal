@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import nixal_capacidades
 import nixal_tool_use
-from nixal_capacidades import GerenciadorCapacidades
+from nixal_capacidades import GerenciadorCapacidades, ResultadoCapacidade
 from nixal_tool_use import NotasLembretesNixOS, registrar_capacidades_operacionais
 
 
@@ -35,6 +35,16 @@ class TesteRegistroFerramentasOperacionais(unittest.TestCase):
         )
         self.patch_catalogo.start()
         self.addCleanup(self.patch_catalogo.stop)
+        self.arquivo_log = Path(self.temp.name) / "auditoria.json"
+        self.patch_log = patch.object(nixal_capacidades, "ARQUIVO_LOG", self.arquivo_log)
+        self.patch_log.start()
+        self.addCleanup(self.patch_log.stop)
+        self.patch_env = patch.dict(os.environ, {
+            "NYXAL_ENABLE_PRIVATE_READ_TOOLS": "",
+            "NYXAL_ENABLE_MUTABLE_TOOLS": "",
+        })
+        self.patch_env.start()
+        self.addCleanup(self.patch_env.stop)
         self.capacidades = GerenciadorCapacidades()
         self.store = NotasLembretesNixOS(Path(self.temp.name) / "notas.json")
 
@@ -75,6 +85,47 @@ class TesteRegistroFerramentasOperacionais(unittest.TestCase):
         self.assertEqual(self.nomes(), antes)
         self.assertTrue(FERRAMENTAS_MUTAVEIS.isdisjoint(self.nomes()))
 
+    def test_catalogo_corrompido_nao_e_sobrescrito(self):
+        with tempfile.TemporaryDirectory(prefix="nyxal-corrupt-catalog-") as tmp:
+            arquivo = Path(tmp) / "capacidades.json"
+            original = "{catalogo inválido"
+            arquivo.write_text(original, encoding="utf-8")
+            with patch.object(nixal_capacidades, "ARQUIVO_CAPACIDADES", arquivo):
+                manager = GerenciadorCapacidades()
+            self.assertTrue(manager.capacidades)
+            self.assertEqual(arquivo.read_text(encoding="utf-8"), original)
+
+    def test_log_corrompido_nao_e_sobrescrito_apos_execucao(self):
+        with tempfile.TemporaryDirectory(prefix="nyxal-corrupt-audit-") as tmp:
+            arquivo = Path(tmp) / "auditoria.json"
+            original = "{auditoria inválida"
+            arquivo.write_text(original, encoding="utf-8")
+            catalogo = Path(tmp) / "capacidades.json"
+            with patch.object(nixal_capacidades, "ARQUIVO_LOG", arquivo):
+                with patch.object(nixal_capacidades, "ARQUIVO_CAPACIDADES", catalogo):
+                    manager = GerenciadorCapacidades()
+                    resultado = manager.executar("obter_hora")
+            self.assertTrue(resultado.sucesso)
+            self.assertEqual(arquivo.read_text(encoding="utf-8"), original)
+
+    def test_resultado_privado_e_redigido_do_log(self):
+        with tempfile.TemporaryDirectory(prefix="nyxal-private-audit-") as tmp:
+            arquivo = Path(tmp) / "auditoria.json"
+            catalogo = Path(tmp) / "capacidades.json"
+            with patch.object(nixal_capacidades, "ARQUIVO_LOG", arquivo):
+                with patch.object(nixal_capacidades, "ARQUIVO_CAPACIDADES", catalogo):
+                    manager = GerenciadorCapacidades()
+                    manager._registrar_execucao(ResultadoCapacidade(
+                        sucesso=True,
+                        capacidade="consultar_emails_google",
+                        resultado={"corpo_texto": "segredo-de-teste"},
+                        timestamp=1.0,
+                        duracao_ms=1.0,
+                    ))
+            gravado = arquivo.read_text(encoding="utf-8")
+            self.assertNotIn("segredo-de-teste", gravado)
+            self.assertIn("conteudo_omitido", gravado)
+
     def test_flags_precisam_ser_booleanas(self):
         with self.assertRaises(TypeError):
             registrar_capacidades_operacionais(self.capacidades, incluir_dados_privados="true")
@@ -102,10 +153,14 @@ class TesteIntegracaoAgenteQwen(unittest.TestCase):
                 "ARQUIVO_CAPACIDADES",
                 Path(temp) / "capacidades.json",
             ):
-                valor = "1" if privado else ""
-                with patch.dict(os.environ, {"NYXAL_ENABLE_PRIVATE_READ_TOOLS": valor}):
-                    agente = AgenteNixalQwen()
-                    return set(agente.capacidades.capacidades)
+                with patch.object(nixal_capacidades, "ARQUIVO_LOG", Path(temp) / "auditoria.json"):
+                    valor = "1" if privado else ""
+                    with patch.dict(os.environ, {
+                        "NYXAL_ENABLE_PRIVATE_READ_TOOLS": valor,
+                        "NYXAL_ENABLE_MUTABLE_TOOLS": "",
+                    }):
+                        agente = AgenteNixalQwen()
+                        return set(agente.capacidades.capacidades)
 
     def test_agente_registra_ferramentas_basicas_por_padrao(self):
         nomes = self._agente(privado=False)
