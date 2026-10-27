@@ -87,7 +87,7 @@ def main() -> None:
         ("stopContinuousVoice", "encerramento explícito da escuta contínua"),
         ("resumeContinuousListening", "retorno automático à escuta após resposta"),
         ("createAnalyser", "VAD baseado em análise de áudio"),
-        ("requestAnimationFrame", "loop de atividade de voz"),
+        ("NYXAL_VOICE_SAMPLE_INTERVAL_MS", "intervalo de amostragem de voz limitado"),
         ("VOICE_VAD_SILENCE_MS", "detecção de fim de fala por silêncio"),
         ("VOICE_UTTERANCE_MAX_MS", "limite de segurança por turno de fala"),
         ("getUserMedia", "captura do microfone"),
@@ -112,11 +112,22 @@ def main() -> None:
         "áudio sem fala não é enviado ao STT",
     )
 
+    verificar(
+        "window.setTimeout(runContinuousVoiceVad, NYXAL_VOICE_SAMPLE_INTERVAL_MS)" in interface
+        and "window.setTimeout(runVoiceBargeInMonitor, NYXAL_VOICE_SAMPLE_INTERVAL_MS)" in interface,
+        "loops VAD e barge-in usam amostragem temporizada controlada",
+    )
+    verificar(
+        "window.clearTimeout(voiceVadFrame)" in interface
+        and "window.clearTimeout(voiceBargeInFrame)" in interface,
+        "loops temporizados podem ser cancelados sem vazamento de timer",
+    )
+
     shell = (BASE_DIR / "deploy" / "systemd" / "iniciar_nyxos_shell.sh").read_text(encoding="utf-8")
     verificar(
-        'INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/}"' in shell
+        "NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/" in shell
         and "NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/?modo=voz" not in shell,
-        "desktop abre por padrão o painel completo da Nyxal em janela normal",
+        "desktop abre o painel completo por padrão; modo de voz é opt-in",
     )
 
     verificar(
