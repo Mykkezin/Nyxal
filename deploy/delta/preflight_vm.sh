@@ -79,6 +79,8 @@ if has_cmd df; then
   else
     warn 'Não foi possível medir o espaço livre do filesystem do checkout'
   fi
+else
+  warn 'Comando df não encontrado; espaço livre não avaliado'
 fi
 
 # Optional virtualization management and candidate image toolchains.
