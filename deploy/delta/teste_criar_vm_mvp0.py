@@ -67,6 +67,32 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
         require_tool.assert_not_called()
         self.assertFalse(destino.exists())
 
+    def test_rejeita_armazenamento_link_simbolico_antes_de_consultar_host(self) -> None:
+        home = self.root / "home-storage-link"
+        home.mkdir()
+        storage_real = self.root / "storage-real"
+        storage_real.mkdir()
+        storage_link = self.root / "storage-link"
+        storage_link.symlink_to(storage_real, target_is_directory=True)
+
+        with (
+            patch.object(delta_vm.sys, "argv", [
+                "criar_vm_mvp0.py", "--storage", str(storage_link),
+            ]),
+            patch.object(delta_vm.Path, "home", return_value=home),
+            patch.dict(os.environ, {"NYXOS_VPS_LIBVIRT_URI": "qemu:///system"}),
+            patch.object(delta_vm, "require_tool") as require_tool,
+            patch.object(delta_vm.shutil, "which") as which,
+            patch("sys.stderr", new=io.StringIO()),
+        ):
+            result = delta_vm.main()
+
+        self.assertEqual(result, 2)
+        require_tool.assert_not_called()
+        which.assert_not_called()
+        self.assertTrue(storage_link.is_symlink())
+        self.assertEqual(list(storage_real.iterdir()), [])
+
     def test_valida_chave_publica_sem_criar_chave_privada(self) -> None:
         ssh_dir = self.root / ".ssh"
         ssh_dir.mkdir()
