@@ -121,6 +121,19 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
             self.assertTrue(com["sucesso"])
             self.assertEqual(com["mensagens"][0]["texto"], f"mensagem-{indice}")
 
+    def test_retencao_prioriza_sessoes_mais_recentemente_ativas(self) -> None:
+        with patch.object(MemoriaConversacionalNixal, "MAX_SESSOES_PERSISTIDAS", 2):
+            memoria = MemoriaConversacionalNixal(caminho=self.caminho)
+            memoria.registrar("sessao-a", "user", "mensagem antiga")
+            memoria.registrar("sessao-b", "user", "mensagem intermediária")
+            memoria.registrar("sessao-a", "user", "sessão A voltou a ser usada")
+            memoria.registrar("sessao-c", "user", "sessão nova")
+
+            recuperada = MemoriaConversacionalNixal(caminho=self.caminho)
+            self.assertTrue(recuperada.possui_sessao("sessao-a"))
+            self.assertFalse(recuperada.possui_sessao("sessao-b"))
+            self.assertTrue(recuperada.possui_sessao("sessao-c"))
+
     def test_validacao_de_entrada_e_limites(self) -> None:
         memoria = MemoriaConversacionalNixal(caminho=self.caminho)
         self.assertFalse(memoria.registrar("", "user", "x")["sucesso"])
