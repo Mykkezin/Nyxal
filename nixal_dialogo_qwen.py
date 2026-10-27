@@ -123,24 +123,25 @@ class DialogoQwenNixal:
         if not self._tool_use_enabled:
             return None
         try:
-            if self.gerenciador_capacidades is None:
-                from nixal_capacidades import GerenciadorCapacidades
-                self.gerenciador_capacidades = GerenciadorCapacidades()
-            if not self._ferramentas_operacionais_registradas:
-                from nixal_tool_use import registrar_capacidades_operacionais
-                privadas = os.environ.get(
-                    "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
-                ).strip().lower() in {"1", "true", "yes", "on"}
-                mutaveis = os.environ.get(
-                    "NYXAL_ENABLE_MUTABLE_TOOLS", ""
-                ).strip().lower() in {"1", "true", "yes", "on"}
-                registrar_capacidades_operacionais(
-                    self.gerenciador_capacidades,
-                    incluir_dados_privados=privadas,
-                    incluir_acoes=mutaveis,
-                )
-                self._ferramentas_operacionais_registradas = True
-            return self.gerenciador_capacidades
+            with self._tool_lock:
+                if self.gerenciador_capacidades is None:
+                    from nixal_capacidades import GerenciadorCapacidades
+                    self.gerenciador_capacidades = GerenciadorCapacidades()
+                if not self._ferramentas_operacionais_registradas:
+                    from nixal_tool_use import registrar_capacidades_operacionais
+                    privadas = os.environ.get(
+                        "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
+                    ).strip().lower() in {"1", "true", "yes", "on"}
+                    mutaveis = os.environ.get(
+                        "NYXAL_ENABLE_MUTABLE_TOOLS", ""
+                    ).strip().lower() in {"1", "true", "yes", "on"}
+                    registrar_capacidades_operacionais(
+                        self.gerenciador_capacidades,
+                        incluir_dados_privados=privadas,
+                        incluir_acoes=mutaveis,
+                    )
+                    self._ferramentas_operacionais_registradas = True
+                return self.gerenciador_capacidades
         except Exception:
             # Function calling é opcional; a conversa textual continua disponível.
             return None
