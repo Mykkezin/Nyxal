@@ -9,6 +9,8 @@ on:
       - integration/nyxal-active-prs-20261027
     paths:
       - "nixal_runtime.py"
+      - "nixal_habitat.py"
+      - "corpo_nixal.py"
       - "nixal_evolucao_controlada.py"
       - "nixal_laboratorio_remoto.py"
       - "nixal_evolucao_remota.py"
@@ -98,7 +100,7 @@ jobs:
       - name: Compilar módulos
         id: compile_main
         run: |
-          python3 -m py_compile             nixal_runtime.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nixal_delta.py             nixal_recursos_habitat.py             nixal_ciclo_residente.py             nixal_auto_experimento_ae2.py             nixal_auto_avaliacao_ae3.py             nixal_ciclo_evolucao_ae4.py             nixal_descoberta_continua_ae5.py             nixal_trilha_http.py teste_nixal_trilha_http.py teste_api_trilha_http_e2e.py nyxal_web_api.py nixal_decisao_autonoma_ci.py
+          python3 -m py_compile             nixal_runtime.py             nixal_habitat.py             corpo_nixal.py             nixal_evolucao_controlada.py             nixal_laboratorio_remoto.py             nixal_evolucao_remota.py             nixal_solicitacao_evolucao.py             nixal_integracao_controlada.py             nixal_governanca_evolucao.py             nixal_observador_desenvolvimento.py             nixal_ciclo_local_nivel10.py             nixal_executor_ciclo_local_nivel10.py             nixal_nucleo_conversacional.py             nixal_memoria_conversacional.py             nixal_dialogo_qwen.py             nixal_processos_habitat.py             nixal_persistencia_operacional.py             nixal_delta.py             nixal_recursos_habitat.py             nixal_ciclo_residente.py             nixal_auto_experimento_ae2.py             nixal_auto_avaliacao_ae3.py             nixal_ciclo_evolucao_ae4.py             nixal_descoberta_continua_ae5.py             nixal_trilha_http.py teste_nixal_trilha_http.py teste_api_trilha_http_e2e.py nyxal_web_api.py nixal_decisao_autonoma_ci.py
 
       - name: Testes de autoreparo residente e integração
         run: |
