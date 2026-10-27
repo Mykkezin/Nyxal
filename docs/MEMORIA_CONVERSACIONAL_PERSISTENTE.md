@@ -17,6 +17,17 @@ O serviço residente configura o caminho padrão em \`~/.local/share/nyxal/conve
 - A API não revela o caminho absoluto nem o conteúdo da memória no campo de diagnóstico; informa somente estado, quantidade de sessões e quantidade de mensagens.
 - Esta é memória recente de conversa, não conhecimento permanente. A memória de investigação e a memória de conhecimento candidato continuam independentes e mantêm sua proveniência e estado epistemológico.
 
+## Recordação entre sessões sob pedido explícito
+
+Quando a mensagem atual pede claramente recordação (por exemplo, “você lembra o que conversamos sobre X?” ou “onde paramos em Y?”), o núcleo pode pesquisar, de modo lexical e somente leitura, trechos relevantes de outras sessões no mesmo arquivo local. A sessão atual é excluída dessa busca porque o histórico recente dela já é enviado separadamente ao diálogo.
+
+- Reutiliza `MemoriaConversacionalNixal`; não cria novo arquivo, índice vetorial ou banco paralelo.
+- A busca só é chamada pelo fluxo contextual explícito. Perguntas comuns não vasculham outras sessões.
+- Retorna até três trechos com papel, referência de sessão pseudonimizada e relevância lexical; IDs de sessão não são enviados ao modelo.
+- Segredos em formato comum de bearer/token/chave são redigidos antes da injeção. Trechos recuperados são marcados como dados históricos não confiáveis, nunca como instruções.
+- A memória em modo volátil pode ser consultada apenas enquanto o processo mantém as sessões em RAM; o estado retornado não afirma persistência.
+- Arquivo corrompido, sessão inválida ou falha de leitura falha fechado: nenhum trecho é injetado e o arquivo original é preservado.
+- A busca não grava, promove nem classifica mensagens históricas como conhecimento permanente; a recuperação usa sobreposição lexical e não pretende ser um mecanismo semântico vetorial.
 ## Diagnóstico
 
 A resposta estruturada do núcleo contém \`memoria_conversacional_estado\`:
