@@ -113,13 +113,17 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             self.assertEqual(json.loads(Path(store.arquivo).read_text())["notas"][0]["titulo"], "Estudo")
 
     def test_limite_impede_loop_infinito_de_tools(self):
-        cliente = ClienteFake([mensagem_tool("obter_hora", {}) for _ in range(10)])
+        cliente = ClienteFake([mensagem_tool("obter_hora", {}) for _ in range(10)] + [
+            {"message": {"content": "Limite alcançado; resposta final."}}
+        ])
         dialogo = DialogoQwenNixal(cliente=cliente)
         manager = GerenciadorCapacidades()
         with patch.object(dialogo, "_gerenciador_ferramentas", return_value=manager):
             result = dialogo.responder("Que horas são?")
+        self.assertTrue(result["sucesso"])
         self.assertEqual(len(result["ferramentas_executadas"]), dialogo.MAX_TOOL_CALLS)
-        self.assertEqual(len(cliente.chamadas), dialogo.MAX_TOOL_CALLS + 1)
+        self.assertEqual(len(cliente.chamadas), dialogo.MAX_TOOL_CALLS + 2)
+        self.assertEqual(result["resposta"], "Limite alcançado; resposta final.")
 
     def test_capability_schema_enum_e_limites(self):
         manager = GerenciadorCapacidades()
