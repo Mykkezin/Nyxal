@@ -68,6 +68,10 @@ bash deploy/delta/diagnosticar_vm_mvp0.sh
 
 Se ele indicar `DOMAIN_EXISTS=yes`, **não crie outra VM ainda**. Inspecione o estado e os caminhos com os comandos exibidos; não desregistre um domínio até confirmar que é a tentativa descartável e não uma VM anterior do usuário. O diagnóstico não remove nem altera nada.
 
+Se indicar `DOMAIN_EXISTS=unknown`, a conexão/listagem do libvirt não permitiu determinar o estado. **Não crie outra VM nem remova discos**; corrija a conexão/permissões e repita o diagnóstico. O script só informa `DOMAIN_EXISTS=no` depois de uma listagem bem-sucedida confirmar que o nome não existe.
+
+O diagnóstico examina os artefatos na pasta configurada (`NYXOS_DELTA_VM_STORAGE` / `NYXOS_VPS_STORAGE`), no armazenamento dedicado padrão (`/var/lib/libvirt/images/delta-mvp0-storage`) e na pasta legada `~/NyxOS/VPS`. Isso permite encontrar sobras tanto da primeira tentativa quanto das tentativas feitas com armazenamento dedicado. O script permanece somente de leitura.
+
 Se indicar `DOMAIN_EXISTS=no`, prepare um diretório dedicado fora da home:
 
 ```bash
