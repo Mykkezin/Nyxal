@@ -71,6 +71,10 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn("data-nyxal-step", self.html)
         self.assertIn("state === 'processing'", self.html)
         self.assertIn("state === 'speaking'", self.html)
+        self.assertIn("stage.style.setProperty('--voice-glow'", self.html)
+        self.assertIn("stage.style.setProperty('--voice-bloom'", self.html)
+        self.assertIn("var(--voice-glow,.45)", self.html)
+        self.assertIn('.nyxal-side-dot[data-state="active"]', self.html)
 
     def test_system_hud_has_readable_metrics_without_becoming_the_centerpiece(self):
         self.assertIn('font-size:12px;letter-spacing:.035em', self.console)
