@@ -92,3 +92,11 @@ python -m unittest teste_defesa_autonoma.py -v
 ```
 
 Os testes cobrem os limiares, expiração da janela, exceção para loopback, confiança, allowlists, aprovação humana, identificadores e ausência de efeitos colaterais. Um teste aprovado valida o comportamento determinístico do motor, não demonstra que a Nyxal inteira esteja protegida nem que alguma defesa esteja ativa no host.
+
+## Integração atual da API — observação, não contenção
+
+O gate de autenticação HTTP alimenta o motor determinístico com falhas de Bearer observadas dentro do handler. O cliente não escolhe `fonte_sinal`, confiança, decisão ou alvo; a fonte é atribuída pelo próprio servidor (`api-auth`). A trilha contém somente metadados mínimos e mantém no máximo 256 registros em memória. `GET /api/agent/defesa` é uma rota interna protegida e devolve até 50 registros recentes.
+
+O evento usa o endereço do peer TCP observado pelo servidor. `Forwarded`, `X-Forwarded-For` e `X-Real-IP` não são usados como identidade. Em uma topologia com proxy, o peer pode ser o proxy local e não o cliente final; não se infere o IP remoto até existir configuração explícita de proxy confiável e testes correspondentes. O histórico é volátil, não contém tokens, corpos, query strings ou cabeçalhos e não é uma trilha forense durável.
+
+Esta integração apenas calcula e expõe recomendações auditáveis. Não bloqueia tráfego, não limita taxa, não reinicia serviços, não revoga credenciais e não altera arquivos. `executor_ativo=false`, `executor_autorizado=false` e `efeito_executado=false` permanecem invariantes. Executor separado, aprovação, idempotência, expiração, auditoria durável e rollback seguem pendentes.
