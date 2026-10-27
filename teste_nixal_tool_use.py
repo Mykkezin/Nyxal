@@ -143,6 +143,152 @@ class TesteRegistroFerramentasOperacionais(unittest.TestCase):
         executar.assert_not_called()
 
 
+    def test_aisweb_read_tools_are_registered_by_default(self):
+        registrar_capacidades_operacionais(self.capacidades, store=self.store)
+        nomes = self.nomes()
+        self.assertTrue({"consultar_notam_aisweb", "consultar_cartas_aisweb"} <= nomes)
+        self.assertTrue(FERRAMENTAS_MUTAVEIS.isdisjoint(nomes))
+        self.assertEqual(
+            self.capacidades.capacidades["consultar_notam_aisweb"].funcao.__name__,
+            "consultar_notam_aisweb",
+        )
+        self.assertEqual(
+            self.capacidades.capacidades["consultar_cartas_aisweb"].funcao.__name__,
+            "consultar_cartas_aisweb",
+        )
+
+    def test_aisweb_validation_blocks_invalid_queries_before_network(self):
+        with patch.object(nixal_tool_use, "_aisweb_consultar") as consultar:
+            notam = nixal_tool_use.consultar_notam_aisweb("SBSP;curl")
+            fir = nixal_tool_use.consultar_notam_aisweb("SBSP", fir="XX")
+            sem_filtro = nixal_tool_use.consultar_cartas_aisweb()
+            especie_sem_tipo = nixal_tool_use.consultar_cartas_aisweb(especie="IFR")
+            tipo_invalido = nixal_tool_use.consultar_cartas_aisweb(especie="VFR", tipo="IAC")
+        self.assertEqual(notam["estado"], "icao_invalido")
+        self.assertEqual(fir["estado"], "fir_invalida")
+        self.assertEqual(sem_filtro["estado"], "filtro_obrigatorio")
+        self.assertEqual(especie_sem_tipo["estado"], "tipo_obrigatorio")
+        self.assertEqual(tipo_invalido["estado"], "tipo_invalido")
+        consultar.assert_not_called()
+
+    def test_aisweb_requires_credentials_without_network(self):
+        with patch.dict(os.environ, {
+            "NYXAL_AISWEB_API_KEY": "",
+            "NYXAL_AISWEB_API_PASS": "",
+        }):
+            with patch.object(nixal_tool_use, "build_opener") as opener:
+                notam = nixal_tool_use.consultar_notam_aisweb("SBSP")
+                cartas = nixal_tool_use.consultar_cartas_aisweb(icao="SBSP")
+        self.assertEqual(notam["estado"], "configuracao_pendente")
+        self.assertEqual(cartas["estado"], "configuracao_pendente")
+        opener.assert_not_called()
+
+    def test_aisweb_xml_response_is_bounded_and_credentials_are_not_returned(self):
+        class FakeResponse:
+            status = 200
+
+            def __init__(self, payload):
+                self.payload = payload
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self, _limit):
+                return self.payload
+
+        class FakeOpener:
+            def __init__(self, payload):
+                self.payload = payload
+                self.request = None
+
+            def open(self, request, timeout):
+                self.request = request
+                self.timeout = timeout
+                return FakeResponse(self.payload)
+
+        fake = FakeOpener(
+            b"<aisweb><notams><notam><icao>SBSP</icao><texto>PISTA FECHADA</texto></notam></notams></aisweb>"
+        )
+        with patch.dict(os.environ, {
+            "NYXAL_AISWEB_API_KEY": "fake-key-for-test",
+            "NYXAL_AISWEB_API_PASS": "fake-pass-for-test",
+        }):
+            with patch.object(nixal_tool_use, "build_opener", return_value=fake):
+                resultado = nixal_tool_use.consultar_notam_aisweb("SBSP", limite=5)
+
+        self.assertTrue(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "consulta_concluida")
+        self.assertEqual(resultado["area"], "notam")
+        self.assertIn("PISTA FECHADA", str(resultado["dados"]))
+        self.assertNotIn("fake-key-for-test", str(resultado))
+        self.assertNotIn("fake-pass-for-test", str(resultado))
+        self.assertIn("apiKey=fake-key-for-test", fake.request.full_url)
+        self.assertEqual(fake.timeout, 10)
+
+    def test_aisweb_rejects_xml_entity_declarations(self):
+        class FakeResponse:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self, _limit):
+                return b"<!DOCTYPE x [<!ENTITY e SYSTEM 'file:///etc/passwd'>]><aisweb>&e;</aisweb>"
+
+        class FakeOpener:
+            def open(self, _request, timeout):
+                self.timeout = timeout
+                return FakeResponse()
+
+        with patch.dict(os.environ, {
+            "NYXAL_AISWEB_API_KEY": "fake-key-for-test",
+            "NYXAL_AISWEB_API_PASS": "fake-pass-for-test",
+        }):
+            with patch.object(nixal_tool_use, "build_opener", return_value=FakeOpener()):
+                resultado = nixal_tool_use.consultar_notam_aisweb("SBSP")
+        self.assertEqual(resultado["estado"], "xml_nao_permitido")
+
+    def test_aisweb_payload_over_limit_is_rejected(self):
+        class FakeResponse:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self, _limit):
+                return b"x" * (nixal_tool_use.MAX_AISWEB_BYTES + 1)
+
+        class FakeOpener:
+            def open(self, _request, timeout):
+                return FakeResponse()
+
+        with patch.dict(os.environ, {
+            "NYXAL_AISWEB_API_KEY": "fake-key-for-test",
+            "NYXAL_AISWEB_API_PASS": "fake-pass-for-test",
+        }):
+            with patch.object(nixal_tool_use, "build_opener", return_value=FakeOpener()):
+                resultado = nixal_tool_use.consultar_notam_aisweb("SBSP")
+        self.assertEqual(resultado["estado"], "resposta_muito_grande")
+
+    def test_qwen_exposes_aisweb_as_default_read_only_tools(self):
+        source = (Path(__file__).resolve().parent / "nixal_dialogo_qwen.py").read_text(encoding="utf-8")
+        start = source.index("FERRAMENTAS_LEITURA_PADRAO = frozenset({")
+        end = source.index("})", start)
+        allowlist = source[start:end]
+        self.assertIn('"consultar_notam_aisweb"', allowlist)
+        self.assertIn('"consultar_cartas_aisweb"', allowlist)
+        self.assertNotIn('"salvar_nota"', allowlist)
+
+
 class TesteIntegracaoAgenteQwen(unittest.TestCase):
     def _agente(self, privado: bool):
         from nixal_agente_qwen import AgenteNixalQwen
