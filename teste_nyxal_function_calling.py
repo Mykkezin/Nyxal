@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 import types
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 # Mantém os testes importáveis em ambientes mínimos sem substituir um Ollama real
@@ -17,7 +19,7 @@ sys.modules.setdefault("ollama", ollama_fake)
 
 from nixal_capacidades import GerenciadorCapacidades
 from nixal_dialogo_qwen import DialogoQwenNixal
-from nixal_tool_use import registrar_capacidades_operacionais
+from nixal_tool_use import NotasLembretesNixOS, registrar_capacidades_operacionais
 
 
 class ClienteFake:
@@ -180,7 +182,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
     def test_salvar_nota_com_opt_in_e_ordem_explicita(self):
         manager = GerenciadorCapacidades()
         with tempfile.TemporaryDirectory() as tmp:
-            store = tools.NotasLembretesNixOS(Path(tmp) / "notas.json")
+            store = NotasLembretesNixOS(Path(tmp) / "notas.json")
             registrar_capacidades_operacionais(manager, incluir_acoes=True, store=store)
             dialogo = DialogoQwenNixal(cliente=ClienteFake([]))
             chamada = mensagem_tool(
