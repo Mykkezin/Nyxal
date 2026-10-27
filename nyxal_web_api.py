@@ -2075,6 +2075,10 @@ def main() -> None:
         (HOST, PORT),
         NyxalAPIHandler,
     )
+    # O serviço de lembretes só é iniciado quando a API realmente sobe,
+    # nunca como efeito colateral de importar este módulo.
+    from nixal_tool_use import ServicoLembretesNixOS
+    servico_lembretes = ServicoLembretesNixOS()
 
     print(
         f"[Nyxal-API] escutando em "
@@ -2106,11 +2110,13 @@ def main() -> None:
     )
 
     try:
+        servico_lembretes.iniciar()
         server.serve_forever()
     except KeyboardInterrupt:
         print()
         print("[Nyxal-API] encerrando...")
     finally:
+        servico_lembretes.parar()
         server.server_close()
 
 
