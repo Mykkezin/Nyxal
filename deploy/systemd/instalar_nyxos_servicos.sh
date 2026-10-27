@@ -87,20 +87,18 @@ rm -f "${AUTOSTART_DIR}/nyxos-shell.desktop"
 
 systemctl --user daemon-reload
 
-# A interface válida já está aberta no Chrome do usuário. Não lançar outro desktop
-# em paralelo nem reativar a miniatura/overlay de voz de instalações antigas.
-# O serviço fica instalado para diagnóstico, mas desativado no início automático.
-for unidade in nyxos-interface.service nyxal-desktop.service; do
-    if systemctl --user disable --now "${unidade}" >/dev/null 2>&1; then
-        echo "Interface duplicada desativada: ${unidade}"
-    fi
-done
+# Mantém o desktop principal NyxOS no navegador e remove apenas o orbe flutuante
+# legado, que sobrepunha os aplicativos. O serviço nyxos-interface é a interface correta.
+if systemctl --user disable --now nyxal-desktop.service >/dev/null 2>&1; then
+    echo "Desktop flutuante legado desativado: nyxal-desktop.service"
+fi
 
 if ! systemctl --user enable --now nyxos.target; then
     echo "ERRO: não foi possível ativar nyxos.target." >&2
     systemctl --user --no-pager --full status nyxos.target nyxal-api.service nyxos-residente.service || true
     exit 1
 fi
+systemctl --user enable nyxos-interface.service
 
 # enable --now não reinicia unidades que já estão ativas. Reinicie API e residente
 # para aplicar imediatamente o código/unidades recém-instalados.
@@ -120,9 +118,18 @@ else
     LINGER_STATUS="não foi possível ativar automaticamente"
 fi
 
-# A janela gráfica fica sob controle do usuário: preserva a sessão correta do Chrome
-# e não cria uma segunda interface sobre os outros aplicativos.
-SHELL_STATUS="desativado por padrão para preservar a interface correta do Chrome"
+# Inicia apenas a interface principal do navegador na sessão gráfica ativa.
+# O launcher abre uma janela normal; o orbe flutuante legado permanece desativado.
+if systemctl --user is-active --quiet graphical-session.target; then
+    if systemctl --user restart nyxos-interface.service; then
+        SHELL_STATUS="interface principal do Chrome iniciada"
+    else
+        SHELL_STATUS="falha ao iniciar a interface principal; consulte o diagnóstico local"
+        CORE_RESTART_FAILED=1
+    fi
+else
+    SHELL_STATUS="interface principal habilitada; aguardando a sessão gráfica"
+fi
 
 echo "Serviços NyxOS instalados e residência ativada."
 echo "API: $(systemctl --user is-active nyxal-api.service || true)"

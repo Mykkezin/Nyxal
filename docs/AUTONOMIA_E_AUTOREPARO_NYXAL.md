@@ -37,7 +37,7 @@ bash deploy/systemd/instalar_nyxos_servicos.sh
 bash deploy/systemd/diagnosticar_nyxos_local.sh
 ```
 
-O instalador recarrega as unidades e reinicia explicitamente a API e o residente. Para evitar duas interfaces concorrentes, ele desativa e para `nyxos-interface.service` e, se existir, a unidade antiga `nyxal-desktop.service`. A interface correta permanece na janela do Chrome aberta pelo usuário; o serviço gráfico não deve ser reiniciado automaticamente. O auto-reparo respeita essa escolha enquanto a unidade estiver desativada.
+O instalador recarrega as unidades e reinicia explicitamente a API e o residente. Ele desativa apenas a unidade legada `nyxal-desktop.service`, responsável pelo orbe flutuante que sobrepunha os aplicativos, e mantém `nyxos-interface.service` habilitado como a interface correta da Nyxal no navegador. O launcher principal abre uma janela normal, sem modo quiosque. O auto-reparo continua podendo recuperar essa interface principal porque ela permanece habilitada.
 
 Se a API ou o residente continuar falhando, colete o diagnóstico sem exibir o arquivo de segredos:
 
