@@ -18,10 +18,11 @@ AE5 registra sinais e oportunidades econômicas candidatas. O coletor dual guard
 `nixal_autoreparo_residente.py` é chamado pelo Ciclo Residente M5.7. Em cada ciclo:
 
 1. faz GET de `/health` exclusivamente em loopback;
-2. verifica a sessão gráfica antes de tentar recuperar o desktop;
-3. após três falhas consecutivas, pode reiniciar apenas `nyxal-api.service` ou `nyxos-interface.service`;
-4. limita cada unidade a três tentativas por 15 minutos, com intervalo mínimo de 90 segundos;
-5. grava ações e estados resumidos em `~/.local/state/nyxal/autoreparo-residente.jsonl`, sem tokens, corpos HTTP ou mensagens de exceção.
+2. pode reiniciar `nyxal-api.service` após três falhas consecutivas;
+3. só tenta recuperar `nyxos-interface.service` se o operador tiver habilitado explicitamente essa unidade;
+4. respeita a unidade de interface desativada, sem reabrir uma segunda janela nem ressuscitar a miniatura;
+5. limita as tentativas a três por 15 minutos, com intervalo mínimo de 90 segundos;
+6. grava ações e estados resumidos em `~/.local/state/nyxal/autoreparo-residente.jsonl`, sem tokens, corpos HTTP ou mensagens de exceção.
 
 Não executa shell arbitrário, não altera ficheiros de código, não instala pacotes, não mexe em firewall, não muda permissões fora do seu ficheiro de auditoria e não toca no kernel. O systemd continua responsável por reiniciar processos que terminam abruptamente. Se a API exigir configuração inválida, o circuito de tentativas impede reinicializações repetitivas.
 
@@ -36,11 +37,7 @@ bash deploy/systemd/instalar_nyxos_servicos.sh
 bash deploy/systemd/diagnosticar_nyxos_local.sh
 ```
 
-O instalador recarrega as unidades e reinicia explicitamente a API e o residente, para não deixar processos ativos a usar configuração anterior. O desktop só é reiniciado quando `graphical-session.target` está ativo. Se estiver ausente, aguarde uma sessão gráfica e execute:
-
-```bash
-systemctl --user restart nyxos-interface.service
-```
+O instalador recarrega as unidades e reinicia explicitamente a API e o residente. Para evitar duas interfaces concorrentes, ele desativa e para `nyxos-interface.service` e, se existir, a unidade antiga `nyxal-desktop.service`. A interface correta permanece na janela do Chrome aberta pelo usuário; o serviço gráfico não deve ser reiniciado automaticamente. O auto-reparo respeita essa escolha enquanto a unidade estiver desativada.
 
 Se a API ou o residente continuar falhando, colete o diagnóstico sem exibir o arquivo de segredos:
 
