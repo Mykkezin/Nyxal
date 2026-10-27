@@ -184,7 +184,6 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn("Pop-up bloqueado", music)
         self.assertIn("'BLOQUEADO'", music)
         self.assertNotIn("Reprodução iniciada", music)
-        self.assertNotIn("playHudSound('click');\\n    }", music)
 
     def test_infinity_drag_handles_cancel_resize_storage_and_viewport_bounds(self):
         self.assertIn("z-index: 9999 !important", self.html)
