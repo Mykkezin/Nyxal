@@ -182,6 +182,15 @@ class NucleoConversacionalNixal:
             else ContextoHistoricoRelevanteNixal(self.memoria_investigacao)
         )
 
+        # O núcleo, o diálogo e o agente compartilham o mesmo catálogo.
+        # A memória e o contexto continuam sob responsabilidade do Core.
+        try:
+            from nixal_capacidades import _obter_gerenciador_capacidades
+            self.agente.capacidades = _obter_gerenciador_capacidades()
+        except Exception:
+            # Falha de conector opcional não deve derrubar a conversa normal.
+            pass
+
         self.capacidades = {
             capacidade["nome"]: capacidade
             for capacidade
