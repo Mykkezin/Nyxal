@@ -362,8 +362,11 @@ def consultar_cartas_aisweb(
         }
     if especie and not tipo:
         return {"sucesso": False, "estado": "tipo_obrigatorio", "motivo": "Informe o tipo de carta para a espécie selecionada."}
-    if dt and dt != "last_amdt" and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", dt):
-        return {"sucesso": False, "estado": "data_invalida", "motivo": "Use AAAA-MM-DD ou last_amdt."}
+    if dt and dt != "last_amdt":
+        try:
+            datetime.strptime(dt, "%Y-%m-%d")
+        except ValueError:
+            return {"sucesso": False, "estado": "data_invalida", "motivo": "Use uma data válida no formato AAAA-MM-DD ou last_amdt."}
     if not (codigos or especie or nome or dt):
         return {
             "sucesso": False, "estado": "filtro_obrigatorio",
