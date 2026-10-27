@@ -29,6 +29,14 @@ print("PYTHON_SYNTAX_OK")
 PY
 ```
 
+A suíte mockada do helper de VM pode ser executada sem criar ou alterar uma VM real:
+
+```bash
+python3 -m unittest discover -s deploy/delta -p 'teste_*.py' -v
+```
+
+O workflow de DELTA compila e executa essa suíte junto das regressões de bootstrap e VPS.
+
 ## 3. Preparar a imagem de laboratório
 
 ```bash
@@ -50,7 +58,7 @@ A imagem cloud atual tem aproximadamente 600 MB; o tamanho e o hash podem mudar 
 
 ## 4. Recuperar a tentativa anterior e preparar armazenamento acessível
 
-A primeira tentativa mostrou que `libvirt-qemu` não consegue pesquisar `/home/nyxal`. Não use `chmod 777` e não altere permissões da home inteira. Vamos manter a imagem base e os dados da Nyxal na home e criar um diretório dedicado de discos dentro de um pool de armazenamento libvirt ativo.
+A primeira tentativa mostrou que `libvirt-qemu` não consegue pesquisar `/home/nyxal`. Não use `chmod 777` e não altere permissões da home inteira. O pool existente `VPS` também aponta para dentro da home, por isso **não deve ser usado para os discos da VM**.
 
 Primeiro execute o diagnóstico, que é somente de leitura:
 
@@ -60,13 +68,15 @@ bash deploy/delta/diagnosticar_vm_mvp0.sh
 
 Se ele indicar `DOMAIN_EXISTS=yes`, **não crie outra VM ainda**. Inspecione o estado e os caminhos com os comandos exibidos; não desregistre um domínio até confirmar que é a tentativa descartável e não uma VM anterior do usuário. O diagnóstico não remove nem altera nada.
 
-Se indicar `DOMAIN_EXISTS=no`, prepare um novo diretório somente se o pool `default` já existir, estiver ativo e for do tipo diretório:
+Se indicar `DOMAIN_EXISTS=no`, prepare um diretório dedicado fora da home:
 
 ```bash
 bash deploy/delta/preparar_storage_mvp0.sh
 ```
 
-O helper valida o checksum da imagem, verifica o espaço disponível e exige confirmação antes de criar somente `delta-mvp0-storage` dentro do diretório do pool libvirt. Ele aplica uma ACL específica para a conta `libvirt-qemu` nesse novo diretório — não altera a permissão da home e não ativa nem reconfigura o pool. Se o pool não existir/estiver parado ou já houver um destino com esse nome, o script interrompe sem modificar nada.
+Por padrão, o helper usa `/var/lib/libvirt/images`, o diretório de sistema padrão para imagens de VM no Ubuntu/Mint. Antes de criar qualquer coisa, ele confirma que esse diretório existe, que a conta `libvirt-qemu` consegue atravessá-lo, que há pelo menos 10 GiB livres, que o checksum da imagem confere e que não existe domínio com o nome planejado. O helper exige confirmação e cria somente `delta-mvp0-storage`, com uma ACL específica para `libvirt-qemu`. Não altera a home, não modifica o pool `VPS`, não cria/ativa pools, não instala pacotes e não remove arquivos.
+
+Caso o armazenamento padrão não exista ou não seja acessível ao QEMU, o script interrompe sem criar a pasta. Só indique outro diretório existente fora da home por meio de `NYXOS_DELTA_STORAGE_ROOT` depois de confirmar que é um caminho apropriado para arquivos de VM.
 
 ## 5. Criar a VM descartável MVP-0
 
@@ -74,7 +84,7 @@ O helper de armazenamento imprime o caminho exato e o comando para a criação. 
 
 ```bash
 python3 deploy/delta/criar_vm_mvp0.py \
-  --storage "/CAMINHO/DO/POOL/delta-mvp0-storage" \
+  --storage "/CAMINHO/DO/ARMAZENAMENTO/delta-mvp0-storage" \
   --image "$HOME/NyxOS/VPS/ubuntu-24.04-server-cloudimg-amd64.img"
 ```
 
@@ -95,7 +105,7 @@ Se a chave pública não for a padrão, indique um caminho explícito:
 ```bash
 python3 deploy/delta/criar_vm_mvp0.py \
   --ssh-key-file ~/.ssh/minha_chave.pub \
-  --storage "/CAMINHO/DO/POOL/delta-mvp0-storage" \
+  --storage "/CAMINHO/DO/ARMAZENAMENTO/delta-mvp0-storage" \
   --image "$HOME/NyxOS/VPS/ubuntu-24.04-server-cloudimg-amd64.img"
 ```
 
