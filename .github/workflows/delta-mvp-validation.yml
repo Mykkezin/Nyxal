@@ -1,5 +1,5 @@
 name: DELTA MVP tooling validation
-# Este workflow usa mocks: nunca cria, liga ou altera uma VM real.
+# All tests use mocks; this workflow never provisions or alters a real VM.
 
 on:
   pull_request:
@@ -27,9 +27,8 @@ concurrency:
 
 jobs:
   validate-delta-tools:
-    # Suites pesadas em PR só são liberadas por opt-in; execução manual continua disponível.
+    # Full tests on PRs require explicit opt-in from a trusted repository author.
     if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
-    # O runner privado evita consumo de minutos hosted e a falha antes do primeiro step (runner_id=0).
     runs-on: self-hosted
     timeout-minutes: 5
     steps:
@@ -46,7 +45,9 @@ jobs:
           bash -n deploy/delta/diagnosticar_vm_mvp0.sh
           bash -n deploy/delta/preparar_storage_mvp0.sh
           bash -n deploy/vps/preparar_base_ubuntu.sh
-      - name: Compile VM bootstrap and regressions
-        run: python3 -m py_compile deploy/delta/criar_vm_mvp0.py teste_delta_mvp0.py nixal_vps.py teste_nixal_vps.py
-      - name: Run mocked DELTA bootstrap and VPS regressions
+      - name: Compile DELTA and VPS regressions
+        run: python3 -m py_compile deploy/delta/criar_vm_mvp0.py deploy/delta/teste_criar_vm_mvp0.py teste_delta_mvp0.py nixal_vps.py teste_nixal_vps.py
+      - name: Run mocked DELTA bootstrap regressions
+        run: python3 -m unittest discover -s deploy/delta -p 'teste_*.py' -v
+      - name: Run mocked DELTA and VPS regressions
         run: python3 -m unittest -v teste_delta_mvp0.py teste_nixal_vps.py
