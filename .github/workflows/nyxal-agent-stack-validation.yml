@@ -83,6 +83,7 @@ on:
       - "interface/js/nyxal-api-client.js"
       - "interface/js/nyxal-api-client.test.cjs"
       - "teste_nyxos_voice_console.py"
+      - "teste_interface_m5_5.py"
       - ".github/workflows/nyxal-agent-stack-validation.yml"
       - ".github/workflows/visual-generation-quality.yml"
       - ".github/workflows/nyxos-voice-console-validation.yml"
@@ -275,6 +276,7 @@ jobs:
           python3 teste_preparacao_investigacao_56_4_22.py
           python3 teste_auto_evolucao_ae1.py
           python3 teste_m5_15_presenca_maquina.py
+          python3 teste_interface_m5_5.py
       - name: Verify knowledge-memory persistence through runtime
         run: python3 teste_integracao_memoria_conhecimento_runtime.py
 
