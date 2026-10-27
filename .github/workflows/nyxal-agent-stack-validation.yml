@@ -2,6 +2,7 @@ name: Nyxal Agent Stack Validation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - main
       - integration/nyxal-active-prs-20261027
@@ -85,103 +86,18 @@ on:
       - "deploy/agent/**"
       - "skills/**"
       - "deploy/voice/**"
-  push:
-    branches:
-      - main
-      - integration/nyxal-active-prs-20261027
-      - feat/nyxal-agent-stack-current-main-20261009
-      - fix/display-root-route-20261009
-      - fix/durable-memory-corruption-guard-20261026
-      - feat/voz-tempo-real-pipecat
-    paths:
-      - "nixal_mcp_runtime.py"
-      - "teste_nyxal_mcp_runtime.py"
-      - "teste_mcp_http.py"
-      - "nyxal_web_api.py"
-      - "nixal_display_routes.py"
-      - "nixal_agent_hub.py"
-      - "nixal_intent_router.py"
-      - "nixal_responses_api.py"
-      - "teste_nixal_responses_api.py"
-      - "nixal_observabilidade_sistema.py"
-      - "nixal_integracao_gmail.py"
-      - "nixal_integracao_google.py"
-      - "nixal_vps.py"
-      - "teste_nixal_vps.py"
-      - "nixal_capacidade_visual.py"
-      - "nixal_seguranca_http.py"
-      - "nixal_nucleo_conversacional.py"
-      - "nixal_recuperador_contexto.py"
-      - "teste_nixal_recuperador_contexto.py"
-      - "nixal_memoria_conversacional.py"
-      - "teste_nixal_memoria_conversacional.py"
-      - "deploy/systemd/nyxal-api.service"
-      - "executar_nyxal_api.sh"
-      - "nixal_agente_qwen.py"
-      - "nixal_capacidades.py"
-      - "nixal_tool_use.py"
-      - "nyxal_mcp_tools.py"
-      - "teste_mcp_stdio.py"
-      - "deploy/agent/requirements-mcp.txt"
-      - "teste_nixal_tool_use.py"
-      - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
-      - "nixal_transporte_conversacional.py"
-      - "nixal_integracao_sessao_transporte.py"
-      - "nixal_contexto_historico_relevante.py"
-      - "nixal_memoria_investigacao.py"
-      - "nixal_memoria_conhecimento.py"
-      - "nixal_dialogo_qwen.py"
-      - "teste_nyxal_function_calling.py"
-      - "docs/NYXAL_FERRAMENTAS.md"
-      - "docs/RECUPERACAO_CONTEXTUAL_MEMORIA.md"
-      - "docs/MEMORIA_CONVERSACIONAL_PERSISTENTE.md"
-      - "nixal_auto_evolucao.py"
-      - "nixal_ciclo_residente.py"
-      - "nixal_presenca_maquina.py"
-      - "executar_nyxos_residente.py"
-      - "teste_nixal_display_routes.py"
-      - "teste_nixal_agent_hub.py"
-      - "teste_nixal_dialogo_router.py"
-      - "teste_nixal_observabilidade_sistema.py"
-      - "teste_nixal_capacidade_visual.py"
-      - "teste_nixal_integracao_google.py"
-      - "teste_nixal_integracao_gmail.py"
-      - "teste_nucleo_contexto_persistente.py"
-      - "teste_nucleo_conversacional.py"
-      - "teste_transporte_conversacional_56_5_2.py"
-      - "teste_integracao_sessao_transporte_56_5_4.py"
-      - "teste_contexto_conversacional_56_5_5.py"
-      - "teste_contexto_historico_relevante_56_4_21.py"
-      - "teste_preparacao_investigacao_56_4_22.py"
-      - "teste_memorias_persistencia_segura.py"
-      - "teste_auto_evolucao_ae1.py"
-      - "teste_m5_15_presenca_maquina.py"
-      - "interface/display/**"
-      - "interface/index.html"
-      - "interface/js/nyxal-voice-console.js"
-      - "teste_nyxos_voice_console.py"
-      - ".github/workflows/nyxal-agent-stack-validation.yml"
-      - ".github/workflows/visual-generation-quality.yml"
-      - ".github/workflows/nyxos-voice-console-validation.yml"
-      - ".github/workflows/security-baseline.yml"
-      - "scripts/autorizar_gmail_nyxal.py"
-      - "scripts/configurar_hermes_whatsapp_policy.py"
-      - "scripts/nyxal_letta_memory.py"
-      - "deploy/agent/**"
-      - "skills/**"
-      - "deploy/voice/**"
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   validate-agent-stack:
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
     runs-on: self-hosted
     timeout-minutes: 10
     steps:
@@ -342,8 +258,8 @@ jobs:
           python3 teste_m5_15_presenca_maquina.py
 
   validate-vps-public-key:
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    runs-on: self-hosted
     timeout-minutes: 5
     steps:
       - name: Checkout without optional submodules

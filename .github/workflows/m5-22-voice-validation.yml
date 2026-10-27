@@ -2,6 +2,7 @@ name: M5.22 Voice Validation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches: [main]
     paths:
       - "nixal_audio_nyxos.py"
@@ -11,33 +12,18 @@ on:
       - "nyxal_web_api.py"
       - "interface/index.html"
       - "teste_voz_continua_56_5_6.py"
-  push:
-    branches:
-      - main
-      - feat/m5-22-voz-nyxos
-      - feat/voz-tempo-real-pipecat
-    paths:
-      - "nixal_audio_nyxos.py"
-      - "nixal_voz_nyxos.py"
-      - "teste_m5_22_voz_nyxos.py"
-      - "deploy/voice/**"
-      - "nyxal_web_api.py"
-      - "interface/index.html"
-      - "teste_voz_continua_56_5_6.py"
-      - ".github/workflows/m5-22-voice-validation.yml"
-
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   validate-m5-22:
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
     runs-on: self-hosted
     timeout-minutes: 10
     steps:

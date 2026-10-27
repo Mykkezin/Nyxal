@@ -2,6 +2,7 @@ name: AMD Developer Cloud Validation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches: [main]
     paths:
       - "nixal_amd_developer_cloud.py"
@@ -13,31 +14,18 @@ on:
       - "docs/AMD_DEVELOPER_CLOUD_NYXOS.md"
       - "deploy/systemd/nyxal-amd-cloud.env.example"
       - ".github/workflows/amd-developer-cloud-validation.yml"
-  push:
-    branches:
-      - main
-      - feat/amd-cloud-vllm-hardening-v2
-    paths:
-      - "nixal_amd_developer_cloud.py"
-      - "nixal_dialogo_qwen.py"
-      - "nyxal_web_api.py"
-      - "teste_nixal_amd_developer_cloud.py"
-      - "teste_dialogo_qwen_56_5_5.py"
-      - "deploy/amd_cloud/start_vllm_rocm.sh"
-      - "docs/AMD_DEVELOPER_CLOUD_NYXOS.md"
-      - "deploy/systemd/nyxal-amd-cloud.env.example"
-      - ".github/workflows/amd-developer-cloud-validation.yml"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   validate-amd-cloud:
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
     runs-on: self-hosted
     timeout-minutes: 10
     steps:
