@@ -116,12 +116,13 @@ class TesteRecuperadorContextoNixal(unittest.TestCase):
     def test_tokens_e_segredos_de_candidatos_sao_redigidos(self) -> None:
         segredo = "TOKEN-NAO-PODE-SAIR-98765"
         bearer = "BEARER-NAO-PODE-SAIR-12345"
+        auth_header = "AUTH-HEADER-NAO-PODE-SAIR-23456"
         gen_token = "TOKEN-GENERICO-NAO-PODE-SAIR-67890"
         self.conhecimento.registrar(
             candidato(
                 "A estratégia de cache local inclui validação de origem; "
-                f"access_token={segredo}; Authorization: Bearer {bearer}; "
-                f"token={gen_token}",
+                f"access_token={segredo}; sessão Bearer {bearer}; "
+                f"Authorization: Bearer {auth_header}; token={gen_token}",
                 "arquitetura",
             )
         )
@@ -129,7 +130,7 @@ class TesteRecuperadorContextoNixal(unittest.TestCase):
         candidatos = resultado["conhecimentos_candidatos"]
         self.assertEqual(len(candidatos), 1)
         texto_seguro = candidatos[0]["texto"]
-        for valor in (segredo, bearer, gen_token):
+        for valor in (segredo, bearer, auth_header, gen_token):
             with self.subTest(valor=valor):
                 self.assertNotIn(valor, texto_seguro)
         self.assertIn("access_token=[REDACTED]", texto_seguro)
