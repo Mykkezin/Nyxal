@@ -125,6 +125,30 @@ class TestLimitesArmazenamento(unittest.TestCase):
             )
             self.assertEqual(backups[0].stat().st_mode & 0o777, 0o600)
 
+    def test_log_capacidades_nao_segue_link_simbolico(self) -> None:
+        with tempfile.TemporaryDirectory() as diretorio:
+            base = Path(diretorio)
+            alvo = base / "evidencia-operacional.json"
+            caminho_log = base / "log_capacidades_nixal.json"
+            original = b'[{"capacidade":"evidencia"}]'
+            alvo.write_bytes(original)
+            modo_original = alvo.stat().st_mode & 0o777
+            caminho_log.symlink_to(alvo)
+            with patch.object(nixal_capacidades, "ARQUIVO_LOG", caminho_log):
+                gerenciador = GerenciadorCapacidades()
+                gerenciador._registrar_execucao(
+                    ResultadoCapacidade(
+                        sucesso=True,
+                        capacidade="novo_registro",
+                        resultado={"ok": True},
+                        timestamp=2.0,
+                        duracao_ms=1.0,
+                    )
+                )
+            self.assertTrue(caminho_log.is_symlink())
+            self.assertEqual(alvo.read_bytes(), original)
+            self.assertEqual(alvo.stat().st_mode & 0o777, modo_original)
+
     def test_log_runtime_arquiva_historico_preexistente_acima_do_teto(self) -> None:
         with tempfile.TemporaryDirectory() as diretorio:
             caminho_log = Path(diretorio) / "log_nyxal_runtime.json"
@@ -191,6 +215,31 @@ class TestLimitesArmazenamento(unittest.TestCase):
             runtime._registrar_log(ciclo)
 
             self.assertEqual(caminho_log.read_bytes(), original)
+
+    def test_log_runtime_nao_segue_link_simbolico(self) -> None:
+        with tempfile.TemporaryDirectory() as diretorio:
+            base = Path(diretorio)
+            alvo = base / "evidencia-operacional.json"
+            caminho_log = base / "log_nyxal_runtime.json"
+            original = b'[{"ciclo_id":"evidencia"}]'
+            alvo.write_bytes(original)
+            modo_original = alvo.stat().st_mode & 0o777
+            caminho_log.symlink_to(alvo)
+            runtime = object.__new__(nixal_runtime.NyxalRuntime)
+            runtime.arquivo_log = caminho_log
+
+            runtime._registrar_log({
+                "sucesso": True,
+                "estado": "ciclo_concluido",
+                "origem": "teste",
+                "versao_runtime": "teste",
+                "ciclo_id": "novo-ciclo",
+                "valor": {"ok": True},
+            })
+
+            self.assertTrue(caminho_log.is_symlink())
+            self.assertEqual(alvo.read_bytes(), original)
+            self.assertEqual(alvo.stat().st_mode & 0o777, modo_original)
 
     def test_janitor_falha_fechado_quando_a_listagem_de_artefatos_falha(self) -> None:
         workflow_path = Path(".github/workflows/prune-actions-artifacts.yml")
