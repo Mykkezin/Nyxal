@@ -226,12 +226,23 @@ class DialogoQwenNixal:
         if original.startswith(informativos):
             return False
         normalizado = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", original).strip()
-        # Negação ligada diretamente ao verbo da ação bloqueia mutação.
-        # Não bloqueie conteúdo de nota como "anote que não quero esquecer".
-        if re.search(r"\b(?:nao|não|nunca)\s+(?:me\s+)?(?:anote|anota|salve|salvar|registre|registra|guarde|guarda|crie|criar|agende|abra|abre|inicie|iniciar)\b", normalizado):
-            return False
-        if re.search(r"\b(?:nao|não|nunca)\s+(?:quero|preciso|precisamos)\s+(?:que\s+voce\s+)?(?:anote|salve|registre|guarde|crie|agende|abra|inicie)\b", normalizado):
-            return False
+        # Bloqueia negação direta e indireta antes de autorizar qualquer mutação.
+        # A negação no conteúdo de uma nota ("Anote que não quero esquecer")
+        # não é uma negação do comando de anotar.
+        comandos_negaveis = {
+            "salvar_nota": r"(?:anote|anota|salve|salvar|registre|registra|guarde|guarda)",
+            "criar_lembrete": r"(?:lembre|lembra|avise|avisa|crie|criar|agende|agendar|programe|programar)",
+            "abrir_aplicativo": r"(?:abra|abre|inicie|iniciar)",
+        }.get(nome)
+        if comandos_negaveis:
+            if re.search(r"\b(?:nao|não|nunca)\s+(?:me\s+)?" + comandos_negaveis + r"\b", normalizado):
+                return False
+            if re.search(
+                r"\b(?:nao|não|nunca)\s+(?:quero|queria|gostaria|preciso|precisamos)"
+                r"\s+(?:que\s+)?(?:voce\s+)?(?:me\s+)?" + comandos_negaveis + r"\b",
+                normalizado,
+            ):
+                return False
         if nome == "salvar_nota":
             return any(x in normalizado for x in (
                 "anote ", "anota ", "salve esta nota", "salvar nota ",
