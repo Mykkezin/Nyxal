@@ -353,24 +353,26 @@ def consultar_cartas_aisweb(
     codigos = [x for x in texto_icao.split(",") if x]
     if codigos and (len(codigos) > 10 or any(not re.fullmatch(r"[A-Z]{4}", x) for x in codigos)):
         return {"sucesso": False, "estado": "icao_invalido", "motivo": "Informe até 10 códigos ICAO de quatro letras."}
-    if especie and especie not in especies_tipos:
+    if not especie:
+        return {"sucesso": False, "estado": "especie_obrigatoria", "motivo": "Informe IFR, VFR ou ROTA para evitar o padrão implícito da API."}
+    if especie not in especies_tipos:
         return {"sucesso": False, "estado": "especie_invalida", "permitidas": sorted(especies_tipos)}
-    if tipo and (not especie or tipo not in especies_tipos[especie]):
+    if not tipo:
+        return {"sucesso": False, "estado": "tipo_obrigatorio", "motivo": "Informe o tipo de carta para a espécie selecionada."}
+    if tipo not in especies_tipos[especie]:
         return {
             "sucesso": False, "estado": "tipo_invalido",
             "motivo": "O tipo precisa ser compatível com a espécie IFR, VFR ou ROTA.",
         }
-    if especie and not tipo:
-        return {"sucesso": False, "estado": "tipo_obrigatorio", "motivo": "Informe o tipo de carta para a espécie selecionada."}
     if dt and dt != "last_amdt":
         try:
             datetime.strptime(dt, "%Y-%m-%d")
         except ValueError:
             return {"sucesso": False, "estado": "data_invalida", "motivo": "Use uma data válida no formato AAAA-MM-DD ou last_amdt."}
-    if not (codigos or especie or nome or dt):
+    if not (codigos or nome or dt):
         return {
             "sucesso": False, "estado": "filtro_obrigatorio",
-            "motivo": "Informe um ICAO, espécie/tipo, nome ou ciclo AIRAC para limitar a pesquisa.",
+            "motivo": "Informe um ICAO, nome ou ciclo AIRAC além da espécie/tipo para limitar a pesquisa.",
         }
     limite = _limite(limite, 20, 1, 50)
     parametros = {"use": "0"}
