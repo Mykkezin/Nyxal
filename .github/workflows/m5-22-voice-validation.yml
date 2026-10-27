@@ -8,6 +8,9 @@ on:
       - "nixal_voz_nyxos.py"
       - "teste_m5_22_voz_nyxos.py"
       - "deploy/voice/**"
+      - "nyxal_web_api.py"
+      - "interface/index.html"
+      - "teste_voz_continua_56_5_6.py"
   push:
     branches:
       - main
@@ -18,6 +21,9 @@ on:
       - "nixal_voz_nyxos.py"
       - "teste_m5_22_voz_nyxos.py"
       - "deploy/voice/**"
+      - "nyxal_web_api.py"
+      - "interface/index.html"
+      - "teste_voz_continua_56_5_6.py"
       - ".github/workflows/m5-22-voice-validation.yml"
 
   workflow_dispatch:
@@ -42,9 +48,13 @@ jobs:
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compilar M5.22
         run: python3 -m py_compile nixal_audio_nyxos.py nixal_voz_nyxos.py teste_m5_22_voz_nyxos.py
-      - name: Compilar adaptador experimental de voz
-        run: python3 -m py_compile deploy/voice/nyxal_pipecat_agent.py deploy/voice/verificar_api_nyxal.py deploy/voice/verificar_contrato_pipecat.py
+      - name: Compilar adaptadores e lógica de prosódia
+        run: python3 -m py_compile nyxal_web_api.py deploy/voice/nyxal_pipecat_agent.py deploy/voice/nyxal_voice_prosody.py deploy/voice/test_nyxal_voice_prosody.py deploy/voice/verificar_api_nyxal.py deploy/voice/verificar_contrato_pipecat.py
       - name: Validar scripts de instalação e diagnóstico
         run: bash -n deploy/voice/instalar_pipecat_experimental.sh deploy/voice/diagnosticar_runtime_local.sh
+      - name: Testar prosódia contextual
+        run: python3 -m unittest discover -s deploy/voice -p 'test_nyxal_voice_prosody.py' -v
+      - name: Testar integração da voz contínua
+        run: python3 teste_voz_continua_56_5_6.py
       - name: Executar teste M5.22
         run: python3 teste_m5_22_voz_nyxos.py
