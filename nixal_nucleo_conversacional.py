@@ -24,7 +24,7 @@ Responsabilidade:
 Princípios:
 
 1. Recebe somente entrada estruturada válida.
-2. Usa a memória conversacional volátil e recupera histórico de investigação persistido somente como contexto auxiliar em perguntas de continuidade.
+2. Usa a memória conversacional volátil e recupera investigações e candidatos de conhecimento persistidos somente como contexto auxiliar, limitado e não confiável, em perguntas conversacionais.
 3. Não promove o contexto conversacional a conhecimento permanente.
 4. Não modifica a arquitetura.
 5. Não altera o cristal diretamente.
