@@ -575,6 +575,8 @@ class VpsNyxOS:
             "--import",
             "--network",
             "network=default,model=virtio",
+            "--channel",
+            "unix,target.type=virtio,target.name=org.qemu.guest_agent.0",
             "--graphics",
             "none",
             "--noautoconsole",
