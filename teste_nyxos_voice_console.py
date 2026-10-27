@@ -17,7 +17,7 @@ class TestNyxalVoiceConsole(unittest.TestCase):
     def test_voice_console_is_loaded(self):
         self.assertIn('/interface/js/nyxal-voice-console.js', self.html)
         self.assertIn('get("modo") === "voz"', self.html)
-        self.assertIn("surface.id = 'nyxalVoiceSurface'", self.html)
+        self.assertIn('document.getElementById("nyxalVoiceSurface")', self.console)
         self.assertIn("new MutationObserver", self.console)
         self.assertIn("setInterval(tickClock, 1000)", self.console)
 
