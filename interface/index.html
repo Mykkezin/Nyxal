@@ -570,15 +570,25 @@
       animation: nyxalVoiceScanSweep 3.6s ease-in-out infinite;
     }
     @keyframes nyxalVoiceScanSweep {
-      0% { transform: translateY(-6px); opacity: 0; }
+      0% { top: -4px; opacity: 0; }
       14%,82% { opacity: .72; }
-      100% { transform: translateY(235px); opacity: 0; }
+      100% { top: 100%; opacity: 0; }
     }
     @keyframes nyxalVoiceFramePulse {
       0%,100% { opacity: .36; }
       50% { opacity: .82; }
     }
     @keyframes nyxalVoiceRingDrift { to { transform: rotate(360deg); } }
+    #nyxalVoiceStage[data-state="listening"] .nyxal-voice-face-frame { opacity: .86; }
+    #nyxalVoiceStage[data-state="processing"] .nyxal-voice-face-frame {
+      opacity: .78;
+      filter: hue-rotate(24deg) drop-shadow(0 0 6px rgba(147,115,255,.4));
+    }
+    #nyxalVoiceStage[data-state="speaking"] .nyxal-voice-face-frame {
+      opacity: .96;
+      animation-duration: 2.6s;
+    }
+    #nyxalVoiceStage[data-state="speaking"] .nyxal-voice-scanline { opacity: .4; }
     #nyxalVoiceSurface .nyxal-voice-control-card {
       position: relative;
       width: min(520px,90vw);
@@ -3099,7 +3109,7 @@
       const status = document.getElementById('nyxalVoiceMiniStatus');
       const stop = document.getElementById('nyxalVoiceStop');
       if (prompt) {
-        if (!voiceConversationActive) prompt.textContent = 'Toque no núcleo para ativar a conversa por voz';
+        if (!voiceConversationActive) prompt.textContent = 'Toque no núcleo para iniciar a conversa';
         else if (voiceUiDormant) prompt.textContent = 'Escuta residente ativa';
         else if (voiceConversationBusy) prompt.textContent = 'Só um instante…';
         else prompt.textContent = 'Pode falar naturalmente';
