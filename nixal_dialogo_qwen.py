@@ -161,36 +161,43 @@ class DialogoQwenNixal:
     @staticmethod
     def _pedido_explicitamente_autorizou(nome: str, texto: str) -> bool:
         original = texto.strip().casefold()
-        # Perguntas e pedidos informativos não autorizam uma escrita nem abrir
-        # aplicativo; esta função só reconhece comandos diretos no turno atual.
-        prefixos_informativos = (
+        if not original or "?" in original:
+            return False
+        informativos = (
             "como ", "o que ", "qual ", "quais ", "por que ", "porque ",
             "posso ", "poderia ", "devo ", "me explique ", "explique como ",
-            "quero saber ", "gostaria de saber ",
+            "quero saber ", "gostaria de saber ", "gostaria de entender ",
+            "é possível ", "e possivel ", "me ensine ",
         )
-        if "?" in original or original.startswith(prefixos_informativos):
+        if original.startswith(informativos):
             return False
-        texto = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", original)
+        # Trata negação antes de procurar o verbo de ação.
+        texto_norm = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", original)
+        negativas = (
+            "nao ", "não ", "nunca ", "sem ", "não quero ", "nao quero ",
+            "nao faça", "nao faca", "não faça", "não faca",
+        )
+        if any(neg in texto_norm for neg in negativas):
+            return False
         if nome == "salvar_nota":
-            pedido = any(x in texto for x in ("anote", "salve esta nota", "salvar nota", "registre esta nota", "guarde esta nota"))
-        elif nome == "criar_lembrete":
-            pedido = any(x in texto for x in ("me lembre", "me lembra", "crie um lembrete", "criar lembrete", "agende um lembrete", "me avise"))
-        elif nome == "abrir_aplicativo":
-            # Não usar o infinitivo genérico "abrir" como prova de intenção:
-            # "como abrir o terminal?" é pergunta, não autorização.
-            pedido = any(x in texto for x in (
-                "abra ", "abra o ", "abra a ", "abre ", "abre o ", "abre a ",
-                "inicie o aplicativo", "inicie o ", "inicie a ",
+            # Requer verbos imperativos e um objeto direto de anotação.
+            return any(x in texto_norm for x in (
+                "anote ", "anota ", "salve esta nota", "salva esta nota",
+                "salvar nota ", "registre esta nota", "registra esta nota",
+                "guarde esta nota", "guarda esta nota",
             ))
-        else:
-            return False
-        # Ações de escrita não são autorizadas por citações ou negações triviais.
-        return pedido and not any(negacao in texto for negacao in (
-            "nao faça", "nao faca", "não faça", "não faca", "nao salve", "não salve",
-            "nao crie", "não crie", "nao abra", "não abra", "nao anote", "não anote",
-            "nao me lembre", "não me lembre", "nao me avise", "não me avise",
-            "nao execute", "não execute",
-        ))
+        if nome == "criar_lembrete":
+            return any(x in texto_norm for x in (
+                "me lembre ", "me lembra ", "crie um lembrete",
+                "criar lembrete ", "agende um lembrete", "me avise ",
+                "lembre me ", "lembra me ",
+            ))
+        if nome == "abrir_aplicativo":
+            return any(x in texto_norm for x in (
+                "abra ", "abre ", "inicie o aplicativo", "inicie o ",
+                "inicie a ",
+            ))
+        return False
 
     def _executar_chamada_ferramenta(self, gerenciador: Any, chamada: Any, pedido_usuario: str) -> dict[str, Any]:
         call_id = self._valor_mensagem(chamada, "id", "") or ""
