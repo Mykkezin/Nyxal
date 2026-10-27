@@ -518,7 +518,7 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         atender.assert_not_called()
         responder.assert_called_once()
         self.assertEqual(
-            resposta["valor"]["resposta"],
+            resposta["valor"]["texto"],
             "Plano revisado com critérios de validação.",
         )
         meta = resposta["valor"]["coordenacao_especialistas"]
