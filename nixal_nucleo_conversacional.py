@@ -38,6 +38,7 @@ Princípios:
 
 from __future__ import annotations
 
+import inspect
 import json
 import math
 import re
@@ -353,15 +354,32 @@ class NucleoConversacionalNixal:
                 contexto_persistido.get("contextos", []),
                 contexto_persistido.get("conhecimentos", []),
             )
+            argumentos_responder = {
+                "historico": historico,
+                "sessao": sessao,
+                **kwargs_dialogo,
+            }
+            try:
+                parametros_responder = inspect.signature(self.dialogo.responder).parameters
+            except (TypeError, ValueError):
+                parametros_responder = {}
+            aceita_estado_runtime = (
+                "estado_runtime_nyxal" in parametros_responder
+                or any(
+                    parametro.kind is inspect.Parameter.VAR_KEYWORD
+                    for parametro in parametros_responder.values()
+                )
+            )
+            if aceita_estado_runtime:
+                argumentos_responder["estado_runtime_nyxal"] = (
+                    self._estado_runtime_para_dialogo(
+                        priorizar_dialogo,
+                        contexto_persistido,
+                    )
+                )
             resposta_dialogo = self.dialogo.responder(
                 texto_dialogo,
-                historico=historico,
-                sessao=sessao,
-                estado_runtime_nyxal=self._estado_runtime_para_dialogo(
-                    priorizar_dialogo,
-                    contexto_persistido,
-                ),
-                **kwargs_dialogo,
+                **argumentos_responder,
             )
 
             if resposta_dialogo.get("sucesso") is True:
