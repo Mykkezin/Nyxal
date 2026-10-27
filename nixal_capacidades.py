@@ -25,6 +25,7 @@ ela serve, mas também EM QUAL DOMÍNIO ela opera.
 from __future__ import annotations
 
 import json
+import math
 import os
 import tempfile
 import threading
@@ -590,6 +591,8 @@ class GerenciadorCapacidades:
                 tipo_valido = isinstance(valor, int) and not isinstance(valor, bool)
             elif esperado in {"number", "float"}:
                 tipo_valido = isinstance(valor, (int, float)) and not isinstance(valor, bool)
+                if tipo_valido and isinstance(valor, float) and not math.isfinite(valor):
+                    return f"O argumento '{caminho}' precisa ser um número finito."
             else:
                 tipo_valido = isinstance(valor, tipo_python)
             if not tipo_valido:
@@ -599,7 +602,8 @@ class GerenciadorCapacidades:
             if isinstance(enum, list) and valor not in enum:
                 return f"O argumento '{caminho}' não pertence aos valores permitidos."
             if isinstance(valor, (int, float)) and not isinstance(valor, bool):
-                minimo, maximo = schema.get("minimo"), schema.get("maximo")
+                minimo = schema.get("minimo", schema.get("minimum"))
+                maximo = schema.get("maximo", schema.get("maximum"))
                 if isinstance(minimo, (int, float)) and valor < minimo:
                     return f"O argumento '{caminho}' está abaixo do mínimo permitido."
                 if isinstance(maximo, (int, float)) and valor > maximo:
@@ -627,7 +631,10 @@ class GerenciadorCapacidades:
                                 return erro
             if isinstance(valor, list):
                 item_schema = schema.get("items")
+                limite_minimo = schema.get("min_items", schema.get("minItems"))
                 limite = schema.get("max_items", schema.get("maxItems"))
+                if isinstance(limite_minimo, int) and len(valor) < limite_minimo:
+                    return f"O argumento '{caminho}' contém poucos itens."
                 if isinstance(limite, int) and len(valor) > limite:
                     return f"O argumento '{caminho}' contém itens demais."
                 if isinstance(item_schema, dict):
@@ -664,7 +671,11 @@ class GerenciadorCapacidades:
         capacidade_registrada = self.capacidades.get(nome)
         bloqueio = None
         if capacidade_registrada is not None:
-            if capacidade_registrada.politica == "acao_com_pedido_explicito" and not autorizacao_explicita:
+            if capacidade_registrada.politica not in {
+                "somente_leitura", "acao_com_pedido_explicito", "requer_confirmacao",
+            }:
+                bloqueio = "Política de capacidade inválida; execução bloqueada."
+            elif capacidade_registrada.politica == "acao_com_pedido_explicito" and not autorizacao_explicita:
                 bloqueio = "Ação exige pedido explícito do usuário; nada foi alterado."
             elif capacidade_registrada.politica == "requer_confirmacao" and not confirmacao:
                 bloqueio = "Ação pendente de confirmação; nada foi alterado."
