@@ -71,3 +71,11 @@ METAR/TAF são consultados na API pública do [AviationWeather.gov Data API](htt
 - O controle de computador é limitado a nomes de aplicativos permitidos e diagnósticos fixos. Não existe execução de comandos arbitrários, código gerado pelo modelo ou shell livre.
 - Não há rotas para enviar e-mails, modificar Calendar ou acionar Home Assistant.
 - Não afirmar que uma ferramenta funcionou sem resultado real. Diferenciar configuração pendente, falha externa e execução concluída.
+
+
+## Opt-ins para function calling
+
+- Por padrão, só as consultas de baixo impacto `obter_hora`, `pesquisar_web`, `consultar_metar_taf` e `executar_diagnostico` são anunciadas ao modelo.
+- Para permitir leituras de arquivos pessoais, Gmail, agenda, Home Assistant e notas locais: `NYXAL_ENABLE_PRIVATE_READ_TOOLS=1`.
+- Para registrar e anunciar escrita de notas, criação de lembretes e abertura de apps permitidos: `NYXAL_ENABLE_MUTABLE_TOOLS=1`. Mesmo com esse opt-in, cada chamada de estado precisa de pedido explícito no turno atual e passa pela política do gerenciador; funções que exigem confirmação separada continuam bloqueadas até existir um fluxo de confirmação aprovado.
+- Os opt-ins são independentes. Ter acesso a dados privados não habilita ações de escrita; habilitar ações não abre leituras privadas.
