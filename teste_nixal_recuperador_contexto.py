@@ -115,17 +115,27 @@ class TesteRecuperadorContextoNixal(unittest.TestCase):
 
     def test_tokens_e_segredos_de_candidatos_sao_redigidos(self) -> None:
         segredo = "TOKEN-NAO-PODE-SAIR-98765"
+        bearer = "BEARER-NAO-PODE-SAIR-12345"
+        gen_token = "TOKEN-GENERICO-NAO-PODE-SAIR-67890"
         self.conhecimento.registrar(
             candidato(
-                f"A estratégia de cache local inclui validação de origem; access_token={segredo}",
+                "A estratégia de cache local inclui validação de origem; "
+                f"access_token={segredo}; Authorization: Bearer {bearer}; "
+                f"token={gen_token}",
                 "arquitetura",
             )
         )
         resultado = self.recuperador.consultar("estratégia de cache local validação origem")
         candidatos = resultado["conhecimentos_candidatos"]
         self.assertEqual(len(candidatos), 1)
-        self.assertNotIn(segredo, candidatos[0]["texto"])
-        self.assertIn("access_token=[REDACTED]", candidatos[0]["texto"])
+        texto_seguro = candidatos[0]["texto"]
+        for valor in (segredo, bearer, gen_token):
+            with self.subTest(valor=valor):
+                self.assertNotIn(valor, texto_seguro)
+        self.assertIn("access_token=[REDACTED]", texto_seguro)
+        self.assertIn("Bearer [REDACTED]", texto_seguro)
+        self.assertIn("authorization=[REDACTED]", texto_seguro)
+        self.assertIn("token=[REDACTED]", texto_seguro)
 
     def test_consulta_vazia_e_bloqueada_e_limites_ficam_bem_delimitados(self) -> None:
         consulta = self.recuperador.consultar("   ")
