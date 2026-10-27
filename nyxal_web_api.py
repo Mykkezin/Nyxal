@@ -13,6 +13,12 @@ from pathlib import Path
 from secrets import compare_digest, token_urlsafe
 from threading import BoundedSemaphore
 
+VOICE_MODULE_DIR = Path(__file__).resolve().parent / "deploy" / "voice"
+if str(VOICE_MODULE_DIR) not in sys.path:
+    sys.path.insert(0, str(VOICE_MODULE_DIR))
+
+from nyxal_voice_prosody import choose_speech_profile, prepare_spoken_reply
+
 from nixal_nucleo_conversacional import (
     NucleoConversacionalNixal,
 )
@@ -118,13 +124,13 @@ try:
             float(
                 os.environ.get(
                     "NYXAL_KOKORO_SPEED",
-                    "1.03",
+                    "1.0",
                 )
             ),
         ),
     )
 except ValueError:
-    KOKORO_SPEED = 1.03
+    KOKORO_SPEED = 1.0
 
 WHISPER_MODEL_NAME = os.environ.get(
     "NYXAL_WHISPER_MODEL",
@@ -452,8 +458,9 @@ def suavizar_audio_kokoro(
     return audio
 
 
-def generate_kokoro_audio(texto: str) -> bytes:
+def generate_kokoro_audio(texto: str, speed: float | None = None) -> bytes:
     global KOKORO_PIPELINE
+    velocidade = KOKORO_SPEED if speed is None else min(1.15, max(0.90, float(speed)))
 
     if KOKORO_PIPELINE is None:
         from kokoro import KPipeline
@@ -470,7 +477,7 @@ def generate_kokoro_audio(texto: str) -> bytes:
     for _, _, audio in KOKORO_PIPELINE(
         texto_para_fala(texto),
         voice=KOKORO_VOICE,
-        speed=KOKORO_SPEED,
+        speed=velocidade,
     ):
         chunks.append(audio)
 
@@ -1138,8 +1145,34 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 )
                 return
 
+            contexto_usuario = (
+                payload.get("contexto_usuario", "")
+                if isinstance(payload, dict)
+                else ""
+            )
+            if not isinstance(contexto_usuario, str):
+                self._send_json(
+                    400,
+                    {
+                        "estado": "entrada_invalida",
+                        "motivo": "O campo 'contexto_usuario' precisa ser um texto.",
+                    },
+                )
+                return
+            contexto_usuario = contexto_usuario[:4000]
+            perfil_fala = choose_speech_profile(
+                contexto_usuario,
+                texto,
+                KOKORO_SPEED,
+            )
+            texto_falado = prepare_spoken_reply(
+                texto,
+                contexto_usuario,
+                perfil_fala,
+            ) or texto.strip()
+
             try:
-                audio = generate_kokoro_audio(texto)
+                audio = generate_kokoro_audio(texto_falado, speed=perfil_fala.speed)
 
                 self._send_bytes(
                     200,
@@ -1172,7 +1205,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                                 "--output_file",
                                 arquivo_audio.name,
                             ],
-                            input=texto.strip() + "\n",
+                            input=texto_falado.strip() + "\n",
                             text=True,
                             capture_output=True,
                             timeout=30,
