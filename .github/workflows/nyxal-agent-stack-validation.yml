@@ -90,7 +90,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -267,10 +267,8 @@ jobs:
         with:
           persist-credentials: false
           submodules: false
-      - name: Configure Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compile VPS SSH key validation
         run: python -m py_compile nixal_vps.py teste_nixal_vps.py
       - name: Run VPS SSH key validation regressions
