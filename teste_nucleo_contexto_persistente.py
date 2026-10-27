@@ -296,6 +296,90 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         )
         self.assertNotIn("CANDIDATOS DE CONHECIMENTO", texto_usuario)
 
+    def test_core_expone_trilha_de_ferramentas_sem_argumentos_ou_resultados_privados(self) -> None:
+        cliente = FakeChatClient()
+        dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
+        payload_privado = "api_key=segredo-telemetria /home/operador/.ssh/authorized_keys"
+
+        def responder_com_ferramentas(
+            texto: str,
+            historico=None,
+            sessao=None,
+            estado_runtime_nyxal=None,
+            **kwargs,
+        ):
+            return {
+                "sucesso": True,
+                "estado": "resposta_gerada",
+                "resposta": "Consultei as ferramentas disponíveis.",
+                "ferramentas_executadas": [
+                    {
+                        "name": "pesquisar_web",
+                        "ok": True,
+                        "tool_call_id": "call-privado",
+                        "argumentos": {"consulta": payload_privado},
+                        "resultado": payload_privado,
+                    },
+                    {
+                        "name": "consultar_metar_taf",
+                        "ok": False,
+                        "argumentos": {"icao": "SBSP"},
+                        "resultado": payload_privado,
+                    },
+                    {
+                        "name": "nome ferramenta inválido",
+                        "ok": False,
+                        "resultado": payload_privado,
+                    },
+                ],
+            }
+
+        dialogo.responder = responder_com_ferramentas
+        nucleo = self.criar_nucleo(
+            dialogo=dialogo,
+            memoria_investigacao=self.memoria,
+            contexto_historico_relevante=self.contexto,
+            memoria_conhecimento=self.memoria_conhecimento,
+        )
+        resposta = nucleo.processar(
+            nucleo.interface.criar_entrada(
+                "Onde paramos na investigação do runner privado do GitHub Actions?",
+                sessao="sessao-telemetria-ferramentas",
+            )
+        )
+
+        telemetria = resposta["valor"]["execucao_ferramentas"]
+        self.assertEqual(telemetria["origem"], "dialogo_qwen")
+        self.assertEqual(telemetria["estado"], "parcial_ou_falha")
+        self.assertEqual(telemetria["quantidade"], 3)
+        self.assertTrue(telemetria["argumentos_e_resultados_omitidos"])
+        self.assertEqual(
+            telemetria["itens"],
+            [
+                {"nome": "pesquisar_web", "execucao_ok": True, "estado": "concluida"},
+                {"nome": "consultar_metar_taf", "execucao_ok": False, "estado": "falha_ou_recusa"},
+                {"nome": "ferramenta_nao_identificada", "execucao_ok": False, "estado": "falha_ou_recusa"},
+            ],
+        )
+        publicado = str(telemetria)
+        self.assertNotIn(payload_privado, publicado)
+        self.assertNotIn("call-privado", publicado)
+        self.assertNotIn("SBSP", publicado)
+
+    def test_resumidor_de_ferramentas_distingue_ausencia_de_telemetria(self) -> None:
+        nenhuma = NucleoConversacionalNixal._resumir_execucao_ferramentas({
+            "sucesso": True,
+            "ferramentas_executadas": [],
+        })
+        indisponivel = NucleoConversacionalNixal._resumir_execucao_ferramentas({
+            "sucesso": False,
+            "estado": "qwen_nao_respondeu",
+        })
+        self.assertEqual(nenhuma["estado"], "nenhuma")
+        self.assertEqual(nenhuma["quantidade"], 0)
+        self.assertEqual(indisponivel["estado"], "telemetria_indisponivel")
+        self.assertEqual(indisponivel["itens"], [])
+
     def test_core_compartilha_catalogo_de_capacidades_com_dialogo(self) -> None:
         cliente = FakeChatClient()
         dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
