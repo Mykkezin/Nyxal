@@ -172,8 +172,16 @@ def main() -> int:
         )
         return 2
 
-    storage = Path(args.storage or os.environ.get("NYXOS_VPS_STORAGE", str(Path.home() / "NyxOS" / "VPS"))).expanduser().resolve()
-    image = Path(args.image).expanduser().resolve() if args.image else storage / DEFAULT_IMAGE_NAME
+    default_storage = os.environ.get(
+        "NYXOS_DELTA_VM_STORAGE",
+        os.environ.get("NYXOS_VPS_STORAGE", str(Path.home() / "NyxOS" / "VPS")),
+    )
+    default_image = os.environ.get(
+        "NYXOS_VPS_BASE_IMAGE",
+        str(Path.home() / "NyxOS" / "VPS" / DEFAULT_IMAGE_NAME),
+    )
+    storage = Path(args.storage or default_storage).expanduser().resolve()
+    image = Path(args.image).expanduser().resolve() if args.image else Path(default_image).expanduser().resolve()
     os.environ["NYXOS_VPS_STORAGE"] = str(storage)
 
     try:
