@@ -113,6 +113,8 @@ Para executar os testes locais da branch:
 ./.venv/bin/python -m unittest -v teste_nyxal_function_calling teste_nyxal_tool_use
 ```
 
+O workflow `Nyxal MCP stdio validation` também testa o protocolo stdio e as políticas das ferramentas em um runner hospedado isolado; ele não exige credenciais pessoais nem acesso a serviços locais.
+
 ## Segurança e limites conhecidos
 
 - Conteúdo de páginas web, arquivos, mensagens, eventos, NOTAMs e cartas é dado externo não confiável, nunca instrução privilegiada.
