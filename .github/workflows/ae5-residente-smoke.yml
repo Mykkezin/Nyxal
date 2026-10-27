@@ -1,0 +1,51 @@
+name: Nyxal AE5 resident activation smoke test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "deploy/systemd/nyxos-residente.service"
+      - "deploy/systemd/nyxal-api.service"
+      - "executar_nyxos_residente.py"
+      - "nixal_ciclo_residente.py"
+      - "nixal_auto_experimento_ae2.py"
+      - "nixal_ciclo_evolucao_ae4.py"
+      - "nixal_descoberta_continua_ae5.py"
+      - "nixal_coletor_dataset_dual_ae5.py"
+      - "teste_ativacao_ae5_residente.py"
+      - ".github/workflows/ae5-residente-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "deploy/systemd/nyxos-residente.service"
+      - "executar_nyxos_residente.py"
+      - "nixal_ciclo_residente.py"
+      - "nixal_descoberta_continua_ae5.py"
+      - "nixal_coletor_dataset_dual_ae5.py"
+      - "teste_ativacao_ae5_residente.py"
+      - ".github/workflows/ae5-residente-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ae5-resident-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  resident-wiring:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile structural test
+        run: python -m py_compile teste_ativacao_ae5_residente.py
+      - name: Verify resident AE5 wiring and guardrails
+        run: python -m unittest -v teste_ativacao_ae5_residente.py
