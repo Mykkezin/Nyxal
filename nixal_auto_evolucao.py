@@ -423,7 +423,7 @@ class AutoEvolucaoGovernadaNixOS:
             "hipotese": hipotese,
             "hipotese_gerada_automaticamente": hipotese_auto_formulada,
             "estado_hipotese": (
-                hipotese_obj.get("estado_atual", "provisoria")
+                self._texto_limitado(hipotese_obj.get("estado_atual"), 32) or "provisoria"
                 if isinstance(hipotese_obj, dict)
                 else "provisoria"
             ),
@@ -435,7 +435,7 @@ class AutoEvolucaoGovernadaNixOS:
             },
             "evidencias": {
                 "ciclo_sucesso": ciclo.get("sucesso") if isinstance(ciclo.get("sucesso"), bool) else None,
-                "estado_ciclo": ciclo.get("estado"),
+                "estado_ciclo": self._texto_limitado(ciclo.get("estado"), 40) or "desconhecido",
                 "necessidade_observada": copy.deepcopy(necessidade),
                 "origem_hipotese": (
                     "ae1_hipotese_observacional_automatica"
