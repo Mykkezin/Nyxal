@@ -129,17 +129,10 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         self.assertIn("access_token=[REDACTED]", texto_usuario)
         self.assertNotIn("abc123", texto_usuario)
 
-    def test_core_routes_explicit_provider_through_canonical_session_history(self) -> None:
+    def test_core_ignores_legacy_remote_provider_and_preserves_canonical_session_history(self) -> None:
         cliente = FakeChatClient()
         dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
         hub = Mock()
-        hub.responder.return_value = {
-            "sucesso": True,
-            "estado": "resposta_gerada",
-            "provedor": "openai",
-            "resposta": "Resposta remota de teste.",
-            "roteamento": {"classe": "conhecimento_geral", "provedor": "openai"},
-        }
         dialogo.agent_hub = hub
         memoria_conversacional = MemoriaConversacionalNixal()
         nucleo = NucleoConversacionalNixal(
@@ -153,6 +146,10 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         primeira_mensagem = (
             "Onde paramos na investigação do runner privado do GitHub Actions?"
         )
+        resposta_local = (
+            "Encontrei uma investigação anterior; ela é contexto histórico, "
+            "não confirmação do estado atual."
+        )
 
         entrada = nucleo.interface.criar_entrada(
             primeira_mensagem, sessao=sessao
@@ -164,31 +161,42 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         primeira = nucleo.processar(entrada)
 
         self.assertEqual(primeira["valor"]["modo"], "resposta_conversacional")
-        self.assertEqual(primeira["resposta"], "Resposta remota de teste.")
-        kwargs = hub.responder.call_args.kwargs
-        self.assertEqual(kwargs["provedor"], "openai")
-        self.assertEqual(kwargs["sessao"], sessao)
-        self.assertEqual(kwargs["contexto_sistema"], contexto_sistema)
+        self.assertEqual(primeira["resposta"], resposta_local)
+        self.assertEqual(len(cliente.calls), 1)
+        self.assertEqual(cliente.calls[0]["model"], "fixture-model")
+        self.assertIn('"cpu_percent":12.5', cliente.calls[0]["messages"][0]["content"])
+        texto_usuario_primeiro = "\n".join(
+            item["content"]
+            for item in cliente.calls[0]["messages"]
+            if item["role"] == "user"
+        )
+        self.assertIn("CONTEXTO DE INVESTIGAÇÕES ANTERIORES", texto_usuario_primeiro)
+        # Seleções legadas como OpenAI/Gemini não reativam o hub externo.
+        hub.responder.assert_not_called()
 
+        segunda_mensagem = "E qual é o próximo passo?"
         segunda_entrada = nucleo.interface.criar_entrada(
-            "E qual é o próximo passo?", sessao=sessao
+            segunda_mensagem, sessao=sessao
         )
         segunda_entrada["valor"]["opcoes_dialogo"] = {
             "provedor": "openai",
             "contexto_sistema": contexto_sistema,
         }
         segunda = nucleo.processar(segunda_entrada)
-        self.assertEqual(segunda["valor"]["modo"], "resposta_conversacional")
 
-        historico_remoto = hub.responder.call_args.kwargs["historico_externo"]
+        self.assertEqual(segunda["valor"]["modo"], "resposta_conversacional")
+        self.assertEqual(segunda["resposta"], resposta_local)
+        self.assertEqual(len(cliente.calls), 2)
+        historico_dialogo = cliente.calls[1]["messages"]
         self.assertIn(
             {"role": "user", "content": primeira_mensagem},
-            historico_remoto,
+            historico_dialogo,
         )
         self.assertIn(
-            {"role": "assistant", "content": "Resposta remota de teste."},
-            historico_remoto,
+            {"role": "assistant", "content": resposta_local},
+            historico_dialogo,
         )
+        self.assertEqual(hub.responder.call_count, 0)
 
         historico_canonico = memoria_conversacional.obter(sessao)["mensagens"]
         self.assertEqual(
@@ -197,11 +205,8 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         )
         self.assertEqual(
             [item["texto"] for item in historico_canonico][-2:],
-            ["E qual é o próximo passo?", "Resposta remota de teste."],
+            [segunda_mensagem, resposta_local],
         )
-        self.assertEqual(hub.responder.call_count, 2)
-        # O núcleo fornece o histórico ao hub; a memória paralela do hub não deve
-        # registrar novamente os mesmos turnos quando historico_externo é usado.
 
     def test_memoria_corrompida_nao_e_classificada_como_historico_ausente(self) -> None:
         caminho_corrompido = Path(self.tempdir.name) / "memoria_corrompida.json"
