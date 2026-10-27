@@ -56,6 +56,7 @@ from nixal_composicao_56_3_9 import (
 )
 from nixal_memoria_conversacional import (
     MemoriaConversacionalNixal,
+    sanitizar_texto_memoria,
 )
 from nixal_memoria_investigacao import MemoriaInvestigacaoNixal
 from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
@@ -609,17 +610,10 @@ class NucleoConversacionalNixal:
         }
 
     @staticmethod
-    def _texto_curto_contexto(valor: Any, limite: int = 320) -> str:
+    def _texto_curto_contexto(self, valor: Any, limite: int = 320) -> str:
         if not isinstance(valor, str):
             return ""
-        texto = re.sub(r"\s+", " ", valor).strip()
-        texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
-        texto = re.sub(
-            r"(?i)\b(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)\b\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+",
-            r"\1=[REDACTED]",
-            texto,
-        )
-        return texto[:limite]
+        return sanitizar_texto_memoria(valor, limite)
 
     def _resumir_contextos_historicos(
         self,
