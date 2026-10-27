@@ -127,7 +127,7 @@ class DialogoQwenNixal:
         # ao modelo segue opt-ins separados para dados privados e mutações.
         nomes_permitidos = {
             "obter_hora", "pesquisar_web", "consultar_metar_taf",
-            "executar_diagnostico",
+            "consultar_notam_aisweb", "consultar_cartas_aisweb", "executar_diagnostico",
         }
         if os.environ.get(
             "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
