@@ -259,7 +259,6 @@ class DialogoQwenNixal:
         return disponiveis
 
     @staticmethod
-    @staticmethod
     def _pedido_explicitamente_autorizou(nome: str, texto: str) -> bool:
         original = texto.strip().casefold()
         if (
