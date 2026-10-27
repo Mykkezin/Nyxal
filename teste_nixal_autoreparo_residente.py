@@ -23,12 +23,27 @@ class RelogioFalso:
 
 
 class SistemaFalso:
-    def __init__(self, *, grafico_ativo: bool = False, interface_ativa: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        grafico_ativo: bool = False,
+        interface_ativa: bool = False,
+        interface_habilitada: bool = True,
+    ) -> None:
         self.grafico_ativo = grafico_ativo
         self.interface_ativa = interface_ativa
+        self.interface_habilitada = interface_habilitada
         self.reinicios: list[list[str]] = []
 
     def __call__(self, argumentos, **_kwargs):
+        if argumentos[:3] == ["systemctl", "--user", "is-enabled"]:
+            unidade = argumentos[-1]
+            habilitada = (
+                self.interface_habilitada
+                if unidade == "nyxos-interface.service"
+                else False
+            )
+            return subprocess.CompletedProcess(argumentos, 0 if habilitada else 1)
         if argumentos[:3] == ["systemctl", "--user", "is-active"]:
             unidade = argumentos[-1]
             ativo = (
@@ -156,6 +171,33 @@ class AutoreparoResidenteTests(unittest.TestCase):
                 sistema.reinicios,
                 [["systemctl", "--user", "restart", "nyxos-interface.service"]],
             )
+
+    def test_nao_reativa_interface_desativada_pelo_operador(self):
+        with tempfile.TemporaryDirectory() as diretorio:
+            sistema = SistemaFalso(
+                grafico_ativo=True,
+                interface_ativa=False,
+                interface_habilitada=False,
+            )
+            reparo = AutoreparoResidenteNixOS(
+                health_checker=lambda: True,
+                command_runner=sistema,
+                clock=RelogioFalso(),
+                arquivo_auditoria=Path(diretorio) / "autoreparo.jsonl",
+            )
+
+            resultado = reparo.verificar_e_reparar()
+
+            self.assertEqual(
+                resultado["interface"]["estado"],
+                "desativada_por_configuracao",
+            )
+            self.assertEqual(
+                resultado["interface"]["reparo"]["estado"],
+                "servico_desativado_pelo_operador",
+            )
+            self.assertTrue(resultado["sucesso"])
+            self.assertEqual(sistema.reinicios, [])
 
     def test_auditoria_nao_grava_detalhes_de_segredos(self):
         with tempfile.TemporaryDirectory() as diretorio:

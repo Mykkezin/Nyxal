@@ -73,6 +73,10 @@ on:
       - "deploy/agent/**"
       - "skills/**"
       - "deploy/voice/**"
+      - "deploy/delta/**"
+      - "deploy/vps/preparar_base_ubuntu.sh"
+      - "docs/DELTA_MVP_ACCEPTANCE.md"
+      - "docs/DELTA_PLATFORM_SPEC.md"
   push:
     branches:
       - main
@@ -146,6 +150,10 @@ on:
       - "deploy/agent/**"
       - "skills/**"
       - "deploy/voice/**"
+      - "deploy/delta/**"
+      - "deploy/vps/preparar_base_ubuntu.sh"
+      - "docs/DELTA_MVP_ACCEPTANCE.md"
+      - "docs/DELTA_PLATFORM_SPEC.md"
   workflow_dispatch:
 
 concurrency:
@@ -285,6 +293,12 @@ jobs:
           bash -n deploy/agent/verificar_nyxal_agent.sh
           bash -n deploy/voice/instalar_pipecat_experimental.sh
           bash -n deploy/voice/diagnosticar_runtime_local.sh
+      - name: Validate DELTA MVP-0 bootstrap scripts and guardrails
+        run: |
+          bash -n deploy/delta/preflight_vm.sh deploy/delta/diagnosticar_vm_mvp0.sh deploy/delta/preparar_storage_mvp0.sh deploy/vps/preparar_base_ubuntu.sh
+          python3 -m py_compile deploy/delta/criar_vm_mvp0.py deploy/delta/teste_criar_vm_mvp0.py
+          python3 -m unittest discover -s deploy/delta -p 'teste_*.py' -v
+
       - name: Run focused unit tests
         run: |
           python3 -m unittest -v \

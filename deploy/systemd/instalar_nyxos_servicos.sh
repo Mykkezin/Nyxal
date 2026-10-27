@@ -86,12 +86,21 @@ install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
 rm -f "${AUTOSTART_DIR}/nyxos-shell.desktop"
 
 systemctl --user daemon-reload
+
+# A interface válida já está aberta no Chrome do usuário. Não lançar outro desktop
+# em paralelo nem reativar a miniatura/overlay de voz de instalações antigas.
+# O serviço fica instalado para diagnóstico, mas desativado no início automático.
+for unidade in nyxos-interface.service nyxal-desktop.service; do
+    if systemctl --user disable --now "${unidade}" >/dev/null 2>&1; then
+        echo "Interface duplicada desativada: ${unidade}"
+    fi
+done
+
 if ! systemctl --user enable --now nyxos.target; then
     echo "ERRO: não foi possível ativar nyxos.target." >&2
     systemctl --user --no-pager --full status nyxos.target nyxal-api.service nyxos-residente.service || true
     exit 1
 fi
-systemctl --user enable nyxos-interface.service
 
 # enable --now não reinicia unidades que já estão ativas. Reinicie API e residente
 # para aplicar imediatamente o código/unidades recém-instalados.
@@ -111,16 +120,9 @@ else
     LINGER_STATUS="não foi possível ativar automaticamente"
 fi
 
-if systemctl --user is-active --quiet graphical-session.target; then
-    if systemctl --user restart nyxos-interface.service; then
-        SHELL_STATUS="iniciado"
-    else
-        SHELL_STATUS="falha ao iniciar; consulte o diagnóstico local"
-        CORE_RESTART_FAILED=1
-    fi
-else
-    SHELL_STATUS="aguardando a próxima sessão gráfica"
-fi
+# A janela gráfica fica sob controle do usuário: preserva a sessão correta do Chrome
+# e não cria uma segunda interface sobre os outros aplicativos.
+SHELL_STATUS="desativado por padrão para preservar a interface correta do Chrome"
 
 echo "Serviços NyxOS instalados e residência ativada."
 echo "API: $(systemctl --user is-active nyxal-api.service || true)"
