@@ -60,6 +60,10 @@ Configuração inicial: VM `delta-mvp0`, 2 vCPUs, 2048 MiB de RAM, disco QCOW2 d
 
 **Aceite do spike:** a VM aparece em `virsh list --all`, completa o boot, recebe endereço pela rede default e permite acesso por console/SSH. Registrar comandos e resultados reais. Se `cloud-localds`, a rede libvirt ou a chave pública não estiverem disponíveis, parar e resolver a pré-condição; não reconfigurar automaticamente o host.
 
+O diagnóstico `deploy/delta/diagnosticar_vm_mvp0.sh` verifica, sem mutações, se o XML da VM contém o canal `org.qemu.guest_agent.0` e envia apenas o RPC `guest-ping` quando a VM está executando e o canal existe. `GUEST_AGENT_PING=success` demonstra que o agente respondeu; falha ou ausência não deve provocar reinstalação/reinício automático pelo host. Inspecionar o serviço dentro da VM usando o console e registrar evidência.
+
+Na última evidência de host anotada neste fluxo (27/10/2026), o serviço `qemu-guest-agent` foi observado inativo. Esse dado é histórico, não uma confirmação do estado atual; repetir o diagnóstico após mudanças na definição da VM. Até haver `GUEST_AGENT_CHANNEL=present` e `GUEST_AGENT_PING=success`, considerar o canal/agente **BLOQUEADO para aceite físico**.
+
 Este spike não satisfaz o aceite da imagem DELTA completa, não demonstra desktop NyxOS, nem substitui a comparação de base da Etapa 1.
 
 ## Etapa 1 — Comparar bases em VM
