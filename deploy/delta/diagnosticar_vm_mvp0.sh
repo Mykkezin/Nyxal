@@ -90,6 +90,7 @@ present = any(
 )
 print("present" if present else "absent")
 ' 2>/dev/null)"; then
+        :
       else
         GUEST_AGENT_CHANNEL="unknown"
         echo 'GUEST_AGENT_CHANNEL_REASON=xml_parse_failed'
