@@ -1283,9 +1283,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         mensagem = payload.get("mensagem")
+        # Deixe a integração criar a sessão quando o cliente não envia uma.
+        # Um token aleatório aqui não existe no gerenciador de sessões e causava 422
+        # quando o chat local fazia fallback do endpoint /api/agent/chat.
         sessao_id = payload.get("sessao")
-        if self.path == "/api/agent/chat" and sessao_id is None:
-            sessao_id = token_urlsafe(18)
 
         if not isinstance(mensagem, str) or not mensagem.strip():
             self._send_json(
