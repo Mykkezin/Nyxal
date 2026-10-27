@@ -100,7 +100,8 @@ class TestNyxalFunctionCalling(unittest.TestCase):
 
     def test_dados_privados_exigem_opt_in_de_ambiente(self):
         dialogo = DialogoQwenNixal(cliente=ClienteFake([]))
-        manager = self.manager()
+        manager = GerenciadorCapacidades()
+        registrar_capacidades_operacionais(manager, incluir_dados_privados=True)
         with patch.dict(os.environ, {"NYXAL_ENABLE_PRIVATE_READ_TOOLS": "1"}):
             nomes = {
                 item["function"]["name"]
@@ -108,6 +109,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             }
         self.assertIn("listar_arquivos", nomes)
         self.assertIn("ler_arquivo", nomes)
+        self.assertIn("consultar_emails_google", nomes)
         self.assertNotIn("salvar_nota", nomes)
         self.assertNotIn("criar_lembrete", nomes)
         self.assertNotIn("abrir_aplicativo", nomes)
