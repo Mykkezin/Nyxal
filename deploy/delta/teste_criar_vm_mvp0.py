@@ -155,7 +155,6 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
             patch.object(delta_vm, "verify_image", return_value="a" * 64),
             patch.object(delta_vm, "check_libvirt"),
             patch.object(delta_vm, "free_space", return_value=(100 * delta_vm.GIB, self.root)),
-            patch.object(delta_vm, "run") as run,
             patch("builtins.input", return_value="n"),
             patch("sys.stdout", new=io.StringIO()),
         ):
