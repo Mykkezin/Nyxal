@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path
 
 from mcp import Client, StdioServerParameters
 
 BASE_DIR = Path(__file__).resolve().parent
-PYTHON = BASE_DIR / ".venv" / "bin" / "python"
+PYTHON = Path(sys.executable)
 SERVER = BASE_DIR / "nyxal_mcp_tools.py"
 REQUIRED_TOOLS = {
     "status_ferramentas",
@@ -20,10 +21,6 @@ REQUIRED_TOOLS = {
 
 
 async def main() -> None:
-    if not PYTHON.is_file():
-        raise SystemExit(
-            f"Virtualenv ausente: {PYTHON}. Instale a dependência MCP opcional primeiro."
-        )
     if not SERVER.is_file():
         raise SystemExit(f"Servidor MCP ausente: {SERVER}")
 
