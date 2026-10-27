@@ -22,6 +22,7 @@ on:
       - "nixal_agente_qwen.py"
       - "nixal_capacidades.py"
       - "nixal_tool_use.py"
+      - "nyxal_mcp_tools.py"
       - "teste_nixal_tool_use.py"
       - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
       - "nixal_transporte_conversacional.py"
@@ -90,6 +91,7 @@ on:
       - "nixal_agente_qwen.py"
       - "nixal_capacidades.py"
       - "nixal_tool_use.py"
+      - "nyxal_mcp_tools.py"
       - "teste_nixal_tool_use.py"
       - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
       - "nixal_transporte_conversacional.py"
@@ -215,6 +217,7 @@ jobs:
             nixal_agente_qwen.py \
             nixal_capacidades.py \
             nixal_tool_use.py \
+            nyxal_mcp_tools.py \
             teste_nixal_tool_use.py \
             nixal_transporte_conversacional.py \
             nixal_integracao_sessao_transporte.py \
