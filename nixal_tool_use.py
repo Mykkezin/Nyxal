@@ -637,11 +637,37 @@ def executar_diagnostico(tipo: str) -> dict[str, Any]:
             "comandos_arbitrarios_habilitados": False}
 
 
-def registrar_capacidades_operacionais(capacidades: Any, *, incluir_acoes: bool = False,
-                                        store: NotasLembretesNixOS | None = None) -> None:
-    """Acrescenta adaptadores ao GerenciadorCapacidades já usado pelo sistema."""
+def registrar_capacidades_operacionais(
+    capacidades: Any,
+    *,
+    incluir_acoes: bool = False,
+    incluir_dados_privados: bool = False,
+    store: NotasLembretesNixOS | None = None,
+) -> None:
+    """Registra ferramentas com perfil seguro por padrão.
+
+    Pesquisa pública, METAR/TAF e diagnósticos fixos ficam disponíveis por
+    padrão. Arquivos pessoais, Gmail, agenda, Home Assistant e notas exigem
+    opt-in; escrita/notificações/abertura de aplicativos exigem outro opt-in.
+    """
     if not hasattr(capacidades, "registrar") or not hasattr(capacidades, "capacidades"):
         raise TypeError("É necessário fornecer o GerenciadorCapacidades existente.")
+    if not isinstance(incluir_acoes, bool) or not isinstance(incluir_dados_privados, bool):
+        raise TypeError("Os opt-ins precisam ser booleanos.")
+    if os.environ.get("NYXAL_ENABLE_PRIVATE_READ_TOOLS", "").strip().lower() in {"1", "true", "yes", "on"}:
+        incluir_dados_privados = True
+    if os.environ.get("NYXAL_ENABLE_MUTABLE_TOOLS", "").strip().lower() in {"1", "true", "yes", "on"}:
+        incluir_acoes = True
+
+    ferramentas_privadas = {
+        "buscar_arquivos",
+        "ler_arquivo_usuario",
+        "consultar_emails_google",
+        "ler_email_google",
+        "consultar_agenda_google",
+        "consultar_home_assistant",
+        "listar_notas_lembretes",
+    }
     notas = store or NotasLembretesNixOS()
 
     try:
@@ -656,6 +682,8 @@ def registrar_capacidades_operacionais(capacidades: Any, *, incluir_acoes: bool 
                   argumentos: dict[str, dict[str, Any]], dominio: str, evidencias: list[str],
                   politica: str = "somente_leitura") -> None:
         if nome in capacidades.capacidades:
+            return
+        if nome in ferramentas_privadas and not incluir_dados_privados:
             return
         # Nunca registra escrita no registro legado que não consiga aplicar a guarda.
         if politica != "somente_leitura" and not (possui_politica and possui_guarda):
