@@ -86,6 +86,10 @@ on:
       - "deploy/agent/**"
       - "skills/**"
       - "deploy/voice/**"
+      - "deploy/delta/**"
+      - "deploy/vps/preparar_base_ubuntu.sh"
+      - "docs/DELTA_MVP_ACCEPTANCE.md"
+      - "docs/DELTA_PLATFORM_SPEC.md"
   workflow_dispatch:
 
 concurrency:
@@ -275,3 +279,31 @@ jobs:
         run: python -m py_compile nixal_vps.py teste_nixal_vps.py
       - name: Run VPS SSH key validation regressions
         run: python -m unittest -v teste_nixal_vps.py
+
+  validate-delta-mvp:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout without optional submodules
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - name: Configure Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check shell script syntax
+        run: |
+          for script in \
+            deploy/delta/preflight_vm.sh \
+            deploy/delta/diagnosticar_vm_mvp0.sh \
+            deploy/delta/preparar_storage_mvp0.sh \
+            deploy/vps/preparar_base_ubuntu.sh; do
+            bash -n "$script"
+          done
+      - name: Compile VM bootstrap and regression tests
+        run: python3 -m py_compile deploy/delta/criar_vm_mvp0.py deploy/delta/teste_criar_vm_mvp0.py nixal_vps.py teste_nixal_vps.py
+      - name: Run mocked DELTA bootstrap tests
+        run: python3 -m unittest discover -s deploy/delta -p 'teste_*.py' -v
