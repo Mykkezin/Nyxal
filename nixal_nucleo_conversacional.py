@@ -171,6 +171,10 @@ class NucleoConversacionalNixal:
             else DialogoQwenNixal()
         )
 
+        # O núcleo é a raiz de composição: agente e diálogo precisam compartilhar
+        # o mesmo catálogo para evitar registros duplicados e auditorias divergentes.
+        self.dialogo.gerenciador_capacidades = self.agente.capacidades
+
         self.memoria_investigacao = (
             memoria_investigacao
             if memoria_investigacao is not None
