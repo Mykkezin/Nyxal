@@ -90,11 +90,17 @@ A persistência reutilizável está em `~/.local/share/nyxal/notas_lembretes.jso
 
 ### Servidor MCP opcional
 
-No computador da Nyxal, após obter a branch:
+Instale a dependência opcional na virtualenv da Nyxal (ela não é necessária para o diálogo principal):
 
 ```bash
 cd ~/Nyxal
-./.venv/bin/python nyxal_mcp_tools.py
+./.venv/bin/python -m pip install -r deploy/agent/requirements-mcp.txt
+```
+
+Para validar o servidor stdio:
+
+```bash
+./.venv/bin/python teste_mcp_stdio.py
 ```
 
 O processo usa transporte stdio do `MCPServer`. No cliente MCP, configure `command` com o caminho absoluto de `~/Nyxal/.venv/bin/python` e `args` com o caminho absoluto de `~/Nyxal/nyxal_mcp_tools.py`. Não coloque credenciais no arquivo de configuração do cliente.

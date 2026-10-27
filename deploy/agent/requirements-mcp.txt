@@ -1,0 +1,3 @@
+# Dependência opcional para executar o servidor MCP local da Nyxal.
+# O diálogo principal/function calling não depende deste pacote.
+mcp[cli]>=2,<3
