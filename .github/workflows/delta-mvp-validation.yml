@@ -1,0 +1,60 @@
+name: DELTA MVP tooling validation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "deploy/delta/**"
+      - "deploy/vps/preparar_base_ubuntu.sh"
+      - "nixal_vps.py"
+      - "teste_nixal_vps.py"
+      - "teste_delta_mvp0.py"
+      - "docs/DELTA_MVP_ACCEPTANCE.md"
+      - "docs/DELTA_PLATFORM_SPEC.md"
+      - ".github/workflows/delta-mvp-validation.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "deploy/delta/**"
+      - "deploy/vps/preparar_base_ubuntu.sh"
+      - "nixal_vps.py"
+      - "teste_nixal_vps.py"
+      - "teste_delta_mvp0.py"
+      - "docs/DELTA_MVP_ACCEPTANCE.md"
+      - "docs/DELTA_PLATFORM_SPEC.md"
+      - ".github/workflows/delta-mvp-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-delta-tools:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout without optional submodules
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - name: Configure Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check shell script syntax
+        run: |
+          bash -n deploy/delta/preflight_vm.sh
+          bash -n deploy/delta/diagnosticar_vm_mvp0.sh
+          bash -n deploy/delta/preparar_storage_mvp0.sh
+          bash -n deploy/vps/preparar_base_ubuntu.sh
+      - name: Compile VM bootstrap and regressions
+        run: python -m py_compile deploy/delta/criar_vm_mvp0.py teste_delta_mvp0.py nixal_vps.py teste_nixal_vps.py
+      - name: Run mocked DELTA bootstrap and VPS regressions
+        run: python -m unittest -v teste_delta_mvp0.py teste_nixal_vps.py
