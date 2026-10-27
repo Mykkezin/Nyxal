@@ -138,10 +138,18 @@ else
 fi
 
 # SSH public keys are needed by the existing cloud-init provisioner. Do not print key contents.
-if compgen -G "${HOME}/.ssh/*.pub" >/dev/null; then
-  ok 'Pelo menos uma chave pública SSH existe em ~/.ssh'
+SSH_KEY_OK=0
+for key_file in "${HOME}"/.ssh/*.pub; do
+  [[ -f "${key_file}" ]] || continue
+  if has_cmd ssh-keygen && ssh-keygen -l -f "${key_file}" >/dev/null 2>&1; then
+    SSH_KEY_OK=1
+    break
+  fi
+done
+if (( SSH_KEY_OK == 1 )); then
+  ok 'Pelo menos uma chave pública SSH válida existe em ~/.ssh'
 else
-  block 'Nenhuma chave pública SSH encontrada em ~/.ssh; a VM não pode ser provisionada com o método cloud-init atual'
+  block 'Nenhuma chave pública SSH válida encontrada em ~/.ssh; a VM não pode ser provisionada com o método cloud-init atual'
 fi
 
 BASE_IMAGE="${NYXOS_VPS_BASE_IMAGE:-${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}/ubuntu-24.04-server-cloudimg-amd64.img}"
