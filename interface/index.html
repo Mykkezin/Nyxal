@@ -568,7 +568,7 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="text-3xl text-hud-cyan animate-pulse">
-              <i class="fa-solid fa-cloud-showers-heavy"></i>
+              <i id="weatherIcon" class="fa-solid fa-cloud-sun" aria-hidden="true"></i>
             </div>
             <div>
               <div id="weatherTemp" class="text-3xl font-orbitron font-bold text-white tracking-tighter">--°C</div>
@@ -1969,6 +1969,7 @@
       const sensacao = document.getElementById("weatherFeels");
       const umidade = document.getElementById("weatherHumidity");
       const vento = document.getElementById("weatherWind");
+      const icone = document.getElementById("weatherIcon");
       if (!temperatura || !condicao || !sensacao || !umidade || !vento) return;
 
       const url = "https://api.open-meteo.com/v1/forecast?latitude=-23.5505&longitude=-46.6333" +
@@ -1999,11 +2000,21 @@
         sensacao.innerText = numero(atual.apparent_temperature, " °C");
         umidade.innerText = numero(atual.relative_humidity_2m, "%");
         vento.innerText = numero(atual.wind_speed_10m, " km/h");
-        condicao.innerText = descricoes[Number(atual.weather_code)] || "Condição atual";
+        const codigoTempo = Number(atual.weather_code);
+        condicao.innerText = descricoes[codigoTempo] || "Condição atual";
         condicao.title = "Dados atuais do Open-Meteo para São Paulo; atualizados periodicamente";
+        if (icone) {
+          if ([0, 1].includes(codigoTempo)) icone.className = "fa-solid fa-sun";
+          else if ([2, 3].includes(codigoTempo)) icone.className = "fa-solid fa-cloud";
+          else if ([45, 48].includes(codigoTempo)) icone.className = "fa-solid fa-smog";
+          else if ([71, 73, 75, 77, 85, 86].includes(codigoTempo)) icone.className = "fa-solid fa-snowflake";
+          else if ([95, 96, 99].includes(codigoTempo)) icone.className = "fa-solid fa-cloud-bolt";
+          else icone.className = "fa-solid fa-cloud-rain";
+        }
       } catch (erro) {
         condicao.innerText = "Clima indisponível";
         condicao.title = "Não foi possível atualizar o clima. Verifique a conexão e tente novamente.";
+        if (icone) icone.className = "fa-solid fa-cloud-sun";
         console.warn("Nyxal: atualização do clima indisponível", erro);
       }
     }
