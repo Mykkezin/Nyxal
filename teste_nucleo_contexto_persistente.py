@@ -74,6 +74,34 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         kwargs.setdefault("memoria_conhecimento", self.memoria_conhecimento)
         return NucleoConversacionalNixal(**kwargs)
 
+    def test_core_recarrega_historico_conversacional_de_arquivo_privado(self) -> None:
+        caminho = Path(self.tempdir.name) / "conversa-persistente.json"
+        primeira = MemoriaConversacionalNixal(caminho=caminho)
+        primeira.registrar("sessao-restaurada", "user", "Meu projeto se chama NyxOS.")
+        primeira.registrar("sessao-restaurada", "assistant", "Entendi: seu projeto se chama NyxOS.")
+
+        dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=FakeChatClient())
+        nucleo = NucleoConversacionalNixal(
+            dialogo=dialogo,
+            memoria_conversacional=MemoriaConversacionalNixal(caminho=caminho),
+            memoria_investigacao=self.memoria,
+            contexto_historico_relevante=self.contexto,
+            memoria_conhecimento=self.memoria_conhecimento,
+        )
+        historico = nucleo._obter_historico("sessao-restaurada")
+
+        self.assertEqual(len(historico), 2)
+        self.assertEqual(historico[0]["texto"], "Meu projeto se chama NyxOS.")
+        self.assertEqual(historico[1]["texto"], "Entendi: seu projeto se chama NyxOS.")
+        resposta = nucleo.processar(
+            nucleo.interface.criar_entrada(
+                "Continua de onde paramos.",
+                sessao="sessao-nova",
+            )
+        )
+        estado_memoria = resposta["valor"]["memoria_conversacional_estado"]
+        self.assertIn(estado_memoria["estado"], {"persistencia_ativa", "memoria_volatil"})
+
     def test_ciclo_helper_retorna_copia_e_rejeita_registro_invalido(self) -> None:
         ciclo = sample_cycle()
         resultado = self.contexto._ciclo({"id": "registro-teste", "ciclo": ciclo})
