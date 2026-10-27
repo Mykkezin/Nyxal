@@ -5,6 +5,8 @@ on:
     branches:
       - main
     paths:
+      - "nyxal_web_api.py"
+      - "teste_api_security_auth.py"
       - "nixal_defesa_autonoma.py"
       - "teste_defesa_autonoma.py"
       - "docs/DEFESA_AUTONOMA_GOVERNADA.md"
@@ -13,6 +15,8 @@ on:
     branches:
       - main
     paths:
+      - "nyxal_web_api.py"
+      - "teste_api_security_auth.py"
       - "nixal_defesa_autonoma.py"
       - "teste_defesa_autonoma.py"
       - "docs/DEFESA_AUTONOMA_GOVERNADA.md"
@@ -42,3 +46,5 @@ jobs:
         run: python3 -m py_compile nixal_defesa_autonoma.py teste_defesa_autonoma.py
       - name: Run defense policy tests
         run: python3 -m unittest teste_defesa_autonoma.py -v
+      - name: Run HTTP authentication and governed defense integration tests
+        run: python3 -m unittest teste_api_security_auth.TestSegurancaAPIHTTP.test_falhas_autenticacao_alimentam_defesa_sem_segredos -v
