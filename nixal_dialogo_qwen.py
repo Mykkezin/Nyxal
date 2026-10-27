@@ -260,25 +260,33 @@ class DialogoQwenNixal:
         except TypeError:
             # Compatibilidade com versões do cliente que não oferecem tool calling.
             return self.cliente.chat(model=self.modelo, messages=atual, options={"temperature": 0.4}), []
-        rodadas = 0
         while True:
             msg = self._extrair_mensagem(resposta)
             calls = self._valor_mensagem(msg, "tool_calls", []) or []
             if not isinstance(calls, list) or not calls:
                 break
-            if rodadas >= self.MAX_TOOL_CALLS:
-                # No limite, nunca execute mais ferramentas. Não dependa de
-                # outra chamada do modelo para devolver uma resposta final.
-                resposta = {"message": {"content": "Atingi o limite de chamadas de ferramentas para esta mensagem. Nenhuma ferramenta adicional foi executada. Resultados já observados: " + json.dumps(chamadas_executadas, ensure_ascii=False, default=str)[:6000]}}
+
+            # O teto limita execuções individuais, não apenas rodadas. Um modelo
+            # pode solicitar várias ferramentas na mesma resposta; nenhuma além
+            # das restantes será incluída no histórico nem executada.
+            restantes = self.MAX_TOOL_CALLS - len(chamadas_executadas)
+            if restantes <= 0:
+                resposta = {
+                    "message": {
+                        "content": "Atingi o limite de chamadas de ferramentas para esta mensagem. "
+                        "Nenhuma ferramenta adicional foi executada. Resultados já observados: "
+                        + json.dumps(chamadas_executadas, ensure_ascii=False, default=str)[:6000]
+                    }
+                }
                 break
 
+            normalizadas = []
             assistant_msg = {
                 "role": "assistant",
                 "content": self._valor_mensagem(msg, "content", "") or "",
                 "tool_calls": [],
             }
-            normalizadas = []
-            for call in calls[:8]:
+            for call in calls[:min(8, restantes)]:
                 fn = self._valor_mensagem(call, "function", {})
                 call_id = self._valor_mensagem(call, "id", "") or ""
                 nome = self._valor_mensagem(fn, "name", "")
@@ -294,6 +302,7 @@ class DialogoQwenNixal:
                     "function": {"name": nome, "arguments": args},
                 })
                 normalizadas.append(call)
+
             atual.append(assistant_msg)
             for call in normalizadas:
                 result = self._executar_chamada_ferramenta(gerenciador, call, texto_usuario)
@@ -304,7 +313,40 @@ class DialogoQwenNixal:
                     "tool_name": result["name"],
                     "content": result["resultado"],
                 })
-            rodadas += 1
+
+            # Quando o orçamento de ferramentas se esgota, a última chamada do
+            # modelo é textual: a resposta final nunca recebe ferramentas.
+            if len(chamadas_executadas) >= self.MAX_TOOL_CALLS:
+                mensagens_finais = atual + [{
+                    "role": "system",
+                    "content": (
+                        "Produza agora uma resposta final em português com base nos resultados "
+                        "das ferramentas já recebidos. Não solicite nem tente usar ferramentas."
+                    ),
+                }]
+                try:
+                    resposta_final = self.cliente.chat(
+                        model=self.modelo, messages=mensagens_finais,
+                        options={"temperature": 0.2},
+                    )
+                    mensagem_final = self._extrair_mensagem(resposta_final)
+                    novas_chamadas = self._valor_mensagem(mensagem_final, "tool_calls", []) or []
+                    conteudo_final = self._valor_mensagem(mensagem_final, "content", "")
+                    if novas_chamadas or not isinstance(conteudo_final, str) or not conteudo_final.strip():
+                        raise ValueError("O modelo não retornou uma resposta final textual.")
+                    resposta = resposta_final
+                except Exception:
+                    resposta = {
+                        "message": {
+                            "content": (
+                                "Atingi o limite de chamadas de ferramentas para esta mensagem. "
+                                "Nenhuma ferramenta adicional foi executada. Resultados já observados: "
+                                + json.dumps(chamadas_executadas, ensure_ascii=False, default=str)[:6000]
+                            )
+                        }
+                    }
+                break
+
             try:
                 resposta = self.cliente.chat(
                     model=self.modelo, messages=atual, tools=ferramentas,
