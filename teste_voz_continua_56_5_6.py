@@ -114,8 +114,9 @@ def main() -> None:
 
     shell = (BASE_DIR / "deploy" / "systemd" / "iniciar_nyxos_shell.sh").read_text(encoding="utf-8")
     verificar(
-        "NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/?modo=voz" in shell,
-        "desktop abre por padrão a interface de voz limpa",
+        'INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/}"' in shell
+        and "NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/?modo=voz" not in shell,
+        "desktop abre por padrão o painel completo da Nyxal em janela normal",
     )
 
     verificar(
