@@ -78,7 +78,7 @@ class TestNyxalVoiceConsole(unittest.TestCase):
 
     def test_weather_reflections_and_keyboard_shortcuts_are_present(self):
         self.assertIn('api.open-meteo.com/v1/forecast', self.console)
-        self.assertIn('3 * 60 * 60 * 1000', self.console)
+        self.assertIn('3 * 60 * 1000', self.console)
         self.assertIn('event.code === "Space"', self.console)
         for mode in ('cyber', 'reverse', 'data', 'image', 'reflection'):
             self.assertIn('"' + mode + '"', self.console)
@@ -97,8 +97,8 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn("Array.isArray(resources.gpu)", self.console)
         self.assertIn("gpu.temperatura_c", self.console)
 
-    def test_reflections_rotate_after_three_hours_and_are_dismissible(self):
-        self.assertIn("3 * 60 * 60 * 1000", self.console)
+    def test_reflections_rotate_after_three_minutes_and_are_dismissible(self):
+        self.assertIn("3 * 60 * 1000", self.console)
         self.assertIn("function checkReflectionInterval()", self.console)
         self.assertIn("rotateReflection(true)", self.console)
         self.assertIn("nvcReflectionDismiss", self.console)
