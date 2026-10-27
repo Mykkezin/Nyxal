@@ -80,6 +80,11 @@ fi
 
 if has_cmd df; then
   VM_STORAGE="${NYXOS_DELTA_VM_STORAGE:-${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}}"
+  case "${VM_STORAGE%/}/" in
+    "${HOME%/}/"*)
+      warn "Armazenamento VM está dentro da home (${VM_STORAGE}); QEMU/libvirt pode não ter acesso. Use preparar_storage_mvp0.sh e passe --storage para o diretório dedicado no pool libvirt."
+      ;;
+  esac
   STORAGE_PROBE="${VM_STORAGE}"
   while [[ ! -d "${STORAGE_PROBE}" && "${STORAGE_PROBE}" != "/" ]]; do
     STORAGE_PROBE="$(dirname -- "${STORAGE_PROBE}")"
