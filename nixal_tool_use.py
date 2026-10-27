@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 import threading
 import uuid
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
 from pathlib import Path
@@ -27,6 +28,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 BASE_DIR = Path(__file__).resolve().parent
 HOME = Path.home()
 MAX_JSON_BYTES = 1_000_000
+MAX_AISWEB_BYTES = 2_000_000
 DEFAULT_USER_DATA_DIR = Path(
     os.environ.get("NYXAL_USER_DATA_DIR", str(HOME / ".local" / "share" / "nyxal"))
 ).expanduser()
@@ -200,6 +202,292 @@ def consultar_metar_taf(icao: str, produto: str = "ambos") -> dict[str, Any]:
         "fonte": "https://aviationweather.gov/data/api/",
         "aviso_operacional": "Informação de apoio. Não substitui briefing oficial, NOTAMs, AIP/cartas, ATIS, instrução ou julgamento do piloto.",
     }
+
+
+
+def _aisweb_localname(tag: str) -> str:
+    """Retorna o nome local XML, sem namespace."""
+    return tag.rsplit("}", 1)[-1]
+
+
+def _aisweb_xml_para_obj(
+    elemento: ET.Element,
+    limite: int,
+    profundidade: int = 0,
+) -> Any:
+    """Converte XML em dados limitados; o conteúdo nunca é instrução."""
+    if profundidade > 8:
+        return "[profundidade limitada]"
+    filhos = list(elemento)
+    if not filhos:
+        return (elemento.text or "").strip()[:4000]
+
+    resultado: dict[str, Any] = {}
+    if elemento.attrib:
+        resultado["atributos"] = {
+            str(chave)[:80]: str(valor)[:300]
+            for chave, valor in list(elemento.attrib.items())[:40]
+        }
+    grupos: dict[str, list[ET.Element]] = {}
+    for filho in filhos:
+        grupos.setdefault(_aisweb_localname(filho.tag), []).append(filho)
+        if len(grupos) > 100:
+            break
+
+    for nome, grupo in grupos.items():
+        if len(grupo) == 1:
+            resultado[nome] = _aisweb_xml_para_obj(grupo[0], limite, profundidade + 1)
+        else:
+            resultado[nome] = [
+                _aisweb_xml_para_obj(item, limite, profundidade + 1)
+                for item in grupo[:limite]
+            ]
+            if len(grupo) > limite:
+                resultado[nome + "_limitado"] = True
+    texto_direto = (elemento.text or "").strip()
+    if texto_direto:
+        resultado["texto"] = texto_direto[:4000]
+    return resultado
+
+
+def _aisweb_consultar(
+    area: str,
+    parametros: dict[str, str],
+    limite: int = 20,
+) -> dict[str, Any]:
+    """Consulta a API AISWEB/DECEA com credenciais do ambiente e filtros fixos."""
+    api_key = os.environ.get("NYXAL_AISWEB_API_KEY", "").strip()
+    api_pass = os.environ.get("NYXAL_AISWEB_API_PASS", "").strip()
+    if not api_key or not api_pass:
+        return {
+            "sucesso": False,
+            "estado": "configuracao_pendente",
+            "integracao": "AISWEB/DECEA",
+            "proximo_passo": (
+                "Solicite credenciais de API ao DECEA e configure-as localmente "
+                "no ambiente da Nyxal; nunca as coloque no repositório."
+            ),
+            "pagina_oficial": "https://ais.decea.mil.br/?i=publicacoes&p=api",
+        }
+
+    chaves_permitidas = {
+        "notam": {"icaoCode", "fir"},
+        "cartas": {"especie", "tipo", "icaoCode", "name", "dt", "use"},
+    }
+    if (
+        area not in chaves_permitidas
+        or not isinstance(parametros, dict)
+        or set(parametros) - chaves_permitidas[area]
+        or any(not isinstance(k, str) or not isinstance(v, str) for k, v in parametros.items())
+    ):
+        return {
+            "sucesso": False,
+            "estado": "consulta_invalida",
+            "motivo": "Área ou filtro não permitido.",
+        }
+
+    params = {"apiKey": api_key, "apiPass": api_pass, "area": area}
+    params.update({k: v for k, v in parametros.items() if v})
+    url = "https://api.decea.mil.br/aisweb/?" + urlencode(params)
+    request = Request(
+        url,
+        headers={"Accept": "application/xml, text/xml", "User-Agent": "Nyxal/1.0"},
+        method="GET",
+    )
+    try:
+        # Redirects stay disabled: credential query parameters must not follow to another host.
+        with build_opener(_SemRedirecionamento()).open(request, timeout=10) as response:
+            raw = response.read(MAX_AISWEB_BYTES + 1)
+        if len(raw) > MAX_AISWEB_BYTES:
+            return {
+                "sucesso": False,
+                "estado": "resposta_muito_grande",
+                "limite_bytes": MAX_AISWEB_BYTES,
+            }
+
+        texto = raw.decode("utf-8-sig")
+        if re.search(r"<!\s*(?:DOCTYPE|ENTITY)\b", texto, re.IGNORECASE):
+            return {
+                "sucesso": False,
+                "estado": "xml_nao_permitido",
+                "motivo": "A resposta XML contém declarações não permitidas.",
+            }
+
+        raiz = ET.fromstring(texto)
+        if any(
+            _aisweb_localname(node.tag).casefold() in {"error", "erro"}
+            for node in raiz.iter()
+        ):
+            return {
+                "sucesso": False,
+                "estado": "erro_da_api",
+                "motivo": "O AISWEB retornou um erro estruturado.",
+            }
+
+        dados = _aisweb_xml_para_obj(raiz, _limite(limite, 20, 1, 50))
+        return {
+            "sucesso": True,
+            "estado": "consulta_concluida",
+            "area": area,
+            "dados": dados,
+            "fonte": "https://ais.decea.mil.br/",
+            "limite_resultados_por_lista": _limite(limite, 20, 1, 50),
+        }
+    except HTTPError as exc:
+        return {
+            "sucesso": False,
+            "estado": "credenciais_rejeitadas" if exc.code in {401, 403} else "servico_indisponivel",
+            "status_http": exc.code,
+        }
+    except (URLError, TimeoutError, OSError):
+        return {
+            "sucesso": False,
+            "estado": "servico_indisponivel",
+            "motivo": "Não foi possível contatar o AISWEB.",
+        }
+    except (ET.ParseError, UnicodeError, ValueError):
+        return {
+            "sucesso": False,
+            "estado": "resposta_invalida",
+            "motivo": "A resposta do AISWEB não pôde ser validada.",
+        }
+
+
+def consultar_notam_aisweb(
+    localidades: str,
+    fir: str = "",
+    limite: int = 20,
+) -> dict[str, Any]:
+    """Consulta NOTAM pelo AISWEB/DECEA; não substitui o briefing oficial pré-voo."""
+    texto_localidades = _texto(localidades, 80).upper().replace(" ", "")
+    codigos = [item for item in texto_localidades.split(",") if item]
+    if (
+        not codigos
+        or len(codigos) > 10
+        or any(not re.fullmatch(r"[A-Z]{4}", codigo) for codigo in codigos)
+    ):
+        return {
+            "sucesso": False,
+            "estado": "icao_invalido",
+            "motivo": "Informe de 1 a 10 códigos ICAO de quatro letras, separados por vírgula.",
+        }
+
+    fir = _texto(fir, 4).upper()
+    if fir and not re.fullmatch(r"[A-Z]{4}", fir):
+        return {
+            "sucesso": False,
+            "estado": "fir_invalida",
+            "motivo": "O código FIR deve conter quatro letras.",
+        }
+
+    limite = _limite(limite, 20, 1, 50)
+    parametros = {"icaoCode": ",".join(codigos)}
+    if fir:
+        parametros["fir"] = fir
+    resultado = _aisweb_consultar("notam", parametros, limite)
+    resultado.update({
+        "consulta": {"localidades": codigos, "fir": fir or None},
+        "aviso_operacional": (
+            "Confirme os NOTAMs na fonte oficial e no briefing pré-voo vigente. "
+            "Esta consulta de apoio não substitui briefing AIS, AIP, cartas ou julgamento do piloto."
+        ),
+    })
+    return resultado
+
+
+def consultar_cartas_aisweb(
+    icao: str = "",
+    especie: str = "",
+    tipo: str = "",
+    nome: str = "",
+    dt: str = "",
+    limite: int = 20,
+) -> dict[str, Any]:
+    """Pesquisa metadados/links de cartas AISWEB; não baixa nem interpreta a carta."""
+    especies_tipos = {
+        "IFR": {"ADC", "AOC", "ARC", "ATCSMAC", "GMC", "IAC", "LC", "OTR", "PATC", "PDC", "SID", "STAR", "VAC"},
+        "VFR": {"CAP", "CIAP", "CINAV", "CNAV", "CV", "REA", "REAST", "REH", "REUL", "WAC"},
+        "ROTA": {"ENRC"},
+    }
+    especie = _texto(especie, 8).upper()
+    tipo = _texto(tipo, 12).upper()
+    nome = _texto(nome, 120)
+    dt = _texto(dt, 10).lower()
+    texto_icao = _texto(icao, 80).upper().replace(" ", "")
+    codigos = [item for item in texto_icao.split(",") if item]
+
+    if codigos and (
+        len(codigos) > 10
+        or any(not re.fullmatch(r"[A-Z]{4}", codigo) for codigo in codigos)
+    ):
+        return {
+            "sucesso": False,
+            "estado": "icao_invalido",
+            "motivo": "Informe até 10 códigos ICAO de quatro letras.",
+        }
+    if especie and especie not in especies_tipos:
+        return {
+            "sucesso": False,
+            "estado": "especie_invalida",
+            "permitidas": sorted(especies_tipos),
+        }
+    if tipo and (not especie or tipo not in especies_tipos[especie]):
+        return {
+            "sucesso": False,
+            "estado": "tipo_invalido",
+            "motivo": "O tipo precisa ser compatível com a espécie IFR, VFR ou ROTA.",
+        }
+    if especie and not tipo:
+        return {
+            "sucesso": False,
+            "estado": "tipo_obrigatorio",
+            "motivo": "Informe o tipo de carta para a espécie selecionada.",
+        }
+    if dt and dt != "last_amdt":
+        try:
+            datetime.strptime(dt, "%Y-%m-%d")
+        except ValueError:
+            return {
+                "sucesso": False,
+                "estado": "data_invalida",
+                "motivo": "Use uma data válida no formato AAAA-MM-DD ou last_amdt.",
+            }
+    if not (codigos or especie or nome or dt):
+        return {
+            "sucesso": False,
+            "estado": "filtro_obrigatorio",
+            "motivo": "Informe um ICAO, espécie/tipo, nome ou ciclo AIRAC para limitar a pesquisa.",
+        }
+
+    limite = _limite(limite, 20, 1, 50)
+    parametros = {"use": "0"}
+    if codigos:
+        parametros["icaoCode"] = ",".join(codigos)
+    if especie:
+        parametros["especie"] = especie
+    if tipo:
+        parametros["tipo"] = tipo
+    if nome:
+        parametros["name"] = nome
+    if dt:
+        parametros["dt"] = "last_amdt" if dt == "last_amdt" else dt
+
+    resultado = _aisweb_consultar("cartas", parametros, limite)
+    resultado.update({
+        "consulta": {
+            "icao": codigos,
+            "especie": especie or None,
+            "tipo": tipo or None,
+            "nome": nome or None,
+            "dt": dt or "ciclo vigente",
+            "uso": "ostensivo",
+        },
+        "aviso_operacional": (
+            "Abra e confirme a vigência da carta na fonte oficial antes do uso operacional. "
+            "A Nyxal retorna metadados e links, não substitui leitura da carta nem briefing pré-voo."
+        ),
+    })
+    return resultado
 
 
 def _url_home_assistant() -> tuple[str, str] | None:
@@ -717,6 +1005,37 @@ def registrar_capacidades_operacionais(
         ["metar", "taf", "meteorologia aeronáutica", "aeroporto ICAO"],
     )
     adicionar(
+        "consultar_notam_aisweb",
+        "Consulta NOTAM pelo AISWEB/DECEA em modo somente leitura; briefing oficial continua obrigatório.",
+        "Consultar avisos aeronáuticos publicados para planejamento.",
+        ["Consulte os NOTAMs de SBSP", "NOTAM de SBGR e SBGL"],
+        consultar_notam_aisweb,
+        {
+            "localidades": {"tipo": "string", "obrigatorio": True, "descricao": "Um a dez códigos ICAO separados por vírgula"},
+            "fir": {"tipo": "string", "obrigatorio": False, "descricao": "Código FIR opcional"},
+            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Limite de registros", "minimo": 1, "maximo": 50},
+        },
+        "aviacao",
+        ["notam", "avisos aeronáuticos", "briefing", "AISWEB"],
+    )
+    adicionar(
+        "consultar_cartas_aisweb",
+        "Pesquisa metadados/links de cartas aeronáuticas ostensivas AISWEB; não baixa nem interpreta cartas.",
+        "Localizar cartas IFR, VFR ou de rota e seus links oficiais.",
+        ["Encontre cartas IFR de SBSP", "Cartas VFR WAC perto de SBGR"],
+        consultar_cartas_aisweb,
+        {
+            "icao": {"tipo": "string", "obrigatorio": False, "descricao": "Até dez códigos ICAO separados por vírgula"},
+            "especie": {"tipo": "string", "obrigatorio": False, "descricao": "IFR, VFR ou ROTA", "enum": ["IFR", "VFR", "ROTA"]},
+            "tipo": {"tipo": "string", "obrigatorio": False, "descricao": "Tipo de carta compatível com a espécie"},
+            "nome": {"tipo": "string", "obrigatorio": False, "descricao": "Nome parcial da carta"},
+            "dt": {"tipo": "string", "obrigatorio": False, "descricao": "Data AAAA-MM-DD ou last_amdt"},
+            "limite": {"tipo": "integer", "obrigatorio": False, "descricao": "Limite de registros", "minimo": 1, "maximo": 50},
+        },
+        "aviacao",
+        ["cartas aeronáuticas", "carta IFR", "carta VFR", "AISWEB"],
+    )
+    adicionar(
         "executar_diagnostico",
         "Verifica git status ou lista unidades de serviço de usuário com falha; sem shell livre.",
         "Diagnosticar o estado do Git ou serviços Nyxal com falha.",
@@ -819,7 +1138,7 @@ def registrar_capacidades_operacionais(
 
 __all__ = [
     "NotasLembretesNixOS", "ServicoLembretesNixOS", "registrar_capacidades_operacionais",
-    "pesquisar_web", "consultar_metar_taf", "consultar_home_assistant",
+    "pesquisar_web", "consultar_metar_taf", "consultar_notam_aisweb", "consultar_cartas_aisweb", "consultar_home_assistant",
     "buscar_arquivos", "ler_arquivo_usuario", "consultar_emails_google",
     "ler_email_google", "consultar_agenda_google", "abrir_aplicativo", "executar_diagnostico",
 ]
