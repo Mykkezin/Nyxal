@@ -118,7 +118,6 @@ OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
 NOTAS_LEMBRETES_NYXAL = NotasLembretesNixOS()
 SERVICO_LEMBRETES_NYXAL = ServicoLembretesNixOS(NOTAS_LEMBRETES_NYXAL)
-SERVICO_LEMBRETES_NYXAL.iniciar()
 CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 
 # Observação governada: eventos em memória, sem executor nem persistência.
@@ -2079,6 +2078,9 @@ def main() -> None:
         (HOST, PORT),
         NyxalAPIHandler,
     )
+    # Inicie a entrega de lembretes apenas quando o servidor principal subir,
+    # evitando threads e notificações em importações de teste/diagnóstico.
+    SERVICO_LEMBRETES_NYXAL.iniciar()
 
     print(
         f"[Nyxal-API] escutando em "
@@ -2115,6 +2117,7 @@ def main() -> None:
         print()
         print("[Nyxal-API] encerrando...")
     finally:
+        SERVICO_LEMBRETES_NYXAL.parar()
         server.server_close()
 
 
