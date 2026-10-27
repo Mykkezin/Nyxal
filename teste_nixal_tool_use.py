@@ -74,16 +74,27 @@ class TesteRegistroFerramentasOperacionais(unittest.TestCase):
         registrar_capacidades_operacionais(self.capacidades, store=self.store)
         self.assertEqual(self.nomes(), antes)
 
-    def test_acoes_mutaveis_falham_fechadas_sem_registro_parcial(self):
+    def test_acoes_mutaveis_exigem_pedido_explicito_no_registro(self):
         antes = self.nomes()
-        with self.assertRaisesRegex(RuntimeError, "não aplica autorização por ferramenta"):
-            registrar_capacidades_operacionais(
-                self.capacidades,
-                incluir_acoes=True,
-                store=self.store,
+        registrar_capacidades_operacionais(
+            self.capacidades,
+            incluir_acoes=True,
+            store=self.store,
+        )
+        nomes = self.nomes()
+        self.assertTrue(FERRAMENTAS_MUTAVEIS <= nomes)
+        self.assertTrue(antes <= nomes)
+        for nome in FERRAMENTAS_MUTAVEIS:
+            self.assertEqual(
+                self.capacidades.capacidades[nome].politica,
+                "acao_com_pedido_explicito",
             )
-        self.assertEqual(self.nomes(), antes)
-        self.assertTrue(FERRAMENTAS_MUTAVEIS.isdisjoint(self.nomes()))
+        # Registration advertises the action only under opt-in; execution still
+        # blocks it unless the caller presents the per-call authorization flag.
+        bloqueado = self.capacidades.executar(
+            "salvar_nota", titulo="Teste", conteudo="Não gravar sem autorização",
+        )
+        self.assertFalse(bloqueado.sucesso)
 
     def test_catalogo_corrompido_nao_e_sobrescrito(self):
         with tempfile.TemporaryDirectory(prefix="nyxal-corrupt-catalog-") as tmp:
