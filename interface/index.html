@@ -1685,6 +1685,7 @@
       try {
         await desbloquearAudioNyxal();
 
+        const ttsStartedAt = performance.now();
         const { data: blob } = await nyxalApiPost('/api/tts', {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1693,6 +1694,11 @@
           }),
           parse: 'blob'
         });
+        console.debug(
+          '[Nyxal][voz] síntese pronta em',
+          Math.round(performance.now() - ttsStartedAt),
+          'ms'
+        );
         if (!voiceBargeInDetected) await tocarAudioTtsComContexto(blob);
       } catch (err) {
         console.warn('TTS local indisponível; usando voz do navegador:', err);
