@@ -118,7 +118,11 @@ OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
 NOTAS_LEMBRETES_NYXAL = NotasLembretesNixOS()
 SERVICO_LEMBRETES_NYXAL = ServicoLembretesNixOS(NOTAS_LEMBRETES_NYXAL)
-SERVICO_LEMBRETES_NYXAL.iniciar()
+LEMBRETES_AUTOMATICOS_HABILITADOS = os.environ.get(
+    "NYXAL_REMINDERS_ENABLED", ""
+).strip().lower() in {"1", "true", "yes", "on"}
+if LEMBRETES_AUTOMATICOS_HABILITADOS:
+    SERVICO_LEMBRETES_NYXAL.iniciar()
 CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 
 # Observação governada: eventos em memória, sem executor nem persistência.
