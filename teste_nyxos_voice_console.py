@@ -52,6 +52,37 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('min-height:30px', self.console)
         self.assertIn('rgba(145,190,225,.25)', self.console)
 
+    def test_immersive_hologram_has_large_centerpiece_and_spatial_signal_panels(self):
+        self.assertIn('viewBox="48 0 264 320"', self.html)
+        self.assertIn('nyxal-voice-sidepanel-left', self.html)
+        self.assertIn('nyxal-voice-sidepanel-right', self.html)
+        self.assertIn('nyxalSideSignal', self.html)
+        self.assertIn('nyxalCorePulse', self.html)
+        self.assertIn('grid-template-columns: minmax(210px,1fr) minmax(460px,620px) minmax(210px,1fr)', self.html)
+        self.assertIn('max-height: 64vh', self.html)
+        self.assertIn('nyxalVoiceOuterOrbit', self.html)
+        self.assertIn('nyxalVoiceScanSweep', self.html)
+
+    def test_side_panels_follow_real_microphone_rms_and_voice_lifecycle(self):
+        self.assertIn("sideRms.textContent = sampleAvailable ? voiceRmsAtual.toFixed(3) : '—'", self.html)
+        self.assertIn("sideSignal.dataset.active = String(Boolean(sampleAvailable && voiceConversationActive && !voiceConversationBusy))", self.html)
+        self.assertIn("function updateNyxalHologramPanels(state)", self.html)
+        self.assertIn("updateNyxalHologramPanels(state)", self.html)
+        self.assertIn("data-nyxal-step", self.html)
+        self.assertIn("state === 'processing'", self.html)
+        self.assertIn("state === 'speaking'", self.html)
+        self.assertIn("stage.style.setProperty('--voice-glow'", self.html)
+        self.assertIn("stage.style.setProperty('--voice-bloom'", self.html)
+        self.assertIn("var(--voice-glow,.45)", self.html)
+        self.assertIn('.nyxal-side-dot[data-state="active"]', self.html)
+
+    def test_system_hud_has_readable_metrics_without_becoming_the_centerpiece(self):
+        self.assertIn('font-size:12px;letter-spacing:.035em', self.console)
+        self.assertIn('min-height:32px;padding:6px 11px', self.console)
+        self.assertIn('position:absolute;top:15px;left:18px;right:18px', self.console)
+        self.assertIn('@media(max-width:720px)', self.console)
+        self.assertIn('prefers-reduced-motion: reduce', self.html)
+
     def test_console_uses_existing_real_telemetry(self):
         self.assertIn('"/api/agent/contexto"', self.console)
         self.assertIn('"/api/public/status"', self.console)
