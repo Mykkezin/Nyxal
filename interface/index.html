@@ -629,6 +629,17 @@
           </div>
         </div>
 
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div class="rounded bg-slate-900/70 border border-slate-800 px-3 py-2 flex items-center justify-between gap-2">
+            <span class="text-[10px] font-rajdhani text-slate-400 uppercase">GPU</span>
+            <span id="gpuUsageText" class="text-xs font-orbitron font-bold text-white">—</span>
+          </div>
+          <div class="rounded bg-slate-900/70 border border-slate-800 px-3 py-2 flex items-center justify-between gap-2">
+            <span class="text-[10px] font-rajdhani text-slate-400 uppercase">TEMP</span>
+            <span id="systemTempText" class="text-xs font-orbitron font-bold text-white">—</span>
+          </div>
+        </div>
+
         <!-- System Stream Graph -->
         <div class="w-full bg-slate-950/80 rounded-lg p-2 border border-slate-800">
           <div class="flex justify-between items-center text-[10px] font-rajdhani text-slate-400 mb-1">
@@ -840,7 +851,7 @@
 
       <!-- DAILY PHILOSOPHICAL REFLECTION -->
       <div class="hud-card p-3 text-center border border-hud-cyan/30">
-        <p class="text-[9px] font-orbitron font-bold text-hud-cyan tracking-[0.22em] mb-1">REFLEXÃO DO DIA</p>
+        <p class="text-[9px] font-orbitron font-bold text-hud-cyan tracking-[0.22em] mb-1">REFLEXÃO NYXAL • A CADA 3 MINUTOS</p>
         <p id="dailyReflectionText" class="font-cinzel italic text-slate-200 text-sm tracking-wide leading-relaxed">
           “A qualidade da ação começa pela qualidade da atenção.”
         </p>
@@ -1893,6 +1904,110 @@
       desenharGraficoSistema();
     }
 
+
+    function numeroObservavel(valor) {
+      if (valor === null || valor === undefined || valor === "") return null;
+      const numero = Number(valor);
+      return Number.isFinite(numero) ? numero : null;
+    }
+
+    function atualizarIndicadorAvancado(id, valor, unidade, titulo) {
+      const elemento = document.getElementById(id);
+      if (!elemento) return;
+      const numero = numeroObservavel(valor);
+      elemento.innerText = numero === null ? "—" : String(Math.round(numero * 10) / 10) + unidade;
+      elemento.title = titulo || (numero === null ? "Leitura indisponível neste hardware ou nesta sessão" : "Leitura de observabilidade local");
+    }
+
+    async function fetchNyxalObservability() {
+      const gpuText = document.getElementById("gpuUsageText");
+      const tempText = document.getElementById("systemTempText");
+      try {
+        const response = await fetch(window.NYXAL_API_BASE + "/api/agent/contexto", { cache: "no-store" });
+        if (!response.ok) throw new Error("observabilidade_http_" + response.status);
+        const payload = await response.json();
+        const observabilidade = payload && payload.observabilidade ? payload.observabilidade : {};
+        const pacoteGpu = observabilidade.gpu || {};
+        const dispositivos = Array.isArray(pacoteGpu.dispositivos) ? pacoteGpu.dispositivos : [];
+        const gpu = dispositivos.find((item) => numeroObservavel(item.uso_percentual) !== null || numeroObservavel(item.vram_uso_percentual) !== null) || dispositivos[0] || {};
+        const usoGpu = numeroObservavel(gpu.uso_percentual) !== null
+          ? numeroObservavel(gpu.uso_percentual)
+          : numeroObservavel(gpu.vram_uso_percentual);
+        let temperatura = numeroObservavel(gpu.temperatura_celsius);
+        if (temperatura === null) temperatura = numeroObservavel(gpu.temperatura_c);
+
+        if (temperatura === null) {
+          const sensores = observabilidade.temperaturas && Array.isArray(observabilidade.temperaturas.sensores)
+            ? observabilidade.temperaturas.sensores
+            : [];
+          const leituras = sensores.map((item) => numeroObservavel(item.celsius)).filter((valor) => valor !== null);
+          if (leituras.length) temperatura = Math.max.apply(null, leituras);
+        }
+
+        atualizarIndicadorAvancado(
+          "gpuUsageText",
+          usoGpu,
+          "%",
+          gpu.nome ? "GPU: " + gpu.nome + "; uso calculado pelo sensor disponível" : undefined
+        );
+        atualizarIndicadorAvancado(
+          "systemTempText",
+          temperatura,
+          " °C",
+          temperatura === null ? "Nenhum sensor térmico forneceu uma leitura válida" : "Maior temperatura disponível na leitura local"
+        );
+      } catch (erro) {
+        atualizarIndicadorAvancado("gpuUsageText", null, "%");
+        atualizarIndicadorAvancado("systemTempText", null, " °C");
+        console.warn("Nyxal: observabilidade de GPU/temperatura indisponível", erro);
+      }
+    }
+
+    async function atualizarClima() {
+      const temperatura = document.getElementById("weatherTemp");
+      const condicao = document.getElementById("weatherCond");
+      const sensacao = document.getElementById("weatherFeels");
+      const umidade = document.getElementById("weatherHumidity");
+      const vento = document.getElementById("weatherWind");
+      if (!temperatura || !condicao || !sensacao || !umidade || !vento) return;
+
+      const url = "https://api.open-meteo.com/v1/forecast?latitude=-23.5505&longitude=-46.6333" +
+        "&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code" +
+        "&timezone=America%2FSao_Paulo";
+      try {
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) throw new Error("clima_http_" + response.status);
+        const payload = await response.json();
+        const atual = payload && payload.current ? payload.current : null;
+        if (!atual) throw new Error("clima_sem_dados_atuais");
+
+        const numero = (valor, unidade, casas = 0) => {
+          const valorNumerico = numeroObservavel(valor);
+          return valorNumerico === null ? "—" : valorNumerico.toFixed(casas) + unidade;
+        };
+        const descricoes = {
+          0: "Céu limpo", 1: "Quase limpo", 2: "Parcialmente nublado", 3: "Nublado",
+          45: "Neblina", 48: "Neblina com geada",
+          51: "Garoa leve", 53: "Garoa", 55: "Garoa forte", 56: "Garoa congelante leve", 57: "Garoa congelante forte",
+          61: "Chuva leve", 63: "Chuva", 65: "Chuva forte", 66: "Chuva congelante leve", 67: "Chuva congelante forte",
+          71: "Neve leve", 73: "Neve", 75: "Neve forte", 77: "Grãos de neve",
+          80: "Aguaceiros leves", 81: "Aguaceiros", 82: "Aguaceiros fortes",
+          85: "Neve em aguaceiros", 86: "Neve forte em aguaceiros",
+          95: "Trovoada", 96: "Trovoada com granizo leve", 99: "Trovoada com granizo forte"
+        };
+        temperatura.innerText = numero(atual.temperature_2m, " °C");
+        sensacao.innerText = numero(atual.apparent_temperature, " °C");
+        umidade.innerText = numero(atual.relative_humidity_2m, "%");
+        vento.innerText = numero(atual.wind_speed_10m, " km/h");
+        condicao.innerText = descricoes[Number(atual.weather_code)] || "Condição atual";
+        condicao.title = "Dados atuais do Open-Meteo para São Paulo; atualizados periodicamente";
+      } catch (erro) {
+        condicao.innerText = "Clima indisponível";
+        condicao.title = "Não foi possível atualizar o clima. Verifique a conexão e tente novamente.";
+        console.warn("Nyxal: atualização do clima indisponível", erro);
+      }
+    }
+
     function desenharGraficoSistema() {
       const canvas = document.getElementById('sysGraphCanvas');
       if (!canvas) return;
@@ -2354,6 +2469,31 @@
       salvarEstadoReflexao(novoEstado);
 
       return escolhida;
+    }
+
+
+    function rotacionarReflexao() {
+      const hoje = chaveDataReflexao();
+      const estado = carregarEstadoReflexao();
+      let usadas = estado.usadas.filter(id => REFLEXOES_NYXAL.some(reflexao => reflexao.id === id));
+      let candidatos = REFLEXOES_NYXAL.filter(reflexao => !usadas.includes(reflexao.id) && reflexao.id !== estado.reflexaoId);
+      let ciclo = estado.ciclo;
+
+      if (!candidatos.length) {
+        usadas = [];
+        candidatos = REFLEXOES_NYXAL.filter(reflexao => reflexao.id !== estado.reflexaoId);
+        ciclo += 1;
+      }
+      if (!candidatos.length) return;
+
+      const escolhida = candidatos[Math.floor(Math.random() * candidatos.length)];
+      salvarEstadoReflexao({
+        ultimoDia: hoje,
+        reflexaoId: escolhida.id,
+        usadas: [...usadas, escolhida.id],
+        ciclo
+      });
+      renderReflexaoDiaria();
     }
 
     function renderReflexaoDiaria(data = new Date()) {
@@ -3791,6 +3931,11 @@
 
         initInfinityDrag();
         renderReflexaoDiaria();
+        window.setInterval(rotacionarReflexao, 3 * 60 * 1000);
+        atualizarClima();
+        window.setInterval(atualizarClima, 10 * 60 * 1000);
+        fetchNyxalObservability();
+        window.setInterval(fetchNyxalObservability, 15000);
         setInterval(updateLiveClock, 1000);
         updateLiveClock();
         fetchNyxalStatus();
