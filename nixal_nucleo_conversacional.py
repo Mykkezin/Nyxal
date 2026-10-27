@@ -171,14 +171,12 @@ class NucleoConversacionalNixal:
             else DialogoQwenNixal()
         )
 
-        # O diálogo Qwen e o Core compartilham o catálogo já existente.
-        # Adaptadores operacionais são registrados nesse catálogo quando o
-        # function calling inicializa; não se cria um segundo sistema de memória.
-        try:
-            if getattr(self.dialogo, "gerenciador_capacidades", None) is None:
-                self.dialogo.gerenciador_capacidades = self.agente.capacidades
-        except Exception:
-            pass
+        # O Core é a raiz de composição: agente e diálogo precisam compartilhar
+        # exatamente o mesmo catálogo e a mesma trilha de auditoria, mesmo se o
+        # diálogo tiver sido inicializado antes do Core com outro gerenciador.
+        self.dialogo.gerenciador_capacidades = self.agente.capacidades
+        if hasattr(self.dialogo, "_ferramentas_operacionais_registradas"):
+            self.dialogo._ferramentas_operacionais_registradas = False
 
         self.memoria_investigacao = (
             memoria_investigacao
