@@ -10,7 +10,7 @@ A defesa não pode dar à Nyxal autoridade irrestrita apenas por detectar uma am
 
 O módulo `nixal_defesa_autonoma.py` implementa uma política determinística isolada. Ele recebe eventos estruturados e devolve recomendações auditáveis. **Não executa nenhuma recomendação**: não altera firewall, não mata processos, não revoga credenciais, não isola serviços, não modifica arquivos e não faz conexões de rede.
 
-O workflow dedicado executa os testes unitários dessa política e do gate de preparação dry-run. A integração inicial da API com eventos autenticados de falha de Bearer já existe; o executor que efetua efeitos reais no host permanece trabalho futuro, dependente de revisão e validação.
+O workflow dedicado executa os testes unitários dessa política e do gate de preparação dry-run. A API registra falhas de Bearer por um produtor interno (`api-auth`), sem guardar token, cabeçalhos ou corpo, e encaminha recomendações ao `ExecutorDefesaGovernada` para preparação simulada. Eventos e planos permanecem somente em memória; o executor que efetua efeitos reais no host continua desabilitado e não está implementado.
 
 ## Ciclo de resposta
 
@@ -99,7 +99,7 @@ O gate de autenticação HTTP alimenta o motor determinístico com falhas de Bea
 
 O evento usa o endereço do peer TCP observado pelo servidor. `Forwarded`, `X-Forwarded-For` e `X-Real-IP` não são usados como identidade. Em uma topologia com proxy, o peer pode ser o proxy local e não o cliente final; não se infere o IP remoto até existir configuração explícita de proxy confiável e testes correspondentes. O histórico é volátil, não contém tokens, corpos, query strings ou cabeçalhos e não é uma trilha forense durável.
 
-Esta integração apenas calcula e expõe recomendações auditáveis. Não bloqueia tráfego, não limita taxa, não reinicia serviços, não revoga credenciais e não altera arquivos. `executor_ativo=false`, `executor_autorizado=false` e `efeito_executado=false` permanecem invariantes. Executor separado, aprovação, idempotência, expiração, auditoria durável e rollback seguem pendentes.
+A API agora encaminha as recomendações para `ExecutorDefesaGovernada.preparar` e expõe os resumos dos planos simulados no endpoint autenticado `GET /api/agent/defesa`. O gate aplica allowlist, idempotência limitada, TTL de plano e aprovação humana para recomendações que não sejam mero alerta. Ainda assim, esta entrega não bloqueia tráfego, não limita taxa, não reinicia serviços, não revoga credenciais e não altera arquivos. `executor_ativo=false`, `executor_autorizado=false` e `efeito_executado=false` permanecem invariantes; os planos não são persistidos e a expiração é metadata do plano, não expiração de um efeito real. Serviço de aprovação autenticada, executor real por capacidade, auditoria durável, TTL efetivo dos efeitos, rollback e integração de sinais além de falhas de Bearer permanecem pendentes.
 ## Gate de preparação governada — dry-run
 
 `nixal_executor_defesa_governada.py` acrescenta uma fronteira separada entre recomendação e qualquer futura execução. Nesta fase ele **só prepara planos simulados**: não existe método de execução física, chamada de shell, ação de rede, escrita de arquivos operacionais, alteração de firewall, reinício de serviço, revogação de credencial ou quarentena real.

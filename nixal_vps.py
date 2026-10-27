@@ -8,6 +8,8 @@ separados. A operação de alteração continua explícita na API.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import re
@@ -58,6 +60,116 @@ class VpsNyxOS:
         if not isinstance(nome, str) or not self.NAME_RE.fullmatch(nome):
             raise ValueError("nome_vps_invalido")
         return nome
+
+    @staticmethod
+    def _validar_chave_ssh(chave: str) -> str:
+        """Valida a estrutura OpenSSH e evita injeção de linhas no cloud-init."""
+        if not isinstance(chave, str) or not chave.strip():
+            raise ValueError("ssh_public_key_obrigatoria")
+        valor = chave.strip()
+        if len(valor) > 16384 or "\n" in valor or "\r" in valor:
+            raise ValueError("ssh_public_key_invalida")
+
+        padrao = re.fullmatch(
+            r"(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|"
+            r"ecdsa-sha2-nistp521|sk-ssh-ed25519@openssh\.com|"
+            r"sk-ecdsa-sha2-nistp256@openssh\.com)[ \t]+"
+            r"([A-Za-z0-9+/]+={0,2})(?:[ \t]+[^\r\n]*)?",
+            valor,
+        )
+        if not padrao:
+            raise ValueError("ssh_public_key_invalida")
+        tipo = padrao.group(1)
+        try:
+            blob = base64.b64decode(padrao.group(2), validate=True)
+        except (ValueError, binascii.Error) as erro:
+            raise ValueError("ssh_public_key_invalida") from erro
+
+        def ler_campo(dados: bytes, posicao: int) -> tuple[bytes, int]:
+            if posicao + 4 > len(dados):
+                raise ValueError("ssh_public_key_invalida")
+            tamanho = int.from_bytes(dados[posicao:posicao + 4], "big")
+            inicio = posicao + 4
+            fim = inicio + tamanho
+            if tamanho <= 0 or fim > len(dados):
+                raise ValueError("ssh_public_key_invalida")
+            return dados[inicio:fim], fim
+
+        try:
+            nome_blob, posicao = ler_campo(blob, 0)
+            if nome_blob.decode("ascii") != tipo:
+                raise ValueError("ssh_public_key_invalida")
+            if tipo in {"ssh-ed25519", "sk-ssh-ed25519@openssh.com"}:
+                public_key, posicao = ler_campo(blob, posicao)
+                if len(public_key) != 32:
+                    raise ValueError("ssh_public_key_invalida")
+                if tipo.startswith("sk-"):
+                    aplicacao, posicao = ler_campo(blob, posicao)
+                    if not aplicacao:
+                        raise ValueError("ssh_public_key_invalida")
+            elif tipo == "ssh-rsa":
+                expoente, posicao = ler_campo(blob, posicao)
+                modulo, posicao = ler_campo(blob, posicao)
+                expoente_valor = int.from_bytes(expoente, "big", signed=False)
+                modulo_valor = int.from_bytes(modulo, "big", signed=False)
+                if (
+                    expoente_valor < 3
+                    or expoente_valor % 2 == 0
+                    or modulo_valor <= expoente_valor
+                    or modulo_valor % 2 == 0
+                    or modulo_valor.bit_length() < 2048
+                ):
+                    raise ValueError("ssh_public_key_invalida")
+            else:
+                curva, posicao = ler_campo(blob, posicao)
+                ponto, posicao = ler_campo(blob, posicao)
+                tipo_ec = tipo.split("@", 1)[0]
+                curva_esperada = tipo_ec.rsplit("nistp", 1)[-1]
+                if curva.decode("ascii") != "nistp" + curva_esperada:
+                    raise ValueError("ssh_public_key_invalida")
+                parametros_curva = {
+                    "256": (
+                        int("FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF", 16),
+                        int("5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B", 16),
+                        32,
+                    ),
+                    "384": (
+                        int("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF", 16),
+                        int("B3312FA7E23EE7E4988E056BE3F82D19181D9C6EFE8141120314088F5013875AC656398D8A2ED19D2A85C8EDD3EC2AEF", 16),
+                        48,
+                    ),
+                    "521": (
+                        (1 << 521) - 1,
+                        int("0051953EB9618E1C9A1F929A21A0B68540EEA2DA725B99B315F3B8B489918EF109E156193951EC7E937B1652C0BD3BB1BF073573DF883D2C34F1EF451FD46B503F00", 16),
+                        66,
+                    ),
+                }
+                primo, constante_b, tamanho_coordenada = parametros_curva[curva_esperada]
+                tamanho_ponto = 1 + 2 * tamanho_coordenada
+                if len(ponto) != tamanho_ponto or not ponto.startswith(b"\x04"):
+                    raise ValueError("ssh_public_key_invalida")
+                coordenada_x = int.from_bytes(ponto[1:1 + tamanho_coordenada], "big")
+                coordenada_y = int.from_bytes(ponto[1 + tamanho_coordenada:], "big")
+                if (
+                    coordenada_x >= primo
+                    or coordenada_y >= primo
+                    or (pow(coordenada_y, 2, primo) - (
+                        pow(coordenada_x, 3, primo) - 3 * coordenada_x + constante_b
+                    )) % primo != 0
+                ):
+                    raise ValueError("ssh_public_key_invalida")
+                if tipo.startswith("sk-"):
+                    aplicacao, posicao = ler_campo(blob, posicao)
+                    if not aplicacao:
+                        raise ValueError("ssh_public_key_invalida")
+            if posicao != len(blob):
+                raise ValueError("ssh_public_key_invalida")
+        except (UnicodeDecodeError, ValueError, KeyError) as erro:
+            raise ValueError("ssh_public_key_invalida") from erro
+
+        # O comentário não é necessário para autenticação e poderia conter
+        # caracteres com semântica especial no YAML; mantenha tipo e blob.
+        return f"{tipo} {padrao.group(2)}"
 
     def _virsh_available(self) -> bool:
         return self._tool("virsh") is not None
@@ -220,6 +332,13 @@ class VpsNyxOS:
             }
 
     def _criar_cloud_init(self, *, nome: str, username: str, ssh_public_key: str) -> Path:
+        # Defense in depth: este sink nunca deve interpolar dados não validados
+        # em user-data YAML, mesmo se um futuro chamador contornar provisionar().
+        nome = self._nome_valido(nome)
+        if not isinstance(username, str) or not re.fullmatch(r"[a-z_][a-z0-9_-]{0,31}", username):
+            raise ValueError("usuario_vps_invalido")
+        ssh_public_key = self._validar_chave_ssh(ssh_public_key)
+
         cloud_localds = self._tool("cloud-localds")
         if not cloud_localds:
             raise RuntimeError("cloud_localds_nao_instalado")
@@ -297,6 +416,7 @@ class VpsNyxOS:
             raise ValueError("usuario_vps_invalido")
         if not isinstance(ssh_public_key, str) or not ssh_public_key.strip():
             raise ValueError("ssh_public_key_obrigatoria")
+        ssh_public_key = self._validar_chave_ssh(ssh_public_key)
 
         source = Path(image_path).expanduser().resolve()
         if not source.is_file():

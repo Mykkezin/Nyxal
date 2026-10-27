@@ -1,10 +1,12 @@
 name: Nyxal LLC — validação completa
 
 on:
-  push:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - main
-      - feat/llc-complete-validation
+      - feat/llc-learning-loop
+      - feat/llc-evidence-provenance
     paths:
       - "nixal_learning_loop_causal.py"
       - "nixal_evidencia_ambiental_llc.py"
@@ -18,33 +20,21 @@ on:
       - "nixal_runtime.py"
       - "teste_llc*.py"
       - ".github/workflows/llc-completa-validation.yml"
-  pull_request:
-    branches:
-      - main
-      - feat/llc-learning-loop
-    paths:
-      - "nixal_learning_loop_causal.py"
-      - "nixal_evidencia_ambiental_llc.py"
-      - "nixal_evidencia_longitudinal_llc.py"
-      - "nixal_proveniencia_evidencia_llc.py"
-      - "nixal_replicacao_llc.py"
-      - "nixal_escopo_llc.py"
-      - "nixal_aprendizado_llc.py"
-      - "nixal_fechamento_llc.py"
-      - "nixal_aprendizado_persistente.py"
-      - "nixal_runtime.py"
-      - "teste_llc*.py"
+      - ".github/workflows/llc-validation.yml"
+      - ".github/workflows/llc6-proveniencia-validation.yml"
+
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   llc-completo:
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
     runs-on: self-hosted
     timeout-minutes: 10
     steps:

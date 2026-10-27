@@ -147,8 +147,8 @@ def main() -> None:
     memoria = MemoriaConversacionalNixal(max_mensagens=4)
 
     verificar(
-        memoria.VERSAO == "56.5.5",
-        "versão da memória é 56.5.5",
+        memoria.VERSAO == "56.6.0",
+        "versão da memória é 56.6.0",
         falhas,
         total,
     )
