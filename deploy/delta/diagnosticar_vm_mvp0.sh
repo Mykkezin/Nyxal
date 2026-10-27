@@ -5,31 +5,65 @@ set -uo pipefail
 
 VM_NAME="${NYXOS_DELTA_VM_NAME:-delta-mvp0}"
 POOL="${NYXOS_DELTA_VM_POOL:-default}"
-OLD_STORAGE="${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}"
+CONFIGURED_STORAGE="${NYXOS_DELTA_VM_STORAGE:-${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}}"
+DEDICATED_STORAGE="${NYXOS_DELTA_STORAGE_ROOT:-/var/lib/libvirt/images}/delta-mvp0-storage"
+LEGACY_STORAGE="${HOME}/NyxOS/VPS"
 
 section() { printf '\n=== %s ===\n' "$1"; }
 has_cmd() { command -v "$1" >/dev/null 2>&1; }
 
 section 'Host and storage capacity'
 printf 'User: %s\nHome: %s\n' "$(id -un)" "$HOME"
-df -h "$HOME" "$OLD_STORAGE" 2>/dev/null || true
-if [[ -e "$OLD_STORAGE" ]]; then
-  ls -ld "$HOME" "$HOME/NyxOS" "$OLD_STORAGE" 2>/dev/null || true
-fi
+for storage in "$CONFIGURED_STORAGE" "$DEDICATED_STORAGE" "$LEGACY_STORAGE"; do
+  [[ -n "$storage" ]] || continue
+  printf '\nStorage candidate: %s\n' "$storage"
+  df -h "$storage" 2>/dev/null || true
+  if [[ -e "$storage" || -L "$storage" ]]; then
+    ls -ldh -- "$storage" 2>/dev/null || true
+  else
+    echo 'PATH_ABSENT=yes'
+  fi
+done
 
 section 'Previous VM definition (read-only)'
-if has_cmd virsh && virsh -c qemu:///system dominfo "$VM_NAME" >/dev/null 2>&1; then
-  echo "DOMAIN_EXISTS=yes"
-  virsh -c qemu:///system dominfo "$VM_NAME" 2>&1 || true
-  echo
-  virsh -c qemu:///system domblklist "$VM_NAME" --details 2>&1 || true
-  echo
-  virsh -c qemu:///system domstate "$VM_NAME" 2>&1 || true
+DOMAIN_STATE="unknown"
+DOMAIN_LIST=""
+if ! has_cmd virsh; then
+  echo 'DOMAIN_EXISTS=unknown'
+  echo 'DOMAIN_CHECK_REASON=virsh_not_installed'
 else
-  echo "DOMAIN_EXISTS=no"
-fi
-echo
-if has_cmd virsh; then
+  if virsh -c qemu:///system dominfo "$VM_NAME" >/dev/null 2>&1; then
+    DOMAIN_STATE="yes"
+  else
+    # A failed dominfo is not proof of absence: it can also mean connection or
+    # permission failure. Only a successful full listing can prove absence.
+    if DOMAIN_LIST="$(virsh -c qemu:///system list --all --name 2>&1)"; then
+      if printf '%s\n' "$DOMAIN_LIST" | grep -Fxq -- "$VM_NAME"; then
+        DOMAIN_STATE="yes"
+      else
+        DOMAIN_STATE="no"
+      fi
+    else
+      DOMAIN_STATE="unknown"
+      echo 'DOMAIN_CHECK_REASON=libvirt_list_failed'
+      printf '%s\n' "$DOMAIN_LIST"
+    fi
+  fi
+
+  printf 'DOMAIN_EXISTS=%s\n' "$DOMAIN_STATE"
+  if [[ "$DOMAIN_STATE" == "yes" ]]; then
+    virsh -c qemu:///system dominfo "$VM_NAME" 2>&1 || true
+    echo
+    virsh -c qemu:///system domblklist "$VM_NAME" --details 2>&1 || true
+    echo
+    virsh -c qemu:///system domstate "$VM_NAME" 2>&1 || true
+  elif [[ "$DOMAIN_STATE" == "no" ]]; then
+    echo 'A ausência foi confirmada por uma listagem bem-sucedida de todos os domínios.'
+  else
+    echo 'ATENCAO: estado indeterminado. Não crie outra VM nem remova artefatos até resolver conexão/permissões do libvirt.'
+  fi
+
+  echo
   virsh -c qemu:///system list --all 2>&1 || true
 fi
 
@@ -42,7 +76,7 @@ if has_cmd virsh && virsh -c qemu:///system pool-info "$POOL" >/dev/null 2>&1; t
     pool_path="$(printf '%s' "$pool_xml" | python3 -c 'import sys,xml.etree.ElementTree as E; r=E.fromstring(sys.stdin.read()); print((r.findtext("./target/path") or "").strip())' 2>/dev/null || true)"
     if [[ -n "$pool_path" && -d "$pool_path" ]]; then
       df -h "$pool_path" 2>/dev/null || true
-      ls -ld "$pool_path" 2>/dev/null || true
+      ls -ldh -- "$pool_path" 2>/dev/null || true
     fi
   fi
 else
@@ -50,13 +84,22 @@ else
   if has_cmd virsh; then virsh -c qemu:///system pool-list --all 2>&1 || true; fi
 fi
 
-section 'Possible leftover files from failed attempt'
-for path in   "${OLD_STORAGE%/}/${VM_NAME}.qcow2"   "${OLD_STORAGE%/}/${VM_NAME}-seed.img"   "${OLD_STORAGE%/}/${VM_NAME}-user-data.yaml"   "${OLD_STORAGE%/}/${VM_NAME}-meta-data.yaml"; do
-  if [[ -e "$path" || -L "$path" ]]; then
-    ls -ldh -- "$path" 2>&1 || true
-  else
-    printf 'ABSENT  %s\n' "$path"
-  fi
+section 'Possible leftover files (all known storage candidates)'
+for storage in "$CONFIGURED_STORAGE" "$DEDICATED_STORAGE" "$LEGACY_STORAGE"; do
+  [[ -n "$storage" ]] || continue
+  printf '\nStorage: %s\n' "$storage"
+  for filename in \
+    "${VM_NAME}.qcow2" \
+    "${VM_NAME}-seed.img" \
+    "${VM_NAME}-user-data.yaml" \
+    "${VM_NAME}-meta-data.yaml"; do
+    path="${storage%/}/${filename}"
+    if [[ -e "$path" || -L "$path" ]]; then
+      ls -ldh -- "$path" 2>&1 || true
+    else
+      printf 'ABSENT  %s\n' "$path"
+    fi
+  done
 done
 
 section 'QEMU account and ACL tool'
@@ -66,7 +109,7 @@ else
   echo 'libvirt-qemu account not found'
 fi
 if has_cmd getfacl; then
-  echo "ACL for home directory (no file contents):"
+  echo 'ACL for home directory (no file contents):'
   getfacl -cp "$HOME" 2>&1 || true
 else
   echo 'getfacl not installed'
