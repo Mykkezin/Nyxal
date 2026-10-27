@@ -70,6 +70,16 @@ class VoiceProsodyTests(unittest.TestCase):
             "Status. Voz feminina ativada.",
         )
 
+    def test_intentional_ellipses_are_preserved_as_pause_cues(self):
+        self.assertEqual(
+            clean_speech_text("Então... deixa eu ver"),
+            "Então... deixa eu ver.",
+        )
+        self.assertEqual(
+            clean_speech_text("Pausa........ e continuo."),
+            "Pausa... e continuo.",
+        )
+
     def test_code_is_not_read_character_by_character(self):
         code_tick = chr(96)
         self.assertEqual(
