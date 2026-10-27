@@ -219,17 +219,32 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
             "sessao-com-segredo",
             "user",
             "A arquitetura do agente usa cache local; access_token=MEMORIA-SEGREDO-123 "
-            "Authorization: Bearer MEMORIA-BEARER-456 token=MEMORIA-TOKEN-789",
+            "Authorization: Bearer MEMORIA-BEARER-456 token=MEMORIA-TOKEN-789 "
+            "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 sk-proj-1234567890abcdefghijklmnop "
+            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.SECRET_SIGNATURE_1234567890 "
+            "-----BEGIN OPENSSH PRIVATE KEY----- PRIVATE_KEY_MATERIAL_DO_NOT_LEAK "
+            "-----END OPENSSH PRIVATE KEY-----",
         )
         resultado = memoria.buscar_relevante("Qual arquitetura do agente usa cache local?")
         self.assertTrue(resultado["sucesso"])
         self.assertEqual(len(resultado["mensagens"]), 1)
         trecho = resultado["mensagens"][0]["trecho"]
-        for segredo in ("MEMORIA-SEGREDO-123", "MEMORIA-BEARER-456", "MEMORIA-TOKEN-789"):
+        for segredo in (
+            "MEMORIA-SEGREDO-123",
+            "MEMORIA-BEARER-456",
+            "MEMORIA-TOKEN-789",
+            "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+            "sk-proj-1234567890abcdefghijklmnop",
+            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.SECRET_SIGNATURE_1234567890",
+            "PRIVATE_KEY_MATERIAL_DO_NOT_LEAK",
+        ):
             self.assertNotIn(segredo, trecho)
         self.assertIn("access_token=[REDACTED]", trecho)
         self.assertIn("Authorization=[REDACTED]", trecho)
         self.assertIn("token=[REDACTED]", trecho)
+        self.assertIn("[REDACTED TOKEN]", trecho)
+        self.assertIn("[REDACTED JWT]", trecho)
+        self.assertIn("[REDACTED PRIVATE KEY]", trecho)
         self.assertNotIn("sessao-com-segredo", str(resultado["mensagens"][0]))
 
     def test_busca_relevante_falha_fechado_em_json_corrompido_sem_reescrever(self) -> None:
