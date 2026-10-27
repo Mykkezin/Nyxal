@@ -3438,6 +3438,45 @@
       return { command: String(match[1] || '').trim() };
     }
 
+    function updateNyxalHologramPanels(state) {
+      const inputLabel = document.getElementById('nyxalSideCaptureState');
+      const coreLabel = document.getElementById('nyxalSideCoreState');
+      const inputDot = document.getElementById('nyxalSideInputDot');
+      const coreDot = document.getElementById('nyxalSideCoreDot');
+      const signal = document.getElementById('nyxalSideSignal');
+      if (!inputLabel && !coreLabel && !signal) return;
+
+      const status = {
+        idle: { input: 'STANDBY', core: 'EM ESPERA' },
+        standby: { input: 'RESIDENTE', core: 'EM ESPERA' },
+        listening: { input: 'OUVINDO', core: 'CAPTURA ATIVA' },
+        processing: { input: 'SINAL RECEBIDO', core: 'CONTEXTUALIZANDO' },
+        speaking: { input: 'CANAL DE ENTRADA', core: 'GERANDO VOZ' }
+      };
+      const current = status[state] || status.idle;
+      if (inputLabel) {
+        inputLabel.textContent = current.input;
+        inputLabel.dataset.state = state === 'listening' ? 'active' : 'idle';
+      }
+      if (coreLabel) coreLabel.textContent = current.core;
+      if (inputDot) inputDot.dataset.state = state === 'listening' ? 'active' : 'idle';
+      if (coreDot) coreDot.dataset.state = ['listening', 'processing', 'speaking'].includes(state) ? 'active' : 'idle';
+      if (signal && state !== 'listening') signal.dataset.active = 'false';
+
+      const phases = state === 'listening'
+        ? { input: 'active', context: 'idle', voice: 'idle' }
+        : state === 'processing'
+          ? { input: 'done', context: 'active', voice: 'idle' }
+          : state === 'speaking'
+            ? { input: 'done', context: 'done', voice: 'active' }
+            : { input: 'idle', context: 'idle', voice: 'idle' };
+      document.querySelectorAll('[data-nyxal-step]').forEach((step) => {
+        step.dataset.phase = phases[step.dataset.nyxalStep] || 'idle';
+      });
+      const stage = document.getElementById('nyxalVoiceStage');
+      if (stage) stage.dataset.state = state;
+    }
+
     function updateVoiceOnlySurfaceState() {
       if (!NYXAL_VOICE_ONLY_MODE) return;
       const prompt = document.getElementById('nyxalVoicePrompt');
@@ -3458,6 +3497,9 @@
           : (voiceConversationBusy ? 'processing' : (voiceUiDormant ? 'standby' : 'listening'));
       }
       if (stop) stop.hidden = !voiceConversationActive;
+      updateNyxalHologramPanels(
+        !voiceConversationActive ? 'idle' : (voiceConversationBusy ? 'processing' : (voiceUiDormant ? 'standby' : 'listening'))
+      );
     }
 
     function initNyxalVoiceOnlySurface() {
@@ -3540,6 +3582,7 @@
       const miniStatus = document.getElementById('nyxalVoiceMiniStatus');
       if (stage) stage.dataset.state = state;
       if (miniStatus) miniStatus.dataset.state = state;
+      updateNyxalHologramPanels(state);
       const globe = document.getElementById('globeContainer');
       const hud = document.getElementById('globeVoiceState');
       const label = document.getElementById('globeVoiceStateText');
@@ -3706,6 +3749,12 @@
         ? Math.max(0, Math.min(100, voiceRmsAtual / maximum * 100))
         : 0;
       if (fill) fill.style.width = `${percentage.toFixed(1)}%`;
+      const sideRms = document.getElementById('nyxalSideRmsValue');
+      if (sideRms) sideRms.textContent = sampleAvailable ? voiceRmsAtual.toFixed(3) : '—';
+      const sideSignal = document.getElementById('nyxalSideSignal');
+      if (sideSignal) sideSignal.dataset.active = String(Boolean(sampleAvailable && voiceConversationActive && !voiceConversationBusy));
+      const stage = document.getElementById('nyxalVoiceStage');
+      if (stage) stage.style.setProperty('--voice-level', sampleAvailable ? String(Math.max(0, Math.min(1, voiceRmsAtual / maximum))) : '0');
       const track = fill?.parentElement;
       if (track) {
         if (sampleAvailable) track.setAttribute('aria-valuenow', voiceRmsAtual.toFixed(3));
