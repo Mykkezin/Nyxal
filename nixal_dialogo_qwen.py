@@ -348,6 +348,8 @@ class DialogoQwenNixal:
         politica = getattr(capacidade, "politica", "somente_leitura")
         if politica not in {"somente_leitura", "acao_com_pedido_explicito", "requer_confirmacao"}:
             return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Política de capacidade inválida; execução bloqueada."}
+        if nome in self.FERRAMENTAS_MUTAVEIS and politica != "acao_com_pedido_explicito":
+            return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Política de ação mutável ausente ou inválida; execução bloqueada."}
         if politica == "acao_com_pedido_explicito" and not autorizacao:
             return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Ação bloqueada: falta pedido explícito do usuário."}
         if politica == "requer_confirmacao":
@@ -423,12 +425,26 @@ class DialogoQwenNixal:
             }
             for chamada in chamadas:
                 function = self._valor_mensagem(chamada, "function", {})
+                argumentos_historico = self._valor_mensagem(function, "arguments", {})
+                if isinstance(argumentos_historico, str):
+                    try:
+                        argumentos_historico = json.loads(argumentos_historico)
+                    except (json.JSONDecodeError, RecursionError, ValueError):
+                        argumentos_historico = {}
+                if not isinstance(argumentos_historico, dict):
+                    argumentos_historico = {}
+                try:
+                    # Valida serialização antes de ecoar argumentos não confiáveis
+                    # ao histórico do provedor; NaN/Infinity não são JSON válido.
+                    json.dumps(argumentos_historico, ensure_ascii=False, allow_nan=False)
+                except (TypeError, ValueError, RecursionError):
+                    argumentos_historico = {}
                 assistant_msg["tool_calls"].append({
                     "id": self._valor_mensagem(chamada, "id", "") or "",
                     "type": "function",
                     "function": {
                         "name": self._valor_mensagem(function, "name", ""),
-                        "arguments": self._valor_mensagem(function, "arguments", {}),
+                        "arguments": argumentos_historico,
                     },
                 })
             atual.append(assistant_msg)
