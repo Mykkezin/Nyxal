@@ -163,6 +163,15 @@ def main() -> int:
         print("ERRO: para proteger o espaço do host, o disco virtual do MVP deve ficar entre 8 e 24 GiB.", file=sys.stderr)
         return 2
 
+    configured_uri = os.environ.get("NYXOS_VPS_LIBVIRT_URI", "qemu:///system")
+    if configured_uri != "qemu:///system":
+        print(
+            "ERRO: este helper MVP-0 valida e usa apenas qemu:///system; "
+            "a variável NYXOS_VPS_LIBVIRT_URI aponta para outra URI.",
+            file=sys.stderr,
+        )
+        return 2
+
     storage = Path(args.storage or os.environ.get("NYXOS_VPS_STORAGE", str(Path.home() / "NyxOS" / "VPS"))).expanduser().resolve()
     image = Path(args.image).expanduser().resolve() if args.image else storage / DEFAULT_IMAGE_NAME
     os.environ["NYXOS_VPS_STORAGE"] = str(storage)
@@ -210,6 +219,9 @@ def main() -> int:
         sys.path.insert(0, str(ROOT))
         from nixal_vps import VpsNyxOS  # pylint: disable=import-outside-toplevel
 
+        key_fields = key_path.read_text(encoding="utf-8").split()
+        # Pass only the key type and encoded key to cloud-init; omit the free-form comment.
+        public_key_for_cloud_init = " ".join(key_fields[:2])
         result = VpsNyxOS().provisionar(
             nome=args.name,
             image_path=str(image),
@@ -218,7 +230,7 @@ def main() -> int:
             disk_gb=args.disk_gb,
             autostart=args.autostart,
             username="ubuntu",
-            ssh_public_key=key_path.read_text(encoding="utf-8").strip(),
+            ssh_public_key=public_key_for_cloud_init,
         )
         if not result.get("sucesso"):
             print("ERRO: o provisionador não confirmou sucesso.", file=sys.stderr)
