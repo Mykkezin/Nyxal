@@ -67,7 +67,7 @@ def status_ferramentas() -> str:
         "home_assistant": {"configurado": _url_home_assistant() is not None, "somente_leitura": True},
         "aviao": {"produtos": ["METAR", "TAF", "NOTAM", "cartas"], "metar_taf_fonte": "AviationWeather.gov Data API", "notam_cartas_fonte": "AISWEB/DECEA", "aisweb_configurado": bool(os.environ.get("NYXAL_AISWEB_API_KEY") and os.environ.get("NYXAL_AISWEB_API_PASS"))},
         "pesquisa_web": "disponível quando a rede permitir",
-        "notas_lembretes": {"arquivo": str(_notas.arquivo), "modo": "somente leitura neste servidor MCP"},
+        "notas_lembretes": {"armazenamento": "local_persistido", "modo": "somente leitura neste servidor MCP"},
         "comandos_arbitrarios": False,
         "segredos_incluidos": False,
     })
@@ -163,6 +163,8 @@ def listar_notas_lembretes(tipo: str = "todos") -> str:
 @mcp.tool()
 def diagnosticar_sistema(tipo: str) -> str:
     """Executa diagnóstico fixo e somente leitura, sem shell livre."""
+    if tipo in {"sistema", "processos", "disco", "memoria"} and not _dados_privados_habilitados():
+        return _bloqueio_privacidade()
     return _json(_executar_diagnostico(tipo))
 
 
