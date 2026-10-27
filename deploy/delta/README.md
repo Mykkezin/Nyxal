@@ -18,6 +18,8 @@ Estes comandos só verificam sintaxe; não escrevem bytecode nem alteram serviç
 
 ```bash
 bash -n deploy/delta/preflight_vm.sh
+bash -n deploy/delta/diagnosticar_vm_mvp0.sh
+bash -n deploy/delta/preparar_storage_mvp0.sh
 bash -n deploy/vps/preparar_base_ubuntu.sh
 python3 - <<'PY'
 from pathlib import Path
@@ -97,7 +99,7 @@ python3 deploy/delta/criar_vm_mvp0.py \
   --image "$HOME/NyxOS/VPS/ubuntu-24.04-server-cloudimg-amd64.img"
 ```
 
-## 5. Observar o primeiro boot
+## 6. Observar o primeiro boot
 
 Após a confirmação e criação:
 
