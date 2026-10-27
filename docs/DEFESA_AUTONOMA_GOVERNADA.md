@@ -100,3 +100,15 @@ O gate de autenticação HTTP alimenta o motor determinístico com falhas de Bea
 O evento usa o endereço do peer TCP observado pelo servidor. `Forwarded`, `X-Forwarded-For` e `X-Real-IP` não são usados como identidade. Em uma topologia com proxy, o peer pode ser o proxy local e não o cliente final; não se infere o IP remoto até existir configuração explícita de proxy confiável e testes correspondentes. O histórico é volátil, não contém tokens, corpos, query strings ou cabeçalhos e não é uma trilha forense durável.
 
 Esta integração apenas calcula e expõe recomendações auditáveis. Não bloqueia tráfego, não limita taxa, não reinicia serviços, não revoga credenciais e não altera arquivos. `executor_ativo=false`, `executor_autorizado=false` e `efeito_executado=false` permanecem invariantes. Executor separado, aprovação, idempotência, expiração, auditoria durável e rollback seguem pendentes.
+## Gate de preparação governada — dry-run
+
+`nixal_executor_defesa_governada.py` acrescenta uma fronteira separada entre recomendação e qualquer futura execução. Nesta fase ele **só prepara planos simulados**: não existe método de execução física, chamada de shell, ação de rede, escrita de arquivos operacionais, alteração de firewall, reinício de serviço, revogação de credencial ou quarentena real.
+
+Controles incluídos:
+
+- Allowlist fechada de tipos de recomendação e validação de escopo por tipo. Contenção de loopback, serviços fora da allowlist, identificadores com caminhos e durações fora do limite são rejeitados.
+- Todas as recomendações além de um simples alerta exigem aprovação humana, mesmo que o objeto de entrada tente marcar o contrário. Um verificador de aprovação opcional só pode validar um comprovante; mesmo quando retorna aprovado, a saída continua `modo=dry_run`, `executor_ativo=false`, `executor_autorizado=false` e `efeito_executado=false`.
+- Idempotência em memória por recomendação, com janela limitada; registros limitados a 256 por instância. Os planos recebem expiração, mas não existe trabalhador nem mecanismo que os aplique.
+- Campos extras da entrada não são copiados para o plano, os motivos têm tamanho limitado e credenciais óbvias em formato Bearer/`token=` são redigidas.
+
+Este gate é uma etapa de preparação e teste, não encerra a issue de defesa. Antes de qualquer efeito real, ainda será necessário um serviço de aprovação autenticada independente, executor por capacidades específicas, armazenamento de auditoria resistente a reinício, TTL/expiração efetiva dos efeitos, rollback testado e testes de replay/concorrência/proxy.
