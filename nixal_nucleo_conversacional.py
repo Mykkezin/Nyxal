@@ -299,10 +299,15 @@ class NucleoConversacionalNixal:
             texto,
         )
 
+        consultar_conversas_anteriores = self._deve_recuperar_conversas_anteriores(texto)
         priorizar_dialogo = self._deve_priorizar_dialogo(
             texto,
             historico,
         )
+        if consultar_conversas_anteriores:
+            # Recordação explícita também deve entrar no diálogo contextual,
+            # mesmo quando a frase não coincide com os marcadores gerais.
+            priorizar_dialogo = True
         # /api/agent/chat envia provedor explicitamente: preserve o contrato
         # desse endpoint e não converta um pedido ao modelo em ação local.
         if "provedor" in kwargs_dialogo:
@@ -319,6 +324,7 @@ class NucleoConversacionalNixal:
             contexto_persistido = self._obter_contexto_historico_persistido(
                 texto,
                 sessao_atual=sessao,
+                consultar_conversas=consultar_conversas_anteriores,
             )
 
         if priorizar_dialogo:
@@ -427,7 +433,7 @@ class NucleoConversacionalNixal:
         resposta["valor"]["arquitetura_modificada"] = False
         contextos_persistidos = contexto_persistido.get("contextos", [])
         resposta["valor"]["contexto_historico_persistido"] = {
-            "consultado": priorizar_dialogo,
+            "consultado": contexto_persistido.get("estado_conversas") != "nao_solicitado",
             "estado": contexto_persistido.get("estado", "indisponivel"),
             "quantidade": len(contextos_persistidos) if isinstance(contextos_persistidos, list) else 0,
             "registros": [
@@ -537,6 +543,7 @@ class NucleoConversacionalNixal:
         self,
         consulta: str,
         sessao_atual: str | None = None,
+        consultar_conversas: bool = False,
     ) -> dict[str, Any]:
         """Recupera contexto de investigação/conhecimento e conversas anteriores explicitamente solicitadas."""
         contextos: list[dict[str, Any]] = []
@@ -581,24 +588,27 @@ class NucleoConversacionalNixal:
             pass
 
         conversas: list[dict[str, Any]] = []
-        estado_conversas = "consulta_indisponivel"
-        try:
-            resultado_conversas = self.memoria_conversacional.buscar_relevante(
-                consulta,
-                sessao_excluida=sessao_atual,
-                limite=3,
-            )
-            if isinstance(resultado_conversas, dict):
-                estado_conversas = str(resultado_conversas.get("estado", "consulta_indisponivel"))[:80]
-                mensagens_raw = resultado_conversas.get("mensagens", [])
-                if isinstance(mensagens_raw, list):
-                    conversas = [item for item in mensagens_raw if isinstance(item, dict)][:3]
-                if resultado_conversas.get("sucesso") is not True:
-                    conversas = []
-        except Exception:
-            # A busca antiga é read-only e opcional; nunca deve derrubar o diálogo.
-            conversas = []
-            estado_conversas = "consulta_indisponivel"
+        estado_conversas = "consulta_indisponivel" if consultar_conversas else "nao_solicitado"
+        if consultar_conversas:
+            try:
+                resultado_conversas = self.memoria_conversacional.buscar_relevante(
+                    consulta,
+                    sessao_excluida=sessao_atual,
+                    limite=3,
+                )
+                if isinstance(resultado_conversas, dict):
+                    estado_conversas = str(
+                        resultado_conversas.get("estado", "consulta_indisponivel")
+                    )[:80]
+                    mensagens_raw = resultado_conversas.get("mensagens", [])
+                    if isinstance(mensagens_raw, list):
+                        conversas = [item for item in mensagens_raw if isinstance(item, dict)][:3]
+                    if resultado_conversas.get("sucesso") is not True:
+                        conversas = []
+            except Exception:
+                # A busca antiga é read-only e opcional; nunca deve derrubar o diálogo.
+                conversas = []
+                estado_conversas = "consulta_indisponivel"
 
         return {
             "estado": estado_historico,
@@ -935,6 +945,36 @@ class NucleoConversacionalNixal:
             " ",
             normalizado,
         ).strip()
+
+    def _deve_recuperar_conversas_anteriores(self, texto: str) -> bool:
+        """Só permite buscar outras sessões quando a mensagem pede recordação explicitamente."""
+        texto_normalizado = self._normalizar_texto_contextual(texto)
+        marcadores = (
+            "voce lembra",
+            "voce se lembra",
+            "lembra do que",
+            "lembra o que",
+            "lembra de mim",
+            "o que conversamos",
+            "sobre o que conversamos",
+            "o que falamos na conversa anterior",
+            "onde paramos",
+            "continue de onde paramos",
+            "continue de onde",
+            "retome de onde",
+            "retome o projeto",
+            "em outra conversa",
+            "na conversa anterior",
+            "sessao anterior",
+            "conversa anterior",
+            "historico da conversa anterior",
+            "o que combinamos anteriormente",
+            "o que decidimos anteriormente",
+            "o que resolvemos anteriormente",
+            "quais eram os passos",
+            "qual era o plano que combinamos",
+        )
+        return any(marcador in texto_normalizado for marcador in marcadores)
 
     def _deve_priorizar_dialogo(
         self,
