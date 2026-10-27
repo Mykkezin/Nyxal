@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - feat/llc-complete-validation
+      - feat/llc-learning-loop
+      - feat/llc-evidence-provenance
     paths:
       - "nixal_learning_loop_causal.py"
       - "nixal_evidencia_ambiental_llc.py"
@@ -18,10 +20,13 @@ on:
       - "nixal_runtime.py"
       - "teste_llc*.py"
       - ".github/workflows/llc-completa-validation.yml"
+      - ".github/workflows/llc-validation.yml"
+      - ".github/workflows/llc6-proveniencia-validation.yml"
   pull_request:
     branches:
       - main
       - feat/llc-learning-loop
+      - feat/llc-evidence-provenance
     paths:
       - "nixal_learning_loop_causal.py"
       - "nixal_evidencia_ambiental_llc.py"
@@ -34,6 +39,9 @@ on:
       - "nixal_aprendizado_persistente.py"
       - "nixal_runtime.py"
       - "teste_llc*.py"
+      - ".github/workflows/llc-completa-validation.yml"
+      - ".github/workflows/llc-validation.yml"
+      - ".github/workflows/llc6-proveniencia-validation.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
