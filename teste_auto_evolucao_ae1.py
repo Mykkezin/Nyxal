@@ -263,7 +263,12 @@ def main() -> None:
         contexto = auto.contexto()
         verificar(
             contexto.get("descoberta_habilitada") is True
-            and contexto.get("execucao_experimental_automatica") is False
+            and contexto.get("hipotese_provisoria_por_necessidade_observada") is True
+            and contexto.get("deduplicacao_de_necessidade_recorrente") is True,
+            "AE1 expõe descoberta adaptativa e controle de recorrência",
+        )
+        verificar(
+            contexto.get("execucao_experimental_automatica") is False
             and contexto.get("autorizacao_explicita") is False,
             "AE1 permanece descoberta/preparação, sem execução automática",
         )
