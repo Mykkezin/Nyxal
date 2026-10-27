@@ -1319,7 +1319,7 @@
     let currentNyxalAudioSource = null;
     let cancelCurrentNyxalSpeech = null;
 
-    function speakBrowserFallback(text) {
+    function speakBrowserFallback(text, userContext = "") {
       return new Promise((resolve) => {
         if (!('speechSynthesis' in window)) {
           resolve(false);
@@ -1337,8 +1337,16 @@
 
         if (goddessVoice) utterance.voice = goddessVoice;
 
-        utterance.pitch = 0.94;
-        utterance.rate = 0.98;
+        const perfilTexto = `${text} ${userContext}`
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase();
+        const alertaDireta = /\b(perigo|urgente|emergencia|imediatamente|afaste-se|nao toque)\b/.test(perfilTexto);
+        const tomPressa = /\b(estou com pressa|to com pressa|tenho pressa|responda rapido|responde rapido|seja breve|vai direto ao ponto|rapidinho|to atrasado|estou atrasado|tenho pouco tempo|sem enrolacao)\b/.test(perfilTexto);
+        const tomAcolhedor = /\b(sinto muito|estou aqui|lamento|vamos com calma|respira|estou triste|to triste|estou mal|to mal|com medo|tenho medo|me sinto sozinho|me sinto sozinha|perdi alguem|alguem morreu)\b/.test(perfilTexto);
+        const tomPositivo = /\b(parabens|conseguiu|deu certo|boa noticia|mandou bem|excelente)\b/.test(perfilTexto);
+        utterance.pitch = 0.96;
+        utterance.rate = alertaDireta ? 0.98 : tomPressa ? 1.08 : tomAcolhedor ? 0.93 : tomPositivo ? 1.03 : 0.98;
         utterance.volume = 1.0;
 
         let concluido = false;
@@ -1664,7 +1672,7 @@
       voiceBargeInFrame = requestAnimationFrame(runVoiceBargeInMonitor);
     }
 
-    async function speakGoddessNyxVoice(text, updateSubtitle = true) {
+    async function speakGoddessNyxVoice(text, updateSubtitle = true, userContext = "") {
       if (!text) return;
 
       if (voiceConversationActive) startVoiceBargeInCapture();
@@ -1689,15 +1697,24 @@
       try {
         await desbloquearAudioNyxal();
 
+        const ttsStartedAt = performance.now();
         const { data: blob } = await nyxalApiPost('/api/tts', {
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texto: text }),
+          body: JSON.stringify({
+            texto: text,
+            contexto_usuario: String(userContext || "").slice(0, 4000)
+          }),
           parse: 'blob'
         });
+        console.debug(
+          '[Nyxal][voz] síntese pronta em',
+          Math.round(performance.now() - ttsStartedAt),
+          'ms'
+        );
         if (!voiceBargeInDetected) await tocarAudioTtsComContexto(blob);
       } catch (err) {
         console.warn('TTS local indisponível; usando voz do navegador:', err);
-        if (!voiceBargeInDetected) await speakBrowserFallback(text);
+        if (!voiceBargeInDetected) await speakBrowserFallback(text, userContext);
       } finally {
         const foiInterrompida = voiceBargeInDetected || voiceBargeInHandoff;
         if (!foiInterrompida) {
@@ -2585,7 +2602,7 @@
             setHologramProcessing(false);
             showSubtitles(visual.resposta || 'A solicitação visual foi processada.');
             if (conversaContinua) {
-              await speakGoddessNyxVoice(visual.fala || visual.resposta || 'Concluído.', false);
+              await speakGoddessNyxVoice(visual.fala || visual.resposta || 'Concluído.', false, msg);
             }
             return;
           }
@@ -2647,7 +2664,8 @@
           showSubtitles(reply);
           await speakGoddessNyxVoice(
             speechText,
-            false
+            false,
+            msg
           );
         } else {
           let errorMessage =
@@ -2661,14 +2679,18 @@
 
           showSubtitles(errorMessage);
           await speakGoddessNyxVoice(
-            errorMessage
+            errorMessage,
+            false,
+            msg
           );
         }
       } catch (err) {
         setHologramProcessing(false);
         console.warn('Chat API fetch error:', err);
         await speakGoddessNyxVoice(
-          "Não consegui conectar à Nyxal. Verifique se a API local está em execução."
+          "Não consegui conectar à Nyxal. Verifique se a API local está em execução.",
+          false,
+          msg
         );
       } finally {
         if (conversaContinua && voiceConversationActive && !voiceBargeInHandoff && !voiceBargeInDetected) {
