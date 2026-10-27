@@ -73,7 +73,15 @@ class MemoriaConversacionalNixal:
         pasta.mkdir(mode=0o700, parents=True, exist_ok=True)
         if pasta.is_symlink() or self.caminho.is_symlink():
             raise OSError("caminho_de_memoria_nao_pode_ser_link_simbolico")
-        os.chmod(pasta, 0o700)
+        permissoes = stat.S_IMODE(pasta.stat().st_mode)
+        if permissoes & 0o077:
+            # Só corrigir automaticamente a pasta de dados conhecida da Nyxal.
+            # Nunca chmod em /tmp, $HOME ou em um diretório arbitrário configurado.
+            pasta_padrao = Path.home() / ".local" / "share" / "nyxal"
+            if pasta.resolve() == pasta_padrao.resolve():
+                os.chmod(pasta, 0o700)
+            else:
+                raise OSError("diretorio_de_memoria_nao_privado")
 
         lock_path = self.caminho.with_name(self.caminho.name + ".lock")
         if lock_path.is_symlink():
