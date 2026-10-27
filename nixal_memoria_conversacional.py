@@ -286,11 +286,13 @@ class MemoriaConversacionalNixal:
                     if erro or dados is None:
                         return self._erro_degradacao(erro or "estrutura_de_memoria_invalida")
                     sessoes = dados["sessoes"]
-                    if sessao_normalizada not in sessoes and len(sessoes) >= self.MAX_SESSOES_PERSISTIDAS:
+                    # Mover a sessão usada para o fim mantém a retenção por recência.
+                    historico = sessoes.pop(sessao_normalizada, [])
+                    if len(sessoes) >= self.MAX_SESSOES_PERSISTIDAS:
                         sessoes.pop(next(iter(sessoes)))
-                    historico = sessoes.setdefault(sessao_normalizada, [])
                     historico.append({"papel": papel_normalizado, "texto": texto_normalizado})
                     del historico[:-self.max_mensagens]
+                    sessoes[sessao_normalizada] = historico
                     erro = self._salvar_persistencia_sem_lock(dados)
                     if erro:
                         return self._erro_degradacao(erro)
