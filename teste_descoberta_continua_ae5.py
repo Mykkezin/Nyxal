@@ -79,6 +79,36 @@ def testar_sem_valor() -> None:
         assert list((Path(tmp) / "Nyxal-evolution-discovery" / "auditoria").glob("ae5-*.json"))
 
 
+def testar_sem_sinal_registra_auditoria() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        clock = Relogio()
+        ae5 = nova_ae5(tmp, clock)
+        resultado = ae5.processar({
+            "sucesso": True,
+            "estado": "ae4_sem_experimento_para_avaliar",
+            "ciclo_id": "c-sem-sinal",
+            "ae1": {
+                "sucesso": True,
+                "estado": "sem_oportunidade",
+                "oportunidade_criada": False,
+            },
+        })
+
+        assert resultado["estado"] == "sem_sinal_ae4"
+        assert resultado["motivos"] == ["oportunidade_ae1_ausente"]
+
+        auditorias = list(
+            (Path(tmp) / "Nyxal-evolution-discovery" / "auditoria").glob("ae5-*.json")
+        )
+        assert len(auditorias) == 1
+        auditoria = json.loads(auditorias[0].read_text(encoding="utf-8"))
+        assert auditoria["motivo"] == "sinal_ae1_ausente_ou_incompleto"
+        assert auditoria["motivos_sinal"] == ["oportunidade_ae1_ausente"]
+        assert auditoria["ciclo_id"] == "c-sem-sinal"
+        assert auditoria["nova_linha"] is False
+        assert auditoria["valor_economico_identificado"] is False
+
+
 def testar_progressao_economica() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         clock = Relogio()
@@ -237,6 +267,7 @@ def testar_fonte_sem_execucao_externa() -> None:
 
 
 def main() -> None:
+    testar_sem_sinal_registra_auditoria()
     testar_sem_valor()
     testar_progressao_economica()
     testar_deduplicacao_24h()
