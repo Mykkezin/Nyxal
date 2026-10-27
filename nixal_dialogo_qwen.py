@@ -187,6 +187,7 @@ class DialogoQwenNixal:
         estados_memoria = {"memoria_volatil", "persistencia_ativa", "memoria_degradada", "indisponivel"}
         estados_historico = {
             "nao_consultado", "consulta_concluida", "contexto_relevante",
+            "contexto_historico_encontrado", "contexto_historico_nao_encontrado",
             "consulta_historica_sem_termos", "memoria_degradada",
             "consulta_indisponivel", "consulta_invalida",
         }
