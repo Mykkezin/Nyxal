@@ -90,17 +90,14 @@ present = any(
 )
 print("present" if present else "absent")
 ' 2>/dev/null)"; then
-        printf 'GUEST_AGENT_CHANNEL=%s\n' "$GUEST_AGENT_CHANNEL"
       else
         GUEST_AGENT_CHANNEL="unknown"
         echo 'GUEST_AGENT_CHANNEL_REASON=xml_parse_failed'
       fi
     else
-      echo 'GUEST_AGENT_CHANNEL=unknown'
       echo 'GUEST_AGENT_CHANNEL_REASON=python3_not_installed'
     fi
   else
-    echo 'GUEST_AGENT_CHANNEL=unknown'
     echo 'GUEST_AGENT_CHANNEL_REASON=domain_xml_unavailable'
   fi
 
@@ -126,6 +123,7 @@ else
     echo "GUEST_AGENT_CHECK_REASON=virsh_not_installed"
   fi
 fi
+printf 'GUEST_AGENT_CHANNEL=%s\n' "$GUEST_AGENT_CHANNEL"
 printf 'GUEST_AGENT_PING=%s\n' "$GUEST_AGENT_PING"
 
 section 'VM storage pool (read-only)'
