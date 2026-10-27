@@ -38,7 +38,6 @@ class DialogoQwenNixal:
     MAX_TOOL_ARGUMENT_CHARS = 16000
     MAX_SPECIALIST_INPUT_CHARS = 8000
     MAX_SPECIALIST_OUTPUT_CHARS = 1500
-    MAX_SPECIALIST_CALLS = 2
 
     FERRAMENTAS_MUTAVEIS = frozenset({
         "salvar_nota", "criar_lembrete", "abrir_aplicativo",
@@ -575,12 +574,28 @@ class DialogoQwenNixal:
         """Ativa a coordenação só quando o usuário a solicita explicitamente."""
         if not isinstance(texto, str) or not texto.strip():
             return False
-        normalizado = unicodedata.normalize("NFKD", texto.casefold())
+        # Não tratar uma instrução citada em documento/exemplo como pedido ativo.
+        sem_citacoes = re.sub(
+            r'"[^"\n]{0,800}"|“[^”\n]{0,800}”|\x60[^\x60\n]{0,800}\x60',
+            " ",
+            texto,
+        )
+        normalizado = unicodedata.normalize("NFKD", sem_citacoes.casefold())
         normalizado = "".join(
             caractere for caractere in normalizado
             if not unicodedata.combining(caractere)
         )
         normalizado = re.sub(r"[^a-z0-9]+", " ", normalizado).strip()
+        negacoes = (
+            "nao use modo especialistas",
+            "nao use modo especialista",
+            "nao ative modo especialistas",
+            "nao ative modo multiagente",
+            "sem usar modo especialistas",
+            "nao quero modo multiagente",
+        )
+        if any(negacao in normalizado for negacao in negacoes):
+            return False
         marcadores = (
             "modo especialistas",
             "modo especialista",
