@@ -23,6 +23,7 @@ import copy
 import hashlib
 import json
 import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -62,6 +63,14 @@ class AutoEvolucaoGovernadaNixOS:
             return None
         valor = valor.strip()
         return valor or None
+
+    @staticmethod
+    def _texto_limitado(valor: Any, limite: int) -> str | None:
+        """Normaliza texto observado e limita o tamanho antes da persistência."""
+        if not isinstance(valor, str) or isinstance(limite, bool) or limite < 1:
+            return None
+        valor = " ".join(valor.split())
+        return valor[:limite] or None
 
     @classmethod
     def _id_oportunidade(
@@ -105,24 +114,44 @@ class AutoEvolucaoGovernadaNixOS:
             if isinstance(prioridade.get("selecionada"), dict)
             else prioridade
         )
-        if not cls._texto(necessidade.get("problema") or necessidade.get("necessidade")):
+
+        if not cls._texto_limitado(
+            necessidade.get("problema") or necessidade.get("necessidade"), 240
+        ):
             decisao = valor.get("decisao")
             decisao = decisao if isinstance(decisao, dict) else {}
             alternativa = decisao.get("necessidade_prioritaria")
             if isinstance(alternativa, dict):
                 necessidade = alternativa
 
-        if cls._texto(necessidade.get("problema") or necessidade.get("necessidade")):
-            return copy.deepcopy(necessidade)
+        # Persistir apenas campos previstos; não copiar payloads, tokens ou objetos
+        # arbitrários anexados à necessidade pelo Runtime ou por uma integração.
+        limites = {
+            "origem": 80,
+            "problema": 240,
+            "necessidade": 120,
+            "tipo_problema": 40,
+            "tipo": 80,
+            "prioridade": 32,
+            "motivo": 240,
+        }
+        normalizada = {}
+        for campo, limite in limites.items():
+            texto = cls._texto_limitado(necessidade.get(campo), limite)
+            if texto is not None:
+                normalizada[campo] = texto
+        if "problema" not in normalizada and "necessidade" in normalizada:
+            normalizada["problema"] = normalizada["necessidade"]
+        if normalizada.get("problema") or normalizada.get("necessidade"):
+            return normalizada
 
-        erro = cls._texto(ciclo.get("erro") or ciclo.get("motivo"))
-        estado = cls._texto(ciclo.get("estado"))
+        erro = cls._texto_limitado(ciclo.get("erro") or ciclo.get("motivo"), 240)
+        estado = cls._texto_limitado(ciclo.get("estado"), 40)
         if ciclo.get("sucesso") is False or estado == "erro":
             if erro:
-                problema = erro[:240]
                 return {
                     "origem": "runtime_residente",
-                    "problema": f"falha_ciclo_residente: {problema}",
+                    "problema": f"falha_ciclo_residente: {erro}"[:240],
                     "tipo_problema": "falha_operacional",
                     "tipo": "fiabilidade_operacional",
                     "necessidade": "investigar_falha_ciclo_residente",
@@ -140,16 +169,16 @@ class AutoEvolucaoGovernadaNixOS:
         cls,
         necessidade: dict[str, Any],
     ) -> dict[str, Any] | None:
-        problema = cls._texto(
-            necessidade.get("problema") or necessidade.get("necessidade")
+        problema = cls._texto_limitado(
+            necessidade.get("problema") or necessidade.get("necessidade"), 240
         )
-        nome = cls._texto(necessidade.get("necessidade"))
+        nome = cls._texto_limitado(necessidade.get("necessidade"), 120)
         if not problema:
             return None
 
         problema = problema[:240]
         nome = nome[:120] if nome else "investigar_necessidade_observada"
-        tipo_problema = cls._texto(necessidade.get("tipo_problema")) or ""
+        tipo_problema = cls._texto_limitado(necessidade.get("tipo_problema"), 40) or ""
         if tipo_problema == "inconsistencia":
             texto = (
                 f"Investigar a inconsistência observada '{problema}' e confrontar "
@@ -190,14 +219,15 @@ class AutoEvolucaoGovernadaNixOS:
         ciclo: dict[str, Any],
         necessidade: dict[str, Any],
     ) -> dict[str, Any]:
+        sucesso = ciclo.get("sucesso")
         return {
-            "ciclo_id": cls._texto(ciclo.get("ciclo_id")),
+            "ciclo_id": cls._texto_limitado(ciclo.get("ciclo_id"), 128),
             "observado_em": cls._timestamp(),
-            "estado_ciclo": cls._texto(ciclo.get("estado")) or "desconhecido",
-            "ciclo_sucesso": ciclo.get("sucesso"),
-            "prioridade": cls._texto(necessidade.get("prioridade")) or "indeterminada",
-            "origem_necessidade": cls._texto(necessidade.get("origem")),
-            "motivo_observado": cls._texto(necessidade.get("motivo")),
+            "estado_ciclo": cls._texto_limitado(ciclo.get("estado"), 40) or "desconhecido",
+            "ciclo_sucesso": sucesso if isinstance(sucesso, bool) else None,
+            "prioridade": cls._texto_limitado(necessidade.get("prioridade"), 32) or "indeterminada",
+            "origem_necessidade": cls._texto_limitado(necessidade.get("origem"), 80),
+            "motivo_observado": cls._texto_limitado(necessidade.get("motivo"), 240),
         }
 
     def _arquivo(self, oportunidade_id: str) -> Path:
@@ -226,16 +256,34 @@ class AutoEvolucaoGovernadaNixOS:
             raise ValueError("oportunidade_id_invalido")
 
         caminho = self._arquivo(oportunidade_id)
-        temporario = caminho.with_name(caminho.name + ".tmp")
-        temporario.write_text(
-            json.dumps(
-                oportunidade,
-                ensure_ascii=False,
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-        os.replace(temporario, caminho)
+        temporario: Path | None = None
+        try:
+            # NamedTemporaryFile cria um temporário exclusivo com permissões
+            # restritas; o replace atômico evita leitores observarem JSON parcial.
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self.diretorio_oportunidades,
+                prefix=f".{oportunidade_id}.",
+                suffix=".tmp",
+                delete=False,
+            ) as arquivo:
+                temporario = Path(arquivo.name)
+                arquivo.write(json.dumps(
+                    oportunidade,
+                    ensure_ascii=False,
+                    indent=2,
+                ))
+                arquivo.flush()
+                os.fsync(arquivo.fileno())
+            os.replace(temporario, caminho)
+            temporario = None
+        finally:
+            if temporario is not None:
+                try:
+                    temporario.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
     def avaliar_ciclo(
         self,
@@ -249,14 +297,15 @@ class AutoEvolucaoGovernadaNixOS:
                 "motivo": "O ciclo precisa ser um objeto.",
             }
 
-        ciclo_id = self._texto(ciclo.get("ciclo_id"))
+        ciclo_id = self._texto_limitado(ciclo.get("ciclo_id"), 128)
         valor = ciclo.get("valor")
         valor = valor if isinstance(valor, dict) else {}
         necessidade = self._extrair_necessidade_observada(ciclo, valor)
 
-        limitacao = self._texto(
+        limitacao = self._texto_limitado(
             necessidade.get("problema")
-            or necessidade.get("necessidade")
+            or necessidade.get("necessidade"),
+            240,
         )
 
         hipotese_obj = valor.get("hipotese")
@@ -272,13 +321,14 @@ class AutoEvolucaoGovernadaNixOS:
 
         hipotese = None
         if isinstance(hipotese_obj, dict):
-            hipotese = self._texto(
+            hipotese = self._texto_limitado(
                 hipotese_obj.get("hipotese")
                 or hipotese_obj.get("texto")
-                or hipotese_obj.get("enunciado")
+                or hipotese_obj.get("enunciado"),
+                1000,
             )
         elif isinstance(hipotese_obj, str):
-            hipotese = self._texto(hipotese_obj)
+            hipotese = self._texto_limitado(hipotese_obj, 1000)
 
         hipotese_auto_formulada = False
         if hipotese is None and necessidade:
@@ -384,7 +434,7 @@ class AutoEvolucaoGovernadaNixOS:
                 "necessidade": necessidade.get("necessidade"),
             },
             "evidencias": {
-                "ciclo_sucesso": ciclo.get("sucesso"),
+                "ciclo_sucesso": ciclo.get("sucesso") if isinstance(ciclo.get("sucesso"), bool) else None,
                 "estado_ciclo": ciclo.get("estado"),
                 "necessidade_observada": copy.deepcopy(necessidade),
                 "origem_hipotese": (
