@@ -10,9 +10,24 @@ Execute a partir de qualquer diretório no checkout:
 bash deploy/delta/preflight_vm.sh
 ```
 
-O pré-voo é somente de leitura. Ele verifica os arquivos-base esperados, QEMU/qemu-img, KVM, RAM, espaço, ferramentas de cloud-init e conexão/rede do libvirt. Não instala pacotes, inicia redes, altera serviços, baixa imagens ou cria VMs.
+O pré-voo é somente de leitura. Ele verifica os arquivos-base esperados, QEMU/qemu-img, KVM, RAM, espaço, ferramentas de cloud-init e conexão/rede do libvirt. Requisitos faltantes para criar a VM são marcados como `BLOCK` e fazem o script sair com código 2; ausência de Nix/Podman ou aviso de espaço sob o recomendado fica como `WARN`. Não instala pacotes, inicia redes, altera serviços, baixa imagens ou cria VMs.
 
-## 2. Preparar a imagem de laboratório
+## 2. Validar os scripts
+
+Estes comandos só verificam sintaxe; não escrevem bytecode nem alteram serviços:
+
+```bash
+bash -n deploy/delta/preflight_vm.sh
+bash -n deploy/vps/preparar_base_ubuntu.sh
+python3 - <<'PY'
+from pathlib import Path
+path = Path("deploy/delta/criar_vm_mvp0.py")
+compile(path.read_text(encoding="utf-8"), str(path), "exec")
+print("PYTHON_SYNTAX_OK")
+PY
+```
+
+## 3. Preparar a imagem de laboratório
 
 ```bash
 bash deploy/vps/preparar_base_ubuntu.sh
@@ -31,7 +46,7 @@ Armazenamento padrão:
 
 A imagem cloud atual tem aproximadamente 600 MB; o tamanho e o hash podem mudar conforme a Canonical publique outro release. Mantenha espaço para o disco da VM e dados instalados, não apenas para o download.
 
-## 3. Criar a VM descartável MVP-0
+## 4. Criar a VM descartável MVP-0
 
 Confirme que existe uma chave pública SSH em `~/.ssh/*.pub`, que `cloud-localds` está instalado e que a rede libvirt `default` está ativa. Nenhuma chave será gerada pelo script.
 
@@ -57,7 +72,7 @@ python3 deploy/delta/criar_vm_mvp0.py --ssh-key-file ~/.ssh/minha_chave.pub
 
 Se qualquer pré-condição falhar, o processo aborta em vez de instalar pacotes ou reconfigurar o host automaticamente.
 
-## 4. Observar o primeiro boot
+## 5. Observar o primeiro boot
 
 Após a confirmação e criação:
 
