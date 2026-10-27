@@ -1,4 +1,5 @@
 name: DELTA MVP tooling validation
+# Este workflow usa mocks: nunca cria, liga ou altera uma VM real.
 
 on:
   pull_request:
