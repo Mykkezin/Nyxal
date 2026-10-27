@@ -1,42 +1,47 @@
 #!/usr/bin/env python3
+"""Smoke test for Nyxal's optional MCP stdio server using the MCP Python SDK v2."""
+
+from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path
 
-from mcp import ClientSession
-from mcp.client.stdio import stdio_client, StdioServerParameters
-
+from mcp import Client, StdioServerParameters
 
 BASE_DIR = Path(__file__).resolve().parent
+PYTHON = Path(sys.executable)
+SERVER = BASE_DIR / "nyxal_mcp_tools.py"
+REQUIRED_TOOLS = {
+    "status_ferramentas",
+    "consultar_metar_taf",
+    "consultar_notam_aisweb",
+    "consultar_cartas_aisweb",
+}
 
 
-async def main():
-    servidor = StdioServerParameters(
-        command=str(BASE_DIR / ".venv" / "bin" / "python"),
-        args=["nyxal_mcp_server.py"],
-        cwd=BASE_DIR,
+async def main() -> None:
+    if not SERVER.is_file():
+        raise SystemExit(f"Servidor MCP ausente: {SERVER}")
+
+    params = StdioServerParameters(
+        command=str(PYTHON),
+        args=[str(SERVER)],
     )
+    async with Client(params) as client:
+        result = await client.list_tools()
+        names = {tool.name for tool in result.tools}
+        missing = REQUIRED_TOOLS - names
+        if missing:
+            raise RuntimeError(f"Ferramentas MCP ausentes: {sorted(missing)}")
 
-    async with stdio_client(servidor) as (leitura, escrita):
-        async with ClientSession(leitura, escrita) as sessao:
-            await sessao.initialize()
+        status = await client.call_tool("status_ferramentas", {})
+        if status.is_error:
+            raise RuntimeError("A consulta status_ferramentas retornou erro.")
 
-            ferramentas = await sessao.list_tools()
-
-            print("MCP conectado.")
-            print("Ferramentas:")
-            for ferramenta in ferramentas.tools:
-                print(f" - {ferramenta.name}")
-
-            resultado = await sessao.call_tool(
-                "status_nyxal",
-                {},
-            )
-
-            print("\nResposta de status_nyxal:")
-            for conteudo in resultado.content:
-                if hasattr(conteudo, "text"):
-                    print(conteudo.text)
+        print("MCP conectado.")
+        print(f"Ferramentas anunciadas: {len(names)}")
+        print("Contrato de status: OK")
 
 
 if __name__ == "__main__":
