@@ -47,6 +47,8 @@ jobs:
           bash -n deploy/delta/preparar_storage_mvp0.sh
           bash -n deploy/vps/preparar_base_ubuntu.sh
       - name: Compile VM bootstrap and regressions
-        run: python3 -m py_compile deploy/delta/criar_vm_mvp0.py teste_delta_mvp0.py nixal_vps.py teste_nixal_vps.py
+        run: python3 -m py_compile deploy/delta/criar_vm_mvp0.py deploy/delta/teste_criar_vm_mvp0.py teste_delta_mvp0.py nixal_vps.py teste_nixal_vps.py
+      - name: Run mocked DELTA storage and bootstrap regressions
+        run: python3 -m unittest discover -s deploy/delta -p 'teste_*.py' -v
       - name: Run mocked DELTA bootstrap and VPS regressions
         run: python3 -m unittest -v teste_delta_mvp0.py teste_nixal_vps.py
