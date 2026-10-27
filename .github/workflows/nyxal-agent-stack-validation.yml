@@ -46,6 +46,7 @@ on:
       - "interface/js/nyxal-voice-console.js"
       - "teste_nyxos_voice_console.py"
       - ".github/workflows/nyxal-agent-stack-validation.yml"
+      - ".github/workflows/security-baseline.yml"
       - "scripts/autorizar_gmail_nyxal.py"
       - "scripts/configurar_hermes_whatsapp_policy.py"
       - "scripts/nyxal_letta_memory.py"
@@ -99,6 +100,7 @@ on:
       - "interface/js/nyxal-voice-console.js"
       - "teste_nyxos_voice_console.py"
       - ".github/workflows/nyxal-agent-stack-validation.yml"
+      - ".github/workflows/security-baseline.yml"
       - "scripts/autorizar_gmail_nyxal.py"
       - "scripts/configurar_hermes_whatsapp_policy.py"
       - "scripts/nyxal_letta_memory.py"
@@ -109,7 +111,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
