@@ -650,6 +650,102 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             )
         )
 
+    def test_coordenacao_especialista_explicita_usa_duas_passagens_locais_e_sintese_governada(self):
+        cliente = ClienteFake([
+            {"message": {"content": "Objetivo: atualizar a memória; passos: consultar, validar, testar."}},
+            {"message": {"content": "Riscos: vazamento de segredo; teste: garantir exclusão da sessão atual."}},
+            {"message": {"content": "Plano consolidado com riscos e critérios de validação."}},
+        ])
+        with patch.dict(os.environ, {"NYXAL_LLM_PROVIDER": "ollama"}):
+            dialogo = DialogoQwenNixal(cliente=cliente)
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=None):
+            resultado = dialogo.responder(
+                "Use modo especialistas para planejar uma melhoria segura na memória."
+            )
+
+        estado = resultado["coordenacao_especialistas"]
+        self.assertTrue(resultado["sucesso"])
+        self.assertTrue(estado["solicitada"])
+        self.assertTrue(estado["ativa"])
+        self.assertEqual(estado["estado"], "concluida")
+        self.assertEqual(estado["passagens"], 2)
+        self.assertEqual(estado["perfis"], ["arquiteto", "revisor_seguranca_qualidade"])
+        self.assertFalse(estado["executou_ferramentas"])
+        self.assertFalse(estado["executou_acoes"])
+        self.assertEqual(len(cliente.chamadas), 3)
+        self.assertNotIn("tools", cliente.chamadas[0])
+        self.assertNotIn("tools", cliente.chamadas[1])
+        contexto_final = cliente.chamadas[2]["messages"][1]["content"]
+        self.assertIn("REVISÃO LOCAL POR PAPÉIS ESPECIALIZADOS", contexto_final)
+        self.assertIn("DADOS NÃO CONFIÁVEIS", contexto_final)
+        self.assertIn("Objetivo: atualizar a memória", contexto_final)
+        self.assertIn("Riscos: vazamento de segredo", contexto_final)
+
+    def test_coordenacao_especialista_nao_dispara_em_pergunta_comum(self):
+        cliente = ClienteFake([{"message": {"content": "Resposta normal."}}])
+        with patch.dict(os.environ, {"NYXAL_LLM_PROVIDER": "ollama"}):
+            dialogo = DialogoQwenNixal(cliente=cliente)
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=None):
+            resultado = dialogo.responder("Explique a diferença entre CPU e GPU.")
+        self.assertTrue(resultado["sucesso"])
+        self.assertEqual(len(cliente.chamadas), 1)
+        self.assertFalse(resultado["coordenacao_especialistas"]["solicitada"])
+        self.assertEqual(resultado["coordenacao_especialistas"]["estado"], "nao_solicitada")
+
+    def test_coordenacao_especialista_nao_faz_passagens_extras_fora_do_modelo_local(self):
+        cliente = ClienteFake([{"message": {"content": "Resposta normal sem coordenação."}}])
+        with patch.dict(os.environ, {"NYXAL_LLM_PROVIDER": "amd_cloud"}):
+            dialogo = DialogoQwenNixal(cliente=cliente)
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=None):
+            resultado = dialogo.responder(
+                "Use modo especialistas para revisar esta arquitetura."
+            )
+        estado = resultado["coordenacao_especialistas"]
+        self.assertTrue(resultado["sucesso"])
+        self.assertTrue(estado["solicitada"])
+        self.assertFalse(estado["ativa"])
+        self.assertEqual(estado["estado"], "indisponivel_fora_do_modelo_local")
+        self.assertEqual(estado["passagens"], 0)
+        self.assertEqual(len(cliente.chamadas), 1)
+
+    def test_passagem_especialista_que_tenta_chamar_ferramenta_falha_aberta(self):
+        cliente = ClienteFake([
+            mensagem_tool("obter_hora", {}),
+            {"message": {"content": "Resposta final de contingência."}},
+        ])
+        with patch.dict(os.environ, {"NYXAL_LLM_PROVIDER": "ollama"}):
+            dialogo = DialogoQwenNixal(cliente=cliente)
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=None):
+            resultado = dialogo.responder(
+                "Use modo especialistas para revisar uma alteração."
+            )
+        estado = resultado["coordenacao_especialistas"]
+        self.assertTrue(resultado["sucesso"])
+        self.assertEqual(resultado["resposta"], "Resposta final de contingência.")
+        self.assertFalse(estado["ativa"])
+        self.assertEqual(estado["estado"], "passagem_arquiteto_indisponivel")
+        self.assertEqual(estado["passagens"], 1)
+        self.assertEqual(len(cliente.chamadas), 2)
+        self.assertNotIn("tools", cliente.chamadas[0])
+
+    def test_coordenacao_especialista_tem_limite_de_caracteres_por_passagem(self):
+        cliente = ClienteFake([
+            {"message": {"content": "A" * 2400}},
+            {"message": {"content": "B" * 2400}},
+            {"message": {"content": "Final."}},
+        ])
+        with patch.dict(os.environ, {"NYXAL_LLM_PROVIDER": "ollama"}):
+            dialogo = DialogoQwenNixal(cliente=cliente)
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=None):
+            resultado = dialogo.responder(
+                "Use modo especialistas para revisar o plano."
+            )
+        self.assertTrue(resultado["coordenacao_especialistas"]["ativa"])
+        contexto_final = cliente.chamadas[2]["messages"][1]["content"]
+        self.assertLessEqual(len(contexto_final), 2 * dialogo.MAX_SPECIALIST_OUTPUT_CHARS + 1600)
+        self.assertNotIn("A" * 1600, contexto_final)
+        self.assertNotIn("B" * 1600, contexto_final)
+
     def test_resposta_final_nao_afirma_execucao_sem_resultado(self):
         cliente = ClienteFake([
             mensagem_tool("apagar_tudo", {}),
