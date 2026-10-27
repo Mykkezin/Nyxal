@@ -138,6 +138,29 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         good = manager.executar("fake", modo="read")
         self.assertTrue(good.sucesso)
 
+    def test_pergunta_informativa_nao_autoriza_escrita_ou_abertura(self):
+        self.assertFalse(
+            DialogoQwenNixal._pedido_explicitamente_autorizou(
+                "salvar_nota", "Como faço para salvar nota?"
+            )
+        )
+        self.assertFalse(
+            DialogoQwenNixal._pedido_explicitamente_autorizou(
+                "abrir_aplicativo", "Como abrir o terminal?"
+            )
+        )
+        self.assertFalse(
+            DialogoQwenNixal._pedido_explicitamente_autorizou(
+                "abrir_aplicativo", "O que devo fazer para abrir navegador?"
+            )
+        )
+        self.assertTrue(
+            DialogoQwenNixal._pedido_explicitamente_autorizou(
+                "abrir_aplicativo", "Por favor, abra o navegador."
+            )
+        )
+
+
     def test_escrita_bloqueada_sem_autorizacao_no_gerenciador(self):
         manager = GerenciadorCapacidades()
         manager.registrar(
