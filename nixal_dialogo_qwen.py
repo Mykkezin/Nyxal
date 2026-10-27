@@ -188,7 +188,8 @@ class DialogoQwenNixal:
         return pedido and not any(negacao in texto for negacao in (
             "nao faça", "nao faca", "não faça", "não faca", "nao salve", "não salve",
             "nao crie", "não crie", "nao abra", "não abra", "nao anote", "não anote",
-            "nao me lembre", "não me lembre", "nao execute", "não execute",
+            "nao me lembre", "não me lembre", "nao me avise", "não me avise",
+            "nao execute", "não execute",
         ))
 
     def _executar_chamada_ferramenta(self, gerenciador: Any, chamada: Any, pedido_usuario: str) -> dict[str, Any]:
