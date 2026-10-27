@@ -1,14 +1,7 @@
 name: DELTA MVP tooling validation
+# All tests use mocks; this workflow never provisions or alters a real VM.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "deploy/delta/**"
-      - "deploy/vps/preparar_base_ubuntu.sh"
-      - "docs/DELTA_MVP_ACCEPTANCE.md"
-      - "docs/DELTA_PLATFORM_SPEC.md"
-      - ".github/workflows/delta-mvp-validation.yml"
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     branches:
@@ -17,6 +10,9 @@ on:
     paths:
       - "deploy/delta/**"
       - "deploy/vps/preparar_base_ubuntu.sh"
+      - "nixal_vps.py"
+      - "teste_nixal_vps.py"
+      - "teste_delta_mvp0.py"
       - "docs/DELTA_MVP_ACCEPTANCE.md"
       - "docs/DELTA_PLATFORM_SPEC.md"
       - ".github/workflows/delta-mvp-validation.yml"
@@ -31,6 +27,7 @@ concurrency:
 
 jobs:
   validate-delta-tools:
+    # Full tests on PRs require explicit opt-in from a trusted repository author.
     if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
     runs-on: self-hosted
     timeout-minutes: 5
@@ -48,7 +45,9 @@ jobs:
           bash -n deploy/delta/diagnosticar_vm_mvp0.sh
           bash -n deploy/delta/preparar_storage_mvp0.sh
           bash -n deploy/vps/preparar_base_ubuntu.sh
-      - name: Compile DELTA bootstrap and regressions
-        run: python3 -m py_compile deploy/delta/criar_vm_mvp0.py deploy/delta/teste_criar_vm_mvp0.py
+      - name: Compile DELTA and VPS regressions
+        run: python3 -m py_compile deploy/delta/criar_vm_mvp0.py deploy/delta/teste_criar_vm_mvp0.py teste_delta_mvp0.py nixal_vps.py teste_nixal_vps.py
       - name: Run mocked DELTA bootstrap regressions
         run: python3 -m unittest discover -s deploy/delta -p 'teste_*.py' -v
+      - name: Run mocked DELTA and VPS regressions
+        run: python3 -m unittest -v teste_delta_mvp0.py teste_nixal_vps.py
