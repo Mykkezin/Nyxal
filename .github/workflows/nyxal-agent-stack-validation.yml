@@ -24,6 +24,7 @@ on:
       - "nixal_tool_use.py"
       - "nyxal_mcp_tools.py"
       - "teste_nixal_tool_use.py"
+      - "teste_nyxal_tool_use.py"
       - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
       - "nixal_transporte_conversacional.py"
       - "nixal_integracao_sessao_transporte.py"
@@ -93,6 +94,7 @@ on:
       - "nixal_tool_use.py"
       - "nyxal_mcp_tools.py"
       - "teste_nixal_tool_use.py"
+      - "teste_nyxal_tool_use.py"
       - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
       - "nixal_transporte_conversacional.py"
       - "nixal_integracao_sessao_transporte.py"
@@ -219,6 +221,7 @@ jobs:
             nixal_tool_use.py \
             nyxal_mcp_tools.py \
             teste_nixal_tool_use.py \
+            teste_nyxal_tool_use.py \
             nixal_transporte_conversacional.py \
             nixal_integracao_sessao_transporte.py \
             nixal_contexto_historico_relevante.py \
@@ -263,6 +266,7 @@ jobs:
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
             teste_nixal_tool_use \
+            teste_nyxal_tool_use \
             teste_nyxal_function_calling \
             teste_nyxos_voice_console \
             teste_nixal_responses_api \
