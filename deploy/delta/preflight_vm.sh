@@ -128,7 +128,7 @@ else
   warn 'Nenhuma chave pública SSH encontrada em ~/.ssh; a VM não pode ser provisionada com o método cloud-init atual'
 fi
 
-BASE_IMAGE="${NYXOS_VPS_BASE_IMAGE:-${HOME}/NyxOS/VPS/ubuntu-24.04-server-cloudimg-amd64.img}"
+BASE_IMAGE="${NYXOS_VPS_BASE_IMAGE:-${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}/ubuntu-24.04-server-cloudimg-amd64.img}"
 if [[ -f "${BASE_IMAGE}" ]]; then
   ok "Imagem cloud base encontrada: ${BASE_IMAGE}"
 else
