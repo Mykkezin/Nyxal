@@ -144,6 +144,86 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertIn("falta pedido explícito", resultado["resultado"])
         self.assertEqual(efeitos, [])
 
+    def test_schema_aninhado_valida_tipos_campos_e_limites(self):
+        manager = GerenciadorCapacidades()
+        manager.registrar(
+            nome="schema_aninhado_teste",
+            descricao="Teste",
+            objetivo="Teste",
+            exemplos=["Teste"],
+            funcao=lambda config, itens: {"config": config, "itens": itens},
+            argumentos={
+                "config": {
+                    "tipo": "object",
+                    "obrigatorio": True,
+                    "properties": {
+                        "modo": {"tipo": "string", "enum": ["read"]},
+                        "tentativas": {"tipo": "integer", "minimo": 1, "maximo": 3},
+                    },
+                    "required": ["modo"],
+                },
+                "itens": {
+                    "tipo": "array",
+                    "obrigatorio": True,
+                    "max_items": 2,
+                    "items": {"tipo": "string"},
+                },
+            },
+            dominios=["teste"],
+            evidencias_dominio=["teste"],
+        )
+        self.assertEqual(
+            manager.validar_argumentos(
+                "schema_aninhado_teste",
+                {"config": {"modo": "read", "tentativas": 2}, "itens": ["a"]},
+            ),
+            (True, None),
+        )
+        self.assertFalse(manager.validar_argumentos(
+            "schema_aninhado_teste",
+            {"config": {"modo": "write"}, "itens": ["a"]},
+        )[0])
+        self.assertFalse(manager.validar_argumentos(
+            "schema_aninhado_teste",
+            {"config": {"modo": "read", "extra": True}, "itens": ["a"]},
+        )[0])
+        self.assertFalse(manager.validar_argumentos(
+            "schema_aninhado_teste",
+            {"config": {"modo": "read"}, "itens": ["a", "b", "c"]},
+        )[0])
+
+    def test_numero_nao_finito_e_politica_desconhecida_falham_fechados(self):
+        manager = GerenciadorCapacidades()
+        manager.registrar(
+            nome="numero_teste",
+            descricao="Teste",
+            objetivo="Teste",
+            exemplos=["Teste"],
+            funcao=lambda valor: {"valor": valor},
+            argumentos={"valor": {"tipo": "number", "obrigatorio": True, "minimo": 0, "maximo": 10}},
+            dominios=["teste"],
+            evidencias_dominio=["teste"],
+        )
+        self.assertFalse(manager.validar_argumentos("numero_teste", {"valor": float("nan")})[0])
+        manager.capacidades["numero_teste"].politica = "politica_desconhecida"
+        resultado = manager.executar("numero_teste", valor=5)
+        self.assertFalse(resultado.sucesso)
+        self.assertIn("Política de capacidade inválida", resultado.erro)
+
+    def test_leitor_legado_bloqueia_diretorios_e_chaves_sensiveis(self):
+        from nixal_capacidades import BASE_DIR
+        manager = GerenciadorCapacidades()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".ssh").mkdir()
+            (root / ".ssh" / "known_hosts").write_text("host key", encoding="utf-8")
+            (root / "README.md").write_text("documentação", encoding="utf-8")
+            with patch("nixal_capacidades.BASE_DIR", root):
+                protegido = manager._ler_arquivo(".ssh/known_hosts")
+                permitido = manager._ler_arquivo("README.md")
+        self.assertIn("credenciais ou chaves", protegido.get("erro", ""))
+        self.assertTrue(permitido.get("sucesso"))
+
     def test_politica_do_registro_bloqueia_escrita_sem_autorizacao(self):
         manager = GerenciadorCapacidades()
         efeitos = []
