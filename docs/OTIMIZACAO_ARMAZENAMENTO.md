@@ -14,9 +14,13 @@ não ao histórico de código.
 - `log_nyxal_runtime.json`: máximo de 512 KiB; ciclos muito grandes mantêm
   metadados e um marcador de resumo, sem persistir todo o payload.
 - A leitura de logs preexistentes também é limitada a teto + 1 byte antes de
-  fazer parse JSON. Se um log herdado ultrapassa o limite, o histórico antigo é
-  descartado e a próxima execução grava um registro novo e limitado; um arquivo
-  legado enorme não pode invalidar a proteção de memória na inicialização.
+  fazer parse JSON. Se um log legado ultrapassa seu teto, ele é arquivado ao lado
+  do original com sufixo `.oversized-` seguido do valor de `time.time_ns()`,
+  com permissão `0600`, antes de criar um novo log limitado. Colisão de nome,
+  link simbólico ou falha ao arquivar/proteger a evidência bloqueia a gravação;
+  o arquivo original não é silenciosamente sobrescrito. JSON inválido também
+  permanece intacto e impede a gravação até revisão. Assim, logs legados grandes
+  não invalidam a proteção de memória e as evidências operacionais são preservadas.
 - Os logs são ignorados pelo Git depois que forem removidos do índice do projeto.
 - `saida_cadeia_real_56_4_34.txt` é uma saída de execução histórica, não um
   arquivo de código; novas cópias locais também são ignoradas.
