@@ -78,6 +78,20 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(result["ferramentas_executadas"][0]["ok"], False)
         self.assertEqual(result["ferramentas_executadas"][0]["resultado"], "Ferramenta não registrada/permitida.")
 
+    def test_catalogo_nao_expoe_privados_ou_mutaveis_por_padrao(self):
+        manager = self.manager()
+        dialogo = DialogoQwenNixal(cliente=ClienteFake([]))
+        with patch.dict(os.environ, {}, clear=True):
+            names = {
+                item["function"]["name"]
+                for item in dialogo._especificacoes_ferramentas(manager)
+            }
+        self.assertTrue({"obter_hora", "pesquisar_web", "consultar_metar_taf", "executar_diagnostico"} <= names)
+        for blocked in ("listar_arquivos", "ler_arquivo", "ler_estado_corpo", "consultar_emails_google",
+                        "consultar_agenda_google", "consultar_home_assistant", "salvar_nota",
+                        "criar_lembrete", "abrir_aplicativo"):
+            self.assertNotIn(blocked, names)
+
     def test_escrita_sem_pedido_explicito_bloqueada(self):
         cliente = ClienteFake([
             mensagem_tool("salvar_nota", {"titulo": "Teste", "conteudo": "Não salvar"}),
@@ -89,7 +103,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = tools.NotasLembretesNixOS(Path(tmp) / "notas.json")
             tools.registrar_capacidades_operacionais(manager, incluir_acoes=True, store=store)
-            with patch.object(dialogo, "_gerenciador_ferramentas", return_value=manager):
+            with patch.dict(os.environ, {"NYXAL_ENABLE_MUTABLE_TOOLS": "1"}), patch.object(dialogo, "_gerenciador_ferramentas", return_value=manager):
                 result = dialogo.responder("Responda somente, não salve nada.")
         first = result["ferramentas_executadas"][0]
         self.assertFalse(first["ok"])
@@ -106,7 +120,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = tools.NotasLembretesNixOS(Path(tmp) / "notas.json")
             tools.registrar_capacidades_operacionais(manager, incluir_acoes=True, store=store)
-            with patch.object(dialogo, "_gerenciador_ferramentas", return_value=manager):
+            with patch.dict(os.environ, {"NYXAL_ENABLE_MUTABLE_TOOLS": "1"}), patch.object(dialogo, "_gerenciador_ferramentas", return_value=manager):
                 result = dialogo.responder("Anote que devo revisar navegação.")
             self.assertTrue(result["ferramentas_executadas"][0]["ok"])
             self.assertTrue(Path(store.arquivo).is_file())
