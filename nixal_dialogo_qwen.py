@@ -44,7 +44,8 @@ class DialogoQwenNixal:
         "listar_notas_lembretes",
     })
     FERRAMENTAS_LEITURA_PADRAO = frozenset({
-        "obter_hora", "pesquisar_web", "consultar_metar_taf", "executar_diagnostico",
+        "obter_hora", "pesquisar_web", "consultar_metar_taf",
+        "consultar_notam_aisweb", "consultar_cartas_aisweb", "executar_diagnostico",
     })
     MODELO_PADRAO = "qwen2:7b"
 
