@@ -310,10 +310,15 @@ class GerenciadorCapacidades:
 
 
 def ativar_ferramentas_operacionais(capacidades: GerenciadorCapacidades | None = None, *, incluir_acoes: bool = True) -> GerenciadorCapacidades:
-    """Registra os adaptadores existentes no catálogo e retorna o gerenciador usado."""
-    from nixal_tool_use import registrar_capacidades_operacionais
+    """Registra adaptadores no gerenciador existente; retorna a instância utilizada."""
     alvo = capacidades if capacidades is not None else GerenciadorCapacidades()
+    from nixal_tool_use import registrar_capacidades_operacionais
     registrar_capacidades_operacionais(alvo, incluir_acoes=incluir_acoes)
     return alvo
 
-__all__ = ["GerenciadorCapacidades", "ResultadoCapacidade", "Capacidade", "ativar_ferramentas_operacionais"]
+
+def _obter_gerenciador_capacidades() -> GerenciadorCapacidades:
+    """Usado pelo diálogo para compartilhar a mesma instância e os contratos."""
+    return ativar_ferramentas_operacionais(GerenciadorCapacidades(), incluir_acoes=True)
+
+__all__ = ["GerenciadorCapacidades", "ResultadoCapacidade", "Capacidade", "ativar_ferramentas_operacionais", "_obter_gerenciador_capacidades"]
