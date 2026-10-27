@@ -2118,7 +2118,8 @@ def main() -> None:
         if mcp_http_process is not None:
             mcp_host = os.environ.get("NYXAL_MCP_HTTP_HOST", "127.0.0.1")
             mcp_port = int(os.environ.get("NYXAL_MCP_HTTP_PORT", "8765"))
-            print(f"[Nyxal-API] MCP HTTP local autenticado ativo em http://{mcp_host}:{mcp_port}/mcp")
+            mcp_host_url = f"[{mcp_host}]" if ":" in mcp_host else mcp_host
+            print(f"[Nyxal-API] MCP HTTP local autenticado ativo em http://{mcp_host_url}:{mcp_port}/mcp")
         servico_lembretes.iniciar()
         lembretes_iniciados = True
         server.serve_forever()

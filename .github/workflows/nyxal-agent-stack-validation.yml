@@ -8,6 +8,7 @@ on:
     paths:
       - "nixal_mcp_runtime.py"
       - "teste_nyxal_mcp_runtime.py"
+      - "teste_mcp_http.py"
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
@@ -82,6 +83,7 @@ on:
     paths:
       - "nixal_mcp_runtime.py"
       - "teste_nyxal_mcp_runtime.py"
+      - "teste_mcp_http.py"
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
@@ -212,6 +214,7 @@ jobs:
             nyxal_web_api.py \
             nixal_mcp_runtime.py \
             teste_nyxal_mcp_runtime.py \
+            teste_mcp_http.py \
             nixal_display_routes.py \
             nixal_agent_hub.py \
             nixal_intent_router.py \
@@ -269,6 +272,7 @@ jobs:
             "$MCP_VENV/bin/python" -m pip install --disable-pip-version-check --no-input -r deploy/agent/requirements-mcp.txt
             "$MCP_VENV/bin/python" -m py_compile nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py
             "$MCP_VENV/bin/python" teste_mcp_stdio.py
+            "$MCP_VENV/bin/python" teste_mcp_http.py
           fi
       - name: Validate local setup scripts
         run: |
