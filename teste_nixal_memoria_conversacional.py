@@ -59,7 +59,7 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(self.caminho.with_name(self.caminho.name + ".lock").stat().st_mode), 0o600)
 
     def test_json_corrompido_falha_fechado_e_preserva_bytes_originais(self) -> None:
-        self.caminho.parent.mkdir(parents=True)
+        self.caminho.parent.mkdir(mode=0o700, parents=True)
         original = b'{"versao":'
         self.caminho.write_bytes(original)
         memoria = MemoriaConversacionalNixal(caminho=self.caminho)
@@ -76,7 +76,7 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
         self.assertEqual(self.caminho.read_bytes(), original)
 
     def test_schema_desconhecido_falha_fechado_e_preserva_arquivo(self) -> None:
-        self.caminho.parent.mkdir(parents=True)
+        self.caminho.parent.mkdir(mode=0o700, parents=True)
         original = json.dumps({"versao": 999, "sessoes": {}}).encode()
         self.caminho.write_bytes(original)
         memoria = MemoriaConversacionalNixal(caminho=self.caminho)
@@ -133,6 +133,21 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
             self.assertTrue(recuperada.possui_sessao("sessao-a"))
             self.assertFalse(recuperada.possui_sessao("sessao-b"))
             self.assertTrue(recuperada.possui_sessao("sessao-c"))
+
+    def test_caminho_personalizado_em_diretorio_compartilhado_falha_sem_alterar_permissoes(self) -> None:
+        compartilhado = Path(self.tmp.name) / "compartilhado"
+        compartilhado.mkdir(mode=0o755)
+        caminho = compartilhado / "conversas.json"
+        antes = stat.S_IMODE(compartilhado.stat().st_mode)
+
+        memoria = MemoriaConversacionalNixal(caminho=caminho)
+        resultado = memoria.registrar("sessao-a", "user", "nao escrever")
+
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "memoria_degradada")
+        self.assertEqual(stat.S_IMODE(compartilhado.stat().st_mode), antes)
+        self.assertFalse(caminho.exists())
+        self.assertFalse(caminho.with_name(caminho.name + ".lock").exists())
 
     def test_validacao_de_entrada_e_limites(self) -> None:
         memoria = MemoriaConversacionalNixal(caminho=self.caminho)
