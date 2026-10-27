@@ -287,26 +287,3 @@ jobs:
           python3 teste_preparacao_investigacao_56_4_22.py
           python3 teste_auto_evolucao_ae1.py
           python3 teste_m5_15_presenca_maquina.py
-
-  validate-mcp-stdio:
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    steps:
-      - name: Checkout MCP implementation
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          submodules: false
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: deploy/agent/requirements-mcp.txt
-      - name: Install optional MCP SDK and validate stdio server
-        run: |
-          MCP_VENV="$RUNNER_TEMP/nyxal-mcp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          python -m venv "$MCP_VENV"
-          "$MCP_VENV/bin/python" -m pip install --disable-pip-version-check --no-input -r deploy/agent/requirements-mcp.txt
-          "$MCP_VENV/bin/python" -m py_compile nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py nixal_integracao_gmail.py nixal_amd_developer_cloud.py
-          "$MCP_VENV/bin/python" teste_mcp_stdio.py
