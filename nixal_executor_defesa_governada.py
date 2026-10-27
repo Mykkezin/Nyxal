@@ -56,6 +56,22 @@ def _texto_limitado(valor: Any, limite: int) -> str | None:
     return normalizado or None
 
 
+def _motivo_sem_segredos(valor: Any) -> str | None:
+    """Redige credenciais óbvias e não ecoa metadados arbitrários da entrada."""
+    texto = _texto_limitado(valor, MAX_MOTIVO_CHARS)
+    if texto is None:
+        return None
+    import re
+
+    texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [redigido]", texto)
+    texto = re.sub(
+        r"(?i)\b(token|api[_ -]?key|password|secret|senha)\s*[:=]\s*\S+",
+        r"\1=[redigido]",
+        texto,
+    )
+    return texto
+
+
 def _escopo_validado(tipo: str, escopo: Any) -> str | None:
     if not isinstance(escopo, str) or not 1 <= len(escopo) <= 128:
         return None
@@ -163,7 +179,7 @@ class ExecutorDefesaGovernada:
         if not isinstance(tipo, str) or tipo not in TIPOS_RECOMENDACAO:
             return None
         escopo = _escopo_validado(tipo, recomendacao.get("escopo"))
-        motivo = _texto_limitado(recomendacao.get("motivo"), MAX_MOTIVO_CHARS)
+        motivo = _motivo_sem_segredos(recomendacao.get("motivo"))
         if escopo is None or motivo is None:
             return None
 
@@ -260,7 +276,9 @@ class ExecutorDefesaGovernada:
 
             criado = self._utc()
             expira = criado + timedelta(seconds=self._ttl)
-            plano_id = "plano-" + chave[:24]
+            plano_id = "plano-" + sha256(
+                f"{chave}|{agora:.9f}".encode("utf-8")
+            ).hexdigest()[:24]
             exige_aprovacao = validada["exige_aprovacao_humana"]
             estado = (
                 "aguardando_aprovacao"
@@ -284,7 +302,7 @@ class ExecutorDefesaGovernada:
             }
             self._registros.append(registro)
             self._idempotencia[chave] = (
-                agora + self._janela_idempotencia,
+                agora + max(self._ttl, self._janela_idempotencia),
                 plano_id,
             )
             self._idempotencia.move_to_end(chave)
