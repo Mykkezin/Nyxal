@@ -21,6 +21,12 @@ on:
       - "nixal_integracao_gmail.py"
       - "nixal_integracao_google.py"
       - "nixal_vps.py"
+      - "deploy/delta/**"
+      - "deploy/vps/preparar_base_ubuntu.sh"
+      - "docs/DELTA_MVP_ACCEPTANCE.md"
+      - "docs/DELTA_PLATFORM_SPEC.md"
+      - "nixal_runtime.py"
+      - "teste_limites_armazenamento.py"
       - "teste_nixal_vps.py"
       - "nixal_capacidade_visual.py"
       - "nixal_seguranca_http.py"
@@ -170,6 +176,8 @@ jobs:
             nixal_nucleo_conversacional.py \
             nixal_agente_qwen.py \
             nixal_capacidades.py \
+            nixal_runtime.py \
+            teste_limites_armazenamento.py \
             nixal_vps.py \
             nixal_tool_use.py \
             teste_nixal_tool_use.py \
@@ -243,6 +251,7 @@ jobs:
             teste_nixal_integracao_google \
             teste_nixal_integracao_gmail \
             teste_nixal_vps \
+            teste_limites_armazenamento \
             teste_nucleo_contexto_persistente \
             teste_nixal_recuperador_contexto \
             teste_nixal_memoria_conversacional \
@@ -277,3 +286,31 @@ jobs:
         run: python3 -m py_compile nixal_vps.py teste_nixal_vps.py
       - name: Run VPS SSH key validation regressions
         run: python3 -m unittest -v teste_nixal_vps.py
+  validate-delta-mvp:
+    needs: validate-vps-public-key
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Checkout without optional submodules
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      - name: Check DELTA shell script syntax
+        run: |
+          for script in \
+            deploy/delta/preflight_vm.sh \
+            deploy/delta/diagnosticar_vm_mvp0.sh \
+            deploy/delta/preparar_storage_mvp0.sh \
+            deploy/vps/preparar_base_ubuntu.sh; do
+            bash -n "$script"
+          done
+      - name: Compile DELTA bootstrap and storage recovery tests
+        run: python3 -m py_compile deploy/delta/criar_vm_mvp0.py deploy/delta/teste_criar_vm_mvp0.py nixal_vps.py teste_nixal_vps.py nixal_capacidades.py nixal_runtime.py teste_limites_armazenamento.py
+      - name: Run mocked DELTA bootstrap and bounded storage tests
+        run: |
+          python3 -m unittest discover -s deploy/delta -p 'teste_*.py' -v
+          python3 -m unittest -v teste_limites_armazenamento
