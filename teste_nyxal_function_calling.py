@@ -757,6 +757,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         entrada_revisor = cliente.chamadas[1]["messages"][1]["content"]
         self.assertLessEqual(len(entrada_revisor), dialogo.MAX_SPECIALIST_INPUT_CHARS)
         self.assertIn("Solicitação original do usuário:", entrada_revisor)
+        self.assertIn("Use modo especialistas", entrada_revisor)
         self.assertIn("Proposta não verificada do perfil Arquiteto:", entrada_revisor)
         self.assertIn("PROPOSTA_ARQUITETO_CHECAVEL", entrada_revisor)
         contexto_final = cliente.chamadas[2]["messages"][1]["content"]
