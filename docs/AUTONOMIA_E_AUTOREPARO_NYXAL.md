@@ -47,7 +47,7 @@ No modo de voz, a tela mostra o estado real da API e, quando o backend fornece o
 
 ### Recuperação da interface a cada duas horas
 
-O serviço `nyxos-interface-reset.service` usa `systemctl --user try-restart nyxos-interface.service` e é acionado por `nyxos-interface-reset.timer` a cada duas horas. Ele reinicia **somente a interface do navegador**, não o computador, a API ou o residente. O uso de `try-restart` é intencional: se a interface tiver sido parada manualmente, o timer não a reativa. A reciclagem encerra a sessão de voz que estiver em andamento e abre novamente a interface configurada pelo serviço.
+O serviço `nyxos-interface-reset.service` usa `systemctl --user try-restart nyxos-interface.service` e, quando habilitado, é acionado por `nyxos-interface-reset.timer` a cada duas horas. O instalador deixa o timer **desativado por padrão**, porque o reset interrompe qualquer conversa por voz e fecha/reabre a janela da Nyxal. Para habilitar conscientemente depois da instalação, execute `systemctl --user enable --now nyxos-interface-reset.timer`; para fazê-lo durante a instalação, use `NYXOS_ENABLE_INTERFACE_RESET_TIMER=1 bash deploy/systemd/instalar_nyxos_servicos.sh`. O serviço reinicia **somente a interface do navegador**, não o computador, a API ou o residente. O uso de `try-restart` é intencional: se a interface tiver sido parada manualmente, o timer não a reativa.
 
 Para verificar a programação e os estados instalados:
 
