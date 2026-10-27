@@ -81,6 +81,7 @@ on:
   push:
     branches:
       - main
+      - feat/delta-platform-foundation-20261027
       - integration/nyxal-active-prs-20261027
       - feat/nyxal-agent-stack-current-main-20261009
       - fix/display-root-route-20261009

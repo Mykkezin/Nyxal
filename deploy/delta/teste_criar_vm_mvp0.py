@@ -247,6 +247,7 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
 
     def test_scripts_de_preflight_e_diagnostico_sao_somente_leitura(self) -> None:
         preflight = (DELTA_DIR / "preflight_vm.sh").read_text(encoding="utf-8")
+        self.assertIn('VM_STORAGE="${NYXOS_DELTA_VM_STORAGE:-${NYXOS_VPS_STORAGE:-${HOME}/NyxOS/VPS}}"', preflight)
         diagnose = (DELTA_DIR / "diagnosticar_vm_mvp0.sh").read_text(encoding="utf-8")
         for forbidden in ("apt install", "apt-get install", "virsh net-start", "systemctl start", "rm -rf"):
             self.assertNotIn(forbidden, preflight)
