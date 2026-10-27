@@ -86,6 +86,9 @@ def main() -> None:
     assert 'for unidade in nyxal-api.service nyxos-residente.service; do' in instalador
     assert "diagnosticar_nyxos_local.sh" in instalador
     assert "systemctl --user show" in diagnostico
+    assert "prazo = time.monotonic() + 15.0" in diagnostico
+    assert 'time.sleep(0.5)' in diagnostico
+    assert 'conexao.request("GET", "/health"' in diagnostico
     assert "cmp -s" in diagnostico
     assert "NYXAL_API_TOKEN" not in diagnostico
     assert 'PYTHON_BIN="${NYXAL_DIR}/.venv/bin/python"' in instalador
