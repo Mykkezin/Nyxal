@@ -215,7 +215,7 @@
     /* Presence layering: avoid transform/animation conflicts with receded windows. */
     #nyxalHoloContainer { isolation: isolate; z-index: 25; }
     .nyxal-receded { animation: none !important; }
-    #infinityHub.nyxos-infinity-draggable { position: fixed !important; left: 50vw; top: 50vh; transform: none !important; z-index: 120 !important; width: 1px; height: 1px; }
+    #infinityHub.nyxos-infinity-draggable { position: fixed !important; left: 50vw; top: 50vh; transform: none !important; z-index: 9999 !important; width: 1px; height: 1px; }
     #infinityHub.nyxos-infinity-dragging .infinity-core { cursor: grabbing; }
 
     /* Floating & Breathing Animation for Nyxal Hologram */
@@ -1330,7 +1330,7 @@
             <i class="fa-solid fa-music text-hud-cyan text-sm"></i>
             <h2 class="font-orbitron text-xs font-semibold tracking-wider text-slate-200">MÚSICA</h2>
           </div>
-          <span class="text-[10px] font-rajdhani text-hud-cyan">STANDBY</span>
+          <span id="spotifyStatus" class="text-[10px] font-rajdhani text-hud-cyan">PRONTO</span>
         </div>
 
         <div class="flex items-center gap-3 mb-2">
@@ -1343,12 +1343,18 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-center gap-4 pt-1">
-          <button onclick="playHudSound('click')" class="text-slate-500 hover:text-white transition-colors"><i class="fa-solid fa-backward-step text-xs"></i></button>
-          <button id="playPauseBtn" onclick="togglePlayMusic()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center hover:text-hud-cyan hover:border hover:border-hud-cyan transition-all">
-            <i class="fa-solid fa-play text-xs"></i>
+        <div class="flex items-center justify-center gap-3 pt-1">
+          <button
+            id="playPauseBtn"
+            type="button"
+            onclick="togglePlayMusic()"
+            aria-label="Abrir Spotify Web"
+            title="Abrir Spotify Web"
+            class="w-9 h-9 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center hover:text-hud-cyan hover:border hover:border-hud-cyan transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-hud-cyan"
+          >
+            <i class="fa-solid fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i>
           </button>
-          <button onclick="playHudSound('click')" class="text-slate-500 hover:text-white transition-colors"><i class="fa-solid fa-forward-step text-xs"></i></button>
+          <span class="text-[10px] font-rajdhani text-slate-500 tracking-wide">ABRIR PLAYER EXTERNO</span>
         </div>
       </div>
 
@@ -4455,37 +4461,129 @@
       desenharGraficoSistema();
     }
 
-    // Infinity — reposicionamento livre mantido somente na sessão atual.
+    // Infinity — arraste resiliente, persistência de sessão e limites do viewport.
     function initInfinityDrag() {
       const hub = document.getElementById('infinityHub');
       const core = document.getElementById('infinityCoreButton');
       if (!hub || !core || hub.dataset.dragReady === '1') return;
+
+      // Retira o hub do contêiner com overflow/transform para evitar clipping.
+      if (hub.parentElement !== document.body) document.body.appendChild(hub);
+      hub.style.position = 'fixed';
+      hub.style.transform = 'none';
+      hub.style.left = hub.style.left || '50vw';
+      hub.style.top = hub.style.top || '50vh';
+      core.style.touchAction = 'none';
       hub.dataset.dragReady = '1';
-      const saved = sessionStorage.getItem('NYXOS_INFINITY_POSITION');
-      if (saved) { try { const p = JSON.parse(saved); if (Number.isFinite(p.x) && Number.isFinite(p.y)) { hub.style.left=p.x+'px'; hub.style.top=p.y+'px'; } } catch (_) {} }
-      let dragging=false, moved=false, startX=0, startY=0, originX=0, originY=0;
+
+      const STORAGE_KEY = 'NYXOS_INFINITY_POSITION';
+      function clampCoordinate(value, viewportSize) {
+        const margin = Math.min(170, Math.max(24, viewportSize / 2));
+        return Math.max(margin, Math.min(Math.max(margin, viewportSize - margin), value));
+      }
+      function applyPosition(x, y) {
+        hub.style.left = clampCoordinate(x, window.innerWidth) + 'px';
+        hub.style.top = clampCoordinate(y, window.innerHeight) + 'px';
+      }
+      function currentCenter() {
+        const rect = hub.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      }
+      function savePosition() {
+        try {
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(currentCenter()));
+        } catch (_) {
+          // A posição continua utilizável nesta sessão, mesmo sem storage.
+        }
+      }
+
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const position = JSON.parse(saved);
+          if (Number.isFinite(position.x) && Number.isFinite(position.y)) {
+            applyPosition(position.x, position.y);
+          }
+        }
+      } catch (_) {
+        // Dados inválidos ou storage bloqueado não devem quebrar os atalhos.
+      }
+
+      let dragging = false;
+      let moved = false;
+      let startX = 0;
+      let startY = 0;
+      let originX = 0;
+      let originY = 0;
+      let activePointerId = null;
+
+      function finishDrag(event) {
+        if (!dragging) return;
+        if (event && activePointerId !== null && event.pointerId !== activePointerId) return;
+
+        const wasMoved = moved;
+        dragging = false;
+        activePointerId = null;
+        try {
+          if (event && core.hasPointerCapture?.(event.pointerId)) {
+            core.releasePointerCapture(event.pointerId);
+          }
+        } catch (_) {}
+        hub.classList.remove('nyxos-infinity-dragging');
+        savePosition();
+
+        if (wasMoved) {
+          if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          core.dataset.dragSuppressed = '1';
+          window.setTimeout(() => { delete core.dataset.dragSuppressed; }, 0);
+        }
+      }
+
       core.addEventListener('pointerdown', (event) => {
-        if (event.button !== 0) return;
-        dragging=true; moved=false; startX=event.clientX; startY=event.clientY;
-        const rect=hub.getBoundingClientRect(); originX=rect.left+rect.width/2; originY=rect.top+rect.height/2;
-        core.setPointerCapture?.(event.pointerId); hub.classList.add('nyxos-infinity-dragging');
+        if (event.button !== 0 || (event.isPrimary === false)) return;
+        event.preventDefault();
+        dragging = true;
+        moved = false;
+        activePointerId = event.pointerId;
+        startX = event.clientX;
+        startY = event.clientY;
+        const center = currentCenter();
+        originX = center.x;
+        originY = center.y;
+        try { core.setPointerCapture?.(event.pointerId); } catch (_) {}
+        hub.classList.add('nyxos-infinity-dragging');
       });
+
       core.addEventListener('pointermove', (event) => {
-        if (!dragging) return;
-        const dx=event.clientX-startX, dy=event.clientY-startY;
-        if (Math.hypot(dx,dy)>4) moved=true;
-        const x=Math.max(40,Math.min(window.innerWidth-40,originX+dx));
-        const y=Math.max(40,Math.min(window.innerHeight-40,originY+dy));
-        hub.style.left=x+'px'; hub.style.top=y+'px';
+        if (!dragging || event.pointerId !== activePointerId) return;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        if (Math.hypot(dx, dy) > 4) moved = true;
+        applyPosition(originX + dx, originY + dy);
+        if (moved) event.preventDefault();
+      }, { passive: false });
+
+      core.addEventListener('pointerup', finishDrag);
+      core.addEventListener('pointercancel', finishDrag);
+      core.addEventListener('lostpointercapture', (event) => {
+        if (dragging) finishDrag(event);
       });
-      core.addEventListener('pointerup', (event) => {
-        if (!dragging) return;
-        dragging=false; core.releasePointerCapture?.(event.pointerId); hub.classList.remove('nyxos-infinity-dragging');
-        const rect=hub.getBoundingClientRect();
-        sessionStorage.setItem('NYXOS_INFINITY_POSITION', JSON.stringify({x:rect.left+rect.width/2,y:rect.top+rect.height/2}));
-        if (moved) { event.preventDefault(); event.stopPropagation(); core.dataset.dragSuppressed='1'; setTimeout(()=>delete core.dataset.dragSuppressed,0); }
+      core.addEventListener('click', (event) => {
+        if (core.dataset.dragSuppressed === '1') {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+
+      window.addEventListener('resize', () => {
+        if (dragging) return;
+        const center = currentCenter();
+        applyPosition(center.x, center.y);
+        savePosition();
       });
-      core.addEventListener('click', (event) => { if (core.dataset.dragSuppressed==='1') { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
     }
 
     // Infinity — abre/fecha somente os seis atalhos existentes
@@ -4678,6 +4776,76 @@
 
     function togglePlayMusic() {
       playHudSound('click');
+      const title = document.getElementById('musicTrackTitle');
+      const artist = document.getElementById('musicArtist');
+      const status = document.getElementById('spotifyStatus');
+      const button = document.getElementById('playPauseBtn');
+
+      function report(track, detail, state) {
+        if (title) title.textContent = track;
+        if (artist) artist.textContent = detail;
+        if (status) status.textContent = state;
+        if (button) {
+          button.setAttribute(
+            'aria-label',
+            state === 'BLOQUEADO' || state === 'ERRO'
+              ? 'Tentar abrir Spotify Web novamente'
+              : 'Abrir Spotify Web'
+          );
+        }
+      }
+
+      let existing = window.__nyxosSpotifyWindow;
+      try {
+        if (existing && !existing.closed) {
+          existing.focus();
+          report(
+            'Spotify Web',
+            'Player aberto. Escolha uma faixa no Spotify.',
+            'ABERTO'
+          );
+          return;
+        }
+      } catch (_) {
+        window.__nyxosSpotifyWindow = null;
+      }
+
+      let popup = null;
+      try {
+        // Abre uma página local em resposta direta ao clique, remove o opener
+        // e só então navega para Spotify, reduzindo risco de reverse tabnabbing.
+        popup = window.open('about:blank', '_blank');
+      } catch (_) {
+        popup = null;
+      }
+
+      if (!popup) {
+        report(
+          'Spotify Web',
+          'Pop-up bloqueado. Permita pop-ups para abrir o player.',
+          'BLOQUEADO'
+        );
+        return;
+      }
+
+      try {
+        popup.opener = null;
+        popup.location.replace('https://open.spotify.com/');
+        window.__nyxosSpotifyWindow = popup;
+        report(
+          'Spotify Web',
+          'Player aberto. Escolha uma faixa no Spotify.',
+          'ABERTO'
+        );
+      } catch (_) {
+        try { popup.close(); } catch (_) {}
+        window.__nyxosSpotifyWindow = null;
+        report(
+          'Spotify Web',
+          'Não foi possível abrir o player. Tente novamente.',
+          'ERRO'
+        );
+      }
     }
 
     function addNewEventPrompt() {
