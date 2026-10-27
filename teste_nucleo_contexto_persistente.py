@@ -80,7 +80,8 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         primeira.registrar("sessao-restaurada", "user", "Meu projeto se chama NyxOS.")
         primeira.registrar("sessao-restaurada", "assistant", "Entendi: seu projeto se chama NyxOS.")
 
-        dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=FakeChatClient())
+        cliente = FakeChatClient()
+        dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
         nucleo = NucleoConversacionalNixal(
             dialogo=dialogo,
             memoria_conversacional=MemoriaConversacionalNixal(caminho=caminho),
@@ -101,6 +102,11 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         )
         estado_memoria = resposta["valor"]["memoria_conversacional_estado"]
         self.assertIn(estado_memoria["estado"], {"persistencia_ativa", "memoria_volatil"})
+        system_prompt = cliente.calls[0]["messages"][0]["content"]
+        self.assertIn("Estado operacional observado pelo Core da Nyxal", system_prompt)
+        self.assertIn('"estado":"persistencia_ativa"', system_prompt)
+        self.assertIn('"persistencia_ativa":true', system_prompt)
+        self.assertNotIn(str(caminho), system_prompt)
 
     def test_ciclo_helper_retorna_copia_e_rejeita_registro_invalido(self) -> None:
         ciclo = sample_cycle()

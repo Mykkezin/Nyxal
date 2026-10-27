@@ -38,6 +38,7 @@ Princípios:
 
 from __future__ import annotations
 
+import inspect
 import json
 import math
 import re
@@ -353,11 +354,32 @@ class NucleoConversacionalNixal:
                 contexto_persistido.get("contextos", []),
                 contexto_persistido.get("conhecimentos", []),
             )
+            argumentos_responder = {
+                "historico": historico,
+                "sessao": sessao,
+                **kwargs_dialogo,
+            }
+            try:
+                parametros_responder = inspect.signature(self.dialogo.responder).parameters
+            except (TypeError, ValueError):
+                parametros_responder = {}
+            aceita_estado_runtime = (
+                "estado_runtime_nyxal" in parametros_responder
+                or any(
+                    parametro.kind is inspect.Parameter.VAR_KEYWORD
+                    for parametro in parametros_responder.values()
+                )
+            )
+            if aceita_estado_runtime:
+                argumentos_responder["estado_runtime_nyxal"] = (
+                    self._estado_runtime_para_dialogo(
+                        priorizar_dialogo,
+                        contexto_persistido,
+                    )
+                )
             resposta_dialogo = self.dialogo.responder(
                 texto_dialogo,
-                historico=historico,
-                sessao=sessao,
-                **kwargs_dialogo,
+                **argumentos_responder,
             )
 
             if resposta_dialogo.get("sucesso") is True:
@@ -423,6 +445,54 @@ class NucleoConversacionalNixal:
         }
 
         return resposta
+
+    def _estado_runtime_para_dialogo(
+        self,
+        contexto_consultado: bool,
+        contexto_persistido: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Descreve o estado observado sem expor caminhos nem conteúdo privado."""
+        try:
+            estado_memoria = self.memoria_conversacional.estado()
+        except Exception:
+            estado_memoria = {
+                "estado": "indisponivel",
+                "persistencia_ativa": False,
+                "sucesso": False,
+            }
+        if not isinstance(estado_memoria, dict):
+            estado_memoria = {
+                "estado": "indisponivel",
+                "persistencia_ativa": False,
+                "sucesso": False,
+            }
+
+        investigacoes = contexto_persistido.get("contextos", [])
+        conhecimentos = contexto_persistido.get("conhecimentos", [])
+        if not isinstance(investigacoes, list):
+            investigacoes = []
+        if not isinstance(conhecimentos, list):
+            conhecimentos = []
+
+        return {
+            "memoria_conversacional": {
+                "estado": estado_memoria.get("estado", "indisponivel"),
+                "persistencia_ativa": estado_memoria.get("persistencia_ativa") is True,
+                "sucesso": estado_memoria.get("sucesso") is True,
+                "permanente": False,
+            },
+            "investigacoes": {
+                "consultado": contexto_consultado is True,
+                "estado": contexto_persistido.get("estado", "nao_consultado"),
+                "quantidade": min(3, len(investigacoes)),
+            },
+            "conhecimento_candidato": {
+                "consultado": contexto_consultado is True,
+                "estado": contexto_persistido.get("estado_conhecimento", "nao_consultado"),
+                "quantidade": min(3, len(conhecimentos)),
+                "conhecimento_permanente": False,
+            },
+        }
 
     def _obter_contexto_historico_persistido(
         self,
