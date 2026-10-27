@@ -34,6 +34,7 @@ class DialogoQwenNixal:
     VERSAO = "56.6.0"
     MAX_TOOL_CALLS = 3
     MAX_TOOL_RESULT_CHARS = 12000
+    MAX_TOOL_ARGUMENT_CHARS = 16000
 
     FERRAMENTAS_MUTAVEIS = frozenset({
         "salvar_nota", "criar_lembrete", "abrir_aplicativo",
@@ -268,14 +269,22 @@ class DialogoQwenNixal:
         nome = self._valor_mensagem(function, "name", "")
         argumentos_raw = self._valor_mensagem(function, "arguments", {})
         if isinstance(argumentos_raw, str):
+            if len(argumentos_raw) > self.MAX_TOOL_ARGUMENT_CHARS:
+                return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Argumentos excedem o limite de tamanho."}
             try:
                 argumentos = json.loads(argumentos_raw)
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, RecursionError, ValueError):
                 return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Argumentos JSON inválidos."}
         else:
             argumentos = argumentos_raw
         if not isinstance(nome, str) or not isinstance(argumentos, dict):
             return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Chamada inválida."}
+        try:
+            serializados = json.dumps(argumentos, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+        except (TypeError, ValueError, RecursionError):
+            return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Argumentos não são um objeto JSON válido."}
+        if len(serializados) > self.MAX_TOOL_ARGUMENT_CHARS:
+            return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Argumentos excedem o limite de tamanho."}
         ferramentas = {item["function"]["name"] for item in self._especificacoes_ferramentas(gerenciador)}
         if nome not in ferramentas or nome not in gerenciador.capacidades:
             return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Ferramenta não registrada/permitida."}
@@ -283,6 +292,8 @@ class DialogoQwenNixal:
         autorizacao = self._pedido_explicitamente_autorizou(nome, pedido_usuario)
         capacidade = gerenciador.capacidades[nome]
         politica = getattr(capacidade, "politica", "somente_leitura")
+        if politica not in {"somente_leitura", "acao_com_pedido_explicito", "requer_confirmacao"}:
+            return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Política de capacidade inválida; execução bloqueada."}
         if politica == "acao_com_pedido_explicito" and not autorizacao:
             return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Ação bloqueada: falta pedido explícito do usuário."}
         if politica == "requer_confirmacao":
