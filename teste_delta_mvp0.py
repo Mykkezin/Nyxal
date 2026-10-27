@@ -9,6 +9,8 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import io
+import os
+import subprocess
 import sys
 import tempfile
 import types
@@ -202,6 +204,100 @@ class TesteDeltaMVP0(unittest.TestCase):
                 delta.find_ssh_key(str(self.key))
         require_tool.assert_not_called()
 
+
+    def test_diagnostico_separa_dominio_ausente_de_erro_de_conexao(self) -> None:
+        diagnostic = ROOT / "deploy" / "delta" / "diagnosticar_vm_mvp0.sh"
+        for mode, expected_state in (
+            ("unknown", "DOMAIN_EXISTS=unknown"),
+            ("absent", "DOMAIN_EXISTS=no"),
+            ("present", "DOMAIN_EXISTS=yes"),
+        ):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory(prefix="delta-diagnostic-") as temp:
+                root = Path(temp)
+                home = root / "home"
+                home.mkdir()
+                bin_dir = root / "bin"
+                bin_dir.mkdir()
+                current_storage = root / "configured-storage"
+                current_storage.mkdir()
+                storage_root = root / "libvirt-images"
+                dedicated_storage = storage_root / "delta-mvp0-storage"
+                dedicated_storage.mkdir(parents=True)
+                legacy_storage = home / "NyxOS" / "VPS"
+                legacy_storage.mkdir(parents=True)
+                leftover = dedicated_storage / "delta-mvp0.qcow2"
+                leftover.write_bytes(b"fixture marker, not a real disk")
+
+                fake_virsh = bin_dir / "virsh"
+                fake_virsh.write_text(
+                    """#!/usr/bin/env bash
+set -u
+case "$*" in
+  *" dominfo "*)
+    if [[ "$NYXOS_TEST_VIRSH_MODE" == "present" ]]; then
+      printf 'Name: delta-mvp0\\nState: shut off\\n'
+      exit 0
+    fi
+    printf 'libvirt connection unavailable\\n' >&2
+    exit 1
+    ;;
+  *" list --all --name")
+    case "$NYXOS_TEST_VIRSH_MODE" in
+      unknown) printf 'libvirt connection unavailable\\n' >&2; exit 1 ;;
+      absent) printf 'other-vm\\n'; exit 0 ;;
+      present) printf 'delta-mvp0\\n'; exit 0 ;;
+    esac
+    ;;
+  *" pool-info "*) exit 1 ;;
+  *" pool-list --all"*) printf 'Name State Autostart\\ndefault active yes\\n'; exit 0 ;;
+  *" list --all"*) printf ' Id Name State\\n -  other-vm shut off\\n'; exit 0 ;;
+  *) exit 0 ;;
+esac
+""",
+                    encoding="utf-8",
+                )
+                fake_virsh.chmod(0o755)
+
+                env = os.environ.copy()
+                env.update({
+                    "HOME": str(home),
+                    "PATH": str(bin_dir) + os.pathsep + env.get("PATH", ""),
+                    "NYXOS_DELTA_VM_STORAGE": str(current_storage),
+                    "NYXOS_DELTA_STORAGE_ROOT": str(storage_root),
+                    "NYXOS_DELTA_VM_NAME": "delta-mvp0",
+                    "NYXOS_TEST_VIRSH_MODE": mode,
+                })
+                completed = subprocess.run(
+                    ["bash", str(diagnostic)],
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                    timeout=10,
+                    check=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertIn(expected_state, completed.stdout)
+                self.assertIn(str(dedicated_storage), completed.stdout)
+                self.assertIn(str(legacy_storage), completed.stdout)
+                self.assertIn("delta-mvp0.qcow2", completed.stdout)
+                if mode == "unknown":
+                    self.assertIn("Não crie outra VM nem remova artefatos", completed.stdout)
+                    self.assertNotIn("DOMAIN_EXISTS=no", completed.stdout)
+                elif mode == "absent":
+                    self.assertIn("ausência foi confirmada", completed.stdout)
+                else:
+                    self.assertIn("Name: delta-mvp0", completed.stdout)
+                self.assertTrue(leftover.is_file(), "o diagnóstico não pode alterar arquivos existentes")
+
+    def test_diagnostico_permanece_somente_leitura_e_cobre_storage_dedicado(self) -> None:
+        diagnostic = (ROOT / "deploy" / "delta" / "diagnosticar_vm_mvp0.sh").read_text(encoding="utf-8")
+        self.assertIn("DOMAIN_EXISTS=unknown", diagnostic)
+        self.assertIn('virsh -c qemu:///system list --all --name', diagnostic)
+        self.assertIn('NYXOS_DELTA_VM_STORAGE', diagnostic)
+        self.assertIn('delta-mvp0-storage', diagnostic)
+        self.assertIn('LEGACY_STORAGE="${HOME}/NyxOS/VPS"', diagnostic)
+        for forbidden in ("virsh destroy", "virsh undefine", "rm -rf", "chmod 777", "systemctl start"):
+            self.assertNotIn(forbidden, diagnostic)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
