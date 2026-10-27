@@ -165,9 +165,13 @@ def testar_evidencia_persistida_e_sanitizada() -> None:
         )
         ciclo = ciclo_sem_hipotese("ciclo-evidencia-segura")
         necessidade = ciclo["valor"]["necessidade_prioritaria"]["selecionada"]
+        ciclo["valor"]["hipotese"] = {
+            "hipotese": "Hipótese explícita de teste",
+            "estado_atual": "estado-" + ("x" * 200),
+        }
         necessidade["token_sensivel"] = "SEGREDO-NAO-PERSISTIR"
         necessidade["payload"] = {"corpo": "conteudo-nao-permitido"}
-        necessidade["problema"] = "  " + ("lacuna observada " * 40) + "\\n"
+        necessidade["problema"] = "  " + ("lacuna observada " * 40) + "\n"
         resultado = auto.avaliar_ciclo(ciclo)
         oportunidade = resultado.get("valor", {})
         persistida = json.loads(
@@ -177,12 +181,13 @@ def testar_evidencia_persistida_e_sanitizada() -> None:
         verificar(
             "SEGREDO-NAO-PERSISTIR" not in json.dumps(persistida, ensure_ascii=False)
             and "payload" not in observada
-            and "token_sensivel" not in observada,
+            and "token_sensivel" not in observada
+            and len(persistida.get("estado_hipotese", "")) <= 32,
             "AE1 não persiste campos arbitrários ou segredos anexados à necessidade",
         )
         verificar(
             len(observada.get("problema", "")) <= 240
-            and "\\n" not in observada.get("problema", ""),
+            and "\n" not in observada.get("problema", ""),
             "campos observados são normalizados e limitados antes da persistência",
         )
         verificar(
