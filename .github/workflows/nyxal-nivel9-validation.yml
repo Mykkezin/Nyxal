@@ -255,17 +255,21 @@ jobs:
           assert "experimento_falhou" in SolicitacaoEvolucaoNixal.ESTADOS
           print("REGRAS_NIVEL9_OK")
           PY
-      - name: Empacotar projeto completo
+      - name: Empacotar projeto completo (somente publicação manual)
+        if: github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p /tmp/nyxal-package
           git archive --format=zip --output="/tmp/nyxal-package/Nyxal-N10-${GITHUB_SHA}.zip" "${GITHUB_SHA}"
 
-      - name: Publicar projeto completo
+      - name: Publicar projeto completo (opcional)
+        if: github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: nyxal-projeto-nivel10
           path: /tmp/nyxal-package/Nyxal-N10-*.zip
           if-no-files-found: error
+          retention-days: 1
       - name: Teste Auto-Evolution AE1
         run: python3 teste_auto_evolucao_ae1.py
 
@@ -286,6 +290,9 @@ jobs:
 
       - name: Teste Descoberta Contínua AE5
         run: python3 teste_descoberta_continua_ae5.py
+
+      - name: Teste integrado da ativação residente AE5
+        run: python3 -m unittest -v teste_ativacao_ae5_residente.py
 
       - name: Avaliar evidências e escolher próximo passo governado
         if: always()
@@ -342,22 +349,3 @@ jobs:
           )
           PY
           python3 nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
-
-  ae5-resident-smoke:
-    name: AE5 resident wiring (hosted)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Compile focused activation test
-        run: python -m py_compile teste_ativacao_ae5_residente.py
-      - name: Verify AE5 wiring and guardrails
-        run: python -m unittest -v teste_ativacao_ae5_residente.py
-
