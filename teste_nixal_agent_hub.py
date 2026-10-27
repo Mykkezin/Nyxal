@@ -71,11 +71,16 @@ class TestNyxalAgentHub(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         hub.resolve_provider(provider)
 
-    def test_chat_api_forces_local_nyxal_even_when_client_requests_gemini(self):
+    def test_chat_api_forces_local_nyxal_and_lets_integration_create_session(self):
         from pathlib import Path
         source = (Path(__file__).resolve().parent / "nyxal_web_api.py").read_text(encoding="utf-8")
         self.assertIn('provedor = "nyxal"', source)
         self.assertIn("ignora seleções antigas de Gemini", source)
+        self.assertIn('sessao_id = payload.get("sessao")', source)
+        self.assertNotIn(
+            'if self.path == "/api/agent/chat" and sessao_id is None:',
+            source,
+        )
 
     def test_bloqueia_url_arbitraria_para_hermes_e_letta(self):
         with patch.dict(os.environ, {
