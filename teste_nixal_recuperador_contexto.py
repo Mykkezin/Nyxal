@@ -113,6 +113,20 @@ class TesteRecuperadorContextoNixal(unittest.TestCase):
         self.assertEqual(resultado["fontes"]["conhecimento_candidato"]["estado"], "memoria_degradada")
         self.assertEqual(self.caminho_conhecimento.read_text(encoding="utf-8"), original)
 
+    def test_tokens_e_segredos_de_candidatos_sao_redigidos(self) -> None:
+        segredo = "TOKEN-NAO-PODE-SAIR-98765"
+        self.conhecimento.registrar(
+            candidato(
+                f"A estratégia de cache local inclui validação de origem; access_token={segredo}",
+                "arquitetura",
+            )
+        )
+        resultado = self.recuperador.consultar("estratégia de cache local validação origem")
+        candidatos = resultado["conhecimentos_candidatos"]
+        self.assertEqual(len(candidatos), 1)
+        self.assertNotIn(segredo, candidatos[0]["texto"])
+        self.assertIn("access_token=[REDACTED]", candidatos[0]["texto"])
+
     def test_consulta_vazia_e_bloqueada_e_limites_ficam_bem_delimitados(self) -> None:
         consulta = self.recuperador.consultar("   ")
         self.assertFalse(consulta["sucesso"])
