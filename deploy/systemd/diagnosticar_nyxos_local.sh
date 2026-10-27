@@ -77,6 +77,7 @@ import ast
 import http.client
 import re
 import sys
+import time
 from pathlib import Path
 
 root = Path(sys.argv[1])
@@ -114,24 +115,31 @@ except (OSError, UnicodeError):
     pass
 
 saudavel = False
-for host in ("127.0.0.1", "::1"):
-    conexao = None
-    try:
-        conexao = http.client.HTTPConnection(host, porta, timeout=2)
-        conexao.request("GET", "/health", headers={"Connection": "close"})
-        resposta = conexao.getresponse()
-        resposta.read(4096)
-        if resposta.status == 200:
-            print(f"API_HEALTH_OK: HTTP 200 em loopback, porta {porta}")
-            saudavel = True
-            break
-        print(f"API_HEALTH_FALHOU: HTTP {resposta.status} em loopback, porta {porta}")
-    except (OSError, TimeoutError, http.client.HTTPException) as erro:
-        print(f"API_INDISPONIVEL: {type(erro).__name__} em loopback, porta {porta}")
-    finally:
-        if conexao is not None:
-            conexao.close()
+prazo = time.monotonic() + 15.0
+ultima_falha = "nenhuma resposta HTTP válida"
+while not saudavel and time.monotonic() < prazo:
+    for host in ("127.0.0.1", "::1"):
+        conexao = None
+        try:
+            conexao = http.client.HTTPConnection(host, porta, timeout=1)
+            conexao.request("GET", "/health", headers={"Connection": "close"})
+            resposta = conexao.getresponse()
+            resposta.read(4096)
+            if resposta.status == 200:
+                print(f"API_HEALTH_OK: HTTP 200 em loopback, porta {porta}")
+                saudavel = True
+                break
+            ultima_falha = f"HTTP {resposta.status} em {host}"
+        except (OSError, TimeoutError, http.client.HTTPException) as erro:
+            ultima_falha = f"{type(erro).__name__} em {host}"
+        finally:
+            if conexao is not None:
+                conexao.close()
+    if not saudavel and time.monotonic() < prazo:
+        time.sleep(0.5)
 
+if not saudavel:
+    print(f"API_INDISPONIVEL: {ultima_falha} na porta {porta} após aguardar até 15 segundos")
 if not saudavel:
     print("Ação recomendada: verifique os estados/resultados systemd exibidos acima e consulte o journal pelo comando abaixo.")
     print("journalctl --user -u nyxal-api.service -u nyxos-residente.service -u nyxos-interface.service -n 100 --no-pager")

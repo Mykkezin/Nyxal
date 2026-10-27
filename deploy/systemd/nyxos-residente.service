@@ -8,7 +8,7 @@ Wants=nyxal-api.service
 [Service]
 Type=simple
 WorkingDirectory=%h/Nyxal
-ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/executar_nyxos_residente.py --intervalo 5 --continuar-em-erro --habilitar-aprendizado --habilitar-auto-experimento
+ExecStart=%h/Nyxal/.venv/bin/python %h/Nyxal/executar_nyxos_residente.py --intervalo 5 --continuar-em-erro --habilitar-aprendizado --habilitar-auto-experimento --habilitar-ae5-descoberta
 EnvironmentFile=-%h/.config/nyxal/nyxal.env
 Restart=on-failure
 RestartSec=3

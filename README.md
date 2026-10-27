@@ -25,6 +25,8 @@ Nyxal is an experimental AI system built around a simple principle:
 - **AE4** — resident orchestration
 - **AE5** — continuous economic/evidence discovery
 
+The resident systemd profile enables persisted learning, gated AE2 experiments, AE5 discovery, and dual-transition dataset collection outside Git. AE2 processes at most one formal, gate-valid request per cycle. AE5 does not train models, create N9 requests automatically, or authorize code integration.
+
 AE1 → AE5 remain governed capabilities. They do not grant automatic integration authority.
 
 ### Learning Loop Causal
@@ -106,4 +108,3 @@ Setup, environment variables, SSH tunneling and connection checks: [AMD Develope
 The integration branch adds an optional agent hub for **Hermes Agent + Gemini**, with Letta persistent memory and a local Nyxal/AMD inference fallback. It also includes read-only Google Workspace access (Gmail, Calendar, Contacts and Drive metadata), local system observability, Gemini Nano Banana 2.1 image creation/editing, versioned skills and WhatsApp setup instructions. The default TTS voice is Kokoro `pf_dora`.
 
 External accounts are **not considered connected until keys, OAuth consent, services and any WhatsApp pairing have been configured and verified locally**. Google Workspace starts read-only; the host observer uses fixed read-only queries; secrets and messaging sessions remain outside Git. Follow [docs/NYXAL_AGENT_STACK.md](docs/NYXAL_AGENT_STACK.md) to configure the stack and [Gemini model documentation](https://ai.google.dev/gemini-api/docs/models) to verify model access.
-
