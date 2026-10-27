@@ -131,15 +131,26 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
         home = self.root / "home"
         home.mkdir()
         storage = self.root / "storage-outside-home"
+        storage.mkdir()
         key = home / "id_ed25519.pub"
         key.write_text("ssh-ed25519 QUJD comment\n", encoding="utf-8")
         fake_stdin = SimpleNamespace(isatty=lambda: True)
+        fake_module = types.ModuleType("nixal_vps")
+        fake_vps_class = Mock()
+        fake_module.VpsNyxOS = fake_vps_class
         with (
             patch.object(delta_vm.sys, "argv", ["criar_vm_mvp0.py", "--storage", str(storage)]),
             patch.object(delta_vm.sys, "stdin", fake_stdin),
             patch.object(delta_vm.Path, "home", return_value=home),
             patch.dict(os.environ, {"NYXOS_VPS_LIBVIRT_URI": "qemu:///system"}),
             patch.object(delta_vm, "require_tool"),
+            patch.object(delta_vm.shutil, "which", return_value="/usr/bin/getfacl"),
+            patch.object(delta_vm, "run", return_value=SimpleNamespace(
+                    returncode=0,
+                    stdout="user:libvirt-qemu:rwx\ndefault:user:libvirt-qemu:rwx\n",
+                    stderr="",
+                )) as run,
+            patch.dict(sys.modules, {"nixal_vps": fake_module}),
             patch.object(delta_vm, "find_ssh_key", return_value=key),
             patch.object(delta_vm, "verify_image", return_value="a" * 64),
             patch.object(delta_vm, "check_libvirt"),
@@ -150,13 +161,16 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
         ):
             result = delta_vm.main()
         self.assertEqual(result, 0)
-        run.assert_not_called()
-        self.assertFalse(storage.exists())
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0], ["/usr/bin/getfacl", "-cp", str(storage)])
+        fake_vps_class.assert_not_called()
+        self.assertEqual(list(storage.iterdir()), [])
 
     def test_modo_nao_interativo_aborta_sem_provisionar(self) -> None:
         home = self.root / "home-nao-interativo"
         home.mkdir()
         storage = self.root / "storage-nao-interativo"
+        storage.mkdir()
         fake_stdin = SimpleNamespace(isatty=lambda: False)
         fake_module = types.ModuleType("nixal_vps")
         fake_vps_class = Mock()
@@ -172,6 +186,12 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
             patch.dict(os.environ, {"NYXOS_VPS_LIBVIRT_URI": "qemu:///system"}, clear=False),
             patch.dict(sys.modules, {"nixal_vps": fake_module}),
             patch.object(delta_vm, "require_tool"),
+            patch.object(delta_vm.shutil, "which", return_value="/usr/bin/getfacl"),
+            patch.object(delta_vm, "run", return_value=SimpleNamespace(
+                    returncode=0,
+                    stdout="user:libvirt-qemu:rwx\ndefault:user:libvirt-qemu:rwx\n",
+                    stderr="",
+                )),
             patch.object(delta_vm, "find_ssh_key", return_value=self.root / "id_ed25519.pub"),
             patch.object(delta_vm, "verify_image", return_value="a" * 64),
             patch.object(delta_vm, "check_libvirt"),
@@ -184,12 +204,13 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
         self.assertEqual(result, 2)
         prompt.assert_not_called()
         fake_vps_class.assert_not_called()
-        self.assertFalse(storage.exists())
+        self.assertEqual(list(storage.iterdir()), [])
 
     def test_confirmacao_positiva_chama_provisionador_existente(self) -> None:
         home = self.root / "home-interativo"
         home.mkdir()
         storage = self.root / "storage-interativo"
+        storage.mkdir()
         key = self.root / "key.pub"
         key.write_text("ssh-ed25519 QUJDREVGR0g= comentario-livre\n", encoding="utf-8")
         fake_stdin = SimpleNamespace(isatty=lambda: True)
@@ -211,6 +232,12 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
             patch.dict(os.environ, {"NYXOS_VPS_LIBVIRT_URI": "qemu:///system"}, clear=False),
             patch.dict(sys.modules, {"nixal_vps": fake_module}),
             patch.object(delta_vm, "require_tool"),
+            patch.object(delta_vm.shutil, "which", return_value="/usr/bin/getfacl"),
+            patch.object(delta_vm, "run", return_value=SimpleNamespace(
+                    returncode=0,
+                    stdout="user:libvirt-qemu:rwx\ndefault:user:libvirt-qemu:rwx\n",
+                    stderr="",
+                )) as run,
             patch.object(delta_vm, "find_ssh_key", return_value=key),
             patch.object(delta_vm, "verify_image", return_value="a" * 64),
             patch.object(delta_vm, "check_libvirt"),
@@ -228,7 +255,9 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
         self.assertEqual(kwargs["ssh_public_key"], "ssh-ed25519 QUJDREVGR0g=")
         self.assertFalse(kwargs["autostart"])
         self.assertEqual(kwargs["nome"], "delta-mvp0")
-        self.assertFalse(storage.exists())
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0], ["/usr/bin/getfacl", "-cp", str(storage)])
+        self.assertEqual(list(storage.iterdir()), [])
 
     def test_storage_helper_exige_confirmacao_antes_da_alteracao(self) -> None:
         source = (DELTA_DIR / "preparar_storage_mvp0.sh").read_text(encoding="utf-8")
