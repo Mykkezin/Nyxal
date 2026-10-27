@@ -2236,6 +2236,9 @@
 
         const { response: res, data } = await nyxalApiPost('/api/chat', {
           headers: { 'Content-Type': 'application/json' },
+          // HTTP 4xx/5xx são respostas da API, não falhas de conexão.
+          // O chamador precisa ler estado/erro para recuperar sessão ou mostrar o motivo real.
+          throwOnError: false,
           body: JSON.stringify(
             nyxalSessionId
               ? { mensagem: msg, sessao: nyxalSessionId }
