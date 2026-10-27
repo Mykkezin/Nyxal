@@ -60,6 +60,7 @@
       "#nyxalVoiceConsole .nvc-top{position:absolute;top:15px;left:18px;right:18px;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;pointer-events:none}",
       "#nyxalVoiceConsole .nvc-top-left,#nyxalVoiceConsole .nvc-top-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;pointer-events:auto}",
       "#nyxalVoiceConsole .nvc-chip{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:6px 11px;border:1px solid rgba(145,190,225,.28);border-radius:999px;background:linear-gradient(135deg,rgba(8,18,33,.9),rgba(4,10,20,.82));color:#d9e7f6;backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 rgba(224,242,254,.04),0 3px 16px rgba(0,0,0,.16);white-space:nowrap;font-size:12px;letter-spacing:.035em}",
+      "#nyxalVoiceConsole .nvc-chip.nvc-brand-chip{min-height:30px;padding:5px 9px;border-color:rgba(145,190,225,.25);font-size:11px;letter-spacing:.035em}",
       "#nyxalVoiceConsole .nvc-dot{width:6px;height:6px;flex:0 0 auto;border-radius:50%;background:#6ee7b7;box-shadow:0 0 11px rgba(110,231,183,.68)}",
       "#nyxalVoiceConsole .nvc-metric{color:#f0f7ff;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}",
       "#nyxalVoiceConsole .nvc-muted{color:#a2b6ca}",
@@ -89,7 +90,7 @@
       "#nyxalVoiceConsole .nvc-reflection-text{color:#e6f2ff;font-size:12px;line-height:1.55;margin:4px 0 8px}",
       "#nyxalVoiceConsole .nvc-close{border:0;background:transparent;color:#91a7bd;padding:4px 7px}",
       "#nyxalVoiceSurface.is-dormant #nyxalVoiceConsole{opacity:0;pointer-events:none}",
-      "@media(max-width:720px){#nyxalVoiceConsole .nvc-top{top:8px;left:8px;right:8px;gap:7px}#nyxalVoiceConsole .nvc-top-left,#nyxalVoiceConsole .nvc-top-right{gap:5px}#nyxalVoiceConsole .nvc-chip{font-size:10px;min-height:26px;padding:4px 8px;gap:5px}#nyxalVoiceConsole .nvc-top-right{max-width:100%}#nyxalVoiceConsole .nvc-workspace{top:74px;left:9px;right:9px;bottom:68px;width:auto;max-height:none;padding:11px}#nyxalVoiceConsole .nvc-tool-button{right:10px;bottom:10px}#nyxalVoiceConsole .nvc-reflection{bottom:10px;width:calc(100vw - 18px)}}",
+      "@media(max-width:720px){#nyxalVoiceConsole .nvc-top{top:8px;left:8px;right:8px;gap:7px}#nyxalVoiceConsole .nvc-top-left,#nyxalVoiceConsole .nvc-top-right{gap:5px}#nyxalVoiceConsole .nvc-chip{font-size:10px;min-height:26px;padding:4px 8px;gap:5px}#nyxalVoiceConsole .nvc-chip.nvc-brand-chip{font-size:10px;min-height:26px;padding:4px 8px}#nyxalVoiceConsole .nvc-top-right{max-width:100%}#nyxalVoiceConsole .nvc-workspace{top:74px;left:9px;right:9px;bottom:68px;width:auto;max-height:none;padding:11px}#nyxalVoiceConsole .nvc-tool-button{right:10px;bottom:10px}#nyxalVoiceConsole .nvc-reflection{bottom:10px;width:calc(100vw - 18px)}}",
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -114,7 +115,7 @@
     dock.innerHTML = [
       '<div class="nvc-top">',
         '<div class="nvc-top-left">',
-          '<div class="nvc-chip"><span class="nvc-dot"></span><span>NYXAL</span><span class="nvc-muted">RESIDENTE</span></div>',
+          '<div class="nvc-chip nvc-brand-chip"><span class="nvc-dot"></span><span>NYXAL</span><span class="nvc-muted">RESIDENTE</span></div>',
           '<div class="nvc-chip"><span id="nvcClock">--:--:--</span><span class="nvc-muted" id="nvcDate"></span></div>',
           '<div class="nvc-chip" title="Clima atual em São Paulo"><span id="nvcWeatherIcon">◌</span><span id="nvcWeatherTemp">--°</span><span class="nvc-muted" id="nvcWeatherLabel">Clima</span></div>',
         '</div>',
