@@ -129,6 +129,17 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         self.assertIn("access_token=[REDACTED]", texto_usuario)
         self.assertNotIn("abc123", texto_usuario)
 
+    def test_core_compartilha_catalogo_de_capacidades_com_dialogo(self) -> None:
+        cliente = FakeChatClient()
+        dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
+        nucleo = NucleoConversacionalNixal(dialogo=dialogo)
+
+        self.assertIs(nucleo.dialogo, dialogo)
+        self.assertIs(
+            dialogo.gerenciador_capacidades,
+            nucleo.agente.capacidades,
+        )
+
     def test_core_ignores_legacy_remote_provider_and_preserves_canonical_session_history(self) -> None:
         cliente = FakeChatClient()
         dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
