@@ -655,6 +655,21 @@ class GerenciadorCapacidades:
                     return False, f"O argumento '{nome_argumento}' é curto demais."
                 if dados.get("max_length") is not None and len(valor) > dados["max_length"]:
                     return False, f"O argumento '{nome_argumento}' é longo demais."
+                if dados.get("minLength") is not None and len(valor) < dados["minLength"]:
+                    return False, f"O argumento '{nome_argumento}' é curto demais."
+                if dados.get("maxLength") is not None and len(valor) > dados["maxLength"]:
+                    return False, f"O argumento '{nome_argumento}' é longo demais."
+            if esperado in {"object", "dict", "objeto"} and isinstance(valor, dict):
+                propriedades = dados.get("properties")
+                obrigatorios_objeto = dados.get("required")
+                if isinstance(propriedades, dict):
+                    desconhecidos_objeto = set(valor) - set(propriedades)
+                    if desconhecidos_objeto:
+                        return False, f"Propriedade não permitida em '{nome_argumento}'."
+                    if isinstance(obrigatorios_objeto, list):
+                        faltando = [k for k in obrigatorios_objeto if k not in valor]
+                        if faltando:
+                            return False, f"Falta propriedade obrigatória em '{nome_argumento}'."
         return True, None
 
     # ============================================================
