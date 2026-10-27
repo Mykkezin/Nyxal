@@ -732,7 +732,11 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertEqual(status, 401)
         status, _ = self.request(
             "GET", "/api/agent/contexto",
-            headers={"Authorization": "Bearer TOKEN-INCORRETO"},
+            headers={
+                "Authorization": "Bearer TOKEN-INCORRETO",
+                "X-Forwarded-For": "203.0.113.99",
+                "Forwarded": "for=203.0.113.99",
+            },
         )
         self.assertEqual(status, 403)
 
@@ -756,6 +760,13 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
             self.assertFalse(evento.get("executor_autorizado"))
             self.assertFalse(evento.get("efeito_executado"))
             self.assertNotIn("headers", evento)
+            self.assertFalse(any(
+                recomendacao.get("tipo") in {
+                    "limitar_taxa_origem",
+                    "bloqueio_temporario_origem",
+                }
+                for recomendacao in evento.get("recomendacoes", [])
+            ))
             for recomendacao in evento.get("recomendacoes", []):
                 self.assertFalse(recomendacao.get("executor_autorizado"))
                 self.assertFalse(recomendacao.get("efeito_executado"))
