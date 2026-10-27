@@ -1,27 +1,5 @@
 #!/usr/bin/env python3
-
-"""
-NIXAL — SISTEMA DE CAPACIDADES
-
-Microetapa 56.3.8
-
-Agora cada capacidade possui um contrato semântico expandido:
-
-- nome
-- descrição
-- objetivo
-- exemplos de necessidades
-- argumentos
-- domínios
-- evidências de domínio
-
-Os domínios fazem parte do contrato nativo da capacidade.
-
-Isso permite que outros módulos, como o compositor e o Qwen,
-descubram não apenas COMO chamar uma capacidade e PARA QUE
-ela serve, mas também EM QUAL DOMÍNIO ela opera.
-"""
-
+"""Contrato de capacidade operacional: validação, política e auditoria segura."""
 from __future__ import annotations
 
 import json
@@ -31,25 +9,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-
 BASE_DIR = Path(__file__).resolve().parent
+ARQUIVO_CAPACIDADES = BASE_DIR / "capacidades_nixal.json"
+ARQUIVO_LOG = BASE_DIR / "log_capacidades_nixal.json"
+MAX_TAMANHO_ARQUIVO = 1 * 1024 * 1024
+POLITICAS_CAPACIDADE = {"somente_leitura", "acao_com_pedido_explicito", "requer_confirmacao"}
 
-ARQUIVO_CAPACIDADES = (
-    BASE_DIR / "capacidades_nixal.json"
-)
-
-ARQUIVO_LOG = (
-    BASE_DIR / "log_capacidades_nixal.json"
-)
-
-MAX_TAMANHO_ARQUIVO = (
-    1 * 1024 * 1024
-)
-
-
-# ================================================================
-# ESTRUTURAS
-# ================================================================
 
 @dataclass
 class ResultadoCapacidade:
@@ -71,1186 +36,277 @@ class Capacidade:
     argumentos: dict[str, dict[str, Any]]
     dominios: list[str]
     evidencias_dominio: list[str]
+    politica: str = "somente_leitura"
 
-
-# ================================================================
-# GERENCIADOR
-# ================================================================
 
 class GerenciadorCapacidades:
+    """Registro de capacidades existente, com validação e guarda de execução."""
 
     def __init__(self) -> None:
-
-        self.capacidades: dict[
-            str,
-            Capacidade,
-        ] = {}
-
-        self.registro_anterior = (
-            self._carregar_registro()
-        )
-
-        # --------------------------------------------------------
-        # HORA
-        # --------------------------------------------------------
+        self.capacidades: dict[str, Capacidade] = {}
+        self.registro_anterior = self._carregar_registro()
 
         self.registrar(
-            nome="obter_hora",
-            descricao=(
-                "Obtém o horário atual da máquina."
-            ),
-            objetivo=(
-                "Descobrir o horário atual do sistema."
-            ),
-            dominios=[
-                "sistema_computacional",
-            ],
-            evidencias_dominio=[
-                "hora",
-                "horario",
-                "sistema",
-                "maquina",
-            ],
-            exemplos=[
-                "Que horas são?",
-                "Preciso saber a hora.",
-                "Qual é o horário agora?",
-                "Me diga o horário atual.",
-            ],
+            nome="obter_hora", descricao="Obtém o horário atual da máquina.",
+            objetivo="Descobrir o horário atual do sistema.",
+            dominios=["sistema_computacional"], evidencias_dominio=["hora", "horario", "sistema", "maquina"],
+            exemplos=["Que horas são?", "Preciso saber a hora.", "Qual é o horário agora?", "Me diga o horário atual."],
             funcao=self._obter_hora,
         )
-
-        # --------------------------------------------------------
-        # ARQUIVOS
-        # --------------------------------------------------------
-
         self.registrar(
-            nome="listar_arquivos",
-            descricao=(
-                "Lista os arquivos do diretório "
-                "do projeto Nixal."
-            ),
-            objetivo=(
-                "Descobrir quais arquivos existem "
-                "no projeto Nixal."
-            ),
-            dominios=[
-                "projeto_arquivo",
-            ],
-            evidencias_dominio=[
-                "arquivo",
-                "arquivos",
-                "projeto",
-                "diretorio",
-                "pasta",
-            ],
-            exemplos=[
-                "Quais arquivos existem?",
-                "Quero conhecer os arquivos do projeto.",
-                "Liste os arquivos da Nixal.",
-                "Quais arquivos estão disponíveis?",
-            ],
+            nome="listar_arquivos", descricao="Lista arquivos não ocultos do diretório do projeto.",
+            objetivo="Descobrir quais arquivos existem no projeto Nyxal.",
+            dominios=["projeto_arquivo"], evidencias_dominio=["arquivo", "arquivos", "projeto", "diretorio", "pasta"],
+            exemplos=["Quais arquivos existem?", "Quero conhecer os arquivos do projeto.", "Liste os arquivos da Nyxal."],
             funcao=self._listar_arquivos,
         )
-
-        # --------------------------------------------------------
-        # ESTADO CORPORAL
-        # --------------------------------------------------------
-
         self.registrar(
-            nome="ler_estado_corpo",
-            descricao=(
-                "Lê o estado atual do corpo da Nixal."
-            ),
-            objetivo=(
-                "Consultar o estado atual do corpo "
-                "computacional da Nixal, incluindo CPU, "
-                "memória, GPU, temperaturas, armazenamento "
-                "e processos."
-            ),
-            dominios=[
-                "corpo_computacional",
-            ],
-            evidencias_dominio=[
-                "corpo",
-                "corporal",
-                "cpu",
-                "gpu",
-                "memoria",
-                "armazenamento",
-                "processos",
-                "computador",
-                "computacional",
-            ],
-            exemplos=[
-                "Como está meu corpo?",
-                "Como está minha CPU?",
-                "Qual é o uso da minha GPU?",
-                "Como está minha memória?",
-                "Quais são minhas temperaturas?",
-                "Qual é o estado atual do meu computador?",
-            ],
-            funcao=self._ler_estado_corpo,
+            nome="ler_estado_corpo", descricao="Lê o estado operacional corporal da Nyxal.",
+            objetivo="Consultar o estado corporal registrado.",
+            dominios=["sistema_computacional"], evidencias_dominio=["estado", "corpo", "fisiologia"],
+            exemplos=["Qual é o estado do corpo?", "Leia o estado operacional."], funcao=self._ler_estado_corpo,
         )
-
-        # --------------------------------------------------------
-        # MEMÓRIA CORPORAL
-        # --------------------------------------------------------
-
         self.registrar(
-            nome="ler_memoria_corporal",
-            descricao=(
-                "Lê os eventos registrados "
-                "na memória corporal."
-            ),
-            objetivo=(
-                "Consultar eventos e acontecimentos "
-                "registrados anteriormente pelo corpo "
-                "da Nixal."
-            ),
-            dominios=[
-                "corpo_computacional",
-            ],
-            evidencias_dominio=[
-                "corpo",
-                "corporal",
-                "evento",
-                "eventos",
-                "historico",
-                "acontecimentos",
-            ],
-            exemplos=[
-                "Quais eventos meu corpo registrou?",
-                "O que meu corpo registrou?",
-                "Quais eventos corporais aconteceram?",
-                "Mostre meu histórico corporal.",
-                "O que aconteceu com meu corpo?",
-                "Quais eventos estão na minha memória corporal?",
-            ],
-            funcao=self._ler_memoria_corporal,
+            nome="ler_memoria_corporal", descricao="Lê a memória corporal operacional.",
+            objetivo="Consultar a memória corporal registrada.",
+            dominios=["memoria_operacional"], evidencias_dominio=["memoria", "corpo", "estado"],
+            exemplos=["Leia a memória corporal.", "Consulte a memória operacional."], funcao=self._ler_memoria_corporal,
         )
-
-        # --------------------------------------------------------
-        # LEITURA DE ARQUIVO
-        # --------------------------------------------------------
-
         self.registrar(
-            nome="ler_arquivo",
-            descricao=(
-                "Lê um arquivo de texto dentro "
-                "do projeto Nixal."
-            ),
-            objetivo=(
-                "Ler o conteúdo textual de um arquivo "
-                "específico cujo nome ou caminho relativo "
-                "foi fornecido."
-            ),
-            dominios=[
-                "projeto_arquivo",
-            ],
-            evidencias_dominio=[
-                "arquivo",
-                "arquivos",
-                "projeto",
-                "texto",
-                "conteudo",
-                "caminho",
-                "diretorio",
-            ],
-            exemplos=[
-                "Leia o arquivo estado_corpo_nixal.json.",
-                "Mostre o conteúdo de capacidades_nixal.json.",
-                "Abra o arquivo teste.py.",
-                "Leia o conteúdo de um arquivo específico.",
-            ],
+            nome="ler_arquivo", descricao="Lê arquivo textual relativo dentro do projeto.",
+            objetivo="Ler o conteúdo textual de arquivo específico dentro do projeto.",
+            dominios=["projeto_arquivo"], evidencias_dominio=["arquivo", "arquivos", "projeto", "texto", "conteudo", "caminho", "diretorio"],
+            exemplos=["Leia o arquivo estado_corpo_nixal.json.", "Mostre o conteúdo de capacidades_nixal.json.", "Abra o arquivo teste.py."],
             funcao=self._ler_arquivo,
-            argumentos={
-                "arquivo": {
-                    "tipo": "string",
-                    "obrigatorio": True,
-                    "descricao": (
-                        "Nome ou caminho relativo "
-                        "do arquivo dentro do projeto Nixal."
-                    ),
-                }
-            },
+            argumentos={"arquivo": {"tipo": "string", "obrigatorio": True, "descricao": "Caminho relativo ao projeto"}},
         )
 
-    # ============================================================
-    # REGISTRO PERSISTENTE
-    # ============================================================
-
-    def _carregar_registro(
-        self,
-    ) -> list[dict[str, Any]]:
-
+    def _carregar_registro(self) -> list[dict[str, Any]]:
         if not ARQUIVO_CAPACIDADES.exists():
             return []
-
         try:
-
-            with ARQUIVO_CAPACIDADES.open(
-                "r",
-                encoding="utf-8",
-            ) as f:
-
-                dados = json.load(f)
-
-            if isinstance(dados, list):
-                return dados
-
+            valor = json.loads(ARQUIVO_CAPACIDADES.read_text(encoding="utf-8"))
+            return valor if isinstance(valor, list) else []
+        except (OSError, json.JSONDecodeError):
             return []
 
-        except Exception as erro:
-
-            print(
-                "[Nixal] Não foi possível carregar "
-                f"o registro de capacidades: {erro}"
-            )
-
-            return []
-
-    def _salvar_registro(
-        self,
-    ) -> None:
-
-        dados = (
-            self.listar_capacidades()
-        )
-
+    def _salvar_registro(self) -> None:
         try:
-
-            with ARQUIVO_CAPACIDADES.open(
-                "w",
-                encoding="utf-8",
-            ) as f:
-
-                json.dump(
-                    dados,
-                    f,
-                    ensure_ascii=False,
-                    indent=2,
-                )
-
-        except Exception as erro:
-
-            print(
-                "[Nixal] Não foi possível salvar "
-                f"o registro de capacidades: {erro}"
-            )
-
-    # ============================================================
-    # REGISTRAR
-    # ============================================================
+            ARQUIVO_CAPACIDADES.parent.mkdir(parents=True, exist_ok=True)
+            tmp = ARQUIVO_CAPACIDADES.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(self.listar_capacidades(), ensure_ascii=False, indent=2), encoding="utf-8")
+            tmp.replace(ARQUIVO_CAPACIDADES)
+        except OSError:
+            # Falha de persistência do catálogo não deve impedir o uso em memória.
+            pass
 
     def registrar(
-        self,
-        nome: str,
-        descricao: str,
-        objetivo: str,
-        exemplos: list[str],
-        funcao: Callable[..., Any],
-        argumentos: dict[
-            str,
-            dict[str, Any],
-        ] | None = None,
-        dominios: list[str] | None = None,
-        evidencias_dominio: list[str] | None = None,
+        self, nome: str, descricao: str, objetivo: str, exemplos: list[str],
+        funcao: Callable[..., Any], argumentos: dict[str, dict[str, Any]] | None = None,
+        dominios: list[str] | None = None, evidencias_dominio: list[str] | None = None,
+        politica: str = "somente_leitura",
     ) -> None:
-
-        if not nome:
-            raise ValueError(
-                "Nome da capacidade não pode ser vazio."
-            )
-
+        if not isinstance(nome, str) or not nome.strip():
+            raise ValueError("Nome de capacidade vazio.")
         if not callable(funcao):
-            raise TypeError(
-                f"A capacidade '{nome}' precisa possuir "
-                "uma função válida."
-            )
-
-        if not isinstance(
-            exemplos,
-            list,
-        ):
-            raise TypeError(
-                "Exemplos precisam ser uma lista."
-            )
-
-        dominios = (
-            dominios
-            if dominios is not None
-            else []
-        )
-
-        evidencias_dominio = (
-            evidencias_dominio
-            if evidencias_dominio is not None
-            else []
-        )
-
-        if not isinstance(
-            dominios,
-            list,
-        ):
-            raise TypeError(
-                "Domínios precisam ser uma lista."
-            )
-
-        if not isinstance(
-            evidencias_dominio,
-            list,
-        ):
-            raise TypeError(
-                "Evidências de domínio precisam "
-                "ser uma lista."
-            )
-
-        dominios_normalizados = []
-
-        for dominio in dominios:
-
-            if not isinstance(
-                dominio,
-                str,
-            ):
-                raise TypeError(
-                    "Cada domínio precisa ser string."
-                )
-
-            dominio = dominio.strip()
-
-            if not dominio:
-                continue
-
-            if dominio not in (
-                dominios_normalizados
-            ):
-
-                dominios_normalizados.append(
-                    dominio
-                )
-
-        evidencias_normalizadas = []
-
-        for evidencia in (
-            evidencias_dominio
-        ):
-
-            if not isinstance(
-                evidencia,
-                str,
-            ):
-                raise TypeError(
-                    "Cada evidência de domínio "
-                    "precisa ser string."
-                )
-
-            evidencia = evidencia.strip()
-
-            if not evidencia:
-                continue
-
-            if evidencia not in (
-                evidencias_normalizadas
-            ):
-
-                evidencias_normalizadas.append(
-                    evidencia
-                )
-
-        if not dominios_normalizados:
-            raise ValueError(
-                f"A capacidade '{nome}' "
-                "precisa possuir pelo menos "
-                "um domínio."
-            )
-
-        if not evidencias_normalizadas:
-            raise ValueError(
-                f"A capacidade '{nome}' "
-                "precisa possuir pelo menos "
-                "uma evidência de domínio."
-            )
-
+            raise TypeError(f"A capacidade '{nome}' precisa possuir função válida.")
+        if not isinstance(exemplos, list) or not all(isinstance(x, str) for x in exemplos):
+            raise TypeError("Exemplos precisam ser uma lista de strings.")
+        if not isinstance(argumentos or {}, dict):
+            raise TypeError("Argumentos precisam ser um objeto.")
+        dominios = list(dict.fromkeys(x.strip() for x in (dominios or []) if isinstance(x, str) and x.strip()))
+        evidencias = list(dict.fromkeys(x.strip() for x in (evidencias_dominio or []) if isinstance(x, str) and x.strip()))
+        if not dominios or not evidencias:
+            raise ValueError(f"A capacidade '{nome}' precisa de domínio e evidências.")
+        if politica not in POLITICAS_CAPACIDADE:
+            raise ValueError("Política de execução da capacidade inválida.")
         if nome in self.capacidades:
-            raise ValueError(
-                f"A capacidade '{nome}' "
-                "já está registrada."
-            )
-
-        self.capacidades[nome] = (
-            Capacidade(
-                nome=nome,
-                descricao=descricao,
-                objetivo=objetivo,
-                exemplos=exemplos,
-                funcao=funcao,
-                argumentos=(
-                    argumentos
-                    or {}
-                ),
-                dominios=(
-                    dominios_normalizados
-                ),
-                evidencias_dominio=(
-                    evidencias_normalizadas
-                ),
-            )
+            raise ValueError(f"A capacidade '{nome}' já está registrada.")
+        self.capacidades[nome] = Capacidade(
+            nome=nome, descricao=descricao, objetivo=objetivo, exemplos=exemplos,
+            funcao=funcao, argumentos=argumentos or {}, dominios=dominios,
+            evidencias_dominio=evidencias, politica=politica,
         )
-
         self._salvar_registro()
 
-    # ============================================================
-    # ESPECIFICAÇÃO
-    # ============================================================
-
-    def obter_especificacao(
-        self,
-        nome: str,
-    ) -> dict[str, Any] | None:
-
-        capacidade = (
-            self.capacidades.get(nome)
-        )
-
+    def obter_especificacao(self, nome: str) -> dict[str, Any] | None:
+        capacidade = self.capacidades.get(nome)
         if capacidade is None:
             return None
-
         return {
-            "nome": capacidade.nome,
-            "descricao": capacidade.descricao,
-            "objetivo": capacidade.objetivo,
-            "exemplos": capacidade.exemplos,
-            "argumentos": capacidade.argumentos,
-            "dominios": capacidade.dominios,
-            "evidencias_dominio": (
-                capacidade.evidencias_dominio
-            ),
+            "nome": capacidade.nome, "descricao": capacidade.descricao,
+            "objetivo": capacidade.objetivo, "exemplos": capacidade.exemplos,
+            "argumentos": capacidade.argumentos, "dominios": capacidade.dominios,
+            "evidencias_dominio": capacidade.evidencias_dominio, "politica": capacidade.politica,
         }
 
-    # ============================================================
-    # VALIDAÇÃO DE ARGUMENTOS
-    # ============================================================
-
-    def validar_argumentos(
-        self,
-        nome: str,
-        argumentos: dict[str, Any],
-    ) -> tuple[bool, str | None]:
-
-        capacidade = (
-            self.capacidades.get(nome)
-        )
-
+    def validar_argumentos(self, nome: str, argumentos: dict[str, Any]) -> tuple[bool, str | None]:
+        capacidade = self.capacidades.get(nome)
         if capacidade is None:
-
-            return (
-                False,
-                f"Capacidade inexistente: {nome}",
-            )
-
-        if not isinstance(
-            argumentos,
-            dict,
-        ):
-
-            return (
-                False,
-                "Os argumentos precisam ser "
-                "um objeto JSON.",
-            )
-
-        especificacao = (
-            capacidade.argumentos
-        )
-
-        # --------------------------------------------------------
-        # Argumentos desconhecidos
-        # --------------------------------------------------------
-
-        for nome_argumento in argumentos:
-
-            if (
-                nome_argumento
-                not in especificacao
-            ):
-
-                return (
-                    False,
-                    (
-                        f"Argumento não permitido para "
-                        f"'{nome}': {nome_argumento}"
-                    ),
-                )
-
-        # --------------------------------------------------------
-        # Argumentos obrigatórios
-        # --------------------------------------------------------
-
-        for (
-            nome_argumento,
-            dados,
-        ) in especificacao.items():
-
-            obrigatorio = dados.get(
-                "obrigatorio",
-                False,
-            )
-
-            if (
-                obrigatorio
-                and nome_argumento
-                not in argumentos
-            ):
-
-                return (
-                    False,
-                    (
-                        "Argumento obrigatório ausente: "
-                        f"{nome_argumento}"
-                    ),
-                )
-
-        # --------------------------------------------------------
-        # Tipos
-        # --------------------------------------------------------
-
-        for (
-            nome_argumento,
-            valor,
-        ) in argumentos.items():
-
-            esperado = (
-                especificacao[
-                    nome_argumento
-                ].get("tipo")
-            )
-
-            if esperado == "string":
-
-                if not isinstance(
-                    valor,
-                    str,
-                ):
-
-                    return (
-                        False,
-                        (
-                            f"O argumento "
-                            f"'{nome_argumento}' "
-                            "precisa ser string."
-                        ),
-                    )
-
+            return False, f"Capacidade inexistente: {nome}"
+        if not isinstance(argumentos, dict):
+            return False, "Os argumentos precisam ser um objeto JSON."
+        especificacao = capacidade.argumentos
+        desconhecidos = set(argumentos) - set(especificacao)
+        if desconhecidos:
+            return False, f"Argumento não permitido para '{nome}': {sorted(desconhecidos)[0]}"
+        for key, spec in especificacao.items():
+            if not isinstance(spec, dict):
+                return False, f"Especificação inválida para '{key}'."
+            if spec.get("obrigatorio", False) and key not in argumentos:
+                return False, f"Argumento obrigatório ausente: {key}"
+        for key, value in argumentos.items():
+            spec = especificacao[key]
+            esperado = spec.get("tipo")
+            tipo_ok = True
+            if esperado in {"string", "str"}:
+                tipo_ok = isinstance(value, str)
+            elif esperado in {"integer", "int", "inteiro"}:
+                tipo_ok = isinstance(value, int) and not isinstance(value, bool)
+            elif esperado in {"number", "float", "numero"}:
+                tipo_ok = isinstance(value, (int, float)) and not isinstance(value, bool)
+            elif esperado in {"boolean", "bool", "booleano"}:
+                tipo_ok = isinstance(value, bool)
+            elif esperado in {"object", "dict", "objeto"}:
+                tipo_ok = isinstance(value, dict)
+            elif esperado in {"array", "list", "lista"}:
+                tipo_ok = isinstance(value, list)
+            if not tipo_ok:
+                return False, f"O argumento '{key}' precisa ser {esperado}."
+            if isinstance(spec.get("enum"), list) and value not in spec["enum"]:
+                return False, f"O argumento '{key}' não está entre os valores permitidos."
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                if spec.get("minimo", spec.get("minimum")) is not None and value < spec.get("minimo", spec.get("minimum")):
+                    return False, f"O argumento '{key}' está abaixo do mínimo permitido."
+                if spec.get("maximo", spec.get("maximum")) is not None and value > spec.get("maximo", spec.get("maximum")):
+                    return False, f"O argumento '{key}' excede o máximo permitido."
+            if isinstance(value, str):
+                if spec.get("min_length") is not None and len(value) < spec["min_length"]:
+                    return False, f"O argumento '{key}' é curto demais."
+                if spec.get("max_length") is not None and len(value) > spec["max_length"]:
+                    return False, f"O argumento '{key}' é longo demais."
         return True, None
 
-    # ============================================================
-    # EXECUÇÃO
-    # ============================================================
-
-    def executar(
-        self,
-        nome: str,
-        **argumentos: Any,
-    ) -> ResultadoCapacidade:
-
-        inicio = time.perf_counter()
-        timestamp = time.time()
-
-        valido, erro_validacao = (
-            self.validar_argumentos(
-                nome,
-                argumentos,
-            )
-        )
-
+    def executar(self, nome: str, *, autorizacao_explicita: bool = False, confirmacao: bool = False, **argumentos: Any) -> ResultadoCapacidade:
+        inicio, timestamp = time.perf_counter(), time.time()
+        capacidade = self.capacidades.get(nome)
+        if capacidade is not None:
+            if capacidade.politica == "acao_com_pedido_explicito" and not autorizacao_explicita:
+                resultado = ResultadoCapacidade(False, nome, erro="Ação bloqueada: falta pedido explícito do usuário.", timestamp=timestamp, duracao_ms=(time.perf_counter()-inicio)*1000)
+                self._registrar_execucao(resultado)
+                return resultado
+            if capacidade.politica == "requer_confirmacao" and not (autorizacao_explicita and confirmacao):
+                resultado = ResultadoCapacidade(False, nome, erro="Ação bloqueada: requer autorização explícita e confirmação.", timestamp=timestamp, duracao_ms=(time.perf_counter()-inicio)*1000)
+                self._registrar_execucao(resultado)
+                return resultado
+        valido, erro = self.validar_argumentos(nome, argumentos)
         if not valido:
-
-            resultado = (
-                ResultadoCapacidade(
-                    sucesso=False,
-                    capacidade=nome,
-                    erro=erro_validacao,
-                    timestamp=timestamp,
-                    duracao_ms=(
-                        time.perf_counter()
-                        - inicio
-                    ) * 1000,
-                )
-            )
-
-            self._registrar_execucao(
-                resultado
-            )
-
+            resultado = ResultadoCapacidade(False, nome, erro=erro, timestamp=timestamp, duracao_ms=(time.perf_counter()-inicio)*1000)
+            self._registrar_execucao(resultado)
             return resultado
-
-        capacidade = (
-            self.capacidades[nome]
-        )
-
         try:
-
-            valor = capacidade.funcao(
-                **argumentos
-            )
-
-            fim = time.perf_counter()
-
-            resultado = (
-                ResultadoCapacidade(
-                    sucesso=True,
-                    capacidade=nome,
-                    resultado=valor,
-                    timestamp=timestamp,
-                    duracao_ms=(
-                        fim - inicio
-                    ) * 1000,
-                )
-            )
-
-        except Exception as erro:
-
-            fim = time.perf_counter()
-
-            resultado = (
-                ResultadoCapacidade(
-                    sucesso=False,
-                    capacidade=nome,
-                    erro=(
-                        f"{type(erro).__name__}: "
-                        f"{erro}"
-                    ),
-                    timestamp=timestamp,
-                    duracao_ms=(
-                        fim - inicio
-                    ) * 1000,
-                )
-            )
-
-            print(
-                "\n[Nixal] Erro durante execução:"
-            )
-
+            valor = capacidade.funcao(**argumentos)
+            resultado = ResultadoCapacidade(True, nome, resultado=valor, timestamp=timestamp, duracao_ms=(time.perf_counter()-inicio)*1000)
+        except Exception as exc:
+            resultado = ResultadoCapacidade(False, nome, erro=f"{type(exc).__name__}: {exc}", timestamp=timestamp, duracao_ms=(time.perf_counter()-inicio)*1000)
             traceback.print_exc()
-
-        self._registrar_execucao(
-            resultado
-        )
-
+        self._registrar_execucao(resultado)
         return resultado
 
-    # ============================================================
-    # DESCOBERTA
-    # ============================================================
+    def listar_capacidades(self) -> list[dict[str, Any]]:
+        return [{
+            "nome": c.nome, "descricao": c.descricao, "objetivo": c.objetivo,
+            "exemplos": c.exemplos, "argumentos": c.argumentos,
+            "dominios": c.dominios, "evidencias_dominio": c.evidencias_dominio,
+            "politica": c.politica,
+        } for c in self.capacidades.values()]
 
-    def listar_capacidades(
-        self,
-    ) -> list[dict[str, Any]]:
-
-        capacidades = []
-
-        for capacidade in (
-            self.capacidades.values()
-        ):
-
-            capacidades.append(
-                {
-                    "nome": capacidade.nome,
-                    "descricao": (
-                        capacidade.descricao
-                    ),
-                    "objetivo": (
-                        capacidade.objetivo
-                    ),
-                    "exemplos": (
-                        capacidade.exemplos
-                    ),
-                    "argumentos": (
-                        capacidade.argumentos
-                    ),
-                    "dominios": (
-                        capacidade.dominios
-                    ),
-                    "evidencias_dominio": (
-                        capacidade.evidencias_dominio
-                    ),
-                }
-            )
-
-        return capacidades
-
-    # ============================================================
-    # CAPACIDADE — HORA
-    # ============================================================
-
-    def _obter_hora(
-        self,
-    ) -> dict[str, Any]:
-
+    def _obter_hora(self) -> dict[str, Any]:
         agora = time.localtime()
+        return {"hora": agora.tm_hour, "minuto": agora.tm_min, "segundo": agora.tm_sec, "timestamp": time.time()}
 
-        return {
-            "hora": agora.tm_hour,
-            "minuto": agora.tm_min,
-            "segundo": agora.tm_sec,
-            "timestamp": time.time(),
-        }
-
-    # ============================================================
-    # CAPACIDADE — LISTAR ARQUIVOS
-    # ============================================================
-
-    def _listar_arquivos(
-        self,
-    ) -> list[str]:
-
-        arquivos = []
-
+    def _listar_arquivos(self) -> list[str]:
         try:
+            return sorted(item.name for item in BASE_DIR.iterdir() if item.is_file() and not item.name.startswith("."))
+        except OSError:
+            return []
 
-            for item in sorted(
-                BASE_DIR.iterdir()
-            ):
-
-                if item.is_file():
-
-                    arquivos.append(
-                        item.name
-                    )
-
-        except Exception as erro:
-
-            return [
-                (
-                    f"erro: "
-                    f"{type(erro).__name__}: "
-                    f"{erro}"
-                )
-            ]
-
-        return arquivos
-
-    # ============================================================
-    # CAPACIDADE — ESTADO DO CORPO
-    # ============================================================
-
-    def _ler_estado_corpo(
-        self,
-    ) -> dict[str, Any]:
-
-        arquivo = (
-            BASE_DIR
-            / "estado_corpo_nixal.json"
-        )
-
+    def _ler_estado_corpo(self) -> dict[str, Any]:
+        arquivo = BASE_DIR / "estado_corpo_nixal.json"
         if not arquivo.exists():
-
-            return {
-                "disponivel": False,
-                "motivo": (
-                    "estado_corpo_nixal.json "
-                    "ainda não existe."
-                ),
-            }
-
+            return {"disponivel": False, "motivo": "estado_corpo_nixal.json ainda não existe."}
         try:
+            return {"disponivel": True, "estado": json.loads(arquivo.read_text(encoding="utf-8"))}
+        except (OSError, json.JSONDecodeError) as exc:
+            return {"disponivel": False, "erro": type(exc).__name__}
 
-            with arquivo.open(
-                "r",
-                encoding="utf-8",
-            ) as f:
-
-                dados = json.load(f)
-
-            return {
-                "disponivel": True,
-                "estado": dados,
-            }
-
-        except Exception as erro:
-
-            return {
-                "disponivel": False,
-                "erro": str(erro),
-            }
-
-    # ============================================================
-    # CAPACIDADE — MEMÓRIA CORPORAL
-    # ============================================================
-
-    def _ler_memoria_corporal(
-        self,
-    ) -> dict[str, Any]:
-
-        arquivo = (
-            BASE_DIR
-            / "memoria_corporal_nixal.json"
-        )
-
+    def _ler_memoria_corporal(self) -> dict[str, Any]:
+        arquivo = BASE_DIR / "memoria_corporal_nixal.json"
         if not arquivo.exists():
-
-            return {
-                "disponivel": False,
-                "motivo": (
-                    "memoria_corporal_nixal.json "
-                    "ainda não existe."
-                ),
-            }
-
+            return {"disponivel": False, "motivo": "memoria_corporal_nixal.json ainda não existe."}
         try:
+            return {"disponivel": True, "memoria": json.loads(arquivo.read_text(encoding="utf-8"))}
+        except (OSError, json.JSONDecodeError) as exc:
+            return {"disponivel": False, "erro": type(exc).__name__}
 
-            with arquivo.open(
-                "r",
-                encoding="utf-8",
-            ) as f:
-
-                dados = json.load(f)
-
-            return {
-                "disponivel": True,
-                "memoria": dados,
-            }
-
-        except Exception as erro:
-
-            return {
-                "disponivel": False,
-                "erro": str(erro),
-            }
-
-    # ============================================================
-    # CAPACIDADE — LER ARQUIVO
-    # ============================================================
-
-    def _ler_arquivo(
-        self,
-        arquivo: str,
-    ) -> dict[str, Any]:
-
-        if not isinstance(
-            arquivo,
-            str,
-        ):
-
-            return {
-                "sucesso": False,
-                "erro": (
-                    "O nome do arquivo precisa "
-                    "ser uma string."
-                ),
-            }
-
-        arquivo = arquivo.strip()
-
-        if not arquivo:
-
-            return {
-                "sucesso": False,
-                "erro": (
-                    "O nome do arquivo está vazio."
-                ),
-            }
-
+    def _ler_arquivo(self, arquivo: str) -> dict[str, Any]:
+        import re
+        if not isinstance(arquivo, str) or not arquivo.strip():
+            return {"sucesso": False, "erro": "Informe um caminho relativo."}
         caminho = Path(arquivo)
-
-        if caminho.is_absolute():
-
-            return {
-                "sucesso": False,
-                "erro": (
-                    "Caminhos absolutos não são "
-                    "permitidos por esta capacidade."
-                ),
-            }
-
+        if caminho.is_absolute() or ".." in caminho.parts or any(part.startswith(".") for part in caminho.parts):
+            return {"sucesso": False, "erro": "Caminho absoluto, traversal e caminhos ocultos são bloqueados."}
         try:
+            destino = (BASE_DIR / caminho).resolve()
+            destino.relative_to(BASE_DIR.resolve())
+        except (OSError, ValueError):
+            return {"sucesso": False, "erro": "O arquivo precisa estar dentro do projeto Nyxal."}
+        sensivel = {".env", ".env.local", "credentials.json", "token.json", "id_rsa", "id_ed25519", ".bashrc", ".profile"}
+        if destino.name.lower() in sensivel or destino.name.lower().startswith(".env") or destino.suffix.lower() in {".pem", ".key", ".p12", ".pfx"} or any(x in destino.name.lower() for x in ("secret", "credential", "access_token", "refresh_token", "private_key")):
+            return {"sucesso": False, "erro": "Leitura bloqueada pela política de proteção de credenciais."}
+        try:
+            if not destino.is_file():
+                return {"sucesso": False, "erro": f"Arquivo não encontrado: {arquivo}"}
+            if destino.stat().st_size > 1_000_000:
+                return {"sucesso": False, "erro": "Arquivo excede o limite de 1 MiB."}
+            return {"sucesso": True, "conteudo": destino.read_text(encoding="utf-8")[:20000]}
+        except (OSError, UnicodeDecodeError):
+            return {"sucesso": False, "erro": "Arquivo indisponível ou não textual UTF-8."}
 
-            caminho_final = (
-                BASE_DIR / caminho
-            ).resolve()
-
-            base_final = (
-                BASE_DIR.resolve()
-            )
-
-            if (
-                caminho_final != base_final
-                and base_final
-                not in caminho_final.parents
-            ):
-
-                return {
-                    "sucesso": False,
-                    "erro": (
-                        "O arquivo precisa estar "
-                        "dentro do projeto Nixal."
-                    ),
-                }
-
-            if not caminho_final.exists():
-
-                return {
-                    "sucesso": False,
-                    "erro": (
-                        f"Arquivo não encontrado: "
-                        f"{arquivo}"
-                    ),
-                }
-
-            if not caminho_final.is_file():
-
-                return {
-                    "sucesso": False,
-                    "erro": (
-                        f"O caminho não é um arquivo: "
-                        f"{arquivo}"
-                    ),
-                }
-
-            tamanho = (
-                caminho_final.stat().st_size
-            )
-
-            if (
-                tamanho
-                > MAX_TAMANHO_ARQUIVO
-            ):
-
-                return {
-                    "sucesso": False,
-                    "erro": (
-                        "Arquivo excede o limite de "
-                        f"{MAX_TAMANHO_ARQUIVO} bytes."
-                    ),
-                }
-
-            conteudo = (
-                caminho_final.read_text(
-                    encoding="utf-8"
-                )
-            )
-
-            return {
-                "sucesso": True,
-                "arquivo": str(
-                    caminho_final.relative_to(
-                        base_final
-                    )
-                ),
-                "tamanho_bytes": tamanho,
-                "conteudo": conteudo,
-            }
-
-        except UnicodeDecodeError:
-
-            return {
-                "sucesso": False,
-                "erro": (
-                    "O arquivo não é um texto UTF-8 "
-                    "compatível com esta capacidade."
-                ),
-            }
-
-        except Exception as erro:
-
-            return {
-                "sucesso": False,
-                "erro": (
-                    f"{type(erro).__name__}: "
-                    f"{erro}"
-                ),
-            }
-
-    # ============================================================
-    # LOG
-    # ============================================================
-
-    def _registrar_execucao(
-        self,
-        resultado: ResultadoCapacidade,
-    ) -> None:
-
-        historico: list[
-            dict[str, Any]
-        ] = []
-
+    def _registrar_execucao(self, resultado: ResultadoCapacidade) -> None:
+        historico: list[dict[str, Any]] = []
         if ARQUIVO_LOG.exists():
-
             try:
-                # Limita também a leitura do histórico legado. Um log antigo
-                # maior que o teto não pode consumir memória antes da nova gravação.
-                with ARQUIVO_LOG.open("rb") as f:
-                    conteudo_existente = f.read(MAX_TAMANHO_ARQUIVO + 1)
-
-                if len(conteudo_existente) <= MAX_TAMANHO_ARQUIVO:
-                    dados = json.loads(conteudo_existente.decode("utf-8"))
-                    if isinstance(dados, list):
-                        historico = dados
-
-            except Exception:
+                dados = json.loads(ARQUIVO_LOG.read_text(encoding="utf-8"))
+                if isinstance(dados, list):
+                    historico = dados
+            except (OSError, json.JSONDecodeError):
                 historico = []
-
+        registro = asdict(resultado)
+        if resultado.capacidade in {"ler_arquivo", "ler_arquivo_usuario", "consultar_emails_google", "ler_email_google", "consultar_agenda_google", "listar_notas_lembretes", "salvar_nota", "criar_lembrete", "consultar_home_assistant"}:
+            registro["resultado"] = {"conteudo_omitido": True, "motivo": "Resultado privado não é gravado no log."}
+            if registro.get("erro"):
+                registro["erro"] = "Falha de ferramenta omitida do log por privacidade."
+        tamanho = len(json.dumps(registro, ensure_ascii=False).encode("utf-8"))
+        if tamanho > MAX_TAMANHO_ARQUIVO // 2:
+            registro["resultado"] = {"truncado": True, "tamanho_original_bytes": tamanho}
+        historico.append(registro)
+        orcamento = MAX_TAMANHO_ARQUIVO // 2
+        mantido = []
+        tamanho_atual = 2
+        for item in reversed(historico):
+            item_size = len(json.dumps(item, ensure_ascii=False).encode("utf-8")) + 1
+            if tamanho_atual + item_size > orcamento:
+                break
+            mantido.append(item)
+            tamanho_atual += item_size
+        seguro = list(reversed(mantido))
         try:
-
-            registro = asdict(resultado)
-            tamanho_registro = len(
-                json.dumps(
-                    registro,
-                    ensure_ascii=False,
-                    indent=2,
-                ).encode("utf-8")
-            )
-
-            # Um único resultado não pode consumir todo o orçamento
-            # do log. Preserve metadados e marque o conteúdo omitido.
-            if tamanho_registro > MAX_TAMANHO_ARQUIVO // 2:
-
-                registro["resultado"] = {
-                    "truncado": True,
-                    "motivo": (
-                        "Resultado omitido para respeitar "
-                        "o limite de armazenamento do log."
-                    ),
-                    "tamanho_original_bytes": tamanho_registro,
-                }
-
-                registro["capacidade"] = str(
-                    registro.get("capacidade", "")
-                )[:256]
-
-                if registro.get("erro") is not None:
-                    registro["erro"] = str(
-                        registro["erro"]
-                    )[:2048]
-
-            historico.append(registro)
-            historico = historico[-200:]
-
-            payload = json.dumps(
-                historico,
-                ensure_ascii=False,
-                indent=2,
-            )
-
-            # Limite rígido em bytes UTF-8, e não só em quantidade
-            # de execuções. Remove primeiro os registros mais antigos.
-            while (
-                len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO
-                and len(historico) > 1
-            ):
-
-                historico.pop(0)
-
-                payload = json.dumps(
-                    historico,
-                    ensure_ascii=False,
-                    indent=2,
-                )
-
-            if len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO:
-
-                historico = [
-                    {
-                        "sucesso": bool(registro.get("sucesso")),
-                        "capacidade": str(
-                            registro.get("capacidade", "")
-                        )[:256],
-                        "erro": (
-                            str(registro.get("erro"))[:1024]
-                            if registro.get("erro") is not None
-                            else None
-                        ),
-                        "timestamp": registro.get("timestamp", 0.0),
-                        "duracao_ms": registro.get("duracao_ms", 0.0),
-                        "resultado": {
-                            "truncado": True,
-                            "motivo": "Limite rígido de armazenamento",
-                            "tamanho_original_bytes": tamanho_registro,
-                        },
-                    }
-                ]
-
-                payload = json.dumps(
-                    historico,
-                    ensure_ascii=False,
-                    indent=2,
-                )
-
-            if len(payload.encode("utf-8")) > MAX_TAMANHO_ARQUIVO:
-                payload = "[]"
-
-            ARQUIVO_LOG.parent.mkdir(
-                parents=True,
-                exist_ok=True,
-            )
-
-            ARQUIVO_LOG.write_text(
-                payload,
-                encoding="utf-8",
-            )
-
-        except Exception as erro:
-
-            print(
-                "[Nixal] Não foi possível salvar "
-                f"log de capacidade: {erro}"
-            )
+            temp = ARQUIVO_LOG.with_suffix(".json.tmp")
+            temp.write_text(json.dumps(seguro, ensure_ascii=False, indent=2), encoding="utf-8")
+            temp.replace(ARQUIVO_LOG)
+        except OSError:
+            pass
 
 
-# ================================================================
-# TESTE
-# ================================================================
-
-def main() -> None:
-
-    gerenciador = (
-        GerenciadorCapacidades()
-    )
-
-    print()
-    print("=" * 60)
-    print("NIXAL — SISTEMA DE CAPACIDADES")
-    print("=" * 60)
-
-    print()
-    print("Capacidades disponíveis:")
-    print()
-
-    for capacidade in (
-        gerenciador.listar_capacidades()
-    ):
-
-        print(
-            f"- {capacidade['nome']}"
-        )
-
-        print(
-            f"    descrição: "
-            f"{capacidade['descricao']}"
-        )
-
-        print(
-            f"    objetivo: "
-            f"{capacidade['objetivo']}"
-        )
-
-        print(
-            f"    domínios: "
-            f"{capacidade['dominios']}"
-        )
-
-        print(
-            f"    evidências: "
-            f"{capacidade['evidencias_dominio']}"
-        )
-
-    print()
-    print("=" * 60)
-    print("MICROETAPA 56.3.8")
-    print("=" * 60)
-
-
-if __name__ == "__main__":
-    main()
+__all__ = ["GerenciadorCapacidades", "ResultadoCapacidade", "Capacidade"]
