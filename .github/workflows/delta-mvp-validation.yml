@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened, labeled]
     branches:
       - main
+      - integration/nyxal-active-prs-20261027
     paths:
       - "deploy/delta/**"
       - "deploy/vps/preparar_base_ubuntu.sh"
