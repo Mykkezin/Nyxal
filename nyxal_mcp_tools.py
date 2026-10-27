@@ -15,6 +15,8 @@ from nixal_tool_use import (
     consultar_emails_google as _consultar_emails,
     consultar_home_assistant as _consultar_home_assistant,
     consultar_metar_taf as _consultar_metar_taf,
+    consultar_notam_aisweb as _consultar_notam_aisweb,
+    consultar_cartas_aisweb as _consultar_cartas_aisweb,
     executar_diagnostico as _executar_diagnostico,
     ler_arquivo_usuario as _ler_arquivo,
     ler_email_google as _ler_email,
@@ -45,7 +47,7 @@ def status_ferramentas() -> str:
             "somente_leitura": True,
         },
         "home_assistant": {"configurado": _url_home_assistant() is not None, "somente_leitura": True},
-        "aviao": {"produtos": ["METAR", "TAF"], "fonte": "AviationWeather.gov Data API"},
+        "aviao": {"produtos": ["METAR", "TAF", "NOTAM", "cartas"], "metar_taf_fonte": "AviationWeather.gov Data API", "notam_cartas_fonte": "AISWEB/DECEA", "aisweb_configurado": bool(__import__("os").environ.get("NYXAL_AISWEB_API_KEY") and __import__("os").environ.get("NYXAL_AISWEB_API_PASS"))},
         "pesquisa_web": "disponível quando a rede permitir",
         "notas_lembretes": {"arquivo": str(_notas.arquivo), "modo": "somente leitura neste servidor MCP"},
         "comandos_arbitrarios": False,
@@ -63,6 +65,25 @@ def pesquisar_web(consulta: str, limite: int = 5) -> str:
 def consultar_metar_taf(icao: str, produto: str = "ambos") -> str:
     """Consulta METAR/TAF públicos; não substitui o briefing operacional."""
     return _json(_consultar_metar_taf(icao, produto))
+
+
+@mcp.tool()
+def consultar_notam_aisweb(localidades: str, fir: str = "", limite: int = 20) -> str:
+    """Consulta NOTAM no AISWEB/DECEA; confirmação oficial pré-voo permanece obrigatória."""
+    return _json(_consultar_notam_aisweb(localidades, fir, limite))
+
+
+@mcp.tool()
+def consultar_cartas_aisweb(
+    icao: str = "",
+    especie: str = "",
+    tipo: str = "",
+    nome: str = "",
+    dt: str = "",
+    limite: int = 20,
+) -> str:
+    """Pesquisa metadados/links de cartas oficiais do AISWEB; não substitui briefing pré-voo."""
+    return _json(_consultar_cartas_aisweb(icao, especie, tipo, nome, dt, limite))
 
 
 @mcp.tool()
