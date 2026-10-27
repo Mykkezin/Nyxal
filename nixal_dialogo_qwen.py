@@ -223,10 +223,20 @@ class DialogoQwenNixal:
         except TypeError:
             # Compatibilidade com versões do cliente que não oferecem tool calling.
             return self.cliente.chat(model=self.modelo, messages=atual, options={"temperature": 0.4}), []
-        for _ in range(self.MAX_TOOL_CALLS):
+        rodadas = 0
+        while True:
             msg = self._extrair_mensagem(resposta)
             calls = self._valor_mensagem(msg, "tool_calls", []) or []
             if not isinstance(calls, list) or not calls:
+                break
+            if rodadas >= self.MAX_TOOL_CALLS:
+                # Chegou ao limite: não executar mais ações. Peça ao modelo uma
+                # resposta textual final sem ferramentas para encerrar o turno.
+                atual.append({"role": "system", "content": "Limite de chamadas de ferramentas atingido. Responda agora com os resultados já obtidos; não solicite outras ferramentas."})
+                try:
+                    resposta = self.cliente.chat(model=self.modelo, messages=atual, options={"temperature": 0.2})
+                except TypeError:
+                    resposta = {"message": {"content": "Concluí a quantidade máxima de chamadas de ferramentas. Os resultados executados estão disponíveis no histórico desta interação."}}
                 break
             assistant_msg = {"role": "assistant", "content": self._valor_mensagem(msg, "content", "") or "", "tool_calls": []}
             for call in calls[:8]:
@@ -240,8 +250,8 @@ class DialogoQwenNixal:
                 result = self._executar_chamada_ferramenta(gerenciador, call, texto_usuario)
                 chamadas_executadas.append(result)
                 atual.append({"role": "tool", "content": result["resultado"]})
+            rodadas += 1
             resposta = self.cliente.chat(model=self.modelo, messages=atual, tools=ferramentas, options={"temperature": 0.2})
-        # Não executa chamadas adicionais retornadas depois do limite.
         return resposta, chamadas_executadas
 
     def responder(
