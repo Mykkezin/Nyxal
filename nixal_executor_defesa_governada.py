@@ -319,6 +319,7 @@ class ExecutorDefesaGovernada:
                 "ttl_segundos": self._ttl,
                 "acao": deepcopy(validada),
                 "aprovacao_verificada": aprovacao_verificada,
+                "aprovacao_verificada_em": self._utc().isoformat() if aprovacao_verificada else None,
                 "exige_aprovacao_humana": exige_aprovacao,
                 "modo": "dry_run",
                 "executor_ativo": False,
