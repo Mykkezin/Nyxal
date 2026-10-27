@@ -19,6 +19,7 @@ on:
       - "nixal_integracao_gmail.py"
       - "nixal_integracao_google.py"
       - "nixal_vps.py"
+      - "teste_nixal_vps.py"
       - "nixal_capacidade_visual.py"
       - "nixal_seguranca_http.py"
       - "nixal_nucleo_conversacional.py"
@@ -94,6 +95,7 @@ on:
       - "nixal_integracao_gmail.py"
       - "nixal_integracao_google.py"
       - "nixal_vps.py"
+      - "teste_nixal_vps.py"
       - "nixal_capacidade_visual.py"
       - "nixal_seguranca_http.py"
       - "nixal_nucleo_conversacional.py"
@@ -314,3 +316,22 @@ jobs:
           python3 teste_auto_evolucao_ae1.py
           python3 teste_m5_15_presenca_maquina.py
 
+  validate-vps-ssh-key-input:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile VPS module and security regressions
+        run: python -m py_compile nixal_vps.py teste_nixal_vps.py
+      - name: Test VPS and SSH key input validation
+        run: python -m unittest -v teste_nixal_vps
