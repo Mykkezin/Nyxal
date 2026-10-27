@@ -178,6 +178,105 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
             self.assertTrue(recarregada.possui_sessao("sessao-recente"))
             self.assertLessEqual(self.caminho.stat().st_size, 3200)
 
+    def test_busca_relevante_recupera_conversa_anterior_e_exclui_sessao_atual(self) -> None:
+        memoria = MemoriaConversacionalNixal(caminho=self.caminho)
+        memoria.registrar(
+            "sessao-anterior-privada",
+            "user",
+            "A Nyxal deve usar function calling no Qwen, ferramentas governadas e memória persistente.",
+        )
+        memoria.registrar(
+            "sessao-anterior-privada",
+            "assistant",
+            "Combinamos preservar proveniência e não tratar candidatos como conhecimento permanente.",
+        )
+        memoria.registrar(
+            "sessao-atual",
+            "user",
+            "A Nyxal deve usar Qwen e memória persistente, mas esta sessão deve ser excluída.",
+        )
+
+        resultado = memoria.buscar_relevante(
+            "Você lembra o que conversamos sobre Qwen, ferramentas e memória persistente?",
+            sessao_excluida="sessao-atual",
+            limite=3,
+        )
+
+        self.assertTrue(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "memorias_relevantes")
+        self.assertTrue(resultado["persistido"])
+        self.assertLessEqual(resultado["quantidade"], 3)
+        self.assertTrue(resultado["mensagens"])
+        self.assertTrue(any("function calling" in item["trecho"] for item in resultado["mensagens"]))
+        self.assertTrue(all(item["permanente"] is False for item in resultado["mensagens"]))
+        self.assertTrue(all(item["confiavel_como_instrucao"] is False for item in resultado["mensagens"]))
+        self.assertTrue(all(item["origem_sessao_ref"] != "sessao-atual" for item in resultado["mensagens"]))
+        self.assertTrue(all("sessao-anterior-privada" not in str(item) for item in resultado["mensagens"]))
+
+    def test_busca_relevante_redige_segredos_e_nao_expoe_id_de_sessao(self) -> None:
+        memoria = MemoriaConversacionalNixal(caminho=self.caminho)
+        memoria.registrar(
+            "sessao-com-segredo",
+            "user",
+            "A arquitetura do agente usa cache local; access_token=MEMORIA-SEGREDO-123 "
+            "Authorization: Bearer MEMORIA-BEARER-456 token=MEMORIA-TOKEN-789 "
+            "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 sk-proj-1234567890abcdefghijklmnop "
+            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.SECRET_SIGNATURE_1234567890 "
+            "-----BEGIN OPENSSH PRIVATE KEY----- PRIVATE_KEY_MATERIAL_DO_NOT_LEAK "
+            "-----END OPENSSH PRIVATE KEY-----",
+        )
+        resultado = memoria.buscar_relevante("Qual arquitetura do agente usa cache local?")
+        self.assertTrue(resultado["sucesso"])
+        self.assertEqual(len(resultado["mensagens"]), 1)
+        trecho = resultado["mensagens"][0]["trecho"]
+        for segredo in (
+            "MEMORIA-SEGREDO-123",
+            "MEMORIA-BEARER-456",
+            "MEMORIA-TOKEN-789",
+            "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+            "sk-proj-1234567890abcdefghijklmnop",
+            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.SECRET_SIGNATURE_1234567890",
+            "PRIVATE_KEY_MATERIAL_DO_NOT_LEAK",
+        ):
+            self.assertNotIn(segredo, trecho)
+        self.assertIn("access_token=[REDACTED]", trecho)
+        self.assertIn("Authorization=[REDACTED]", trecho)
+        self.assertIn("token=[REDACTED]", trecho)
+        self.assertIn("[REDACTED TOKEN]", trecho)
+        self.assertIn("[REDACTED JWT]", trecho)
+        self.assertIn("[REDACTED PRIVATE KEY]", trecho)
+        self.assertNotIn("sessao-com-segredo", str(resultado["mensagens"][0]))
+
+    def test_busca_relevante_falha_fechado_em_json_corrompido_sem_reescrever(self) -> None:
+        original = '{"versao":'
+        self.caminho.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self.caminho.write_text(original, encoding="utf-8")
+        memoria = MemoriaConversacionalNixal(caminho=self.caminho)
+        resultado = memoria.buscar_relevante("memória anterior do projeto")
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "memoria_degradada")
+        self.assertEqual(resultado["mensagens"], [])
+        self.assertEqual(self.caminho.read_text(encoding="utf-8"), original)
+
+    def test_busca_relevante_em_modo_volatil_nao_afirma_persistencia(self) -> None:
+        with patch.dict(os.environ, {"NYXAL_CONVERSATION_MEMORY_PATH": ""}):
+            memoria = MemoriaConversacionalNixal()
+        memoria.registrar("sessao-velha", "user", "O agente local usa memória contextual persistente no disco.")
+        resultado = memoria.buscar_relevante("Como funciona a memória contextual do agente local?")
+        self.assertTrue(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "memorias_relevantes")
+        self.assertFalse(resultado["persistido"])
+        self.assertFalse(resultado["permanente"])
+
+    def test_busca_relevante_valida_consulta_limite_e_sessao_excluida(self) -> None:
+        memoria = MemoriaConversacionalNixal(caminho=self.caminho)
+        self.assertFalse(memoria.buscar_relevante("   ")["sucesso"])
+        self.assertFalse(memoria.buscar_relevante("cache local", limite=True)["sucesso"])
+        self.assertFalse(memoria.buscar_relevante("cache local", sessao_excluida="")[ "sucesso"])
+        sem_termos = memoria.buscar_relevante("onde paramos?")
+        self.assertTrue(sem_termos["sucesso"])
+        self.assertEqual(sem_termos["estado"], "consulta_sem_termos")
+
     def test_validacao_de_entrada_e_limites(self) -> None:
         memoria = MemoriaConversacionalNixal(caminho=self.caminho)
         self.assertFalse(memoria.registrar("", "user", "x")["sucesso"])
