@@ -1144,8 +1144,25 @@ class GerenciadorCapacidades:
                         if not isinstance(dados, list) or not all(isinstance(item, dict) for item in dados):
                             return
                         historico = dados
-                    # Histórico legado acima do teto não pode bloquear a escrita
-                    # para sempre. A próxima gravação o substitui por um log limitado.
+                    else:
+                        # Preserve o arquivo legado como evidência antes de iniciar
+                        # um log novo e limitado. Não sobrescreva um backup anterior.
+                        backup = ARQUIVO_LOG.with_name(
+                            f"{ARQUIVO_LOG.name}.oversized-{time.time_ns()}"
+                        )
+                        try:
+                            os.replace(ARQUIVO_LOG, backup)
+                            try:
+                                os.chmod(backup, 0o600)
+                            except OSError:
+                                # Se não for possível proteger o backup, restaure o
+                                # nome original e falhe fechado em vez de expor dados.
+                                os.replace(backup, ARQUIVO_LOG)
+                                return
+                        except OSError:
+                            # O histórico original continua no caminho canônico;
+                            # não registre por cima dele se não pudermos preservá-lo.
+                            return
                 except Exception:
                     return
 
