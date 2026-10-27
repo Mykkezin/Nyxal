@@ -1170,6 +1170,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 contexto_usuario,
                 perfil_fala,
             ) or texto.strip()
+            # The Piper CLI's length scale is inverse to the relative speech rate.
+            velocidade_relativa = perfil_fala.speed / max(0.90, KOKORO_SPEED)
+            velocidade_relativa = min(1.10, max(0.90, velocidade_relativa))
+            piper_length_scale = 1.0 / velocidade_relativa
 
             try:
                 audio = generate_kokoro_audio(texto_falado, speed=perfil_fala.speed)
@@ -1204,6 +1208,8 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                                 str(TTS_MODEL),
                                 "--output_file",
                                 arquivo_audio.name,
+                                "--length_scale",
+                                f"{piper_length_scale:.3f}",
                             ],
                             input=texto_falado.strip() + "\n",
                             text=True,
