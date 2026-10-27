@@ -17,6 +17,7 @@ from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
 from nixal_dialogo_qwen import DialogoQwenNixal
 from nixal_memoria_investigacao import MemoriaInvestigacaoNixal
 from nixal_memoria_conversacional import MemoriaConversacionalNixal
+import nixal_nucleo_conversacional as nucleo_mod
 from nixal_nucleo_conversacional import NucleoConversacionalNixal
 
 
@@ -535,6 +536,37 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         self.assertNotIn("prompt_interno", meta)
         self.assertNotIn("SEGREDO_INTERNO_DAS_PASSAGENS", str(resposta))
         self.assertNotIn("NAO_EXPOR_PROMPT", str(resposta))
+
+    def test_core_preserva_compatibilidade_com_dialogo_legado_sem_detector_especialista(self) -> None:
+        nucleo = self.criar_nucleo(
+            dialogo=DialogoQwenNixal(modelo="fixture-model", cliente=FakeChatClient()),
+            memoria_investigacao=self.memoria,
+            contexto_historico_relevante=self.contexto,
+        )
+
+        class DialogoQwenNixalStub:
+            pass
+
+        resultado_atendido = {
+            "atendida": True,
+            "necessidade": "consulta antiga",
+            "resultado": {"resultado": "compatibilidade preservada"},
+            "capacidade_escolhida": "obter_hora",
+            "argumentos": {},
+            "selecao": {"sucesso": True, "capacidade": "obter_hora", "argumentos": {}},
+        }
+        with patch.object(nucleo_mod, "DialogoQwenNixal", DialogoQwenNixalStub):
+            with patch.object(nucleo, "_atender", return_value=resultado_atendido) as atender:
+                resposta = nucleo.processar(
+                    nucleo.interface.criar_entrada(
+                        "Use modo especialistas para planejar uma melhoria.",
+                        sessao="sessao-dialogo-legado",
+                    )
+                )
+
+        atender.assert_called_once()
+        self.assertEqual(resposta["valor"]["texto"], "compatibilidade preservada")
+        self.assertNotIn("coordenacao_especialistas", resposta["valor"])
 
     def test_core_sanitiza_metadados_de_especialistas_com_esquema_e_limites(self) -> None:
         bruto = {
