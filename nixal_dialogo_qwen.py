@@ -658,8 +658,8 @@ class DialogoQwenNixal:
             "perfis": [],
             "passagens": 0,
             "modelo_local": self.provedor in {"ollama", "local", "nyxal"},
-            "executou_ferramentas": False,
-            "executou_acoes": False,
+            "passagens_executaram_ferramentas": False,
+            "passagens_executaram_acoes": False,
         }
         if not solicitado:
             return None, estado_base
