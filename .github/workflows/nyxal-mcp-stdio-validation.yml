@@ -20,9 +20,7 @@ on:
       - "docs/NYXAL_FERRAMENTAS.md"
       - ".github/workflows/nyxal-mcp-stdio-validation.yml"
   push:
-    branches:
-      - main
-      - feat/nyxal-governed-tools-aisweb-20261027
+    branches: [main]
     paths:
       - "nyxal_mcp_tools.py"
       - "teste_mcp_stdio.py"
@@ -74,8 +72,7 @@ jobs:
         run: |
           python -m py_compile nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py nixal_integracao_gmail.py nixal_amd_developer_cloud.py
       - name: Exercise stdio protocol and tool registry
-        run: |
-          "$NYXAL_MCP_TEST_PYTHON" teste_mcp_stdio.py
+        run: "$NYXAL_MCP_TEST_PYTHON" teste_mcp_stdio.py
       - name: Test governed tool policies
         run: |
           "$NYXAL_MCP_TEST_PYTHON" -m unittest -v teste_nixal_tool_use teste_nyxal_function_calling teste_nyxal_tool_use teste_nucleo_contexto_persistente
