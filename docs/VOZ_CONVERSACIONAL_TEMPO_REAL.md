@@ -123,6 +123,23 @@ Recomenda-se usar fones durante a avaliação, porque o protótipo não adiciona
 - Consumo de CPU/RAM, latência até a primeira fala, falsa interrupção e perda de transcrições são medidos na máquina de destino.
 - A integração não muda a configuração estável nem habilita o serviço automaticamente.
 
+## Prosódia contextual e naturalidade pt-BR
+
+A camada deploy/voice/nyxal_voice_prosody.py agora prepara a fala separadamente do texto exibido pela conversa e não altera a memória nem a resposta original do núcleo.
+
+- **Entrega contextual:** perfis discretos calm, gentle, focused, brisk, upbeat e curious são selecionados por pistas textuais conservadoras. A velocidade do Kokoro muda pouco a pouco em relação à configuração-base; instruções de segurança não recebem contrações coloquiais.
+- **Pausas e pontuação:** títulos e itens de lista viram limites de frase, reticências intencionais são preservadas como pausas mais longas e a limpeza de Markdown evita que código, emojis decorativos e formatação sejam recitados de forma estranha. A pontuação nativa do Kokoro conduz as micro-pausas.
+- **Português brasileiro informal:** contrações como tá, tô e pra são usadas apenas quando a mensagem já indica um registro informal; a fala formal e as orientações de segurança permanecem preservadas.
+- **Sem teatro artificial:** não são adicionados hums, suspiros ou respirações falsas automaticamente. Isso evita inserir sons que a voz-base não consegue produzir de maneira natural e consistente.
+- **Caminhos integrados:** o endpoint principal /api/tts recebe opcionalmente contexto_usuario e aplica o perfil à voz Kokoro e ao fallback Piper. A interface passa o enunciado do usuário; o adaptador Pipecat aplica a mesma lógica e atualiza a velocidade com TTSUpdateSettingsFrame.
+
+Validação sem microfone nem download de modelos:
+
+    python3 -m unittest discover -s deploy/voice -p 'test_nyxal_voice_prosody.py' -v
+    python3 teste_voz_continua_56_5_6.py
+
+O classificador atual usa **sinais do texto**, não análise acústica real da emoção ou do ritmo do interlocutor. Kokoro permite ajustar velocidade, mas não oferece neste caminho controle independente confiável de respiração, rouquidão ou entonação emocional. A meta de 200–400 ms ainda não é garantida: o núcleo /api/chat entrega uma resposta completa antes de iniciar o TTS. Primeiro é preciso medir, na máquina de destino, o tempo de transcrição, resposta do núcleo e primeira amostra de áudio; para reduzir mais a latência será necessário streaming incremental do núcleo, não apenas acelerar a síntese.
+
 ## Limitações conhecidas
 
 - O núcleo Nyxal continua produzindo a resposta do chat antes da síntese de voz; o TTS é transmitido em frames, mas a geração textual do núcleo ainda pode determinar a maior parte da latência.
