@@ -35,6 +35,24 @@ class VoiceProsodyTests(unittest.TestCase):
         self.assertEqual(profile.style, "upbeat")
         self.assertAlmostEqual(profile.speed, 1.04)
 
+    def test_user_in_a_hurry_gets_a_brisk_but_not_extreme_delivery(self):
+        profile = choose_speech_profile(
+            "Estou com pressa, vai direto ao ponto.",
+            "A reunião começa em cinco minutos.",
+            1.0,
+        )
+        self.assertEqual(profile.style, "brisk")
+        self.assertAlmostEqual(profile.speed, 1.08)
+
+    def test_distress_context_is_gentle_even_without_fixed_empathy_phrase(self):
+        profile = choose_speech_profile(
+            "Estou triste hoje.",
+            "Vamos organizar isso com calma.",
+            1.0,
+        )
+        self.assertEqual(profile.style, "gentle")
+        self.assertAlmostEqual(profile.speed, 0.94)
+
     def test_question_style_is_not_overacted(self):
         profile = choose_speech_profile(
             "Pode me ajudar?", "Quer que eu explique de outro jeito?", 1.0
