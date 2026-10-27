@@ -326,7 +326,8 @@ jobs:
             nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py
       - name: Exercise MCP stdio and read-only tool registry
         if: steps.mcp.outputs.available == 'true'
-        run: "$NYXAL_MCP_TEST_PYTHON" teste_mcp_stdio.py
+        run: |
+          "$NYXAL_MCP_TEST_PYTHON" teste_mcp_stdio.py
       - name: Test governed tool policies
         if: steps.mcp.outputs.available == 'true'
         run: |
