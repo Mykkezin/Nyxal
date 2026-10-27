@@ -87,7 +87,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             },
             "investigacoes": {
                 "consultado": True,
-                "estado": "contexto_relevante",
+                "estado": "contexto_historico_encontrado",
                 "quantidade": 99,
                 "conteudo": "não encaminhar",
             },
@@ -102,7 +102,26 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(estado["memoria_conversacional"]["estado"], "persistencia_ativa")
         self.assertTrue(estado["memoria_conversacional"]["persistencia_ativa"])
         self.assertFalse(estado["memoria_conversacional"]["permanente"])
+        self.assertEqual(estado["investigacoes"]["estado"], "contexto_historico_encontrado")
         self.assertEqual(estado["investigacoes"]["quantidade"], 3)
+
+        estado_sem_contexto = DialogoQwenNixal._normalizar_estado_runtime_core({
+            "memoria_conversacional": {"estado": "memoria_volatil"},
+            "investigacoes": {
+                "consultado": True,
+                "estado": "contexto_historico_nao_encontrado",
+                "quantidade": 0,
+            },
+            "conhecimento_candidato": {
+                "consultado": True,
+                "estado": "sem_candidatos_relevantes",
+                "quantidade": 0,
+            },
+        })
+        self.assertEqual(
+            estado_sem_contexto["investigacoes"]["estado"],
+            "contexto_historico_nao_encontrado",
+        )
         self.assertEqual(estado["conhecimento_candidato"]["quantidade"], 2)
         self.assertFalse(estado["conhecimento_candidato"]["conhecimento_permanente"])
         serialized = json.dumps(estado, ensure_ascii=False)
