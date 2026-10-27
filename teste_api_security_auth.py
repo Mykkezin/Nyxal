@@ -2,6 +2,8 @@
 """Testes de integração HTTP para os limites de autenticação e CORS da Nyxal."""
 from __future__ import annotations
 
+import json
+
 import http.client
 import sys
 import threading
@@ -424,17 +426,44 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("/root/nyxal.env", body)
 
-        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="gemini"):
-            with patch.object(api.AGENTE_NYXAL, "responder", side_effect=RuntimeError(detalhe_interno)):
-                status, body = self.request(
-                    "POST", "/api/agent/chat",
-                    body=b'{"mensagem":"teste","provedor":"auto"}',
-                    headers={**auth, "Content-Type": "application/json"},
-                )
+        resposta_nucleo = {
+            "sucesso": True,
+            "estado": "resposta_pronta",
+            "origem": "nucleo_conversacional_nixal",
+            "resposta": "Resposta indisponível.",
+            "sessao": "sessao-teste",
+            "valor": {
+                "texto": "Resposta indisponível.",
+                "sessao": "sessao-teste",
+                "modo": "dialogo_indisponivel",
+            },
+        }
+        resultado_integracao = {
+            "sucesso": True,
+            "estado": "mensagem_processada_com_sessao",
+            "sessao": "sessao-teste",
+            "valor": {"transporte": {"resposta": resposta_nucleo}},
+        }
+        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="nyxal"):
+            with patch.object(
+                api.INTEGRACAO_CONVERSACIONAL,
+                "processar_mensagem",
+                return_value=resultado_integracao,
+            ) as processar:
+                with patch.object(api.AGENTE_NYXAL, "responder") as responder_direto:
+                    status, body = self.request(
+                        "POST", "/api/agent/chat",
+                        body=b'{"mensagem":"teste","provedor":"gemini","sessao":"sessao-teste"}',
+                        headers={**auth, "Content-Type": "application/json"},
+                    )
         self.assertEqual(status, 503)
         self.assertIn("O provedor selecionado não está disponível.", body)
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("nao-retornar", body)
+        processar.assert_called_once()
+        self.assertEqual(processar.call_args.kwargs["provedor"], "nyxal")
+        self.assertEqual(processar.call_args.kwargs["sessao_id"], "sessao-teste")
+        responder_direto.assert_not_called()
 
         with patch.object(api, "generate_kokoro_audio", side_effect=RuntimeError(detalhe_interno)):
             with patch.object(api.Path, "exists", return_value=True):
@@ -462,6 +491,112 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertIn("O serviço Google Workspace não está disponível.", body)
         self.assertNotIn("SEGREDO_INTERNO", body)
         self.assertNotIn("/root/nyxal.env", body)
+
+    def test_agent_chat_supplies_readonly_system_context_to_local_dialogue(self) -> None:
+        api.PROXY_MODE = True
+        api.API_TOKEN = "token-de-teste"
+        snapshot = {"cpu_percent": 12.5, "memoria": {"percent": 38.0}}
+        residence = {"estado": "ativo", "unidades": []}
+        answer = {
+            "sucesso": True,
+            "estado": "resposta_conversacional",
+            "origem": "nucleo_conversacional_nixal",
+            "resposta": "Uso atual recebido.",
+            "sessao": "sessao-contexto-local",
+            "valor": {
+                "texto": "Uso atual recebido.",
+                "sessao": "sessao-contexto-local",
+                "modo": "resposta_conversacional",
+            },
+        }
+        integration_result = {
+            "sucesso": True,
+            "estado": "mensagem_processada_com_sessao",
+            "sessao": "sessao-contexto-local",
+            "valor": {"transporte": {"resposta": answer}},
+        }
+        auth = {
+            "Authorization": "Bearer token-de-teste",
+            "Content-Type": "application/json",
+        }
+        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="nyxal"):
+            with patch.object(api.OBSERVABILIDADE_NYXOS, "snapshot", return_value=snapshot) as observar:
+                with patch.object(api, "residencia_snapshot", return_value=residence) as residencia:
+                    with patch.object(
+                        api.INTEGRACAO_CONVERSACIONAL,
+                        "processar_mensagem",
+                        return_value=integration_result,
+                    ) as processar:
+                        status, body = self.request(
+                            "POST",
+                            "/api/agent/chat",
+                            body=(
+                                b'{"mensagem":"Qual o uso de CPU, RAM, disco e GPU do sistema?",'
+                                b'"provedor":"gemini","sessao":"sessao-contexto-local"}'
+                            ),
+                            headers=auth,
+                        )
+
+        self.assertEqual(status, 200, body)
+        self.assertIn("Uso atual recebido.", body)
+        observar.assert_called_once()
+        residencia.assert_called_once()
+        kwargs = processar.call_args.kwargs
+        self.assertEqual(kwargs["provedor"], "nyxal")
+        self.assertEqual(kwargs["sessao_id"], "sessao-contexto-local")
+        self.assertEqual(
+            kwargs["contexto_sistema"],
+            {"observabilidade": snapshot, "residencia": residence},
+        )
+
+    def test_agent_chat_uses_core_session_integration_and_forces_local_provider(self) -> None:
+        api.PROXY_MODE = True
+        api.API_TOKEN = "token-de-teste"
+        answer = {
+            "sucesso": True,
+            "estado": "resposta_conversacional",
+            "origem": "nucleo_conversacional_nixal",
+            "resposta": "Resposta pelo núcleo.",
+            "sessao": "sessao-core-123",
+            "valor": {
+                "texto": "Resposta pelo núcleo.",
+                "sessao": "sessao-core-123",
+                "modo": "resposta_conversacional",
+            },
+        }
+        integration_result = {
+            "sucesso": True,
+            "estado": "mensagem_processada_com_sessao",
+            "sessao": "sessao-core-123",
+            "valor": {"transporte": {"resposta": answer}},
+        }
+        auth = {
+            "Authorization": "Bearer token-de-teste",
+            "Content-Type": "application/json",
+        }
+        with patch.object(api.AGENTE_NYXAL, "resolve_provider", return_value="nyxal"):
+            with patch.object(
+                api.INTEGRACAO_CONVERSACIONAL,
+                "processar_mensagem",
+                return_value=integration_result,
+            ) as processar:
+                with patch.object(api.AGENTE_NYXAL, "responder") as responder_direto:
+                    status, body = self.request(
+                        "POST",
+                        "/api/agent/chat",
+                        body=b'{"mensagem":"Ol\u00e1","provedor":"openai","sessao":"sessao-core-123"}',
+                        headers=auth,
+                    )
+        self.assertEqual(status, 200, body)
+        self.assertIn("Resposta pelo núcleo.", body)
+        self.assertEqual(json.loads(body)["sessao"], "sessao-core-123")
+        processar.assert_called_once()
+        kwargs = processar.call_args.kwargs
+        self.assertEqual(kwargs["texto"], "Olá")
+        self.assertEqual(kwargs["sessao_id"], "sessao-core-123")
+        self.assertEqual(kwargs["provedor"], "nyxal")
+        self.assertEqual(kwargs["contexto_sistema"], {})
+        responder_direto.assert_not_called()
 
     def test_limites_de_corpo_sao_aplicados_antes_da_leitura(self) -> None:
         # Os corpos não são enviados intencionalmente: se uma rota tentar lê-los

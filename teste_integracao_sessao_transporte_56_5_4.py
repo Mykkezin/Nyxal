@@ -28,12 +28,17 @@ class TransporteTeste:
         texto: str,
         nucleo,
         sessao: str,
+        *,
+        provedor: str | None = None,
+        contexto_sistema: dict | None = None,
     ) -> dict:
         self.chamadas.append(
             {
                 "texto": texto,
                 "nucleo": nucleo,
                 "sessao": sessao,
+                "provedor": provedor,
+                "contexto_sistema": contexto_sistema,
             }
         )
 
@@ -178,7 +183,37 @@ def main() -> None:
     )
 
     # --------------------------------------------------------
-    # 3 — SEPARAÇÃO ARQUITETURAL
+    # 3 — OPÇÕES DE PROVEDOR SEM SEGUNDA CAMADA DE SESSÃO
+    # --------------------------------------------------------
+
+    contexto_sistema_teste = {"observabilidade": {"cpu_percent": 15.0}}
+    resultado_opcoes = integracao.processar_mensagem(
+        texto="Resuma o estado do sistema.",
+        nucleo=nucleo,
+        sessao_id=sessao_id,
+        provedor="openai",
+        contexto_sistema=contexto_sistema_teste,
+    )
+    verificar(
+        resultado_opcoes.get("sucesso") is True,
+        "opções de provedor não quebram o contrato de sessão",
+    )
+    verificar(
+        transporte.chamadas[-1]["provedor"] == "openai",
+        "integração encaminha o provedor selecionado",
+    )
+    verificar(
+        transporte.chamadas[-1]["contexto_sistema"] == contexto_sistema_teste,
+        "integração encaminha o contexto de leitura",
+    )
+    contexto_sistema_teste["observabilidade"]["cpu_percent"] = 99.0
+    verificar(
+        transporte.chamadas[-1]["contexto_sistema"]["observabilidade"]["cpu_percent"] == 15.0,
+        "contexto é isolado por cópia profunda antes do transporte",
+    )
+
+    # --------------------------------------------------------
+    # 4 — SEPARAÇÃO ARQUITETURAL
     # --------------------------------------------------------
 
     valor = resultado_2.get("valor", {})

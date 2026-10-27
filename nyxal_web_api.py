@@ -101,6 +101,9 @@ COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
 VPS_NYXOS = VpsNyxOS()
 AMD_DEVELOPER_CLOUD = AmdDeveloperCloud()
 AGENTE_NYXAL = NyxalAgentHub()
+# O chat principal usa o mesmo roteador quando há provedores remotos configurados.
+# O núcleo conversacional continua responsável por memória, contexto histórico e contrato.
+NUCLEO_CONVERSACIONAL.dialogo.agent_hub = AGENTE_NYXAL
 OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
 CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
@@ -1283,9 +1286,6 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         mensagem = payload.get("mensagem")
-        # Deixe a integração criar a sessão quando o cliente não envia uma.
-        # Um token aleatório aqui não existe no gerenciador de sessões e causava 422
-        # quando o chat local fazia fallback do endpoint /api/agent/chat.
         sessao_id = payload.get("sessao")
 
         if not isinstance(mensagem, str) or not mensagem.strip():
@@ -1311,76 +1311,93 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             )
             return
 
+        provedor_conversa: str | None = None
+        contexto_sistema_conversa: dict[str, Any] | None = None
         if self.path == "/api/agent/chat":
             provedor_solicitado = payload.get("provedor")
             if provedor_solicitado is not None and not isinstance(provedor_solicitado, str):
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": "O campo provedor precisa ser texto."})
                 return
-            # Política de chat somente Nyxal: ignora seleções antigas de Gemini,
-            # auto ou outros provedores enviadas pelo ambiente/cliente.
+            # O chat textual é sempre local. O valor enviado pelo cliente não pode
+            # reativar provedores externos; contexto operacional continua sendo
+            # coletado em modo somente leitura para que o Qwen responda com dados atuais.
             provedor = "nyxal"
             try:
                 provedor_resolvido = AGENTE_NYXAL.resolve_provider(provedor)
                 if provedor_resolvido != "nyxal":
-                    contexto_sistema = {}
-                    if _precisa_contexto_sistema(mensagem):
-                        contexto_sistema["observabilidade"] = OBSERVABILIDADE_NYXOS.snapshot()
-                        contexto_sistema["residencia"] = residencia_snapshot()
-                    if _precisa_contexto_email(mensagem):
-                        try:
-                            status_google = GMAIL_NYXOS.status()
-                            contexto_sistema["gmail"] = (
-                                GMAIL_NYXOS.listar_mensagens(query="is:unread newer_than:7d", limite=10)
-                                if status_google.get("servicos_disponiveis", {}).get("gmail") and status_google.get("estado") == "configurado"
-                                else status_google
-                            )
-                        except Exception:
-                            contexto_sistema["gmail"] = {
-                                "estado": "gmail_indisponivel", "somente_leitura": True,
-                                "motivo": "Não foi possível consultar o Gmail nesta solicitação.",
-                            }
-                    if _precisa_contexto_agenda(mensagem):
-                        try:
-                            contexto_sistema["agenda"] = GMAIL_NYXOS.listar_eventos(limite=12, dias=14)
-                        except Exception:
-                            contexto_sistema["agenda"] = {"estado": "agenda_indisponivel", "somente_leitura": True}
-                    if _precisa_contexto_contatos(mensagem):
-                        try:
-                            contexto_sistema["contatos"] = GMAIL_NYXOS.listar_contatos(limite=25)
-                        except Exception:
-                            contexto_sistema["contatos"] = {"estado": "contatos_indisponiveis", "somente_leitura": True}
-                    if _precisa_contexto_drive(mensagem):
-                        try:
-                            contexto_sistema["google_drive"] = GMAIL_NYXOS.listar_arquivos_drive(limite=25)
-                        except Exception:
-                            contexto_sistema["google_drive"] = {"estado": "drive_indisponivel", "somente_leitura": True}
-                    resposta_agente = AGENTE_NYXAL.responder(
-                        mensagem,
-                        sessao=sessao_id,
-                        provedor=provedor,
-                        contexto_sistema=contexto_sistema,
-                    )
-                    if not resposta_agente.get("fallback_local"):
-                        self._send_json(200, resposta_agente)
-                        return
+                    raise RuntimeError("A política de conversa local foi violada.")
+                provedor_conversa = "nyxal"
+                contexto_sistema_conversa = {}
+                if _precisa_contexto_sistema(mensagem):
+                    contexto_sistema_conversa["observabilidade"] = OBSERVABILIDADE_NYXOS.snapshot()
+                    contexto_sistema_conversa["residencia"] = residencia_snapshot()
+                if _precisa_contexto_email(mensagem):
+                    try:
+                        status_google = GMAIL_NYXOS.status()
+                        contexto_sistema_conversa["gmail"] = (
+                            GMAIL_NYXOS.listar_mensagens(query="is:unread newer_than:7d", limite=10)
+                            if status_google.get("servicos_disponiveis", {}).get("gmail")
+                            and status_google.get("estado") == "configurado"
+                            else status_google
+                        )
+                    except Exception:
+                        contexto_sistema_conversa["gmail"] = {
+                            "estado": "gmail_indisponivel",
+                            "somente_leitura": True,
+                            "motivo": "Não foi possível consultar o Gmail nesta solicitação.",
+                        }
+                if _precisa_contexto_agenda(mensagem):
+                    try:
+                        contexto_sistema_conversa["agenda"] = GMAIL_NYXOS.listar_eventos(limite=12, dias=14)
+                    except Exception:
+                        contexto_sistema_conversa["agenda"] = {
+                            "estado": "agenda_indisponivel", "somente_leitura": True,
+                        }
+                if _precisa_contexto_contatos(mensagem):
+                    try:
+                        contexto_sistema_conversa["contatos"] = GMAIL_NYXOS.listar_contatos(limite=25)
+                    except Exception:
+                        contexto_sistema_conversa["contatos"] = {
+                            "estado": "contatos_indisponiveis", "somente_leitura": True,
+                        }
+                if _precisa_contexto_drive(mensagem):
+                    try:
+                        contexto_sistema_conversa["google_drive"] = GMAIL_NYXOS.listar_arquivos_drive(limite=25)
+                    except Exception:
+                        contexto_sistema_conversa["google_drive"] = {
+                            "estado": "drive_indisponivel", "somente_leitura": True,
+                        }
             except ValueError as erro:
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": str(erro)})
                 return
-            except RuntimeError as erro:
-                self._send_json(503, {"estado": "provedor_indisponivel", "motivo": "O provedor selecionado não está disponível."})
+            except RuntimeError:
+                self._send_json(503, {
+                    "estado": "provedor_indisponivel",
+                    "motivo": "A conversa local não está disponível.",
+                })
                 return
             except Exception as erro:
-                self._send_json(502, {"estado": "falha_no_agente", "motivo": f"{type(erro).__name__}: integração indisponível."})
+                self._send_json(502, {
+                    "estado": "falha_no_agente",
+                    "motivo": f"{type(erro).__name__}: integração indisponível.",
+                })
                 return
 
         try:
-            resultado = (
-                INTEGRACAO_CONVERSACIONAL.processar_mensagem(
+            if self.path == "/api/agent/chat":
+                resultado = INTEGRACAO_CONVERSACIONAL.processar_mensagem(
+                    texto=mensagem,
+                    nucleo=NUCLEO_CONVERSACIONAL,
+                    sessao_id=sessao_id,
+                    provedor=provedor_conversa,
+                    contexto_sistema=contexto_sistema_conversa,
+                )
+            else:
+                resultado = INTEGRACAO_CONVERSACIONAL.processar_mensagem(
                     texto=mensagem,
                     nucleo=NUCLEO_CONVERSACIONAL,
                     sessao_id=sessao_id,
                 )
-            )
         except Exception as erro:
             self._send_json(
                 500,
@@ -1402,6 +1419,19 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             if isinstance(transporte, dict)
             else None
         )
+
+        if self.path == "/api/agent/chat" and isinstance(resposta_estruturada, dict):
+            dados_resposta = resposta_estruturada.get("valor")
+            if (
+                isinstance(dados_resposta, dict)
+                and dados_resposta.get("modo") == "dialogo_indisponivel"
+            ):
+                self._send_json(503, {
+                    "estado": "provedor_indisponivel",
+                    "motivo": "O provedor selecionado não está disponível.",
+                    "sessao": resultado.get("sessao"),
+                })
+                return
 
         resposta_textual = (
             resposta_estruturada.get("resposta")

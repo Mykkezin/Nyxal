@@ -454,6 +454,32 @@ def main() -> None:
             mensagem,
         )
 
+    opcoes_sistema = {"observabilidade": {"cpu_percent": 12.5}}
+    resultado_opcoes = transporte.processar_mensagem(
+        "Mensagem com provedor explícito.",
+        nucleo,
+        sessao="sessao_opcoes",
+        provedor="openai",
+        contexto_sistema=opcoes_sistema,
+    )
+    check(
+        resultado_opcoes.get("sucesso") is True,
+        "opções de provedor e contexto atravessam o transporte",
+    )
+    check(
+        nucleo.entradas[-1]["valor"]["opcoes_dialogo"]["provedor"] == "openai",
+        "provedor é transportado como metadado validado",
+    )
+    check(
+        nucleo.entradas[-1]["valor"]["opcoes_dialogo"]["contexto_sistema"] == opcoes_sistema,
+        "contexto de observabilidade é preservado no transporte",
+    )
+    opcoes_sistema["observabilidade"]["cpu_percent"] = 99
+    check(
+        nucleo.entradas[-1]["valor"]["opcoes_dialogo"]["contexto_sistema"]["observabilidade"]["cpu_percent"] == 12.5,
+        "contexto do chamador fica isolado por cópia profunda",
+    )
+
     print()
     print("=" * 64)
     print(

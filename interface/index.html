@@ -64,6 +64,67 @@
       0%,100% { transform: scale(1.015); }
       50% { transform: scale(1.035); }
     }
+    /* Native Nyxal persona: lightweight SVG, no uploaded media or video feed. */
+    #nyxalHoloContainer { transition: opacity .45s ease, transform .45s ease, filter .45s ease; }
+    #nyxalHoloContainer.nyxal-presence-hidden {
+      opacity: 0 !important; visibility: hidden !important; pointer-events: none !important;
+      transform: translate3d(0, 18px, 0) scale(.96) !important; filter: blur(6px) !important;
+      animation: none !important;
+    }
+    .nyxal-presence-stage {
+      isolation: isolate;
+      background: radial-gradient(ellipse at 50% 42%, rgba(31,91,151,.27), transparent 48%),
+        radial-gradient(ellipse at 50% 100%, rgba(95,43,151,.17), transparent 57%), #020611;
+    }
+    .nyxal-stage-grid {
+      position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.34;
+      background-image:linear-gradient(rgba(0,242,254,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(0,242,254,.08) 1px,transparent 1px);
+      background-size:24px 24px;
+      mask-image:radial-gradient(ellipse at center,#000 18%,transparent 78%);
+    }
+    .nyxal-stage-ring {
+      position:absolute; width:218px; height:218px; border:1px solid rgba(0,242,254,.18); border-radius:50%;
+      z-index:1; pointer-events:none; box-shadow:0 0 30px rgba(0,242,254,.045),inset 0 0 30px rgba(0,242,254,.035);
+      animation:nyxalRingDrift 22s linear infinite;
+    }
+    .nyxal-stage-ring::before,.nyxal-stage-ring::after {
+      content:""; position:absolute; inset:13px; border:1px dashed rgba(150,115,255,.28); border-radius:50%;
+    }
+    .nyxal-stage-ring::after { inset:-12px; border-color:rgba(0,242,254,.12); transform:rotateX(68deg); }
+    .nyxal-avatar { position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; }
+    #nyxalCharacterSvg { display:block; width:min(100%,320px); height:100%; overflow:visible; }
+    #nyxalCharacterSvg .avatar-breath { transform-origin:160px 220px; animation:nyxalBreath 4.5s ease-in-out infinite; }
+    #nyxalCharacterSvg .avatar-hair-strand { fill:none; stroke:rgba(82,213,255,.42); stroke-width:1.4; stroke-linecap:round; }
+    #nyxalCharacterSvg .avatar-eye-glow { filter:url(#nyxalNeon); }
+    #nyxalCharacterSvg .avatar-circuit { fill:none; stroke:rgba(0,242,254,.62); stroke-width:1.2; stroke-linecap:round; }
+    #nyxalCharacterSvg .avatar-mouth-open { opacity:0; transform-box:fill-box; transform-origin:center; }
+    .nyxal-avatar[data-state="listening"] #nyxalCharacterSvg .avatar-aura { opacity:.9; animation:nyxalAuraListen 1.35s ease-in-out infinite; }
+    .nyxal-avatar[data-state="listening"] #nyxalCharacterSvg .avatar-eye-core { fill:#baffff; }
+    .nyxal-avatar[data-state="processing"] #nyxalCharacterSvg .avatar-aura { opacity:.72; animation:nyxalAuraThink 1.05s ease-in-out infinite; }
+    .nyxal-avatar[data-state="processing"] #nyxalCharacterSvg .avatar-circuit { stroke:#c2a5ff; animation:nyxalCircuitPulse .75s ease-in-out infinite alternate; }
+    .nyxal-avatar[data-state="speaking"] #nyxalCharacterSvg .avatar-aura { opacity:1; animation:nyxalAuraSpeak .65s ease-in-out infinite; }
+    .nyxal-avatar[data-state="speaking"] #nyxalCharacterSvg .avatar-mouth-open { opacity:.9; animation:nyxalMouthSpeak .22s ease-in-out infinite alternate; }
+    .nyxal-avatar[data-state="speaking"] #nyxalCharacterSvg .avatar-mouth-line { opacity:.25; }
+    .nyxal-avatar[data-state="idle"] #nyxalCharacterSvg .avatar-aura { opacity:.4; animation:nyxalAuraIdle 5s ease-in-out infinite; }
+    .nyxal-avatar-state {
+      position:absolute; left:50%; bottom:8px; transform:translateX(-50%); z-index:24;
+      padding:3px 8px; max-width:calc(100% - 20px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      color:rgba(124,243,255,.84); font:9px/1.2 monospace; letter-spacing:.15em;
+      background:rgba(2,6,17,.72); border:1px solid rgba(0,242,254,.18); border-radius:999px; pointer-events:none;
+    }
+    @keyframes nyxalBreath { 0%,100% { transform:translateY(1px) scale(1); } 50% { transform:translateY(-2px) scale(1.008); } }
+    @keyframes nyxalRingDrift { to { transform:rotate(360deg); } }
+    @keyframes nyxalAuraIdle { 0%,100% { transform:scale(.98); filter:drop-shadow(0 0 12px rgba(0,242,254,.18)); } 50% { transform:scale(1.035); filter:drop-shadow(0 0 24px rgba(0,242,254,.3)); } }
+    @keyframes nyxalAuraListen { 0%,100% { transform:scale(.98); opacity:.58; } 50% { transform:scale(1.09); opacity:1; } }
+    @keyframes nyxalAuraThink { 0%,100% { transform:scale(1) rotate(0deg); } 50% { transform:scale(1.07) rotate(2deg); } }
+    @keyframes nyxalAuraSpeak { 0%,100% { transform:scale(1); } 50% { transform:scale(1.08); } }
+    @keyframes nyxalCircuitPulse { to { opacity:.38; } }
+    @keyframes nyxalMouthSpeak { from { transform:scaleY(.55); } to { transform:scaleY(1.2); } }
+    @media (prefers-reduced-motion:reduce) {
+      .nyxal-stage-ring,#nyxalCharacterSvg .avatar-breath,.nyxal-avatar[data-state] #nyxalCharacterSvg .avatar-aura,
+      .nyxal-avatar[data-state="processing"] #nyxalCharacterSvg .avatar-circuit,
+      .nyxal-avatar[data-state="speaking"] #nyxalCharacterSvg .avatar-mouth-open { animation:none !important; }
+    }
   </style>
 
   <script>
@@ -345,6 +406,23 @@
     }
     #nyxalVoiceSurface #nyxalVoicePrompt { margin: 12px 0 0; color: #e2e8f0; font-size: 15px; font-weight: 400; letter-spacing: .015em; }
     #nyxalVoiceSurface #nyxalVoiceMiniStatus { color: #64748b; font: 10px/1.4 monospace; letter-spacing: .15em; text-transform: uppercase; margin-top: -10px; }
+    #nyxalVoiceSurface .nyxal-voice-diagnostics {
+      width: min(300px,76vw); display: grid; gap: 7px; margin-top: -11px;
+      color: #64748b; font: 9px/1.4 monospace; letter-spacing: .12em; text-align: left;
+    }
+    #nyxalVoiceSurface .nyxal-voice-diagnostics-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+    #nyxalVoiceSurface #nyxalVoiceRms { color: #93c5fd; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    #nyxalVoiceSurface .nyxal-voice-rms-track {
+      height: 3px; border-radius: 999px; overflow: hidden; background: rgba(148,163,184,.14);
+    }
+    #nyxalVoiceSurface #nyxalVoiceRmsFill {
+      display: block; width: 0%; height: 100%; background: #7dd3fc;
+      box-shadow: 0 0 10px rgba(125,211,252,.6); transition: width .08s linear;
+    }
+    #nyxalVoiceSurface #nyxalVoiceActivity { color: #64748b; min-height: 12px; }
+    #nyxalVoiceSurface #nyxalVoiceActivity[data-active="true"] { color: #6ee7b7; }
     #nyxalVoiceSurface #nyxalVoiceSubtitleMount {
       width: min(680px,90vw); min-height: 42px; display: flex; align-items: center; justify-content: center;
     }
@@ -355,7 +433,7 @@
     #nyxalVoiceSurface #aiSubtitlesText {
       color: #cbd5e1 !important; font: 400 14px/1.6 Inter,sans-serif !important; letter-spacing: .01em; overflow-wrap: anywhere;
     }
-    #nyxalVoiceSurface #voiceDiagnostics { display: none !important; }
+
     #nyxalVoiceSurface .nyxal-voice-footer {
       width: min(680px,90vw); display: flex; justify-content: space-between; align-items: center; gap: 12px;
       color: #475569; font: 9px/1.4 monospace; letter-spacing: .12em;
@@ -376,7 +454,17 @@
       #nyxalVoiceStage { width: min(240px,47vh); height: min(240px,47vh); min-width: 150px; min-height: 150px; }
       #nyxalVoiceSurface #nyxalVoicePrompt { font-size: 12px; }
     }
-  </style>  <script src="/interface/js/nyxal-voice-console.js" defer></script>
+  
+    /* In voice-only mode, reuse the same Nyxal character instead of the legacy globe orb. */
+    #nyxalVoiceSurface #globeContainer::before { content: none !important; display: none !important; }
+    #nyxalVoiceSurface #nyxalAvatar {
+      position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+      display: flex !important; align-items: center !important; justify-content: center !important;
+      z-index: 10 !important; pointer-events: none !important;
+    }
+    #nyxalVoiceSurface #nyxalCharacterSvg { width: 100% !important; height: 100% !important; max-width: 320px; }
+    #nyxalVoiceSurface #nyxalAvatarStateLabel { display: none !important; }
+  </style>
 </head>
 
 <body class="min-h-screen bg-[#02050e] text-slate-100 flex flex-col justify-between relative selection:bg-hud-cyan selection:text-black">
@@ -776,9 +864,12 @@
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-hud-cyan opacity-75"></span>
               <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-hud-cyan"></span>
             </span>
-            <span id="aiStatusText" class="font-orbitron text-xs font-bold text-hud-cyan tracking-wider">NYXAL • PRESENÇA ATIVA</span>
+            <span id="aiStatusText" class="font-orbitron text-xs font-bold text-hud-cyan tracking-wider">NYXAL • PRESENÇA AUTÔNOMA</span>
           </div>
-          <span class="text-[10px] font-mono text-slate-400" title="Presença vetorial autônoma, sem dependência de vídeo externo"><i class="fa-solid fa-brain text-xs text-hud-cyan"></i> AUTÔNOMA</span>
+          <div class="flex items-center gap-3">
+            <span class="text-[10px] font-mono text-slate-400" title="Presença vetorial autônoma, sem dependência de vídeo externo"><i class="fa-solid fa-brain text-xs text-hud-cyan"></i> AUTÔNOMA</span>
+            <span id="nyxalPresenceShortcut" class="text-[9px] font-mono tracking-wide text-slate-500" title="Atalho para chamar a Nyxal">CTRL + SHIFT + ESPAÇO</span>
+          </div>
         </div>
 
         <!-- Video Hologram Container -->
@@ -800,8 +891,10 @@
           </div>
 
           <!-- Presença vetorial autônoma: não depende de vídeo, arquivo local ou serviço externo. -->
-          <div id="nyxalCharacterSvg" class="relative z-10 flex h-full w-full items-center justify-center" role="img" aria-label="Nyxal, presença digital autônoma">
-            <svg viewBox="0 0 360 320" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <div id="nyxalAvatar" class="nyxal-avatar relative z-10 flex h-full w-full items-center justify-center" data-state="idle" role="img" aria-label="Nyxal, presença digital autônoma">
+            <svg id="nyxalCharacterSvg" viewBox="0 0 360 320" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" aria-labelledby="nyxalCharacterTitle nyxalCharacterDesc" xmlns="http://www.w3.org/2000/svg">
+              <title id="nyxalCharacterTitle">Nyxal — presença digital autônoma</title>
+              <desc id="nyxalCharacterDesc">Avatar vetorial da Nyxal com contornos de energia azul e ciano.</desc>
               <defs>
                 <radialGradient id="nyxalHalo" cx="50%" cy="42%" r="60%">
                   <stop offset="0" stop-color="#7dd3fc" stop-opacity=".54"/>
@@ -835,14 +928,14 @@
                   @media (prefers-reduced-motion: reduce) { .nyxal-avatar-float,.nyxal-avatar-aura,.nyxal-avatar-orbit { animation: none; } }
                 </style>
               </defs>
-              <circle cx="180" cy="145" r="128" fill="url(#nyxalHalo)" class="nyxal-avatar-aura"/>
+              <circle cx="180" cy="145" r="128" fill="url(#nyxalHalo)" class="nyxal-avatar-aura avatar-aura"/>
               <g class="nyxal-avatar-orbit" fill="none" stroke="#7dd3fc" stroke-opacity=".38">
                 <ellipse cx="180" cy="145" rx="107" ry="42" stroke-width="1.1" transform="rotate(-28 180 145)"/>
                 <ellipse cx="180" cy="145" rx="106" ry="42" stroke-width=".7" transform="rotate(54 180 145)"/>
                 <circle cx="279" cy="108" r="3" fill="#d9f5ff" stroke="none"/>
                 <circle cx="82" cy="177" r="2.5" fill="#d9f5ff" stroke="none"/>
               </g>
-              <g class="nyxal-avatar-float">
+              <g class="nyxal-avatar-float avatar-breath">
                 <path d="M83 290 Q89 228 121 210 L145 198 L216 198 L241 211 Q275 236 278 290 Z" fill="url(#nyxalCloak)" stroke="#7dd3fc" stroke-opacity=".56" stroke-width="1.5"/>
                 <path d="M143 202 L180 253 L217 202 L205 290 L155 290 Z" fill="#071426" stroke="#8bdcff" stroke-opacity=".62" stroke-width="1"/>
                 <path d="M155 202 L180 231 L205 202" fill="none" stroke="#b5eaff" stroke-opacity=".72" stroke-width="2"/>
@@ -853,10 +946,11 @@
                 <path d="M191 130 Q205 119 219 130" fill="none" stroke="#172d4c" stroke-width="4" stroke-linecap="round"/>
                 <path d="M146 139 Q157 132 169 139" fill="none" stroke="#76e4ff" stroke-width="2.4" stroke-linecap="round"/>
                 <path d="M191 139 Q203 132 215 139" fill="none" stroke="#76e4ff" stroke-width="2.4" stroke-linecap="round"/>
-                <circle cx="158" cy="138" r="2.3" fill="#e8fbff"/>
-                <circle cx="203" cy="138" r="2.3" fill="#e8fbff"/>
+                <circle class="avatar-eye-core" cx="158" cy="138" r="2.3" fill="#e8fbff"/>
+                <circle class="avatar-eye-core" cx="203" cy="138" r="2.3" fill="#e8fbff"/>
                 <path d="M180 140 L176 160 L183 162" fill="none" stroke="#6688a9" stroke-width="1.7" stroke-linecap="round"/>
-                <path d="M165 174 Q180 181 195 174" fill="none" stroke="#355c7e" stroke-width="1.8" stroke-linecap="round"/>
+                <path class="avatar-mouth-line" d="M165 174 Q180 181 195 174" fill="none" stroke="#355c7e" stroke-width="1.8" stroke-linecap="round"/>
+                <ellipse class="avatar-mouth-open" cx="180" cy="176" rx="5.5" ry="2.5" fill="#15284b" stroke="#8df8ff" stroke-width="1"/>
                 <path d="M133 106 Q140 72 171 68 Q201 60 223 92" fill="none" stroke="#e3f7ff" stroke-opacity=".8" stroke-width="2"/>
                 <path d="M121 113 L106 144 L124 137 M235 112 L252 144 L234 138" fill="none" stroke="#7dd3fc" stroke-opacity=".6" stroke-width="2"/>
                 <path d="M130 214 L109 251 L132 246 M230 214 L251 251 L228 246" fill="none" stroke="#6cccf2" stroke-opacity=".65" stroke-width="2"/>
@@ -873,6 +967,7 @@
       <div id="aiSubtitlesBox" class="absolute bottom-2 left-2 right-2 z-30 bg-slate-950/95 border border-hud-cyan/60 p-2.5 rounded-lg text-center shadow-lg backdrop-blur-md hidden">
             <p id="aiSubtitlesText" class="text-xs font-rajdhani text-hud-cyan font-semibold leading-tight">"Sistemas operacionais iniciados, Nyxal ao seu dispor."</p>
           </div>
+          <div id="nyxalAvatarStateLabel" class="nyxal-avatar-state" aria-live="polite">EM REPOUSO · CTRL+SHIFT+ESPAÇO</div>
         </div>
 
         <!-- Telemetry Details Footer -->
@@ -1624,9 +1719,119 @@
       if (!container) return;
       if (processing) {
         container.classList.add('nyxal-processing');
+        setNyxalAvatarState('processing');
       } else {
         container.classList.remove('nyxal-processing');
       }
+    }
+
+    // ================= AUTONOMOUS PRESENCE CONTROLLER =================
+    // The visual presence recedes after inactivity, but never while voice is active.
+    // Microphone access remains an explicit user action: click the voice core or use the shortcut.
+    const NYXAL_PRESENCE_IDLE_MS = 12000;
+    let nyxalPresenceHideTimer = null;
+
+    function nyxalModalIsOpen() {
+      return Array.from(document.querySelectorAll('.fixed.inset-0'))
+        .some(modal => !modal.classList.contains('hidden'));
+    }
+
+    function nyxalPresenceIsBusy() {
+      const avatar = document.getElementById('nyxalAvatar');
+      const state = avatar?.dataset.state || 'idle';
+      // Listening alone is not visual activity. The VAD stays alive while the avatar is receded.
+      return Boolean(voiceConversationBusy || voiceVozDetectada || ['processing', 'speaking'].includes(state));
+    }
+
+    function scheduleNyxalPresenceHide() {
+      if (NYXAL_VOICE_ONLY_MODE) return;
+      if (nyxalPresenceHideTimer !== null) {
+        window.clearTimeout(nyxalPresenceHideTimer);
+        nyxalPresenceHideTimer = null;
+      }
+      const container = document.getElementById('nyxalHoloContainer');
+      if (!container || nyxalPresenceIsBusy() || nyxalModalIsOpen()) return;
+
+      nyxalPresenceHideTimer = window.setTimeout(() => {
+        nyxalPresenceHideTimer = null;
+        if (nyxalPresenceIsBusy() || nyxalModalIsOpen()) return;
+        container.classList.add('nyxal-presence-hidden');
+        container.setAttribute('aria-hidden', 'true');
+      }, NYXAL_PRESENCE_IDLE_MS);
+    }
+
+    function wakeNyxalPresence(source = 'activity') {
+      const container = document.getElementById('nyxalHoloContainer');
+      if (!container) return;
+      if (nyxalPresenceHideTimer !== null) {
+        window.clearTimeout(nyxalPresenceHideTimer);
+        nyxalPresenceHideTimer = null;
+      }
+      container.classList.remove('nyxal-presence-hidden');
+      container.setAttribute('aria-hidden', 'false');
+      if (!nyxalPresenceIsBusy() && !nyxalModalIsOpen()) scheduleNyxalPresenceHide();
+    }
+
+    function setNyxalAvatarState(state) {
+      const avatar = document.getElementById('nyxalAvatar');
+      const label = document.getElementById('nyxalAvatarStateLabel');
+      if (!avatar) return;
+      const allowedStates = ['idle', 'listening', 'processing', 'speaking'];
+      const nextState = allowedStates.includes(state) ? state : 'idle';
+      avatar.dataset.state = nextState;
+      const labels = {
+        idle: 'EM REPOUSO · CTRL+SHIFT+ESPAÇO',
+        listening: 'OUVINDO',
+        processing: 'PROCESSANDO',
+        speaking: 'FALANDO'
+      };
+      if (label) label.textContent = labels[nextState];
+      // In voice-only mode, the existing wake-word and barge-in controller owns visibility.
+      if (NYXAL_VOICE_ONLY_MODE) return;
+      if (nextState === 'idle') {
+        scheduleNyxalPresenceHide();
+      } else if (
+        nextState === 'listening' &&
+        voiceConversationActive &&
+        !voiceConversationBusy &&
+        !voiceVozDetectada &&
+        document.getElementById('nyxalHoloContainer')?.classList.contains('nyxal-presence-hidden')
+      ) {
+        // Keep the avatar hidden during silence, even if the recorder rotates its buffer.
+      } else {
+        wakeNyxalPresence(nextState);
+      }
+    }
+
+    function initNyxalPresenceController() {
+      const container = document.getElementById('nyxalHoloContainer');
+      if (!container) return;
+      container.setAttribute('aria-hidden', 'false');
+      setNyxalAvatarState('idle');
+      document.addEventListener('keydown', (event) => {
+        if (!(event.ctrlKey && event.shiftKey && event.code === 'Space')) return;
+        const target = event.target;
+        if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName)) return;
+        event.preventDefault();
+        if (NYXAL_VOICE_ONLY_MODE && voiceConversationActive) {
+          setVoiceUiDormant(false);
+          registerVoiceUiActivity();
+          if (!voiceConversationBusy) {
+            setGlobeVoiceState('listening');
+            showSubtitles('Estou aqui. Pode falar.');
+          }
+          return;
+        }
+        wakeNyxalPresence('shortcut');
+        if (voiceConversationActive) {
+          if (!voiceConversationBusy) {
+            setGlobeVoiceState('listening');
+            showSubtitles('Estou aqui. Pode falar.');
+          }
+          return;
+        }
+        toggleVoiceInput();
+      });
     }
 
     function openConfigModal() {
@@ -2224,12 +2429,13 @@
 
       try {
         if (typeof window.nyxalHandleImageIntent === 'function') {
-          const imageIntent = await window.nyxalHandleImageIntent(msg);
-          if (imageIntent && imageIntent.handled) {
-            const imageReply = imageIntent.resposta || 'Concluí o pedido visual.';
+          const visual = await window.nyxalHandleImageIntent(msg);
+          if (visual && visual.handled) {
             setHologramProcessing(false);
-            showSubtitles(imageReply);
-            await speakGoddessNyxVoice(imageIntent.fala || imageReply, false);
+            showSubtitles(visual.resposta || 'A solicitação visual foi processada.');
+            if (conversaContinua) {
+              await speakGoddessNyxVoice(visual.fala || visual.resposta || 'Concluído.', false);
+            }
             return;
           }
         }
@@ -2334,8 +2540,15 @@
     }
 
     function showSubtitles(text) {
+      const message = String(text || '').trim();
+      const passiveListeningNotice = /^(?:estou ouvindo|conversa por voz ativa\.)/i.test(message);
+      if (!passiveListeningNotice) {
+        if (NYXAL_VOICE_ONLY_MODE) setVoiceUiDormant(false);
+        else wakeNyxalPresence('subtitle');
+      }
       const box = document.getElementById('aiSubtitlesBox');
       const textEl = document.getElementById('aiSubtitlesText');
+      if (!box || !textEl) return;
       box.classList.remove('hidden');
       textEl.innerText = `"${text}"`;
     }
@@ -2416,7 +2629,13 @@
               '<span class="nyxal-voice-ring ring-one"></span><span class="nyxal-voice-ring ring-two"></span><span class="nyxal-voice-ring ring-three"></span>' +
             '</div>' +
             '<p id="nyxalVoicePrompt">Toque no núcleo para ativar a conversa por voz</p>' +
-            '<div id="nyxalVoiceMiniStatus">MICROFONE DESATIVADO</div><div id="nyxalVoiceSubtitleMount"></div>' +
+            '<div id="nyxalVoiceMiniStatus">MICROFONE DESATIVADO</div>' +
+            '<section class="nyxal-voice-diagnostics" aria-label="Diagnóstico do microfone" aria-live="polite">' +
+              '<div class="nyxal-voice-diagnostics-row"><span>NÍVEL DO MICROFONE</span><output id="nyxalVoiceRms">RMS —</output></div>' +
+              '<div class="nyxal-voice-rms-track" role="meter" aria-label="Nível RMS capturado" aria-valuemin="0" aria-valuemax="0.08"><span id="nyxalVoiceRmsFill"></span></div>' +
+              '<div id="nyxalVoiceActivity" data-active="false">AGUARDANDO CAPTURA DO MICROFONE</div>' +
+            '</section>' +
+            '<div id="nyxalVoiceSubtitleMount"></div>' +
           '</section>' +
           '<footer class="nyxal-voice-footer"><span>NYXOS · ESCUTA LOCAL</span><button id="nyxalVoiceStop" type="button" hidden>Pausar escuta</button></footer>' +
         '</div>';
@@ -2426,8 +2645,10 @@
         const node = document.getElementById(id);
         if (node) stage.appendChild(node);
       });
+      const persona = document.getElementById('nyxalAvatar');
+      if (persona) stage.appendChild(persona);
       const subtitleMount = document.getElementById('nyxalVoiceSubtitleMount');
-      ['aiSubtitlesBox','voiceDiagnostics'].forEach((id) => {
+      ['aiSubtitlesBox'].forEach((id) => {
         const node = document.getElementById(id);
         if (node) subtitleMount.appendChild(node);
       });
@@ -2440,12 +2661,8 @@
       updateVoiceOnlySurfaceState();
     }
 
-    function showVoiceDiagnostics() {
-      const box = document.getElementById('voiceDiagnostics');
-      if (box) box.classList.remove('hidden');
-    }
-
     function setGlobeVoiceState(state) {
+      setNyxalAvatarState(state);
       const globe = document.getElementById('globeContainer');
       const hud = document.getElementById('globeVoiceState');
       const label = document.getElementById('globeVoiceStateText');
@@ -2492,7 +2709,8 @@
     let voiceCaptureStartedAt = 0;
     let voiceSpeechDetectedInCurrentRecording = false;
     let voiceNoiseFloor = 0.003;
-    let voiceRmsAtual = 0;
+    let voiceRmsAtual = null;
+
     let voiceVozDetectada = false;
     let voiceCalibracaoIniciadaAt = 0;
     let voiceBargeInRecorder = null;
@@ -2517,10 +2735,16 @@
     const VOICE_RESUME_GUARD_MS = 320;
 
     function setVoiceMicrophoneEnabled(enabled) {
-      if (!voiceStream) return;
+      if (!voiceStream) {
+        updateVoiceDiagnostics(null, voiceActivityThreshold(), false);
+        return;
+      }
       voiceStream.getAudioTracks().forEach(track => {
         track.enabled = enabled;
       });
+      // Ao pausar/reabrir a faixa, descarte o último RMS para não exibi-lo
+      // como leitura atual até que o analisador entregue uma nova amostra.
+      updateVoiceDiagnostics(null, voiceActivityThreshold(), false);
     }
 
     function updateVoiceConversationButton() {
@@ -2555,9 +2779,11 @@
       voiceSilenceStartedAt = 0;
       voiceCaptureStartedAt = 0;
       voiceSpeechDetectedInCurrentRecording = false;
-      voiceRmsAtual = 0;
+
       voiceVozDetectada = false;
+      voiceRmsAtual = null;
       voiceCalibracaoIniciadaAt = performance.now();
+      updateVoiceDiagnostics(null, voiceActivityThreshold(), false);
       voiceNoiseFloor = Math.max(
         0.0015,
         Math.min(0.008, voiceNoiseFloor || 0.003)
@@ -2588,14 +2814,33 @@
       );
     }
 
-    function updateVoiceDiagnostics() {
-      const diagnostics = document.getElementById('voiceDiagnostics');
-      if (!diagnostics) return;
-
-      diagnostics.textContent =
-        'RMS ' + voiceRmsAtual.toFixed(4) +
-        ' • LIMIAR ' + voiceActivityThreshold().toFixed(4) +
-        ' • ' + (voiceVozDetectada ? 'FALA DETECTADA' : 'OUVINDO');
+    function updateVoiceDiagnostics(rms = voiceRmsAtual, threshold = voiceActivityThreshold(), speechActive = voiceVozDetectada) {
+      const sampleAvailable = Number.isFinite(rms) && Boolean(voiceConversationActive && voiceAnalyser);
+      // null significa que ainda não houve uma amostra real do microfone.
+      voiceRmsAtual = sampleAvailable ? Math.max(0, rms) : null;
+      const safeThreshold = Number.isFinite(threshold) && threshold > 0
+        ? threshold
+        : VOICE_MIN_THRESHOLD;
+      const level = document.getElementById('nyxalVoiceRms');
+      if (level) level.textContent = sampleAvailable ? `RMS ${voiceRmsAtual.toFixed(3)}` : 'RMS —';
+      const fill = document.getElementById('nyxalVoiceRmsFill');
+      const maximum = Math.max(VOICE_MAX_THRESHOLD, safeThreshold);
+      const percentage = sampleAvailable
+        ? Math.max(0, Math.min(100, voiceRmsAtual / maximum * 100))
+        : 0;
+      if (fill) fill.style.width = `${percentage.toFixed(1)}%`;
+      const track = fill?.parentElement;
+      if (track) {
+        if (sampleAvailable) track.setAttribute('aria-valuenow', voiceRmsAtual.toFixed(3));
+        else track.removeAttribute('aria-valuenow');
+      }
+      const activity = document.getElementById('nyxalVoiceActivity');
+      if (activity) {
+        activity.textContent = !sampleAvailable
+          ? (voiceConversationActive ? 'AGUARDANDO AMOSTRA DE ÁUDIO' : 'MICROFONE DESATIVADO')
+          : (speechActive ? 'FALA DETECTADA' : 'ESCUTA ATIVA · SEM FALA');
+        activity.dataset.active = String(Boolean(sampleAvailable && speechActive));
+      }
     }
 
     function beginVoiceCapture() {
@@ -2793,8 +3038,6 @@
         voiceCalibracaoIniciadaAt > 0 &&
         now - voiceCalibracaoIniciadaAt < VOICE_VAD_CALIBRATION_MS;
 
-      voiceRmsAtual = rms;
-
       if (!voiceRecorder) {
         beginVoiceCapture();
       }
@@ -2813,9 +3056,13 @@
 
       const vozAtiva =
         rms >= voiceActivityThreshold();
+      const inicioDeVoz = vozAtiva && !voiceVozDetectada;
 
       voiceVozDetectada = vozAtiva;
-      updateVoiceDiagnostics();
+      updateVoiceDiagnostics(rms, threshold, vozAtiva);
+      if (inicioDeVoz && !NYXAL_VOICE_ONLY_MODE) {
+        wakeNyxalPresence('voice-activity');
+      }
 
       if (voiceRecorder) {
         if (vozAtiva) {
@@ -3071,7 +3318,7 @@
         showSubtitles(
           'Conversa por voz ativa. Fale normalmente; não é necessário tocar novamente.'
         );
-        showVoiceDiagnostics();
+
         if (NYXAL_VOICE_ONLY_MODE) {
           setVoiceUiDormant(false);
           updateVoiceOnlySurfaceState();
@@ -3524,6 +3771,7 @@
 
     // Initialize Everything
     window.onload = function() {
+      initNyxalPresenceController();
       if (NYXAL_VOICE_ONLY_MODE) {
         initNyxalVoiceOnlySurface();
         initGlobeVoiceControl();
@@ -3540,7 +3788,7 @@
         initGlobeVoiceControl();
         initSysGraph();
         initNyxosOperationalPanel();
-        restoreStoredHologram();
+
         initInfinityDrag();
         renderReflexaoDiaria();
         setInterval(updateLiveClock, 1000);

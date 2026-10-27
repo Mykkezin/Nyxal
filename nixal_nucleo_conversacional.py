@@ -208,6 +208,54 @@ class NucleoConversacionalNixal:
 
         texto = entrada["valor"]["texto"]
         sessao = entrada["valor"].get("sessao")
+        opcoes_dialogo = entrada["valor"].get("opcoes_dialogo")
+        kwargs_dialogo: dict[str, Any] = {}
+
+        if opcoes_dialogo is not None:
+            if not isinstance(opcoes_dialogo, dict) or set(opcoes_dialogo) - {"provedor", "contexto_sistema"}:
+                return self.interface.criar_resposta(
+                    "As opções do diálogo são inválidas.",
+                    sessao=sessao,
+                    estado="opcoes_dialogo_invalidas",
+                )
+            provedor = opcoes_dialogo.get("provedor")
+            contexto_sistema = opcoes_dialogo.get("contexto_sistema")
+            if provedor is not None:
+                if (
+                    not isinstance(provedor, str)
+                    or provedor not in {"auto", "nyxal", "gemini", "hermes", "letta", "openai", "grok"}
+                ):
+                    return self.interface.criar_resposta(
+                        "O provedor conversacional é inválido.",
+                        sessao=sessao,
+                        estado="opcoes_dialogo_invalidas",
+                    )
+                kwargs_dialogo["provedor"] = provedor
+            if contexto_sistema is not None:
+                if not isinstance(contexto_sistema, dict):
+                    return self.interface.criar_resposta(
+                        "O contexto do sistema é inválido.",
+                        sessao=sessao,
+                        estado="opcoes_dialogo_invalidas",
+                    )
+                try:
+                    contexto_json = json.dumps(
+                        contexto_sistema, ensure_ascii=False, allow_nan=False,
+                        separators=(",", ":"),
+                    )
+                except (TypeError, ValueError):
+                    return self.interface.criar_resposta(
+                        "O contexto do sistema não é JSON válido.",
+                        sessao=sessao,
+                        estado="opcoes_dialogo_invalidas",
+                    )
+                if len(contexto_json) > 128000:
+                    return self.interface.criar_resposta(
+                        "O contexto do sistema excede o limite permitido.",
+                        sessao=sessao,
+                        estado="opcoes_dialogo_invalidas",
+                    )
+                kwargs_dialogo["contexto_sistema"] = json.loads(contexto_json)
 
         historico = self._obter_historico(
             sessao
@@ -223,6 +271,10 @@ class NucleoConversacionalNixal:
             texto,
             historico,
         )
+        # /api/agent/chat envia provedor explicitamente: preserve o contrato
+        # desse endpoint e não converta um pedido ao modelo em ação local.
+        if "provedor" in kwargs_dialogo:
+            priorizar_dialogo = True
         contexto_persistido = {
             "estado": "nao_consultado",
             "contextos": [],
@@ -271,6 +323,8 @@ class NucleoConversacionalNixal:
             resposta_dialogo = self.dialogo.responder(
                 texto_dialogo,
                 historico=historico,
+                sessao=sessao,
+                **kwargs_dialogo,
             )
 
             if resposta_dialogo.get("sucesso") is True:
