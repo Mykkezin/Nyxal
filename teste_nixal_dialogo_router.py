@@ -146,7 +146,12 @@ class TestNyxalPrimaryDialogueRouter(unittest.TestCase):
         api_source = (root / "nyxal_web_api.py").read_text(encoding="utf-8")
         core_source = (root / "nixal_nucleo_conversacional.py").read_text(encoding="utf-8")
         self.assertIn("NUCLEO_CONVERSACIONAL.dialogo.agent_hub = AGENTE_NYXAL", api_source)
-        self.assertIn("historico=historico,\n                sessao=sessao,", core_source)
+        # O Core monta argumentos comuns em um dicionário para manter
+        # compatibilidade com adaptadores legados e só injeta metadados quando aceitos.
+        self.assertIn('"historico": historico', core_source)
+        self.assertIn('"sessao": sessao', core_source)
+        self.assertIn('inspect.signature(self.dialogo.responder).parameters', core_source)
+        self.assertIn('argumentos_responder["estado_runtime_nyxal"]', core_source)
 
 
     def test_explicit_local_provider_overrides_auto_environment(self):
