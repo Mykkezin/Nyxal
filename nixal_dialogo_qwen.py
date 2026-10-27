@@ -162,12 +162,19 @@ class DialogoQwenNixal:
     def _pedido_explicitamente_autorizou(nome: str, texto: str) -> bool:
         texto = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", texto.casefold())
         if nome == "salvar_nota":
-            return any(x in texto for x in ("anote", "salve esta nota", "salvar nota", "registre esta nota", "guarde esta nota"))
-        if nome == "criar_lembrete":
-            return any(x in texto for x in ("me lembre", "me lembra", "crie um lembrete", "criar lembrete", "agende um lembrete", "me avise"))
-        if nome == "abrir_aplicativo":
-            return any(x in texto for x in ("abra ", "abrir ", "abre ", "inicie o aplicativo", "iniciar aplicativo"))
-        return False
+            pedido = any(x in texto for x in ("anote", "salve esta nota", "salvar nota", "registre esta nota", "guarde esta nota"))
+        elif nome == "criar_lembrete":
+            pedido = any(x in texto for x in ("me lembre", "me lembra", "crie um lembrete", "criar lembrete", "agende um lembrete", "me avise"))
+        elif nome == "abrir_aplicativo":
+            pedido = any(x in texto for x in ("abra ", "abrir ", "abre ", "inicie o aplicativo", "iniciar aplicativo"))
+        else:
+            return False
+        # Ações de escrita não são autorizadas por citações ou negações triviais.
+        return pedido and not any(negacao in texto for negacao in (
+            "nao faça", "nao faca", "não faça", "não faca", "nao salve", "não salve",
+            "nao crie", "não crie", "nao abra", "não abra", "nao anote", "não anote",
+            "nao me lembre", "não me lembre", "nao execute", "não execute",
+        ))
 
     def _executar_chamada_ferramenta(self, gerenciador: Any, chamada: Any, pedido_usuario: str) -> dict[str, Any]:
         call_id = self._valor_mensagem(chamada, "id", "") or ""
