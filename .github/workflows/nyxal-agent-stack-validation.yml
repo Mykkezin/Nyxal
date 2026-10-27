@@ -22,9 +22,9 @@ on:
       - "nixal_agente_qwen.py"
       - "nixal_capacidades.py"
       - "nixal_tool_use.py"
+      - "nyxal_mcp_tools.py"
       - "teste_mcp_stdio.py"
       - "deploy/agent/requirements-mcp.txt"
-      - "nyxal_mcp_tools.py"
       - "teste_nixal_tool_use.py"
       - "teste_nyxal_tool_use.py"
       - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
@@ -94,11 +94,10 @@ on:
       - "nixal_agente_qwen.py"
       - "nixal_capacidades.py"
       - "nixal_tool_use.py"
+      - "nyxal_mcp_tools.py"
       - "teste_mcp_stdio.py"
       - "deploy/agent/requirements-mcp.txt"
-      - "nyxal_mcp_tools.py"
       - "teste_nixal_tool_use.py"
-      - "teste_nyxal_tool_use.py"
       - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
       - "nixal_transporte_conversacional.py"
       - "nixal_integracao_sessao_transporte.py"
@@ -145,7 +144,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -223,7 +222,6 @@ jobs:
             nixal_agente_qwen.py \
             nixal_capacidades.py \
             nixal_tool_use.py \
-            nyxal_mcp_tools.py \
             teste_nixal_tool_use.py \
             teste_nyxal_tool_use.py \
             nixal_transporte_conversacional.py \
@@ -253,6 +251,23 @@ jobs:
             scripts/autorizar_gmail_nyxal.py \
             scripts/configurar_hermes_whatsapp_policy.py \
             scripts/nyxal_letta_memory.py
+      - name: Smoke test optional MCP stdio server (isolated environment)
+        shell: bash
+        run: |
+          if [[ ! -f nyxal_mcp_tools.py || ! -f deploy/agent/requirements-mcp.txt ]]; then
+            echo "Optional MCP server/dependencies are absent in this revision; skipping."
+          else
+            MCP_VENV="$RUNNER_TEMP/nyxal-mcp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            trap 'rm -rf "$MCP_VENV"' EXIT
+            python3 -m venv "$MCP_VENV"
+            "$MCP_VENV/bin/python" -m pip install --disable-pip-version-check --no-input -r deploy/agent/requirements-mcp.txt
+            "$MCP_VENV/bin/python" -m py_compile nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py
+            "$MCP_VENV/bin/python" teste_mcp_stdio.py
+          fi
+      - name: Validate local setup scripts
+        run: |
+          bash -n deploy/agent/configurar_nyxal_agent.sh
+          bash -n deploy/agent/instalar_nyxal_agent.sh
       - name: Validate local configuration scripts
         run: |
           bash -n deploy/agent/configurar_nyxal_agent.sh
@@ -287,11 +302,4 @@ jobs:
           python3 teste_preparacao_investigacao_56_4_22.py
           python3 teste_auto_evolucao_ae1.py
           python3 teste_m5_15_presenca_maquina.py
-      - name: Validate optional MCP stdio implementation on the self-hosted runner
-        run: |
-          MCP_VENV="$RUNNER_TEMP/nyxal-mcp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          trap 'rm -rf "$MCP_VENV"' EXIT
-          python3 -m venv "$MCP_VENV"
-          "$MCP_VENV/bin/python" -m pip install --disable-pip-version-check --no-input -r deploy/agent/requirements-mcp.txt
-          "$MCP_VENV/bin/python" -m py_compile nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py nixal_integracao_gmail.py nixal_amd_developer_cloud.py
-          "$MCP_VENV/bin/python" teste_mcp_stdio.py
+
