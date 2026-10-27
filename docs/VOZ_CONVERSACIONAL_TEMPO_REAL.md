@@ -128,7 +128,7 @@ Recomenda-se usar fones durante a avaliação, porque o protótipo não adiciona
 A camada deploy/voice/nyxal_voice_prosody.py agora prepara a fala separadamente do texto exibido pela conversa e não altera a memória nem a resposta original do núcleo.
 
 - **Entrega contextual:** perfis discretos calm, gentle, focused, brisk, upbeat e curious são selecionados por pistas textuais conservadoras. A velocidade do Kokoro muda pouco a pouco em relação à configuração-base; instruções de segurança não recebem contrações coloquiais.
-- **Pausas e pontuação:** títulos e itens de lista viram limites de frase, e a limpeza de Markdown evita que códigos, emojis decorativos e formatação sejam recitados de forma estranha. Pontuação nativa do Kokoro conduz as micro-pausas.
+- **Pausas e pontuação:** títulos e itens de lista viram limites de frase, reticências intencionais são preservadas como pausas mais longas e a limpeza de Markdown evita que código, emojis decorativos e formatação sejam recitados de forma estranha. A pontuação nativa do Kokoro conduz as micro-pausas.
 - **Português brasileiro informal:** contrações como tá, tô e pra são usadas apenas quando a mensagem já indica um registro informal; a fala formal e as orientações de segurança permanecem preservadas.
 - **Sem teatro artificial:** não são adicionados hums, suspiros ou respirações falsas automaticamente. Isso evita inserir sons que a voz-base não consegue produzir de maneira natural e consistente.
 - **Caminhos integrados:** o endpoint principal /api/tts recebe opcionalmente contexto_usuario e aplica o perfil à voz Kokoro e ao fallback Piper. A interface passa o enunciado do usuário; o adaptador Pipecat aplica a mesma lógica e atualiza a velocidade com TTSUpdateSettingsFrame.
