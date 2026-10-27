@@ -718,15 +718,15 @@ def registrar_capacidades_operacionais(
     )
     adicionar(
         "executar_diagnostico",
-        "Realiza diagnósticos fixos somente leitura; não aceita shell livre.",
-        "Verificar estado do Git, serviços, processos, disco e memória.",
-        ["Verifique o git status", "Confira o uso de disco"],
+        "Verifica git status ou lista unidades de serviço de usuário com falha; sem shell livre.",
+        "Diagnosticar o estado do Git ou serviços Nyxal com falha.",
+        ["Verifique o git status", "Liste os serviços de usuário que falharam"],
         executar_diagnostico,
         {
-            "tipo": {"tipo": "string", "obrigatorio": True, "descricao": "Diagnóstico permitido", "enum": ["git_status", "servicos_nyxal", "sistema", "processos", "disco", "memoria"]},
+            "tipo": {"tipo": "string", "obrigatorio": True, "descricao": "Use git_status ou servicos_nyxal", "enum": ["git_status", "servicos_nyxal"]},
         },
         "diagnostico_local",
-        ["diagnóstico", "git status", "disco", "memória do sistema", "processos"],
+        ["diagnóstico de serviço", "serviço falhou", "serviços falhados", "git status", "unidades systemd"],
     )
 
     if not incluir_dados_privados:
