@@ -347,6 +347,8 @@ class DialogoQwenNixal:
             for chamada in chamadas:
                 function = self._valor_mensagem(chamada, "function", {})
                 assistant_msg["tool_calls"].append({
+                    "id": self._valor_mensagem(chamada, "id", "") or "",
+                    "type": "function",
                     "function": {
                         "name": self._valor_mensagem(function, "name", ""),
                         "arguments": self._valor_mensagem(function, "arguments", {}),
@@ -362,6 +364,31 @@ class DialogoQwenNixal:
                     "tool_name": resultado["name"],
                     "content": resultado["resultado"],
                 })
+            if chamadas_reais >= self.MAX_TOOL_CALLS:
+                mensagens_finais = atual + [{
+                    "role": "system",
+                    "content": (
+                        "Produza agora uma resposta final em português com base nos resultados "
+                        "já recebidos. Não solicite nem tente usar ferramentas."
+                    ),
+                }]
+                try:
+                    final_textual = self.cliente.chat(
+                        model=self.modelo, messages=mensagens_finais,
+                        options={"temperature": 0.2},
+                    )
+                    mensagem_final = self._extrair_mensagem(final_textual)
+                    novas_chamadas = self._valor_mensagem(mensagem_final, "tool_calls", []) or []
+                    conteudo_final = self._valor_mensagem(mensagem_final, "content", "")
+                    if novas_chamadas or not isinstance(conteudo_final, str) or not conteudo_final.strip():
+                        raise ValueError("Resposta final não textual.")
+                    resposta = final_textual
+                except Exception:
+                    resposta = {"message": {"content":
+                        "Concluí a quantidade máxima de chamadas de ferramentas. "
+                        "Não executei novas ferramentas depois do limite."
+                    }}
+                break
             try:
                 resposta = self.cliente.chat(
                     model=self.modelo, messages=atual, tools=ferramentas,
