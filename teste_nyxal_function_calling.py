@@ -325,6 +325,32 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(resultado["resposta"], "Resposta final sem nova ferramenta.")
         self.assertNotIn("tools", cliente.chamadas[-1])
 
+    def test_limite_de_ferramentas_aplica_quando_modelo_retorna_lote(self):
+        lote = [
+            {
+                "id": f"call-{i}",
+                "type": "function",
+                "function": {"name": "obter_hora", "arguments": {}},
+            }
+            for i in range(1, 8)
+        ]
+        cliente = ClienteFake([
+            {"message": {"content": "", "tool_calls": lote}},
+            {"message": {"content": "Resposta final somente textual."}},
+        ])
+        dialogo = DialogoQwenNixal(cliente=cliente)
+        manager = self.manager()
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=manager):
+            resultado = dialogo.responder("Que horas são?")
+        self.assertTrue(resultado["sucesso"])
+        self.assertEqual(resultado["quantidade_ferramentas"], dialogo.MAX_TOOL_CALLS)
+        self.assertEqual(len(cliente.chamadas), 2)
+        self.assertNotIn("tools", cliente.chamadas[-1])
+        self.assertEqual(
+            [x["tool_call_id"] for x in resultado["ferramentas_executadas"]],
+            ["call-1", "call-2", "call-3"],
+        )
+
     def test_resultado_de_ferramenta_e_limitado(self):
         cliente = ClienteFake([mensagem_tool("obter_hora", {}), {"message": {"content": "final"}}])
         dialogo = DialogoQwenNixal(cliente=cliente)
