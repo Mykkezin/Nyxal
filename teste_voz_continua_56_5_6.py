@@ -182,7 +182,9 @@ def main() -> None:
         "choose_speech_profile" in api
         and "prepare_spoken_reply" in api
         and "contexto_usuario" in api
-        and "speed=velocidade" in api,
+        and "speed=velocidade" in api
+        and "piper_length_scale" in api
+        and '"--length_scale"' in api,
         "API principal aplica prosódia contextual e velocidade adaptativa",
     )
 
