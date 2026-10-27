@@ -110,6 +110,62 @@ class TestFerramentasNyxal(unittest.TestCase):
         self.assertNotIn("test-key", serializados)
         self.assertNotIn("test-pass", serializados)
 
+    def test_aisweb_sem_credenciais_nao_tenta_rede(self):
+        from unittest.mock import MagicMock
+
+        with patch.dict(os.environ, {
+            "NYXAL_AISWEB_API_KEY": "",
+            "NYXAL_AISWEB_API_PASS": "",
+        }, clear=True), patch("nixal_tool_use.build_opener") as opener:
+            result = consultar_notam_aisweb("SBSP")
+        self.assertEqual(result["estado"], "configuracao_pendente")
+        opener.assert_not_called()
+
+    def test_aisweb_rejeita_declaracao_xml_de_entidade(self):
+        from unittest.mock import MagicMock
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+            def __exit__(self, *_args):
+                return False
+            def read(self, _limit):
+                return b"<!DOCTYPE x [<!ENTITY e SYSTEM 'file:///etc/passwd'>]><aisweb>&e;</aisweb>"
+
+        opener = MagicMock()
+        opener.open.return_value = FakeResponse()
+        with patch.dict(os.environ, {
+            "NYXAL_AISWEB_API_KEY": "fake-key",
+            "NYXAL_AISWEB_API_PASS": "fake-pass",
+        }, clear=True), patch("nixal_tool_use.build_opener", return_value=opener):
+            result = consultar_notam_aisweb("SBSP")
+        self.assertEqual(result["estado"], "xml_nao_permitido")
+        self.assertNotIn("fake-key", json.dumps(result))
+        self.assertNotIn("fake-pass", json.dumps(result))
+
+    def test_aisweb_rejeita_resposta_acima_do_limite(self):
+        from unittest.mock import MagicMock
+        from nixal_tool_use import MAX_AISWEB_BYTES
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+            def __exit__(self, *_args):
+                return False
+            def read(self, _limit):
+                return b"x" * (MAX_AISWEB_BYTES + 1)
+
+        opener = MagicMock()
+        opener.open.return_value = FakeResponse()
+        with patch.dict(os.environ, {
+            "NYXAL_AISWEB_API_KEY": "fake-key",
+            "NYXAL_AISWEB_API_PASS": "fake-pass",
+        }, clear=True), patch("nixal_tool_use.build_opener", return_value=opener):
+            result = consultar_notam_aisweb("SBSP")
+        self.assertEqual(result["estado"], "resposta_muito_grande")
+        self.assertNotIn("fake-key", json.dumps(result))
+        self.assertNotIn("fake-pass", json.dumps(result))
+
     def test_home_assistant_sem_token_nao_expoe_segredos(self):
         with patch.dict(os.environ, {"NYXAL_HOME_ASSISTANT_URL": "", "NYXAL_HOME_ASSISTANT_TOKEN": ""}):
             result = consultar_home_assistant()
