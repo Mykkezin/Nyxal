@@ -236,7 +236,7 @@ def consultar_home_assistant(entidade_id: str = "", dominio: str = "seguro") -> 
         return {
             "sucesso": True, "estado": "configuracao_pendente",
             "integracao": "Home Assistant", "modo": "somente_leitura",
-            "proximo_passo": "Configure NYXAL_HOME_ASSISTANT_URL e NYXAL_HOME_ASSISTANT_TOKEN no ambiente do serviço local.",
+            "proximo_passo": "Configure a URL-base e uma credencial de acesso no ambiente do serviço local; nunca a grave no repositório.",
             "acoes_fisicas_habilitadas": False,
         }
     base, token = config
