@@ -30,6 +30,7 @@ permissions:
 
 jobs:
   validate-dashboard-ui:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
     runs-on: self-hosted
     timeout-minutes: 8
     steps:
@@ -38,21 +39,17 @@ jobs:
         with:
           persist-credentials: false
           submodules: false
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+      - name: Verify system Python 3.12
+        run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
+      - name: Verify system Node.js 22 and npm
+        run: node -e 'const v=process.versions.node.split(".").map(Number); if(v[0]!==22) process.exit(1); console.log(process.version)' && npm --version
       - name: Compile deterministic UI test harnesses
-        run: python -m py_compile teste_nyxos_voice_console.py teste_voz_continua_56_5_6.py
+        run: python3 -m py_compile teste_nyxos_voice_console.py teste_voz_continua_56_5_6.py
       - name: Check external voice-console JavaScript syntax
         run: node --check interface/js/nyxal-voice-console.js
       - name: Check all inline JavaScript in main interface
         run: |
-          python - <<'PY'
+          python3 - <<'PY'
           import re
           import subprocess
           import tempfile
@@ -81,6 +78,6 @@ jobs:
           print(f"JavaScript inline validado: {checked} scripts")
           PY
       - name: Run dashboard voice UI regressions
-        run: python -m unittest -v teste_nyxos_voice_console
+        run: python3 -m unittest -v teste_nyxos_voice_console
       - name: Run continuous voice integration regressions
-        run: python teste_voz_continua_56_5_6.py
+        run: python3 teste_voz_continua_56_5_6.py
