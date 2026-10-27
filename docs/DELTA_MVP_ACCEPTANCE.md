@@ -71,6 +71,8 @@ Construir protótipos mínimos equivalentes com:
 
 A comparação deve usar o mesmo contrato funcional, não configurações arbitrariamente diferentes. Caso uma das opções não possa ser automatizada no ambiente disponível, registrar o bloqueio e a evidência em vez de declarar sucesso.
 
+Os checks automatizados do workflow DELTA usam mocks e verificam o comportamento dos helpers; eles não comprovam, isoladamente, o aceite físico da VM. O aceite físico exige evidência real de boot, acesso SSH, canal e serviço `qemu-guest-agent`, health checks, persistência após reinício, atualização/rollback e recuperação.
+
 Medir:
 - reprodutibilidade do build;
 - tempo de build e de boot;
