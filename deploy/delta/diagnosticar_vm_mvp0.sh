@@ -67,6 +67,66 @@ else
   virsh -c qemu:///system list --all 2>&1 || true
 fi
 
+
+section 'QEMU guest agent channel (read-only)'
+GUEST_AGENT_CHANNEL="unknown"
+GUEST_AGENT_PING="not_attempted"
+if [[ "${DOMAIN_STATE}" == "yes" ]] && has_cmd virsh; then
+  DOMAIN_XML=""
+  if DOMAIN_XML="$(virsh -c qemu:///system dumpxml "$VM_NAME" 2>/dev/null)"; then
+    if has_cmd python3; then
+      if GUEST_AGENT_CHANNEL="$(printf '%s' "$DOMAIN_XML" | python3 -c '
+import sys
+import xml.etree.ElementTree as ET
+try:
+    root = ET.fromstring(sys.stdin.read())
+except ET.ParseError:
+    raise SystemExit(2)
+name = "org.qemu.guest_agent.0"
+present = any(
+    (target := channel.find("target")) is not None
+    and target.attrib.get("name") == name
+    for channel in root.findall("./devices/channel")
+)
+print("present" if present else "absent")
+' 2>/dev/null)"; then
+        :
+      else
+        GUEST_AGENT_CHANNEL="unknown"
+        echo 'GUEST_AGENT_CHANNEL_REASON=xml_parse_failed'
+      fi
+    else
+      echo 'GUEST_AGENT_CHANNEL_REASON=python3_not_installed'
+    fi
+  else
+    echo 'GUEST_AGENT_CHANNEL_REASON=domain_xml_unavailable'
+  fi
+
+  if [[ "$GUEST_AGENT_CHANNEL" == "present" ]]; then
+    DOMAIN_RUNTIME_STATE="$(virsh -c qemu:///system domstate "$VM_NAME" 2>/dev/null || true)"
+    if [[ "$DOMAIN_RUNTIME_STATE" == "running" ]]; then
+      # guest-ping is a read-only QEMU Guest Agent RPC. No service is restarted
+      # and no command is executed inside the guest beyond this health probe.
+      if virsh -c qemu:///system qemu-agent-command "$VM_NAME" \
+        '{"execute":"guest-ping"}' --timeout 5 >/dev/null 2>&1; then
+        GUEST_AGENT_PING="success"
+      else
+        GUEST_AGENT_PING="failed"
+      fi
+    else
+      GUEST_AGENT_PING="not_running"
+    fi
+  fi
+else
+  if [[ "$DOMAIN_STATE" != "yes" ]]; then
+    echo "GUEST_AGENT_CHECK_REASON=domain_not_confirmed_present"
+  else
+    echo "GUEST_AGENT_CHECK_REASON=virsh_not_installed"
+  fi
+fi
+printf 'GUEST_AGENT_CHANNEL=%s\n' "$GUEST_AGENT_CHANNEL"
+printf 'GUEST_AGENT_PING=%s\n' "$GUEST_AGENT_PING"
+
 section 'VM storage pool (read-only)'
 if has_cmd virsh && virsh -c qemu:///system pool-info "$POOL" >/dev/null 2>&1; then
   virsh -c qemu:///system pool-info "$POOL" 2>&1 || true
