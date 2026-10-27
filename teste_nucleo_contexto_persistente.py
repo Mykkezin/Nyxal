@@ -153,7 +153,7 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
             contexto_historico_relevante=self.contexto,
         )
 
-        consulta = "Qual era a estratégia de cache do motor local?"
+        consulta = "Onde paramos na estratégia de cache do motor local?"
         resposta = nucleo.processar(
             nucleo.interface.criar_entrada(consulta, sessao="sessao-candidato-relevante")
         )
@@ -188,7 +188,7 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         )
         resposta = nucleo.processar(
             nucleo.interface.criar_entrada(
-                "Como funciona o roteamento de consultas SQL?", sessao="sessao-candidato-irrelevante"
+                "Onde paramos no roteamento de consultas SQL?", sessao="sessao-candidato-irrelevante"
             )
         )
         texto_usuario = "\\n".join(
@@ -211,7 +211,7 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         )
         resposta = nucleo.processar(
             nucleo.interface.criar_entrada(
-                "Quais decisões de cache do motor local foram registradas?", sessao="sessao-conhecimento-corrompido"
+                "Onde paramos nas decisões de cache do motor local?", sessao="sessao-conhecimento-corrompido"
             )
         )
         metadados = resposta["valor"]["conhecimento_candidato_persistido"]
