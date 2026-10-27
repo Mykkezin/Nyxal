@@ -19,6 +19,11 @@ on:
       - "nixal_capacidade_visual.py"
       - "nixal_seguranca_http.py"
       - "nixal_nucleo_conversacional.py"
+      - "nixal_agente_qwen.py"
+      - "nixal_capacidades.py"
+      - "nixal_tool_use.py"
+      - "teste_nixal_tool_use.py"
+      - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
       - "nixal_transporte_conversacional.py"
       - "nixal_integracao_sessao_transporte.py"
       - "nixal_contexto_historico_relevante.py"
@@ -80,6 +85,11 @@ on:
       - "nixal_capacidade_visual.py"
       - "nixal_seguranca_http.py"
       - "nixal_nucleo_conversacional.py"
+      - "nixal_agente_qwen.py"
+      - "nixal_capacidades.py"
+      - "nixal_tool_use.py"
+      - "teste_nixal_tool_use.py"
+      - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
       - "nixal_transporte_conversacional.py"
       - "nixal_integracao_sessao_transporte.py"
       - "nixal_contexto_historico_relevante.py"
@@ -198,6 +208,10 @@ jobs:
             deploy/voice/verificar_api_nyxal.py \
             deploy/voice/verificar_contrato_pipecat.py \
             nixal_nucleo_conversacional.py \
+            nixal_agente_qwen.py \
+            nixal_capacidades.py \
+            nixal_tool_use.py \
+            teste_nixal_tool_use.py \
             nixal_transporte_conversacional.py \
             nixal_integracao_sessao_transporte.py \
             nixal_contexto_historico_relevante.py \
@@ -240,6 +254,7 @@ jobs:
           python3 -m unittest -v \
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
+            teste_nixal_tool_use \
             teste_nyxos_voice_console \
             teste_nixal_responses_api \
             teste_nixal_dialogo_router \
