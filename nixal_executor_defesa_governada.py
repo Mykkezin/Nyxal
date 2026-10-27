@@ -161,6 +161,9 @@ class ExecutorDefesaGovernada:
         self._verificador_aprovacao = verificador_aprovacao
         self._registros: deque[dict[str, Any]] = deque(maxlen=max_registros)
         self._idempotencia: OrderedDict[str, tuple[float, str]] = OrderedDict()
+        # O prazo monotônico controla apenas a validade do plano dry-run; não
+        # autoriza nem agenda efeito real. A estrutura fica limitada aos planos retidos.
+        self._expira_plano_em: dict[str, float] = {}
         self._lock = Lock()
 
     @staticmethod
@@ -234,6 +237,33 @@ class ExecutorDefesaGovernada:
         while len(self._idempotencia) > MAX_CHAVES_IDEMPOTENCIA:
             self._idempotencia.popitem(last=False)
 
+    def _expirar_planos_dry_run(self, agora: float) -> None:
+        """Marca planos simulados vencidos e remove prazos de registros descartados."""
+        ids_retidos = {
+            registro.get("plano_id")
+            for registro in self._registros
+            if isinstance(registro.get("plano_id"), str)
+        }
+        for plano_id in list(self._expira_plano_em):
+            if plano_id not in ids_retidos:
+                self._expira_plano_em.pop(plano_id, None)
+                continue
+            expira_em = self._expira_plano_em.get(plano_id)
+            if expira_em is None or expira_em > agora:
+                continue
+            registro = next(
+                (
+                    item
+                    for item in reversed(self._registros)
+                    if item.get("plano_id") == plano_id
+                ),
+                None,
+            )
+            if registro is not None and registro.get("estado") != "expirado":
+                registro["estado"] = "expirado"
+                registro["expirado_em"] = self._utc().isoformat()
+            self._expira_plano_em.pop(plano_id, None)
+
     def preparar(
         self,
         recomendacao: Any,
@@ -262,9 +292,28 @@ class ExecutorDefesaGovernada:
         agora = self._relogio()
         with self._lock:
             self._expirar_idempotencia(agora)
+            self._expirar_planos_dry_run(agora)
             existente = self._idempotencia.get(chave)
             if existente is not None:
                 _, plano_id = existente
+                registro_existente = next(
+                    (
+                        registro
+                        for registro in reversed(self._registros)
+                        if registro.get("plano_id") == plano_id
+                    ),
+                    None,
+                )
+                if registro_existente is not None and registro_existente.get("estado") == "expirado":
+                    return {
+                        "sucesso": True,
+                        "estado": "expirado",
+                        "plano_id": plano_id,
+                        "plano": deepcopy(registro_existente),
+                        "executor_ativo": False,
+                        "executor_autorizado": False,
+                        "efeito_executado": False,
+                    }
                 if aprovacao_verificada and validada["exige_aprovacao_humana"]:
                     registro_existente = next(
                         (
@@ -326,7 +375,13 @@ class ExecutorDefesaGovernada:
                 "executor_autorizado": False,
                 "efeito_executado": False,
             }
+            if len(self._registros) == self._registros.maxlen:
+                removido = self._registros[0]
+                removido_id = removido.get("plano_id")
+                if isinstance(removido_id, str):
+                    self._expira_plano_em.pop(removido_id, None)
             self._registros.append(registro)
+            self._expira_plano_em[plano_id] = agora + self._ttl
             self._idempotencia[chave] = (
                 agora + max(self._ttl, self._janela_idempotencia),
                 plano_id,
@@ -348,10 +403,12 @@ class ExecutorDefesaGovernada:
         if isinstance(limite, bool) or not isinstance(limite, int) or not 1 <= limite <= MAX_REGISTROS:
             raise ValueError("limite_invalido")
         with self._lock:
+            self._expirar_planos_dry_run(self._relogio())
             return [deepcopy(item) for item in list(self._registros)[-limite:]]
 
     def contexto(self) -> dict[str, Any]:
         with self._lock:
+            self._expirar_planos_dry_run(self._relogio())
             quantidade = len(self._registros)
         return {
             "sucesso": True,
