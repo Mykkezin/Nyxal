@@ -239,7 +239,7 @@ class DialogoQwenNixal:
                 return False
             if re.search(
                 r"\b(?:nao|não|nunca)\s+(?:quero|queria|gostaria|preciso|precisamos)"
-                r"\s+(?:que\s+)?(?:voce\s+)?(?:me\s+)?" + comandos_negaveis + r"\b",
+                r"\s+(?:que\s+)?(?:voce|você)?\s*(?:me\s+)?" + comandos_negaveis + r"\b",
                 normalizado,
             ):
                 return False
