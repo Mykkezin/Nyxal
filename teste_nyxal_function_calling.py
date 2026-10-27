@@ -179,6 +179,31 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             )
         )
 
+    def test_negacao_direta_e_indireta_bloqueia_mutacoes(self):
+        casos = (
+            ("salvar_nota", "Não anote nada."),
+            ("salvar_nota", "Não quero que anote nada."),
+            ("salvar_nota", "Não quero que você me salve uma nota."),
+            ("criar_lembrete", "Não me lembre disso."),
+            ("criar_lembrete", "Não quero que me lembre disso."),
+            ("criar_lembrete", "Não quero que você me avise amanhã."),
+            ("abrir_aplicativo", "Não abra o terminal."),
+            ("abrir_aplicativo", "Não quero que abra o navegador."),
+            ("abrir_aplicativo", "Nunca inicie o aplicativo."),
+        )
+        for nome, texto in casos:
+            with self.subTest(nome=nome, texto=texto):
+                self.assertFalse(
+                    DialogoQwenNixal._pedido_explicitamente_autorizou(nome, texto)
+                )
+
+        # A negação que faz parte do conteúdo solicitado continua sendo permitida.
+        self.assertTrue(
+            DialogoQwenNixal._pedido_explicitamente_autorizou(
+                "salvar_nota", "Anote que não quero esquecer a data da prova."
+            )
+        )
+
     def test_salvar_nota_com_opt_in_e_ordem_explicita(self):
         manager = GerenciadorCapacidades()
         with tempfile.TemporaryDirectory() as tmp:
