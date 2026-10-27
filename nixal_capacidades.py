@@ -1135,18 +1135,45 @@ class GerenciadorCapacidades:
         # existing logs intact instead of treating them as empty and destroying evidence.
         with _AUDIT_LOCK:
             historico: list[dict[str, Any]] = []
+            # O caminho do log pertence ao estado operacional: não seguir links.
+            if ARQUIVO_LOG.is_symlink():
+                return
             if ARQUIVO_LOG.exists():
                 try:
                     with ARQUIVO_LOG.open("rb") as arquivo:
                         existente = arquivo.read(MAX_TAMANHO_ARQUIVO + 1)
-                    if len(existente) > MAX_TAMANHO_ARQUIVO:
-                        return
-                    dados = json.loads(existente.decode("utf-8"))
+                    if len(existente) <= MAX_TAMANHO_ARQUIVO:
+                        dados = json.loads(existente.decode("utf-8"))
+                        if not isinstance(dados, list) or not all(isinstance(item, dict) for item in dados):
+                            return
+                        historico = dados
+                    else:
+                        # Preserve o arquivo legado como evidência antes de iniciar
+                        # um log novo e limitado. Não sobrescreva um backup anterior.
+                        backup = ARQUIVO_LOG.with_name(
+                            f"{ARQUIVO_LOG.name}.oversized-{time.time_ns()}"
+                        )
+                        # Nunca substitua uma evidência preexistente em caso de colisão.
+                        if backup.exists() or backup.is_symlink():
+                            return
+                        try:
+                            os.replace(ARQUIVO_LOG, backup)
+                            if backup.is_symlink():
+                                os.replace(backup, ARQUIVO_LOG)
+                                return
+                            try:
+                                os.chmod(backup, 0o600)
+                            except OSError:
+                                # Se não for possível proteger o backup, restaure o
+                                # nome original e falhe fechado em vez de expor dados.
+                                os.replace(backup, ARQUIVO_LOG)
+                                return
+                        except OSError:
+                            # O histórico original continua no caminho canônico;
+                            # não registre por cima dele se não pudermos preservá-lo.
+                            return
                 except Exception:
                     return
-                if not isinstance(dados, list) or not all(isinstance(item, dict) for item in dados):
-                    return
-                historico = dados
 
             try:
                 registro = asdict(resultado)
