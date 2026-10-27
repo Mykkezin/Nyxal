@@ -595,12 +595,23 @@ class VpsNyxOS:
             seed.unlink(missing_ok=True)
             raise RuntimeError((created.stderr or created.stdout).strip() or "falha_virt_install")
 
+        autostart_confirmado: bool | None = None
+        avisos: list[str] = []
         if autostart:
-            self.action(nome, "autostart")
+            resultado_autostart = self.action(nome, "autostart")
+            autostart_confirmado = (
+                isinstance(resultado_autostart, dict)
+                and resultado_autostart.get("sucesso") is True
+            )
+            if not autostart_confirmado:
+                # A VM já foi criada e pode estar em execução. Não sinalize a
+                # provisionação inteira como falha nem afirme que o autostart
+                # foi configurado; devolva um aviso explícito e verificável.
+                avisos.append("autostart_nao_confirmado")
 
         return {
             "sucesso": True,
-            "estado": "vps_criada",
+            "estado": "vps_criada_com_aviso" if avisos else "vps_criada",
             "origem": self.FONTE,
             "nome": nome,
             "memory_mb": int(memory_mb),
@@ -608,6 +619,8 @@ class VpsNyxOS:
             "disk_gb": int(disk_gb),
             "disk": str(disk),
             "autostart": bool(autostart),
+            "autostart_confirmado": autostart_confirmado,
+            "avisos": avisos,
             "username": username,
             "ssh_seed": str(seed),
         }
