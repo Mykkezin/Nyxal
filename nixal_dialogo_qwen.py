@@ -123,14 +123,28 @@ class DialogoQwenNixal:
 
     def _especificacoes_ferramentas(self, gerenciador: Any) -> list[dict[str, Any]]:
         disponiveis = []
+        # O catálogo interno pode conter capacidades antigas; a lista exposta
+        # ao modelo segue opt-ins separados para dados privados e mutações.
         nomes_permitidos = {
-            "obter_hora", "listar_arquivos", "ler_estado_corpo", "ler_memoria_corporal",
-            "ler_arquivo", "buscar_arquivos", "ler_arquivo_usuario",
-            "consultar_emails_google", "ler_email_google", "consultar_agenda_google",
-            "pesquisar_web", "consultar_metar_taf", "consultar_home_assistant",
-            "listar_notas_lembretes", "executar_diagnostico",
-            "salvar_nota", "criar_lembrete", "abrir_aplicativo",
+            "obter_hora", "pesquisar_web", "consultar_metar_taf",
+            "executar_diagnostico",
         }
+        if os.environ.get(
+            "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}:
+            nomes_permitidos.update({
+                "listar_arquivos", "ler_estado_corpo", "ler_memoria_corporal",
+                "ler_arquivo", "buscar_arquivos", "ler_arquivo_usuario",
+                "consultar_emails_google", "ler_email_google",
+                "consultar_agenda_google", "consultar_home_assistant",
+                "listar_notas_lembretes",
+            })
+        if os.environ.get(
+            "NYXAL_ENABLE_MUTABLE_TOOLS", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}:
+            nomes_permitidos.update({
+                "salvar_nota", "criar_lembrete", "abrir_aplicativo",
+            })
         for cap in gerenciador.listar_capacidades():
             nome = cap.get("nome")
             if not isinstance(nome, str) or nome not in nomes_permitidos:
