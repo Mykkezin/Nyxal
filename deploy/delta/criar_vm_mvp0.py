@@ -182,6 +182,20 @@ def main() -> int:
     )
     storage = Path(args.storage or default_storage).expanduser().resolve()
     image = Path(args.image).expanduser().resolve() if args.image else Path(default_image).expanduser().resolve()
+    home = Path.home().resolve()
+    try:
+        storage.relative_to(home)
+    except ValueError:
+        pass
+    else:
+        print(
+            "ERRO: o armazenamento da VM está dentro da home, onde libvirt-qemu pode não conseguir pesquisar os diretórios. "
+            "Execute bash deploy/delta/preparar_storage_mvp0.sh e passe o diretório dedicado com --storage. "
+            "A imagem base pode permanecer na home usando --image.",
+            file=sys.stderr,
+        )
+        return 2
+
     os.environ["NYXOS_VPS_STORAGE"] = str(storage)
 
     try:
