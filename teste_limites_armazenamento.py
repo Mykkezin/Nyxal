@@ -125,7 +125,7 @@ class TestLimitesArmazenamento(unittest.TestCase):
             )
             self.assertEqual(backups[0].stat().st_mode & 0o777, 0o600)
 
-    def test_log_runtime_descarta_historico_preexistente_acima_do_teto(self) -> None:
+    def test_log_runtime_arquiva_historico_preexistente_acima_do_teto(self) -> None:
         with tempfile.TemporaryDirectory() as diretorio:
             caminho_log = Path(diretorio) / "log_nyxal_runtime.json"
             registro_antigo = {
@@ -142,6 +142,7 @@ class TestLimitesArmazenamento(unittest.TestCase):
                 + b" " * (nixal_runtime.MAX_TAMANHO_LOG_RUNTIME + 64)
                 + b"]"
             )
+            evidencia_antiga = caminho_log.read_bytes()
             runtime = object.__new__(nixal_runtime.NyxalRuntime)
             runtime.arquivo_log = caminho_log
             ciclo = {
@@ -165,6 +166,31 @@ class TestLimitesArmazenamento(unittest.TestCase):
             dados = json.loads(caminho_log.read_text(encoding="utf-8"))
             self.assertEqual(len(dados), 1)
             self.assertEqual(dados[0]["ciclo_id"], "novo-ciclo")
+            backups = list(caminho_log.parent.glob(caminho_log.name + ".oversized-*"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_bytes(), evidencia_antiga)
+            self.assertEqual(backups[0].stat().st_mode & 0o777, 0o600)
+            self.assertEqual(caminho_log.stat().st_mode & 0o777, 0o600)
+
+    def test_log_runtime_preserva_json_corrompido(self) -> None:
+        with tempfile.TemporaryDirectory() as diretorio:
+            caminho_log = Path(diretorio) / "log_nyxal_runtime.json"
+            original = b'{"registro":"truncado"'
+            caminho_log.write_bytes(original)
+            runtime = object.__new__(nixal_runtime.NyxalRuntime)
+            runtime.arquivo_log = caminho_log
+            ciclo = {
+                "sucesso": True,
+                "estado": "ciclo_concluido",
+                "origem": "teste",
+                "versao_runtime": "teste",
+                "ciclo_id": "novo-ciclo",
+                "valor": {"ok": True},
+            }
+
+            runtime._registrar_log(ciclo)
+
+            self.assertEqual(caminho_log.read_bytes(), original)
 
     def test_janitor_falha_fechado_quando_a_listagem_de_artefatos_falha(self) -> None:
         workflow_path = Path(".github/workflows/prune-actions-artifacts.yml")
