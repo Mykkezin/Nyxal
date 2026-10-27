@@ -53,7 +53,7 @@ Exemplos de consultas:
 
 - NOTAM de um ou mais aeródromos: `consultar_notam_aisweb(localidades="SBSP,SBGR")`.
 - NOTAM filtrado por FIR: `consultar_notam_aisweb(localidades="SBSP", fir="SBBS")` (use o código FIR aplicável à consulta).
-- Buscar cartas ostensivas de um aeródromo: `consultar_cartas_aisweb(icao="SBSP")`.
+- Buscar cartas ostensivas de procedimento de um aeródromo: `consultar_cartas_aisweb(icao="SBSP", especie="IFR", tipo="IAC")`.
 - Buscar um tipo de carta: `consultar_cartas_aisweb(icao="SBSP", especie="IFR", tipo="IAC")`.
 - Consultar o ciclo vigente ou um ciclo especificado: `dt="last_amdt"` ou `dt="AAAA-MM-DD"`.
 
