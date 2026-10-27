@@ -34,6 +34,7 @@ class AutoEvolucaoGovernadaNixOS:
     FONTE = "auto_evolucao_governada_nyxos"
     VERSAO = "AE1.0.0"
     MAX_OPORTUNIDADES = 200
+    MAX_CICLOS_OBSERVADOS = 20
 
     def __init__(
         self,
@@ -68,9 +69,13 @@ class AutoEvolucaoGovernadaNixOS:
         ciclo_id: str,
         limitacao: str,
         hipotese: str,
+        *,
+        recorrente: bool = False,
     ) -> str:
         base = {
-            "ciclo_id": ciclo_id,
+            # Sinais automáticos recorrentes usam uma identidade estável para
+            # atualizar a mesma oportunidade, em vez de criar uma por ciclo.
+            "ciclo_id": "necessidade_recorrente" if recorrente else ciclo_id,
             "limitacao": limitacao,
             "hipotese": hipotese,
         }
@@ -86,6 +91,114 @@ class AutoEvolucaoGovernadaNixOS:
                 canonico.encode("utf-8")
             ).hexdigest()[:20]
         )
+
+    @classmethod
+    def _extrair_necessidade_observada(
+        cls,
+        ciclo: dict[str, Any],
+        valor: dict[str, Any],
+    ) -> dict[str, Any]:
+        prioridade = valor.get("necessidade_prioritaria")
+        prioridade = prioridade if isinstance(prioridade, dict) else {}
+        necessidade = (
+            prioridade.get("selecionada")
+            if isinstance(prioridade.get("selecionada"), dict)
+            else prioridade
+        )
+        if not cls._texto(necessidade.get("problema") or necessidade.get("necessidade")):
+            decisao = valor.get("decisao")
+            decisao = decisao if isinstance(decisao, dict) else {}
+            alternativa = decisao.get("necessidade_prioritaria")
+            if isinstance(alternativa, dict):
+                necessidade = alternativa
+
+        if cls._texto(necessidade.get("problema") or necessidade.get("necessidade")):
+            return copy.deepcopy(necessidade)
+
+        erro = cls._texto(ciclo.get("erro") or ciclo.get("motivo"))
+        estado = cls._texto(ciclo.get("estado"))
+        if ciclo.get("sucesso") is False or estado == "erro":
+            if erro:
+                problema = erro[:240]
+                return {
+                    "origem": "runtime_residente",
+                    "problema": f"falha_ciclo_residente: {problema}",
+                    "tipo_problema": "falha_operacional",
+                    "tipo": "fiabilidade_operacional",
+                    "necessidade": "investigar_falha_ciclo_residente",
+                    "prioridade": "alta",
+                    "motivo": (
+                        "O ciclo registrou uma falha observada; a causa raiz "
+                        "permanece não confirmada."
+                    ),
+                }
+
+        return {}
+
+    @classmethod
+    def _formular_hipotese_observacional(
+        cls,
+        necessidade: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        problema = cls._texto(
+            necessidade.get("problema") or necessidade.get("necessidade")
+        )
+        nome = cls._texto(necessidade.get("necessidade"))
+        if not problema:
+            return None
+
+        problema = problema[:240]
+        nome = nome[:120] if nome else "investigar_necessidade_observada"
+        tipo_problema = cls._texto(necessidade.get("tipo_problema")) or ""
+        if tipo_problema == "inconsistencia":
+            texto = (
+                f"Investigar a inconsistência observada '{problema}' e confrontar "
+                "as fontes de evidência pode indicar uma correção mínima; a causa "
+                "e o benefício continuam por confirmar em teste independente."
+            )
+        elif tipo_problema == "lacuna":
+            texto = (
+                f"Investigar a lacuna observada '{problema}' pode definir como "
+                "documentá-la ou reduzi-la sem presumir que uma capacidade ausente "
+                "já existe; o benefício continua por confirmar em teste."
+            )
+        elif tipo_problema == "falha_operacional":
+            texto = (
+                f"Investigar a falha operacional observada '{problema}' pode "
+                "identificar uma causa reproduzível e uma correção reversível; "
+                "nenhuma causa raiz é presumida antes da validação."
+            )
+        else:
+            texto = (
+                f"Investigar a necessidade '{nome}' diante do problema observado "
+                f"'{problema}' pode revelar uma melhoria verificável; o benefício "
+                "permanece não confirmado até um teste independente."
+            )
+
+        return {
+            "estado_atual": "provisoria",
+            "hipotese": texto,
+            "origem": "ae1_hipotese_observacional_automatica",
+            "necessidade": nome,
+            "problema_observado": problema,
+            "resultado_observado": None,
+        }
+
+    @classmethod
+    def _evidencia_ciclo(
+        cls,
+        ciclo: dict[str, Any],
+        necessidade: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "ciclo_id": cls._texto(ciclo.get("ciclo_id")),
+            "observado_em": cls._timestamp(),
+            "estado_ciclo": cls._texto(ciclo.get("estado")) or "desconhecido",
+            "ciclo_sucesso": ciclo.get("sucesso"),
+            "prioridade": cls._texto(necessidade.get("prioridade")) or "indeterminada",
+            "origem_necessidade": cls._texto(necessidade.get("origem")),
+            "motivo_observado": cls._texto(necessidade.get("motivo")),
+        }
 
     def _arquivo(self, oportunidade_id: str) -> Path:
         return self.diretorio_oportunidades / f"{oportunidade_id}.json"
@@ -139,16 +252,7 @@ class AutoEvolucaoGovernadaNixOS:
         ciclo_id = self._texto(ciclo.get("ciclo_id"))
         valor = ciclo.get("valor")
         valor = valor if isinstance(valor, dict) else {}
-
-        prioridade = valor.get("necessidade_prioritaria")
-        prioridade = (
-            prioridade if isinstance(prioridade, dict) else {}
-        )
-        necessidade = (
-            prioridade.get("selecionada")
-            if isinstance(prioridade.get("selecionada"), dict)
-            else prioridade
-        )
+        necessidade = self._extrair_necessidade_observada(ciclo, valor)
 
         limitacao = self._texto(
             necessidade.get("problema")
@@ -176,16 +280,25 @@ class AutoEvolucaoGovernadaNixOS:
         elif isinstance(hipotese_obj, str):
             hipotese = self._texto(hipotese_obj)
 
+        hipotese_auto_formulada = False
+        if hipotese is None and necessidade:
+            formulacao = self._formular_hipotese_observacional(necessidade)
+            if formulacao is not None:
+                hipotese_obj = formulacao
+                hipotese = self._texto(formulacao.get("hipotese"))
+                hipotese_auto_formulada = hipotese is not None
+
         if not ciclo_id or not limitacao or not hipotese:
             return {
                 "sucesso": True,
                 "estado": "sem_oportunidade",
                 "origem": self.FONTE,
                 "motivo": (
-                    "O ciclo não contém simultaneamente uma limitação "
-                    "e uma hipótese úteis para AE1."
+                    "Não há uma limitação observada e uma hipótese útil, "
+                    "explícita ou provisoriamente formulada a partir da evidência."
                 ),
                 "oportunidade_criada": False,
+                "hipotese_auto_formulada": False,
                 "autorizacao_explicita": False,
                 "integracao_executada": False,
                 "arquitetura_modificada": False,
@@ -195,40 +308,97 @@ class AutoEvolucaoGovernadaNixOS:
             ciclo_id,
             limitacao,
             hipotese,
+            recorrente=hipotese_auto_formulada,
         )
         caminho = self._arquivo(oportunidade_id)
         existente = self._carregar(caminho)
 
         if existente is not None:
+            observacao_atualizada = False
+            if hipotese_auto_formulada:
+                ciclos = existente.get("ciclos_observados")
+                if not isinstance(ciclos, list):
+                    ciclo_origem = self._texto(existente.get("ciclo_origem"))
+                    ciclos = [ciclo_origem] if ciclo_origem else []
+                ciclos = [item for item in ciclos if isinstance(item, str) and item]
+                if ciclo_id not in ciclos:
+                    evidencia_atual = self._evidencia_ciclo(ciclo, necessidade)
+                    ciclos = (ciclos + [ciclo_id])[-self.MAX_CICLOS_OBSERVADOS:]
+                    evidencias = existente.get("evidencias_observadas")
+                    if not isinstance(evidencias, list):
+                        evidencias = []
+                    evidencias = [
+                        item for item in evidencias if isinstance(item, dict)
+                    ]
+                    evidencias.append(evidencia_atual)
+                    existente["ciclos_observados"] = ciclos
+                    existente["evidencias_observadas"] = (
+                        evidencias[-self.MAX_CICLOS_OBSERVADOS:]
+                    )
+                    total = existente.get("observacoes_total", 1)
+                    if isinstance(total, bool) or not isinstance(total, int) or total < 1:
+                        total = max(1, len(ciclos) - 1)
+                    existente["observacoes_total"] = total + 1
+                    existente["ultima_observacao_em"] = evidencia_atual["observado_em"]
+                    existente["ultimo_ciclo_observado"] = ciclo_id
+                    self._salvar_oportunidade(existente)
+                    observacao_atualizada = True
+
             return {
                 "sucesso": True,
-                "estado": "oportunidade_ja_registrada",
+                "estado": (
+                    "oportunidade_reforcada"
+                    if observacao_atualizada
+                    else "oportunidade_ja_registrada"
+                ),
                 "origem": self.FONTE,
                 "valor": copy.deepcopy(existente),
                 "oportunidade_criada": False,
+                "observacao_atualizada": observacao_atualizada,
+                "hipotese_auto_formulada": hipotese_auto_formulada,
                 "autorizacao_explicita": False,
                 "integracao_executada": False,
                 "arquitetura_modificada": False,
             }
 
+        evidencia_inicial = self._evidencia_ciclo(ciclo, necessidade)
         oportunidade = {
             "oportunidade_id": oportunidade_id,
             "versao": self.VERSAO,
             "origem": self.FONTE,
             "estado": "oportunidade",
-            "criada_em": self._timestamp(),
+            "criada_em": evidencia_inicial["observado_em"],
             "ciclo_origem": ciclo_id,
             "limitacao": limitacao,
             "hipotese": hipotese,
+            "hipotese_gerada_automaticamente": hipotese_auto_formulada,
+            "estado_hipotese": (
+                hipotese_obj.get("estado_atual", "provisoria")
+                if isinstance(hipotese_obj, dict)
+                else "provisoria"
+            ),
             "prioridade": {
                 "tipo": necessidade.get("tipo"),
+                "tipo_problema": necessidade.get("tipo_problema"),
                 "prioridade": necessidade.get("prioridade"),
                 "necessidade": necessidade.get("necessidade"),
             },
             "evidencias": {
                 "ciclo_sucesso": ciclo.get("sucesso"),
                 "estado_ciclo": ciclo.get("estado"),
+                "necessidade_observada": copy.deepcopy(necessidade),
+                "origem_hipotese": (
+                    "ae1_hipotese_observacional_automatica"
+                    if hipotese_auto_formulada
+                    else "hipotese_fornecida_pelo_ciclo"
+                ),
             },
+            "ciclos_observados": [ciclo_id] if hipotese_auto_formulada else [],
+            "evidencias_observadas": (
+                [evidencia_inicial] if hipotese_auto_formulada else []
+            ),
+            "observacoes_total": 1 if hipotese_auto_formulada else 0,
+            "ultima_observacao_em": evidencia_inicial["observado_em"],
             "proxima_etapa": "avaliacao_e_preparacao_formal",
             "autorizacao_explicita": False,
             "integracao_executada": False,
@@ -254,6 +424,8 @@ class AutoEvolucaoGovernadaNixOS:
             "origem": self.FONTE,
             "valor": copy.deepcopy(oportunidade),
             "oportunidade_criada": True,
+            "hipotese_auto_formulada": hipotese_auto_formulada,
+            "observacao_atualizada": False,
             "autorizacao_explicita": False,
             "integracao_executada": False,
             "conhecimento_permanente": False,
@@ -283,6 +455,8 @@ class AutoEvolucaoGovernadaNixOS:
             "origem": self.FONTE,
             "versao": self.VERSAO,
             "descoberta_habilitada": True,
+            "hipotese_provisoria_por_necessidade_observada": True,
+            "deduplicacao_de_necessidade_recorrente": True,
             "execucao_experimental_automatica": False,
             "autorizacao_explicita": False,
             "integracao_executada": False,
