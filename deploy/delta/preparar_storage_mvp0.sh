@@ -81,7 +81,9 @@ read -r -p "Prosseguir? Digite 's' para confirmar [s/N]: " ANSWER
 }
 
 QEMU_GROUP="$(id -gn libvirt-qemu)"
-sudo install -d -o "$(id -un)" -g "${QEMU_GROUP}" -m 2770 -- "${TARGET}"
+sudo mkdir -m 0700 -- "${TARGET}"
+sudo chown "$(id -un):${QEMU_GROUP}" -- "${TARGET}"
+sudo chmod 2770 -- "${TARGET}"
 if ! sudo setfacl -m 'u:libvirt-qemu:rwx,d:u:libvirt-qemu:rwx' -- "${TARGET}"; then
     printf 'ERRO: ACL não aplicada. O diretório dedicado foi mantido para inspeção: %s\n' "${TARGET}" >&2
     exit 2

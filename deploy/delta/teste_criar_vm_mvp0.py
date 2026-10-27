@@ -233,10 +233,15 @@ class TesteCriacaoGuardadaVMDelta(unittest.TestCase):
     def test_storage_helper_exige_confirmacao_antes_da_alteracao(self) -> None:
         source = (DELTA_DIR / "preparar_storage_mvp0.sh").read_text(encoding="utf-8")
         prompt = source.index('read -r -p "Prosseguir? Digite')
-        mutation = source.index("sudo install -d")
+        create = source.index('sudo mkdir -m 0700 -- "${TARGET}"')
+        owner = source.index('sudo chown "$(id -un):${QEMU_GROUP}" -- "${TARGET}"')
+        mode = source.index('sudo chmod 2770 -- "${TARGET}"')
         acl = source.index("sudo setfacl -m")
-        self.assertLess(prompt, mutation)
-        self.assertLess(mutation, acl)
+        self.assertLess(prompt, create)
+        self.assertLess(create, owner)
+        self.assertLess(owner, mode)
+        self.assertLess(mode, acl)
+        self.assertNotIn("sudo install -d", source)
         self.assertNotIn("chmod 777", source)
         self.assertNotIn("virsh net-start", source)
 
