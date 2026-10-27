@@ -102,6 +102,57 @@ class VpsNyxOSTest(unittest.TestCase):
                 "unix,target.type=virtio,target.name=org.qemu.guest_agent.0",
             )
 
+    def test_autostart_nao_confirmado_e_reportado_sem_negar_criacao_da_vm(self) -> None:
+        with tempfile.TemporaryDirectory() as diretorio:
+            raiz = Path(diretorio)
+            storage = raiz / "storage"
+            storage.mkdir()
+            imagem = raiz / "base.img"
+            imagem.write_bytes(b"fixture image")
+            comandos: list[list[str]] = []
+
+            def fake_run(command: list[str], **_kwargs: object):
+                argv = list(command)
+                comandos.append(argv)
+                if argv[0] == "/usr/bin/cloud-localds":
+                    Path(argv[1]).write_bytes(b"cloud-init seed")
+                elif argv[0] == "/usr/bin/qemu-img" and "convert" in argv:
+                    Path(argv[-1]).write_bytes(b"qcow2 disk")
+                return __import__("subprocess").CompletedProcess(
+                    args=argv, returncode=0, stdout="", stderr=""
+                )
+
+            with patch.object(VpsNyxOS, "STORAGE", storage):
+                vps = VpsNyxOS()
+                with (
+                    patch.object(vps, "_tool", side_effect=lambda name: f"/usr/bin/{name}"),
+                    patch("nixal_vps.subprocess.run", side_effect=fake_run),
+                    patch.object(
+                        vps,
+                        "action",
+                        return_value={
+                            "sucesso": False,
+                            "estado": "acao_falhou",
+                            "motivo": "autostart não confirmado",
+                        },
+                    ) as action,
+                ):
+                    resultado = vps.provisionar(
+                        nome="vps-agent",
+                        image_path=str(imagem),
+                        disk_gb=8,
+                        autostart=True,
+                        ssh_public_key=_ed25519_fixture(),
+                    )
+
+            self.assertTrue(resultado["sucesso"])
+            self.assertEqual(resultado["estado"], "vps_criada_com_aviso")
+            self.assertTrue(resultado["autostart"])
+            self.assertFalse(resultado["autostart_confirmado"])
+            self.assertEqual(resultado["avisos"], ["autostart_nao_confirmado"])
+            action.assert_called_once_with("vps-agent", "autostart")
+            self.assertTrue(any(cmd[0] == "/usr/bin/virt-install" for cmd in comandos))
+
     def test_contexto(self) -> None:
         contexto = VpsNyxOS().contexto()
         self.assertEqual(contexto["backend"], "libvirt_kvm")
