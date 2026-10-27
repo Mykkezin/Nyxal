@@ -29,3 +29,19 @@ As ações `salvar_nota`, `criar_lembrete` e `abrir_aplicativo` permanecem indis
 O workflow Agent Stack compila `nixal_dialogo_qwen.py` e executa `teste_nyxal_function_calling.py`. A suíte cobre execução de ferramenta de leitura, limite total de chamadas, recusa de nomes desconhecidos, ocultação de ferramentas privadas por padrão, ações mutáveis indisponíveis e fallback para chat textual.
 
 Essa integração não comprova funcionamento de microfone, sensores, serviços reais ou dados privados do computador.
+
+## Consultas aeronáuticas AISWEB/DECEA
+
+O diálogo principal pode usar duas ferramentas de consulta somente leitura:
+- consultar_notam_aisweb: consulta NOTAMs por 1–10 códigos ICAO e, opcionalmente, por FIR.
+- consultar_cartas_aisweb: pesquisa metadados/links de cartas ostensivas por ICAO, espécie/tipo, nome ou ciclo AIRAC.
+
+Essas ferramentas são anunciadas como leitura de baixo impacto e não habilitam envio, escrita ou controle físico. O adaptador usa filtros fixos, valida os códigos ICAO, bloqueia redirecionamentos, limita a resposta XML a 2 MB e rejeita declarações DOCTYPE/ENTITY. Credenciais não são incluídas na resposta da Nyxal.
+
+A API AISWEB/DECEA exige credenciais fornecidas pelo DECEA. Configure-as somente no ambiente local do serviço:
+- NYXAL_AISWEB_API_KEY
+- NYXAL_AISWEB_API_PASS
+
+Sem as duas variáveis, a ferramenta retorna configuracao_pendente sem realizar tráfego de rede. Não coloque essas credenciais no Git, em prompts ou no histórico de conversa.
+
+A resposta é material de apoio; o piloto precisa confirmar NOTAMs, cartas vigentes, AIP e briefing oficial antes de qualquer uso operacional. A integração não calcula mínimos, não decide aeronavegabilidade e não substitui julgamento do piloto.
