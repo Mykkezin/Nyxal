@@ -33,6 +33,23 @@ def _json(resultado: Any) -> str:
     return json.dumps(resultado, ensure_ascii=False, indent=2, default=str)
 
 
+def _dados_privados_habilitados() -> bool:
+    return os.environ.get(
+        "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _bloqueio_privacidade() -> str:
+    return _json({
+        "sucesso": False,
+        "estado": "opt_in_privacidade_ausente",
+        "motivo": (
+            "Leituras de dados locais/pessoais exigem NYXAL_ENABLE_PRIVATE_READ_TOOLS=1 "
+            "no ambiente do processo MCP."
+        ),
+    })
+
+
 @mcp.tool()
 def status_ferramentas() -> str:
     """Retorna o status das integrações sem revelar segredos."""
@@ -90,42 +107,56 @@ def consultar_cartas_aisweb(
 @mcp.tool()
 def consultar_home_assistant(entidade_id: str = "", dominio: str = "seguro") -> str:
     """Consulta estado dos dispositivos Home Assistant; não aciona dispositivos."""
+    if not _dados_privados_habilitados():
+        return _bloqueio_privacidade()
     return _json(_consultar_home_assistant(entidade_id, dominio))
 
 
 @mcp.tool()
 def buscar_arquivos(termo: str, limite: int = 10) -> str:
     """Busca arquivos em pastas permitidas, omitindo credenciais."""
+    if not _dados_privados_habilitados():
+        return _bloqueio_privacidade()
     return _json(_buscar_arquivos(termo, limite))
 
 
 @mcp.tool()
 def ler_arquivo(caminho_relativo: str) -> str:
     """Lê texto de arquivo em pastas permitidas e bloqueia arquivos sensíveis."""
+    if not _dados_privados_habilitados():
+        return _bloqueio_privacidade()
     return _json(_ler_arquivo(caminho_relativo))
 
 
 @mcp.tool()
 def consultar_gmail(consulta: str = "is:unread newer_than:7d", limite: int = 10) -> str:
     """Consulta Gmail OAuth apenas em modo de leitura."""
+    if not _dados_privados_habilitados():
+        return _bloqueio_privacidade()
     return _json(_consultar_emails(consulta, limite))
 
 
 @mcp.tool()
 def ler_email(message_id: str) -> str:
     """Lê uma mensagem específica; não altera a caixa de entrada."""
+    if not _dados_privados_habilitados():
+        return _bloqueio_privacidade()
     return _json(_ler_email(message_id))
 
 
 @mcp.tool()
 def consultar_agenda(dias: int = 14, limite: int = 20) -> str:
     """Consulta eventos Google Calendar, somente leitura."""
+    if not _dados_privados_habilitados():
+        return _bloqueio_privacidade()
     return _json(_consultar_agenda(dias, limite))
 
 
 @mcp.tool()
 def listar_notas_lembretes(tipo: str = "todos") -> str:
     """Lista notas/lembretes locais sem alterar registros."""
+    if not _dados_privados_habilitados():
+        return _bloqueio_privacidade()
     return _json(_notas.listar(tipo))
 
 
