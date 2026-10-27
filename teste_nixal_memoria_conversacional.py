@@ -134,6 +134,22 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
             self.assertFalse(recuperada.possui_sessao("sessao-b"))
             self.assertTrue(recuperada.possui_sessao("sessao-c"))
 
+    def test_ancestral_simbolico_falha_antes_de_criar_diretorios(self) -> None:
+        destino = Path(self.tmp.name) / "destino-real"
+        destino.mkdir(mode=0o700)
+        link = Path(self.tmp.name) / "atalho"
+        link.symlink_to(destino, target_is_directory=True)
+        caminho = link / "nao-criar" / "conversas.json"
+
+        memoria = MemoriaConversacionalNixal(caminho=caminho)
+        resultado = memoria.registrar("sessao-a", "user", "nao escrever fora do destino")
+
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "memoria_degradada")
+        self.assertFalse((destino / "nao-criar").exists())
+        self.assertFalse(caminho.exists())
+        self.assertFalse(caminho.with_name(caminho.name + ".lock").exists())
+
     def test_caminho_personalizado_em_diretorio_compartilhado_falha_sem_alterar_permissoes(self) -> None:
         compartilhado = Path(self.tmp.name) / "compartilhado"
         compartilhado.mkdir(mode=0o755)
