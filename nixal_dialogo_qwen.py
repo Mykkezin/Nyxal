@@ -160,13 +160,28 @@ class DialogoQwenNixal:
 
     @staticmethod
     def _pedido_explicitamente_autorizou(nome: str, texto: str) -> bool:
-        texto = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", texto.casefold())
+        original = texto.strip().casefold()
+        # Perguntas e pedidos informativos não autorizam uma escrita nem abrir
+        # aplicativo; esta função só reconhece comandos diretos no turno atual.
+        prefixos_informativos = (
+            "como ", "o que ", "qual ", "quais ", "por que ", "porque ",
+            "posso ", "poderia ", "devo ", "me explique ", "explique como ",
+            "quero saber ", "gostaria de saber ",
+        )
+        if "?" in original or original.startswith(prefixos_informativos):
+            return False
+        texto = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", original)
         if nome == "salvar_nota":
             pedido = any(x in texto for x in ("anote", "salve esta nota", "salvar nota", "registre esta nota", "guarde esta nota"))
         elif nome == "criar_lembrete":
             pedido = any(x in texto for x in ("me lembre", "me lembra", "crie um lembrete", "criar lembrete", "agende um lembrete", "me avise"))
         elif nome == "abrir_aplicativo":
-            pedido = any(x in texto for x in ("abra ", "abrir ", "abre ", "inicie o aplicativo", "iniciar aplicativo"))
+            # Não usar o infinitivo genérico "abrir" como prova de intenção:
+            # "como abrir o terminal?" é pergunta, não autorização.
+            pedido = any(x in texto for x in (
+                "abra ", "abra o ", "abra a ", "abre ", "abre o ", "abre a ",
+                "inicie o aplicativo", "inicie o ", "inicie a ",
+            ))
         else:
             return False
         # Ações de escrita não são autorizadas por citações ou negações triviais.
