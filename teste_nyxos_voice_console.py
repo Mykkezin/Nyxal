@@ -48,9 +48,9 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('nyxal-face-data-line', self.html)
         self.assertIn('max-height: 52vh', self.html)
         self.assertIn('status.dataset.state', self.html)
-        self.assertIn('font-size:11px', self.console)
-        self.assertIn('min-height:30px', self.console)
-        self.assertIn('rgba(145,190,225,.25)', self.console)
+        self.assertIn('font-size:12px', self.console)
+        self.assertIn('min-height:32px', self.console)
+        self.assertIn('rgba(145,190,225,.28)', self.console)
 
     def test_immersive_hologram_has_large_centerpiece_and_spatial_signal_panels(self):
         self.assertIn('viewBox="48 0 264 320"', self.html)
