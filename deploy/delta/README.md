@@ -29,6 +29,14 @@ print("PYTHON_SYNTAX_OK")
 PY
 ```
 
+A suíte mockada do helper de VM pode ser executada sem criar ou alterar uma VM real:
+
+```bash
+python3 -m unittest discover -s deploy/delta -p 'teste_*.py' -v
+```
+
+O workflow de DELTA compila e executa essa suíte junto das regressões de bootstrap e VPS.
+
 ## 3. Preparar a imagem de laboratório
 
 ```bash
