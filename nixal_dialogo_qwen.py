@@ -15,8 +15,10 @@ Ela recebe somente texto + contexto recente e devolve texto.
 from __future__ import annotations
 
 import json
-
 import os
+import re
+import inspect
+import threading
 from typing import Any
 
 import ollama
@@ -28,7 +30,9 @@ class DialogoQwenNixal:
     """Adaptador conversacional do Qwen com dependência injetável."""
 
     FONTE = "dialogo_qwen_nixal"
-    VERSAO = "56.5.5"
+    VERSAO = "56.6.0"
+    MAX_TOOL_CALLS = 3
+    MAX_TOOL_RESULT_CHARS = 12000
     MODELO_PADRAO = "qwen2:7b"
 
     PROMPT_SISTEMA = (
@@ -91,6 +95,182 @@ class DialogoQwenNixal:
 
         # Injetado pelo runtime/API; o diálogo continua disponível standalone.
         self.agent_hub: Any | None = None
+        self.gerenciador_capacidades: Any | None = None
+        self._tool_use_enabled = os.environ.get("NYXAL_FUNCTION_CALLING_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+        self._tool_lock = threading.RLock()
+
+    def _gerenciador_ferramentas(self) -> Any | None:
+        if not self._tool_use_enabled:
+            return None
+        if self.gerenciador_capacidades is not None:
+            return self.gerenciador_capacidades
+        try:
+            from nixal_capacidades import _obter_gerenciador_capacidades
+            self.gerenciador_capacidades = _obter_gerenciador_capacidades()
+            return self.gerenciador_capacidades
+        except Exception:
+            return None
+
+    @staticmethod
+    def _valor_mensagem(mensagem: Any, campo: str, padrao: Any = None) -> Any:
+        return mensagem.get(campo, padrao) if isinstance(mensagem, dict) else getattr(mensagem, campo, padrao)
+
+    @staticmethod
+    def _extrair_mensagem(resposta: Any) -> Any:
+        if isinstance(resposta, dict):
+            return resposta.get("message", {})
+        return getattr(resposta, "message", {})
+
+    def _especificacoes_ferramentas(self, gerenciador: Any) -> list[dict[str, Any]]:
+        disponiveis = []
+        nomes_permitidos = {
+            "obter_hora", "listar_arquivos", "ler_estado_corpo", "ler_memoria_corporal",
+            "ler_arquivo", "buscar_arquivos", "ler_arquivo_usuario",
+            "consultar_emails_google", "ler_email_google", "consultar_agenda_google",
+            "pesquisar_web", "consultar_metar_taf", "consultar_home_assistant",
+            "listar_notas_lembretes", "executar_diagnostico",
+            "salvar_nota", "criar_lembrete", "abrir_aplicativo",
+        }
+        for cap in gerenciador.listar_capacidades():
+            nome = cap.get("nome")
+            if not isinstance(nome, str) or nome not in nomes_permitidos:
+                continue
+            args = cap.get("argumentos") if isinstance(cap.get("argumentos"), dict) else {}
+            properties: dict[str, Any] = {}
+            required: list[str] = []
+            for arg_name, spec in args.items():
+                if not isinstance(arg_name, str) or not isinstance(spec, dict):
+                    continue
+                typ = spec.get("tipo", "string")
+                schema_type = {"integer": "integer", "int": "integer", "number": "number", "float": "number",
+                    "boolean": "boolean", "bool": "boolean", "object": "object", "array": "array"}.get(typ, "string")
+                item: dict[str, Any] = {"type": schema_type, "description": str(spec.get("descricao", ""))[:240]}
+                if isinstance(spec.get("enum"), list):
+                    item["enum"] = spec["enum"]
+                for source_key, target_key in (("minimo", "minimum"), ("maximo", "maximum")):
+                    if isinstance(spec.get(source_key), (int, float)):
+                        item[target_key] = spec[source_key]
+                properties[arg_name] = item
+                if spec.get("obrigatorio") is True:
+                    required.append(arg_name)
+            disponiveis.append({"type": "function", "function": {"name": nome,
+                "description": str(cap.get("descricao", ""))[:700],
+                "parameters": {"type": "object", "properties": properties, "required": required}}})
+        return disponiveis
+
+    @staticmethod
+    def _pedido_explicitamente_autorizou(nome: str, texto: str) -> bool:
+        original = texto.strip().casefold()
+        # Perguntas e pedidos informativos não autorizam uma escrita nem abrir
+        # aplicativo; esta função só reconhece comandos diretos no turno atual.
+        prefixos_informativos = (
+            "como ", "o que ", "qual ", "quais ", "por que ", "porque ",
+            "posso ", "poderia ", "devo ", "me explique ", "explique como ",
+            "quero saber ", "gostaria de saber ",
+        )
+        if "?" in original or original.startswith(prefixos_informativos):
+            return False
+        texto = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", original)
+        if nome == "salvar_nota":
+            pedido = any(x in texto for x in ("anote", "salve esta nota", "salvar nota", "registre esta nota", "guarde esta nota"))
+        elif nome == "criar_lembrete":
+            pedido = any(x in texto for x in ("me lembre", "me lembra", "crie um lembrete", "criar lembrete", "agende um lembrete", "me avise"))
+        elif nome == "abrir_aplicativo":
+            # Não usar o infinitivo genérico "abrir" como prova de intenção:
+            # "como abrir o terminal?" é pergunta, não autorização.
+            pedido = any(x in texto for x in (
+                "abra ", "abra o ", "abra a ", "abre ", "abre o ", "abre a ",
+                "inicie o aplicativo", "inicie o ", "inicie a ",
+            ))
+        else:
+            return False
+        # Ações de escrita não são autorizadas por citações ou negações triviais.
+        return pedido and not any(negacao in texto for negacao in (
+            "nao faça", "nao faca", "não faça", "não faca", "nao salve", "não salve",
+            "nao crie", "não crie", "nao abra", "não abra", "nao anote", "não anote",
+            "nao me lembre", "não me lembre", "nao me avise", "não me avise",
+            "nao execute", "não execute",
+        ))
+
+    def _executar_chamada_ferramenta(self, gerenciador: Any, chamada: Any, pedido_usuario: str) -> dict[str, Any]:
+        call_id = self._valor_mensagem(chamada, "id", "") or ""
+        function = self._valor_mensagem(chamada, "function", {})
+        nome = self._valor_mensagem(function, "name", "")
+        argumentos_raw = self._valor_mensagem(function, "arguments", {})
+        if isinstance(argumentos_raw, str):
+            try:
+                argumentos = json.loads(argumentos_raw)
+            except json.JSONDecodeError:
+                return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Argumentos JSON inválidos."}
+        else:
+            argumentos = argumentos_raw
+        if not isinstance(nome, str) or not isinstance(argumentos, dict):
+            return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Chamada inválida."}
+        cap = gerenciador.capacidades.get(nome)
+        if cap is None or nome not in {x["function"]["name"] for x in self._especificacoes_ferramentas(gerenciador)}:
+            return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Ferramenta não registrada/permitida."}
+        autorizacao = self._pedido_explicitamente_autorizou(nome, pedido_usuario)
+        politica = getattr(cap, "politica", "somente_leitura")
+        if politica == "acao_com_pedido_explicito" and not autorizacao:
+            return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Ação bloqueada: falta pedido explícito do usuário."}
+        if politica == "requer_confirmacao":
+            return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Ação pendente de confirmação; não foi executada."}
+        kwargs = {"autorizacao_explicita": autorizacao} if "autorizacao_explicita" in inspect.signature(gerenciador.executar).parameters else {}
+        resultado = gerenciador.executar(nome, **kwargs, **argumentos)
+        valor = resultado.resultado if resultado.sucesso else {"erro": resultado.erro}
+        try:
+            resultado_json = json.dumps(valor, ensure_ascii=False, allow_nan=False, default=str)
+        except (TypeError, ValueError):
+            resultado_json = json.dumps({"erro": "Resultado não serializável."}, ensure_ascii=False)
+        return {"tool_call_id": call_id, "name": nome, "ok": resultado.sucesso, "resultado": resultado_json[:self.MAX_TOOL_RESULT_CHARS]}
+
+    def _chat_com_ferramentas(self, mensagens: list[dict[str, Any]], texto_usuario: str) -> tuple[Any, list[dict[str, Any]]]:
+        gerenciador = self._gerenciador_ferramentas()
+        if gerenciador is None:
+            return self.cliente.chat(model=self.modelo, messages=mensagens, options={"temperature": 0.4}), []
+        ferramentas = self._especificacoes_ferramentas(gerenciador)
+        if not ferramentas:
+            return self.cliente.chat(model=self.modelo, messages=mensagens, options={"temperature": 0.4}), []
+        resposta = None
+        chamadas_executadas: list[dict[str, Any]] = []
+        atual = list(mensagens)
+        try:
+            resposta = self.cliente.chat(model=self.modelo, messages=atual, tools=ferramentas, options={"temperature": 0.2})
+        except TypeError:
+            # Compatibilidade com versões do cliente que não oferecem tool calling.
+            return self.cliente.chat(model=self.modelo, messages=atual, options={"temperature": 0.4}), []
+        rodadas = 0
+        while True:
+            msg = self._extrair_mensagem(resposta)
+            calls = self._valor_mensagem(msg, "tool_calls", []) or []
+            if not isinstance(calls, list) or not calls:
+                break
+            if rodadas >= self.MAX_TOOL_CALLS:
+                # Chegou ao limite: não executar mais ações. Peça ao modelo uma
+                # resposta textual final sem ferramentas para encerrar o turno.
+                atual.append({"role": "system", "content": "Limite de chamadas de ferramentas atingido. Responda agora com os resultados já obtidos; não solicite outras ferramentas."})
+                try:
+                    resposta = self.cliente.chat(model=self.modelo, messages=atual, options={"temperature": 0.2})
+                except TypeError:
+                    resposta = {"message": {"content": "Concluí a quantidade máxima de chamadas de ferramentas. Os resultados executados estão disponíveis no histórico desta interação."}}
+                if not self._valor_mensagem(self._extrair_mensagem(resposta), "content"):
+                    resposta = {"message": {"content": "Concluí a quantidade máxima de chamadas de ferramentas. Não executei novas ferramentas depois do limite."}}
+                break
+            assistant_msg = {"role": "assistant", "content": self._valor_mensagem(msg, "content", "") or "", "tool_calls": []}
+            for call in calls[:8]:
+                fn = self._valor_mensagem(call, "function", {})
+                assistant_msg["tool_calls"].append({"function": {
+                    "name": self._valor_mensagem(fn, "name", ""),
+                    "arguments": self._valor_mensagem(fn, "arguments", {}),
+                }})
+            atual.append(assistant_msg)
+            for call in calls[:8]:
+                result = self._executar_chamada_ferramenta(gerenciador, call, texto_usuario)
+                chamadas_executadas.append(result)
+                atual.append({"role": "tool", "content": result["resultado"]})
+            rodadas += 1
+            resposta = self.cliente.chat(model=self.modelo, messages=atual, tools=ferramentas, options={"temperature": 0.2})
+        return resposta, chamadas_executadas
 
     def responder(
         self,
@@ -215,13 +395,7 @@ class DialogoQwenNixal:
         # mesmo que variáveis de ambiente antigas ainda mencionem Gemini/OpenAI.
         # O cliente local Qwen abaixo recebe o histórico e a orientação especializada.
         try:
-            resposta = self.cliente.chat(
-                model=self.modelo,
-                messages=mensagens,
-                options={
-                    "temperature": 0.4,
-                },
-            )
+            resposta, resultados_ferramentas = self._chat_com_ferramentas(mensagens, texto.strip())
         except Exception as erro:
             return {
                 "sucesso": False,
@@ -234,15 +408,8 @@ class DialogoQwenNixal:
                 ),
             }
 
-        if isinstance(resposta, dict):
-            mensagem = resposta.get("message", {})
-        else:
-            mensagem = getattr(resposta, "message", {})
-
-        if isinstance(mensagem, dict):
-            conteudo = mensagem.get("content")
-        else:
-            conteudo = getattr(mensagem, "content", None)
+        mensagem = self._extrair_mensagem(resposta)
+        conteudo = self._valor_mensagem(mensagem, "content")
 
         if not isinstance(conteudo, str) or not conteudo.strip():
             return {
@@ -262,6 +429,8 @@ class DialogoQwenNixal:
             "mensagens_consideradas": len(mensagens) - 1,
             "permanente": False,
             "versao_dialogo": self.VERSAO,
+            "ferramentas_executadas": resultados_ferramentas,
+            "quantidade_ferramentas": len(resultados_ferramentas),
         }
 
 
