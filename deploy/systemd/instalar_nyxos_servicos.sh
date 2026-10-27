@@ -88,8 +88,16 @@ install -m 0644 "${SCRIPT_DIR}/nyxos.target" "${USER_SYSTEMD_DIR}/nyxos.target"
 rm -f "${AUTOSTART_DIR}/nyxos-shell.desktop"
 
 systemctl --user daemon-reload
-systemctl --user enable --now nyxos-interface-reset.timer
-echo "Recuperação periódica habilitada: interface principal a cada 2 horas (somente se estiver ativa)."
+
+# Reiniciar o navegador interrompe conversas por voz; só habilitar o timer por opt-in explícito.
+if [[ "${NYXOS_ENABLE_INTERFACE_RESET_TIMER:-0}" == "1" ]]; then
+    systemctl --user enable --now nyxos-interface-reset.timer
+    echo "Recuperação periódica habilitada por opt-in: interface principal a cada 2 horas."
+else
+    echo "Timer de recuperação instalado, mas não ativado automaticamente para evitar interromper a voz."
+    echo "Para ativá-lo explicitamente neste instalador: NYXOS_ENABLE_INTERFACE_RESET_TIMER=1 bash deploy/systemd/instalar_nyxos_servicos.sh"
+    echo "Ou ative manualmente: systemctl --user enable --now nyxos-interface-reset.timer"
+fi
 
 # Mantém o desktop principal NyxOS no navegador e remove apenas o orbe flutuante
 # legado, que sobrepunha os aplicativos. O serviço nyxos-interface é a interface correta.
