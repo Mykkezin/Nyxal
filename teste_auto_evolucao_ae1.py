@@ -157,6 +157,42 @@ def testar_falha_residente_vira_hipotese_para_investigar() -> None:
         )
 
 
+def testar_evidencia_persistida_e_sanitizada() -> None:
+    with tempfile.TemporaryDirectory(prefix="nyxal-ae1-evidencia-segura-") as pasta:
+        auto = AutoEvolucaoGovernadaNixOS(
+            BASE_DIR,
+            diretorio_oportunidades=Path(pasta),
+        )
+        ciclo = ciclo_sem_hipotese("ciclo-evidencia-segura")
+        necessidade = ciclo["valor"]["necessidade_prioritaria"]["selecionada"]
+        necessidade["token_sensivel"] = "SEGREDO-NAO-PERSISTIR"
+        necessidade["payload"] = {"corpo": "conteudo-nao-permitido"}
+        necessidade["problema"] = "  " + ("lacuna observada " * 40) + "\\n"
+        resultado = auto.avaliar_ciclo(ciclo)
+        oportunidade = resultado.get("valor", {})
+        persistida = json.loads(
+            (Path(pasta) / f"{oportunidade['oportunidade_id']}.json").read_text(encoding="utf-8")
+        )
+        observada = persistida.get("evidencias", {}).get("necessidade_observada", {})
+        verificar(
+            "SEGREDO-NAO-PERSISTIR" not in json.dumps(persistida, ensure_ascii=False)
+            and "payload" not in observada
+            and "token_sensivel" not in observada,
+            "AE1 não persiste campos arbitrários ou segredos anexados à necessidade",
+        )
+        verificar(
+            len(observada.get("problema", "")) <= 240
+            and "\\n" not in observada.get("problema", ""),
+            "campos observados são normalizados e limitados antes da persistência",
+        )
+        verificar(
+            resultado.get("estado") == "oportunidade_criada"
+            and persistida.get("autorizacao_explicita") is False
+            and persistida.get("integracao_executada") is False,
+            "higienização mantém a oportunidade governada sem autorizar integração",
+        )
+
+
 def testar_sem_evidencia_nao_inventa_melhoria() -> None:
     with tempfile.TemporaryDirectory(prefix="nyxal-ae1-sem-evidencia-") as pasta:
         auto = AutoEvolucaoGovernadaNixOS(
@@ -180,6 +216,7 @@ def testar_sem_evidencia_nao_inventa_melhoria() -> None:
 def main() -> None:
     testar_hipotese_provisoria_automatica_e_deduplicacao()
     testar_falha_residente_vira_hipotese_para_investigar()
+    testar_evidencia_persistida_e_sanitizada()
     testar_sem_evidencia_nao_inventa_melhoria()
 
     verificar(MODULO.exists(), "módulo AE1 existe")
