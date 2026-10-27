@@ -1135,6 +1135,9 @@ class GerenciadorCapacidades:
         # existing logs intact instead of treating them as empty and destroying evidence.
         with _AUDIT_LOCK:
             historico: list[dict[str, Any]] = []
+            # O caminho do log pertence ao estado operacional: não seguir links.
+            if ARQUIVO_LOG.is_symlink():
+                return
             if ARQUIVO_LOG.exists():
                 try:
                     with ARQUIVO_LOG.open("rb") as arquivo:
@@ -1152,6 +1155,9 @@ class GerenciadorCapacidades:
                         )
                         try:
                             os.replace(ARQUIVO_LOG, backup)
+                            if backup.is_symlink():
+                                os.replace(backup, ARQUIVO_LOG)
+                                return
                             try:
                                 os.chmod(backup, 0o600)
                             except OSError:
