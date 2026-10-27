@@ -374,6 +374,27 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertFalse(resultado["ok"])
         self.assertEqual(resultado["resultado"], "Argumentos JSON inválidos.")
 
+    def test_argumentos_tool_tem_limite_de_tamanho_e_rejeita_nan(self):
+        manager = self.manager()
+        dialogo = DialogoQwenNixal(cliente=ClienteFake([]))
+        chamada_longa = mensagem_tool(
+            "pesquisar_web", {"consulta": "x" * (dialogo.MAX_TOOL_ARGUMENT_CHARS + 1)},
+        )["message"]["tool_calls"][0]
+        resultado_longo = dialogo._executar_chamada_ferramenta(
+            manager, chamada_longa, "Pesquise uma fonte.",
+        )
+        self.assertFalse(resultado_longo["ok"])
+        self.assertIn("limite de tamanho", resultado_longo["resultado"].lower())
+
+        chamada_nan = mensagem_tool(
+            "pesquisar_web", '{"consulta":"tempo","limite":NaN}',
+        )["message"]["tool_calls"][0]
+        resultado_nan = dialogo._executar_chamada_ferramenta(
+            manager, chamada_nan, "Pesquise uma fonte.",
+        )
+        self.assertFalse(resultado_nan["ok"])
+        self.assertIn("JSON", resultado_nan["resultado"])
+
     def test_falha_no_function_calling_regride_para_chat_textual(self):
         cliente = ClienteFake([
             TypeError("tools unsupported"),
