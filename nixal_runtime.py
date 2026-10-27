@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 import time
 from copy import deepcopy
 from datetime import datetime
@@ -2045,20 +2046,48 @@ class NyxalRuntime:
     ) -> None:
         dados: list[Any] = []
 
+        # Não seguir links simbólicos nem substituir registros que não possam ser
+        # lidos/validados; logs operacionais são evidência de recuperação.
+        if self.arquivo_log.is_symlink():
+            return
         if self.arquivo_log.exists():
             try:
-                # Lê no máximo o orçamento mais um byte, evitando carregar um
-                # log legado descontrolado antes de aplicar o limite de escrita.
                 with self.arquivo_log.open("rb") as arquivo_existente:
                     conteudo_existente = arquivo_existente.read(
                         MAX_TAMANHO_LOG_RUNTIME + 1
                     )
-                if len(conteudo_existente) <= MAX_TAMANHO_LOG_RUNTIME:
+                if len(conteudo_existente) > MAX_TAMANHO_LOG_RUNTIME:
+                    backup = self.arquivo_log.with_name(
+                        f"{self.arquivo_log.name}.oversized-{time.time_ns()}"
+                    )
+                    # Não substitua uma evidência que já exista com o mesmo nome.
+                    if backup.exists() or backup.is_symlink():
+                        return
+                    try:
+                        os.replace(self.arquivo_log, backup)
+                        if backup.is_symlink():
+                            os.replace(backup, self.arquivo_log)
+                            return
+                        try:
+                            os.chmod(backup, 0o600)
+                        except OSError:
+                            # Se o backup não puder ser protegido, restaure o nome
+                            # original e falhe fechado.
+                            try:
+                                os.replace(backup, self.arquivo_log)
+                            except OSError:
+                                pass
+                            return
+                    except OSError:
+                        return
+                else:
                     carregado = json.loads(conteudo_existente.decode("utf-8"))
-                    if isinstance(carregado, list):
-                        dados = carregado
-            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-                dados = []
+                    if not isinstance(carregado, list):
+                        return
+                    dados = carregado
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError, RecursionError):
+                # Não apague automaticamente um arquivo ilegível ou corrompido.
+                return
 
         registro = deepcopy(ciclo)
         tamanho_registro = len(
@@ -2201,12 +2230,34 @@ class NyxalRuntime:
         dados: Any,
     ) -> None:
         caminho.parent.mkdir(parents=True, exist_ok=True)
-        temporario = caminho.with_name(caminho.name + ".tmp")
-        temporario.write_text(
-            json.dumps(dados, ensure_ascii=False, indent=2),
-            encoding="utf-8",
+        payload = json.dumps(dados, ensure_ascii=False, indent=2)
+        descritor, temporario = tempfile.mkstemp(
+            prefix=f".{caminho.name}.",
+            suffix=".tmp",
+            dir=str(caminho.parent),
         )
-        os.replace(temporario, caminho)
+        try:
+            # Transfer the descriptor immediately so failures still close it.
+            with os.fdopen(descritor, "w", encoding="utf-8") as arquivo:
+                os.fchmod(arquivo.fileno(), 0o600)
+                arquivo.write(payload)
+                arquivo.flush()
+                os.fsync(arquivo.fileno())
+            os.replace(temporario, caminho)
+            os.chmod(caminho, 0o600)
+            diretorio_fd = os.open(
+                caminho.parent,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+            )
+            try:
+                os.fsync(diretorio_fd)
+            finally:
+                os.close(diretorio_fd)
+        finally:
+            try:
+                os.unlink(temporario)
+            except FileNotFoundError:
+                pass
 
 
 if __name__ == "__main__":

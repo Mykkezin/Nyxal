@@ -180,7 +180,12 @@ def main() -> int:
         "NYXOS_VPS_BASE_IMAGE",
         str(Path.home() / "NyxOS" / "VPS" / DEFAULT_IMAGE_NAME),
     )
-    storage = Path(args.storage or default_storage).expanduser().resolve()
+    storage_configurada = Path(args.storage or default_storage).expanduser()
+    # Reject a storage symlink before resolve(), which would hide the link itself.
+    if storage_configurada.is_symlink():
+        print("ERRO: o armazenamento da VM não pode ser um link simbólico.", file=sys.stderr)
+        return 2
+    storage = storage_configurada.resolve()
     image = Path(args.image).expanduser().resolve() if args.image else Path(default_image).expanduser().resolve()
     home = Path.home().resolve()
     try:
