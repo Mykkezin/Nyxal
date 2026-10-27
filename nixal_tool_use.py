@@ -33,6 +33,8 @@ DEFAULT_USER_DATA_DIR = Path(
     os.environ.get("NYXAL_USER_DATA_DIR", str(HOME / ".local" / "share" / "nyxal"))
 ).expanduser()
 ARQUIVO_NOTAS_LEMBRETES = DEFAULT_USER_DATA_DIR / "notas_lembretes.json"
+# Compartilhado entre instâncias da loja no mesmo processo (API, Core e serviço de lembretes).
+_NOTAS_LOCK = threading.RLock()
 
 _PARTES_SENSIVEIS = {
     ".git", ".venv", "venv", "node_modules", ".ssh", ".gnupg", ".aws",
@@ -465,7 +467,7 @@ class NotasLembretesNixOS:
 
     def __init__(self, arquivo: Path | None = None) -> None:
         self.arquivo = Path(arquivo) if arquivo else ARQUIVO_NOTAS_LEMBRETES
-        self._lock = threading.RLock()
+        self._lock = _NOTAS_LOCK
 
     def _vazio(self) -> dict[str, Any]:
         return {"versao": self.VERSAO, "notas": [], "lembretes": []}
