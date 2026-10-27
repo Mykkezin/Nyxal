@@ -70,7 +70,19 @@ class MemoriaConversacionalNixal:
             return
 
         pasta = self.caminho.parent
+        # Inspecionar todos os ancestrais antes de mkdir: caso contrário,
+        # parents=True poderia criar diretórios atravessando um symlink existente.
+        candidato = pasta
+        while True:
+            if candidato.is_symlink():
+                raise OSError("ancestral_de_memoria_nao_pode_ser_link_simbolico")
+            if candidato.parent == candidato:
+                break
+            candidato = candidato.parent
+
         pasta.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+        # Revalidar após a criação para reduzir a janela de corrida.
         candidato = pasta
         while True:
             if candidato.is_symlink():
