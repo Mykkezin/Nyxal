@@ -452,7 +452,7 @@ def teste_fallback_dominio_fraco_nao_forca_capacidade() -> None:
 
     entrada = (
         ambiente.interface.criar_entrada(
-            "Qual é o sistema operacional que estou construindo?"
+            "Qual a temperatura da CPU?"
         )
     )
 
@@ -469,11 +469,19 @@ def teste_fallback_dominio_fraco_nao_forca_capacidade() -> None:
     )
 
     verificar(
+        not ambiente.nucleo._deve_priorizar_dialogo(
+            "Qual a temperatura da CPU?",
+            [],
+        ),
+        "pergunta técnica independente deve percorrer o caminho de capacidades",
+    )
+
+    verificar(
         ambiente.chamadas_agente
         == [
-            "Qual é o sistema operacional que estou construindo?"
+            "Qual a temperatura da CPU?"
         ],
-        "fallback não deve substituir a necessidade original por um objetivo arbitrário",
+        "fallback fraco não deve substituir a necessidade original por um objetivo arbitrário",
     )
 
 
@@ -793,3 +801,4 @@ def executar_testes() -> None:
 
 if __name__ == "__main__":
     executar_testes()
+    raise SystemExit(1 if FALHAS else 0)
