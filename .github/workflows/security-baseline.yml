@@ -19,9 +19,10 @@ on:
       - "teste_decisao_autonoma_ci.py"
       - ".github/workflows/nyxal-nivel9-validation.yml"
       - ".github/workflows/security-baseline.yml"
+  workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -95,11 +96,12 @@ jobs:
           PY
           python3 nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
 
-      - name: Archive structured CI evidence
-        if: always()
+      - name: Archive structured CI evidence (manual only)
+        if: github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: nyxal-ci-evidence-${{ github.run_id }}
           path: /tmp/nyxal-ci-evidence.json
           if-no-files-found: warn
-          retention-days: 3
+          retention-days: 1
