@@ -75,6 +75,7 @@ class Capacidade:
     argumentos: dict[str, dict[str, Any]]
     dominios: list[str]
     evidencias_dominio: list[str]
+    politica: str = "somente_leitura"
 
 
 # ================================================================
@@ -371,7 +372,12 @@ class GerenciadorCapacidades:
         ] | None = None,
         dominios: list[str] | None = None,
         evidencias_dominio: list[str] | None = None,
+        *,
+        politica: str = "somente_leitura",
     ) -> None:
+
+        if politica not in {"somente_leitura", "acao_com_pedido_explicito", "requer_confirmacao"}:
+            raise ValueError("Política de capacidade desconhecida.")
 
         if not nome:
             raise ValueError(
@@ -511,6 +517,7 @@ class GerenciadorCapacidades:
                 evidencias_dominio=(
                     evidencias_normalizadas
                 ),
+                politica=politica,
             )
         )
 
@@ -553,111 +560,89 @@ class GerenciadorCapacidades:
         nome: str,
         argumentos: dict[str, Any],
     ) -> tuple[bool, str | None]:
-
-        capacidade = (
-            self.capacidades.get(nome)
-        )
-
+        capacidade = self.capacidades.get(nome)
         if capacidade is None:
+            return False, f"Capacidade inexistente: {nome}"
+        if not isinstance(argumentos, dict):
+            return False, "Os argumentos precisam ser um objeto JSON."
 
-            return (
-                False,
-                f"Capacidade inexistente: {nome}",
-            )
+        especificacao = capacidade.argumentos
+        desconhecidos = set(argumentos) - set(especificacao)
+        if desconhecidos:
+            return False, f"Argumento não permitido para '{nome}': {sorted(desconhecidos)[0]}"
 
-        if not isinstance(
-            argumentos,
-            dict,
-        ):
+        def validar_valor(valor: Any, schema: dict[str, Any], caminho: str) -> str | None:
+            esperado = schema.get("tipo", "string")
+            mapa_tipos = {
+                "string": str,
+                "integer": int,
+                "int": int,
+                "number": (int, float),
+                "float": (int, float),
+                "boolean": bool,
+                "bool": bool,
+                "object": dict,
+                "array": list,
+            }
+            tipo_python = mapa_tipos.get(esperado, str)
+            if esperado in {"integer", "int"}:
+                tipo_valido = isinstance(valor, int) and not isinstance(valor, bool)
+            elif esperado in {"number", "float"}:
+                tipo_valido = isinstance(valor, (int, float)) and not isinstance(valor, bool)
+            else:
+                tipo_valido = isinstance(valor, tipo_python)
+            if not tipo_valido:
+                return f"O argumento '{caminho}' precisa ter tipo {esperado}."
 
-            return (
-                False,
-                "Os argumentos precisam ser "
-                "um objeto JSON.",
-            )
+            enum = schema.get("enum")
+            if isinstance(enum, list) and valor not in enum:
+                return f"O argumento '{caminho}' não pertence aos valores permitidos."
+            if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+                minimo, maximo = schema.get("minimo"), schema.get("maximo")
+                if isinstance(minimo, (int, float)) and valor < minimo:
+                    return f"O argumento '{caminho}' está abaixo do mínimo permitido."
+                if isinstance(maximo, (int, float)) and valor > maximo:
+                    return f"O argumento '{caminho}' excede o máximo permitido."
+            if isinstance(valor, str):
+                minimo = schema.get("min_length", schema.get("minLength"))
+                maximo = schema.get("max_length", schema.get("maxLength"))
+                if isinstance(minimo, int) and len(valor) < minimo:
+                    return f"O argumento '{caminho}' é curto demais."
+                if isinstance(maximo, int) and len(valor) > maximo:
+                    return f"O argumento '{caminho}' é longo demais."
+            if isinstance(valor, dict):
+                props = schema.get("properties")
+                required = schema.get("required", [])
+                if isinstance(props, dict):
+                    extras = set(valor) - set(props)
+                    if extras:
+                        return f"O argumento '{caminho}' contém propriedade não permitida."
+                    if isinstance(required, list) and any(k not in valor for k in required):
+                        return f"O argumento '{caminho}' não contém todos os campos obrigatórios."
+                    for subnome, subvalor in valor.items():
+                        if isinstance(props.get(subnome), dict):
+                            erro = validar_valor(subvalor, props[subnome], f"{caminho}.{subnome}")
+                            if erro:
+                                return erro
+            if isinstance(valor, list):
+                item_schema = schema.get("items")
+                limite = schema.get("max_items", schema.get("maxItems"))
+                if isinstance(limite, int) and len(valor) > limite:
+                    return f"O argumento '{caminho}' contém itens demais."
+                if isinstance(item_schema, dict):
+                    for indice, item in enumerate(valor):
+                        erro = validar_valor(item, item_schema, f"{caminho}[{indice}]")
+                        if erro:
+                            return erro
+            return None
 
-        especificacao = (
-            capacidade.argumentos
-        )
-
-        # --------------------------------------------------------
-        # Argumentos desconhecidos
-        # --------------------------------------------------------
-
-        for nome_argumento in argumentos:
-
-            if (
-                nome_argumento
-                not in especificacao
-            ):
-
-                return (
-                    False,
-                    (
-                        f"Argumento não permitido para "
-                        f"'{nome}': {nome_argumento}"
-                    ),
-                )
-
-        # --------------------------------------------------------
-        # Argumentos obrigatórios
-        # --------------------------------------------------------
-
-        for (
-            nome_argumento,
-            dados,
-        ) in especificacao.items():
-
-            obrigatorio = dados.get(
-                "obrigatorio",
-                False,
-            )
-
-            if (
-                obrigatorio
-                and nome_argumento
-                not in argumentos
-            ):
-
-                return (
-                    False,
-                    (
-                        "Argumento obrigatório ausente: "
-                        f"{nome_argumento}"
-                    ),
-                )
-
-        # --------------------------------------------------------
-        # Tipos
-        # --------------------------------------------------------
-
-        for (
-            nome_argumento,
-            valor,
-        ) in argumentos.items():
-
-            esperado = (
-                especificacao[
-                    nome_argumento
-                ].get("tipo")
-            )
-
-            if esperado == "string":
-
-                if not isinstance(
-                    valor,
-                    str,
-                ):
-
-                    return (
-                        False,
-                        (
-                            f"O argumento "
-                            f"'{nome_argumento}' "
-                            "precisa ser string."
-                        ),
-                    )
-
+        for nome_argumento, schema in especificacao.items():
+            if schema.get("obrigatorio", False) and nome_argumento not in argumentos:
+                return False, f"Argumento obrigatório ausente: {nome_argumento}"
+        for nome_argumento, valor in argumentos.items():
+            erro = validar_valor(valor, especificacao[nome_argumento], nome_argumento)
+            if erro:
+                return False, erro
         return True, None
 
     # ============================================================
@@ -667,11 +652,28 @@ class GerenciadorCapacidades:
     def executar(
         self,
         nome: str,
+        *,
+        autorizacao_explicita: bool = False,
+        confirmacao: bool = False,
         **argumentos: Any,
     ) -> ResultadoCapacidade:
 
         inicio = time.perf_counter()
         timestamp = time.time()
+        capacidade_registrada = self.capacidades.get(nome)
+        bloqueio = None
+        if capacidade_registrada is not None:
+            if capacidade_registrada.politica == "acao_com_pedido_explicito" and not autorizacao_explicita:
+                bloqueio = "Ação exige pedido explícito do usuário; nada foi alterado."
+            elif capacidade_registrada.politica == "requer_confirmacao" and not confirmacao:
+                bloqueio = "Ação pendente de confirmação; nada foi alterado."
+        if bloqueio:
+            resultado = ResultadoCapacidade(
+                sucesso=False, capacidade=nome, erro=bloqueio, timestamp=timestamp,
+                duracao_ms=(time.perf_counter() - inicio) * 1000,
+            )
+            self._registrar_execucao(resultado)
+            return resultado
 
         valido, erro_validacao = (
             self.validar_argumentos(
@@ -1003,6 +1005,21 @@ class GerenciadorCapacidades:
                         "dentro do projeto Nixal."
                     ),
                 }
+
+            segmentos = {parte.casefold() for parte in caminho_final.relative_to(base_final).parts}
+            nome_arquivo = caminho_final.name.casefold()
+            sufixo = caminho_final.suffix.casefold()
+            palavras_sensiveis = (
+                ".env", "secret", "credential", "token", "password", "passwd",
+                "private_key", "id_rsa", "id_ed25519", "oauth", "cookie", "keystore",
+            )
+            extensoes_sensiveis = {".pem", ".key", ".p12", ".pfx", ".kdb", ".jks"}
+            if (
+                any(parte.startswith(".env") for parte in segmentos)
+                or any(any(palavra in parte for palavra in palavras_sensiveis) for parte in segmentos)
+                or sufixo in extensoes_sensiveis
+            ):
+                return {"sucesso": False, "erro": "A leitura de arquivos de credenciais ou chaves está bloqueada."}
 
             if not caminho_final.exists():
 
