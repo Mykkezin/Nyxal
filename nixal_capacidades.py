@@ -1303,12 +1303,21 @@ def main() -> None:
 def ativar_ferramentas_operacionais(
     capacidades: GerenciadorCapacidades | None = None,
     *,
-    incluir_acoes: bool = True,
+    incluir_acoes: bool = False,
+    incluir_dados_privados: bool = False,
 ) -> GerenciadorCapacidades:
-    """Registra adaptadores no catálogo existente sem duplicar o executor."""
+    """Registra adaptadores com perfil seguro; privados e mutáveis são opt-in separados."""
+    if os.environ.get("NYXAL_ENABLE_MUTABLE_TOOLS", "").strip().lower() in {"1", "true", "yes", "on"}:
+        incluir_acoes = True
+    if os.environ.get("NYXAL_ENABLE_PRIVATE_READ_TOOLS", "").strip().lower() in {"1", "true", "yes", "on"}:
+        incluir_dados_privados = True
     alvo = capacidades if capacidades is not None else GerenciadorCapacidades()
     from nixal_tool_use import registrar_capacidades_operacionais
-    registrar_capacidades_operacionais(alvo, incluir_acoes=incluir_acoes)
+    registrar_capacidades_operacionais(
+        alvo,
+        incluir_acoes=incluir_acoes,
+        incluir_dados_privados=incluir_dados_privados,
+    )
     return alvo
 
 
@@ -1319,8 +1328,16 @@ def _obter_gerenciador_capacidades() -> GerenciadorCapacidades:
     """Retorna uma instância do registro compartilhada entre Core e diálogo."""
     global _GERENCIADOR_CAPACIDADES_COMPARTILHADO
     if _GERENCIADOR_CAPACIDADES_COMPARTILHADO is None:
+        incluir_acoes = os.environ.get(
+            "NYXAL_ENABLE_MUTABLE_TOOLS", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        incluir_dados_privados = os.environ.get(
+            "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}
         _GERENCIADOR_CAPACIDADES_COMPARTILHADO = ativar_ferramentas_operacionais(
-            GerenciadorCapacidades(), incluir_acoes=True
+            GerenciadorCapacidades(),
+            incluir_acoes=incluir_acoes,
+            incluir_dados_privados=incluir_dados_privados,
         )
     return _GERENCIADOR_CAPACIDADES_COMPARTILHADO
 
