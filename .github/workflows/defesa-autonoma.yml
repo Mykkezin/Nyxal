@@ -53,4 +53,4 @@ jobs:
       - name: Run governed dry-run execution gate tests
         run: python3 -m unittest teste_executor_defesa_governada.py -v
       - name: Run HTTP authentication and governed defense integration tests
-        run: python3 -m unittest teste_api_security_auth.TestSegurancaAPIHTTP.test_falhas_autenticacao_alimentam_defesa_sem_segredos -v
+        run: python3 -m unittest teste_api_security_auth.py -v
