@@ -265,6 +265,31 @@ class ExecutorDefesaGovernada:
             existente = self._idempotencia.get(chave)
             if existente is not None:
                 _, plano_id = existente
+                if aprovacao_verificada and validada["exige_aprovacao_humana"]:
+                    registro_existente = next(
+                        (
+                            registro
+                            for registro in reversed(self._registros)
+                            if registro.get("plano_id") == plano_id
+                        ),
+                        None,
+                    )
+                    if registro_existente is not None:
+                        if registro_existente.get("aprovacao_verificada") is not True:
+                            registro_existente["aprovacao_verificada"] = True
+                            registro_existente["aprovacao_verificada_em"] = self._utc().isoformat()
+                            registro_existente["estado"] = "simulacao_preparada"
+                        # A aprovação só muda o estado do plano simulado; nunca
+                        # habilita execução, autorização ou efeitos no host.
+                        return {
+                            "sucesso": True,
+                            "estado": registro_existente["estado"],
+                            "plano_id": plano_id,
+                            "plano": deepcopy(registro_existente),
+                            "executor_ativo": False,
+                            "executor_autorizado": False,
+                            "efeito_executado": False,
+                        }
                 return {
                     "sucesso": True,
                     "estado": "duplicado_idempotente",
@@ -294,6 +319,7 @@ class ExecutorDefesaGovernada:
                 "ttl_segundos": self._ttl,
                 "acao": deepcopy(validada),
                 "aprovacao_verificada": aprovacao_verificada,
+                "aprovacao_verificada_em": self._utc().isoformat() if aprovacao_verificada else None,
                 "exige_aprovacao_humana": exige_aprovacao,
                 "modo": "dry_run",
                 "executor_ativo": False,
