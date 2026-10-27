@@ -24,6 +24,7 @@ def main() -> None:
     desinstalador = ler("desinstalar_nyxos_servicos.sh")
     diagnostico = ler("diagnosticar_nyxos_local.sh")
     shell_principal = ler("iniciar_nyxos_shell.sh")
+    autoreparo = (BASE_DIR / "nixal_autoreparo_residente.py").read_text(encoding="utf-8")
 
     for unidade in (api, residente):
         assert "Type=simple" in unidade
@@ -79,6 +80,12 @@ def main() -> None:
     assert "find_browser()" in shell_principal
     assert 'exec "${BROWSER}"' in shell_principal
     assert "iniciar_nyxos_shell.sh" in diagnostico
+
+    assert "systemctl --user disable --now nyxos-interface.service" in instalador
+    assert "systemctl --user disable --now nyxal-desktop.service" in instalador
+    assert "systemctl --user enable nyxos-interface.service" not in instalador
+    assert 'self._unidade_habilitada(self.UNIDADE_INTERFACE)' in autoreparo
+    assert '"desativada_por_configuracao"' in autoreparo
 
     assert "systemctl --user daemon-reload" in instalador
     assert "systemctl --user enable --now nyxos.target" in instalador
@@ -137,7 +144,7 @@ def main() -> None:
     print("TESTE_M5_9_RESIDENCIA_LINUX_OK")
     print("TESTE_MEMORIA_RESIDENTE_LIMITADA_OK")
     print("PYTHON: .venv/bin/python")
-    print("SERVICOS: API + RESIDENTE + INTERFACE GRAFICA")
+    print("SERVICOS: API + RESIDENTE; INTERFACE GRAFICA SOB CONTROLE DO USUARIO")
     print("TARGET: nyxos.target")
     print("AE2_AUTOMATICA: HABILITADA_COM_GATES")
     print("AE5_DESCOBERTA_CONTINUA: HABILITADA_COM_GATES")

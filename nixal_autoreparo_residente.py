@@ -103,6 +103,18 @@ class AutoreparoResidenteNixOS:
         except Exception:
             return False
 
+    def _unidade_habilitada(self, unidade: str) -> bool:
+        """Só considera a interface reparável quando o operador a habilitou."""
+        if unidade != self.UNIDADE_INTERFACE:
+            return False
+        try:
+            resultado = self._rodar(
+                ["systemctl", "--user", "is-enabled", "--quiet", unidade]
+            )
+            return getattr(resultado, "returncode", 1) == 0
+        except Exception:
+            return False
+
     def _api_saudavel(self) -> bool:
         # O health-check só usa loopback, sem token, redirects ou tráfego externo.
         for host in ("127.0.0.1", "::1"):
@@ -287,6 +299,19 @@ class AutoreparoResidenteNixOS:
                     "unidade": self.UNIDADE_INTERFACE,
                 },
             }
+        elif not self._unidade_habilitada(self.UNIDADE_INTERFACE):
+            # A interface pode estar aberta manualmente no Chrome. Não ressuscite
+            # uma miniatura/desktop desativado pelo operador.
+            self._falhas["interface"] = 0
+            interface_estado = {
+                "estado": "desativada_por_configuracao",
+                "falhas_consecutivas": 0,
+                "reparo": {
+                    "estado": "servico_desativado_pelo_operador",
+                    "reinicio_solicitado": False,
+                    "unidade": self.UNIDADE_INTERFACE,
+                },
+            }
         elif self._unidade_ativa(self.UNIDADE_INTERFACE):
             self._falhas["interface"] = 0
             interface_estado = {
@@ -321,6 +346,7 @@ class AutoreparoResidenteNixOS:
         grafico_ok = interface_estado["estado"] in {
             "ativa",
             "aguardando_sessao_grafica",
+            "desativada_por_configuracao",
         }
         reparo_solicitado = any(
             comp["reparo"].get("reinicio_solicitado") is True
