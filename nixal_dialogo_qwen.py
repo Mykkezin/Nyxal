@@ -237,6 +237,8 @@ class DialogoQwenNixal:
                     resposta = self.cliente.chat(model=self.modelo, messages=atual, options={"temperature": 0.2})
                 except TypeError:
                     resposta = {"message": {"content": "Concluí a quantidade máxima de chamadas de ferramentas. Os resultados executados estão disponíveis no histórico desta interação."}}
+                if not self._valor_mensagem(self._extrair_mensagem(resposta), "content"):
+                    resposta = {"message": {"content": "Concluí a quantidade máxima de chamadas de ferramentas. Não executei novas ferramentas depois do limite."}}
                 break
             assistant_msg = {"role": "assistant", "content": self._valor_mensagem(msg, "content", "") or "", "tool_calls": []}
             for call in calls[:8]:
