@@ -461,7 +461,7 @@ class NucleoConversacionalNixal:
         if not isinstance(conversas_anteriores, list):
             conversas_anteriores = []
         resposta["valor"]["memoria_conversacional_anterior"] = {
-            "consultado": priorizar_dialogo,
+            "consultado": consultar_conversas_anteriores,
             "estado": contexto_persistido.get("estado_conversas", "nao_consultado"),
             "quantidade": len(conversas_anteriores[:3]),
             "referencias": [
@@ -531,7 +531,7 @@ class NucleoConversacionalNixal:
                 "conhecimento_permanente": False,
             },
             "conversas_anteriores": {
-                "consultado": contexto_consultado is True,
+                "consultado": contexto_persistido.get("estado_conversas") != "nao_consultado",
                 "estado": contexto_persistido.get("estado_conversas", "nao_consultado"),
                 "quantidade": min(3, len(conversas)),
                 "persistido": self.memoria_conversacional.caminho is not None,
@@ -588,7 +588,7 @@ class NucleoConversacionalNixal:
             pass
 
         conversas: list[dict[str, Any]] = []
-        estado_conversas = "consulta_indisponivel" if consultar_conversas else "nao_solicitado"
+        estado_conversas = "consulta_indisponivel" if consultar_conversas else "nao_consultado"
         if consultar_conversas:
             try:
                 resultado_conversas = self.memoria_conversacional.buscar_relevante(
