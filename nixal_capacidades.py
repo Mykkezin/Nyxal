@@ -586,7 +586,9 @@ class GerenciadorCapacidades:
                 "object": dict,
                 "array": list,
             }
-            tipo_python = mapa_tipos.get(esperado, str)
+            if esperado not in mapa_tipos:
+                return f"O esquema do argumento '{caminho}' declara um tipo não suportado; execução bloqueada."
+            tipo_python = mapa_tipos[esperado]
             if esperado in {"integer", "int"}:
                 tipo_valido = isinstance(valor, int) and not isinstance(valor, bool)
             elif esperado in {"number", "float"}:
