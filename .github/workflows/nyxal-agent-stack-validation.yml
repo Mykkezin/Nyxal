@@ -258,8 +258,9 @@ jobs:
           python3 teste_m5_15_presenca_maquina.py
 
   validate-vps-public-key:
-    # Este conjunto curto de regressões é isolado e deve rodar sem disputar o runner local.
-    runs-on: ubuntu-latest
+    # O runner hospedado não está alocando jobs (runner_id=0); usar o Python 3.12
+    # já instalado no runner privado para que este gate curto seja executável.
+    runs-on: self-hosted
     timeout-minutes: 5
     steps:
       - name: Checkout without optional submodules
