@@ -3517,7 +3517,6 @@
       surface.innerHTML =
         '<div class="nyxal-voice-content">' +
           '<header class="nyxal-voice-brand"><span class="nyxal-voice-brand-dot"></span><span>NYXAL</span><small>VOICE · RESIDENTE</small></header>' +
-          '<section class="nyxal-voice-center">' +
             '<aside class="nyxal-voice-sidepanel nyxal-voice-sidepanel-left" aria-label="Canal de entrada de voz">' +
               '<div class="nyxal-sidepanel-kicker"><span>01</span><span>INPUT CHANNEL</span><span class="nyxal-side-dot" id="nyxalSideInputDot"></span></div>' +
               '<div class="nyxal-sidepanel-title">SINAL <span>DE VOZ</span></div>' +
@@ -3530,6 +3529,7 @@
               '<div class="nyxal-sidepanel-readout"><span>NÍVEL RMS</span><b id="nyxalSideRmsValue">—</b></div>' +
               '<div class="nyxal-sidepanel-foot"><span class="nyxal-side-mini-dot"></span> ENTRADA DE ÁUDIO</div>' +
             '</aside>' +
+          '<section class="nyxal-voice-center">' +
             '<div id="nyxalVoiceStage" aria-label="Núcleo holográfico da Nyxal">' +
               '<span class="nyxal-voice-ring ring-one"></span><span class="nyxal-voice-ring ring-two"></span><span class="nyxal-voice-ring ring-three"></span>' +
               '<span class="nyxal-voice-face-frame" aria-hidden="true"></span>' +
@@ -3545,6 +3545,7 @@
               '</section>' +
               '<div id="nyxalVoiceSubtitleMount"></div>' +
             '</section>' +
+          '</section>' +
             '<aside class="nyxal-voice-sidepanel nyxal-voice-sidepanel-right" aria-label="Estado do núcleo neural">' +
               '<div class="nyxal-sidepanel-kicker"><span>02</span><span>NEURAL CORE</span><span class="nyxal-side-dot nyxal-side-dot-blue" id="nyxalSideCoreDot"></span></div>' +
               '<div class="nyxal-sidepanel-title">NYXAL <span>CORE</span></div>' +
@@ -3558,7 +3559,6 @@
               '</div>' +
               '<div class="nyxal-sidepanel-foot"><span class="nyxal-side-mini-dot nyxal-side-mini-dot-blue"></span> SISTEMA RESIDENTE</div>' +
             '</aside>' +
-          '</section>' +
           '<footer class="nyxal-voice-footer"><span>NYXOS · ESCUTA LOCAL</span><button id="nyxalVoiceStop" type="button" hidden>Pausar escuta</button></footer>' +
         '</div>';
       document.body.appendChild(surface);
