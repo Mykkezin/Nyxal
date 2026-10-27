@@ -480,6 +480,8 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             ("salvar_nota", "'Anote a data da prova' é o exemplo que estou analisando."),
             ("abrir_aplicativo", "A frase 'abra o navegador' aparece no documento que quero resumir."),
             ("salvar_nota", "Resuma este texto: anote a data da prova."),
+            ("abrir_aplicativo", "`abra o navegador` é um exemplo de comando."),
+            ("abrir_aplicativo", "(abra o navegador) é um exemplo citado."),
         )
         for nome, texto in casos:
             with self.subTest(nome=nome, texto=texto):

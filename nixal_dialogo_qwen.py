@@ -261,15 +261,7 @@ class DialogoQwenNixal:
     @staticmethod
     def _pedido_explicitamente_autorizou(nome: str, texto: str) -> bool:
         original = texto.strip().casefold()
-        if (
-            not original
-            or "?" in original
-            or original.startswith("'")
-            or original.startswith('"')
-            or original.startswith("“")
-            or original.startswith("‘")
-            or original.startswith("«")
-        ):
+        if not original or "?" in original or not original[0].isalnum():
             return False
         informativos = (
             "como ", "o que ", "qual ", "quais ", "por que ", "porque ",
