@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import inspect
 import threading
 from typing import Any
 
@@ -34,7 +35,7 @@ class DialogoQwenNixal:
     MAX_TOOL_CALLS = 3
     MAX_TOOL_RESULT_CHARS = 12000
 
-    FERRAMENTAS_MUTAVEIS_DESATIVADAS = frozenset({
+    FERRAMENTAS_MUTAVEIS = frozenset({
         "salvar_nota", "criar_lembrete", "abrir_aplicativo",
     })
     FERRAMENTAS_PRIVADAS = frozenset({
@@ -44,7 +45,8 @@ class DialogoQwenNixal:
         "listar_notas_lembretes",
     })
     FERRAMENTAS_LEITURA_PADRAO = frozenset({
-        "obter_hora", "pesquisar_web", "consultar_metar_taf", "executar_diagnostico",
+        "obter_hora", "pesquisar_web", "consultar_metar_taf",
+        "consultar_notam_aisweb", "consultar_cartas_aisweb", "executar_diagnostico",
     })
     MODELO_PADRAO = "qwen2:7b"
 
@@ -76,6 +78,7 @@ class DialogoQwenNixal:
         self,
         modelo: str | None = None,
         cliente: Any = None,
+        gerenciador_capacidades: Any | None = None,
     ) -> None:
         self.provedor = os.environ.get(
             "NYXAL_LLM_PROVIDER",
@@ -109,7 +112,8 @@ class DialogoQwenNixal:
 
             # Injetados pelo runtime/API; o diálogo continua disponível standalone.
         self.agent_hub: Any | None = None
-        self.gerenciador_capacidades: Any | None = None
+        self.gerenciador_capacidades: Any | None = gerenciador_capacidades
+        self._ferramentas_operacionais_registradas = False
         self._tool_use_enabled = os.environ.get(
             "NYXAL_FUNCTION_CALLING_ENABLED", "true"
         ).strip().lower() in {"1", "true", "yes", "on"}
@@ -118,25 +122,27 @@ class DialogoQwenNixal:
     def _gerenciador_ferramentas(self) -> Any | None:
         if not self._tool_use_enabled:
             return None
-        if self.gerenciador_capacidades is not None:
-            return self.gerenciador_capacidades
         try:
-            from nixal_capacidades import GerenciadorCapacidades
-            from nixal_tool_use import registrar_capacidades_operacionais
-
-            manager = GerenciadorCapacidades()
-            incluir_privadas = os.environ.get(
-                "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
-            ).strip().lower() in {"1", "true", "yes", "on"}
-            registrar_capacidades_operacionais(
-                manager,
-                incluir_dados_privados=incluir_privadas,
-            )
-            self.gerenciador_capacidades = manager
-            return manager
+            if self.gerenciador_capacidades is None:
+                from nixal_capacidades import GerenciadorCapacidades
+                self.gerenciador_capacidades = GerenciadorCapacidades()
+            if not self._ferramentas_operacionais_registradas:
+                from nixal_tool_use import registrar_capacidades_operacionais
+                privadas = os.environ.get(
+                    "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
+                ).strip().lower() in {"1", "true", "yes", "on"}
+                mutaveis = os.environ.get(
+                    "NYXAL_ENABLE_MUTABLE_TOOLS", ""
+                ).strip().lower() in {"1", "true", "yes", "on"}
+                registrar_capacidades_operacionais(
+                    self.gerenciador_capacidades,
+                    incluir_dados_privados=privadas,
+                    incluir_acoes=mutaveis,
+                )
+                self._ferramentas_operacionais_registradas = True
+            return self.gerenciador_capacidades
         except Exception:
-            # Function calling é opcional; falhas ao criar o catálogo não devem
-            # impedir a conversa textual normal.
+            # Function calling é opcional; a conversa textual continua disponível.
             return None
 
     @staticmethod
@@ -156,6 +162,11 @@ class DialogoQwenNixal:
         nomes_permitidos = set(self.FERRAMENTAS_LEITURA_PADRAO)
         if privadas_ativas:
             nomes_permitidos.update(self.FERRAMENTAS_PRIVADAS)
+        mutaveis_ativas = os.environ.get(
+            "NYXAL_ENABLE_MUTABLE_TOOLS", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        if mutaveis_ativas:
+            nomes_permitidos.update(self.FERRAMENTAS_MUTAVEIS)
 
         disponiveis = []
         for capacidade in gerenciador.listar_capacidades():
