@@ -445,6 +445,40 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         )[-1]
         self.assertNotIn("Esta sessão atual não deve aparecer", contexto_recuperado)
 
+    def test_provider_explicito_nao_consulta_conversas_sem_pedido_de_recordacao(self) -> None:
+        caminho_conversas = Path(self.tempdir.name) / "privado" / "conversas.json"
+        memoria_conversacional = MemoriaConversacionalNixal(caminho=caminho_conversas)
+        memoria_conversacional.registrar(
+            "sessao-anterior",
+            "user",
+            "A Nyxal deve usar Qwen local, function calling governado e memória persistente.",
+        )
+
+        cliente = FakeChatClient()
+        dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
+        nucleo = self.criar_nucleo(
+            dialogo=dialogo,
+            memoria_conversacional=memoria_conversacional,
+            memoria_investigacao=self.memoria,
+            contexto_historico_relevante=self.contexto,
+        )
+        consulta = "Qual é a diferença entre CPU e GPU?"
+        entrada = nucleo.interface.criar_entrada(consulta, sessao="sessao-atual")
+        entrada["valor"]["opcoes_dialogo"] = {"provedor": "nyxal"}
+        resposta = nucleo.processar(entrada)
+
+        estado_memoria = resposta["valor"]["memoria_conversacional_anterior"]
+        self.assertEqual(resposta["valor"]["modo"], "resposta_conversacional")
+        self.assertFalse(estado_memoria["consultado"])
+        self.assertEqual(estado_memoria["estado"], "nao_consultado")
+        mensagens_usuario = "\\n".join(
+            mensagem["content"]
+            for mensagem in cliente.calls[0]["messages"]
+            if mensagem["role"] == "user"
+        )
+        self.assertNotIn("CONVERSAS ANTERIORES", mensagens_usuario)
+        self.assertNotIn("Qwen local", mensagens_usuario)
+
     def test_core_nao_consulta_memoria_de_outras_sessoes_em_pergunta_comum(self) -> None:
         caminho_conversas = Path(self.tempdir.name) / "privado" / "conversas.json"
         memoria_conversacional = MemoriaConversacionalNixal(caminho=caminho_conversas)
