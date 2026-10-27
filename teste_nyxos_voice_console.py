@@ -109,6 +109,13 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('window.setInterval(atualizarClima, 10 * 60 * 1000)', self.html)
         self.assertIn('window.setInterval(fetchNyxalObservability, 15000)', self.html)
 
+    def test_weather_failure_clears_stale_measurements(self):
+        climate = self.html[self.html.index("async function atualizarClima()"):self.html.index("function desenharGraficoSistema()", self.html.index("async function atualizarClima()"))]
+        catch_block = climate[climate.index("} catch (erro) {"):]
+        for name in ("temperatura", "sensacao", "umidade", "vento"):
+            self.assertIn(name + '.innerText = "—";', catch_block)
+        self.assertIn('condicao.innerText = "Clima indisponível";', catch_block)
+
     def test_main_dashboard_rotates_reflections_every_three_minutes(self):
         self.assertIn('function rotacionarReflexao()', self.html)
         self.assertIn('window.setInterval(rotacionarReflexao, 3 * 60 * 1000)', self.html)

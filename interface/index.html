@@ -2029,6 +2029,15 @@
           else icone.className = "fa-solid fa-cloud-rain";
         }
       } catch (erro) {
+        // Não deixar valores de uma atualização anterior parecerem atuais.
+        temperatura.innerText = "—";
+        sensacao.innerText = "—";
+        umidade.innerText = "—";
+        vento.innerText = "—";
+        temperatura.title = "Leitura indisponível: a atualização do clima falhou";
+        sensacao.title = "Leitura indisponível: a atualização do clima falhou";
+        umidade.title = "Leitura indisponível: a atualização do clima falhou";
+        vento.title = "Leitura indisponível: a atualização do clima falhou";
         condicao.innerText = "Clima indisponível";
         condicao.title = "Não foi possível atualizar o clima. Verifique a conexão e tente novamente.";
         if (icone) icone.className = "fa-solid fa-cloud-sun";
