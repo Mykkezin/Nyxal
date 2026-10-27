@@ -97,6 +97,20 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn("Array.isArray(resources.gpu)", self.console)
         self.assertIn("gpu.temperatura_c", self.console)
 
+    def test_main_dashboard_restores_weather_and_gpu_temperature_metrics(self):
+        self.assertIn('id="gpuUsageText"', self.html)
+        self.assertIn('id="systemTempText"', self.html)
+        self.assertIn('function fetchNyxalObservability()', self.html)
+        self.assertIn('fetch(window.NYXAL_API_BASE + "/api/agent/contexto"', self.html)
+        self.assertIn('function atualizarClima()', self.html)
+        self.assertIn('api.open-meteo.com/v1/forecast', self.html)
+        self.assertIn('window.setInterval(atualizarClima, 10 * 60 * 1000)', self.html)
+        self.assertIn('window.setInterval(fetchNyxalObservability, 15000)', self.html)
+
+    def test_main_dashboard_rotates_reflections_every_three_minutes(self):
+        self.assertIn('function rotacionarReflexao()', self.html)
+        self.assertIn('window.setInterval(rotacionarReflexao, 3 * 60 * 1000)', self.html)
+
     def test_reflections_rotate_after_three_minutes_and_are_dismissible(self):
         self.assertIn("3 * 60 * 1000", self.console)
         self.assertIn("function checkReflectionInterval()", self.console)
