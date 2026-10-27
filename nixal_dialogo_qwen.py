@@ -215,20 +215,37 @@ class DialogoQwenNixal:
 
     @staticmethod
     def _pedido_explicitamente_autorizou(nome: str, texto: str) -> bool:
-        # Nenhuma ação mutável está disponível. Este predicado não concede
-        # acesso: uma política por capacidade precisa existir antes de habilitá-las.
         original = texto.strip().casefold()
-        if "?" in original or original.startswith((
+        if not original or "?" in original:
+            return False
+        informativos = (
             "como ", "o que ", "qual ", "quais ", "por que ", "porque ",
             "posso ", "poderia ", "devo ", "me explique ", "explique como ",
-        )):
+            "quero saber ", "gostaria de saber ", "me ensine ",
+        )
+        if original.startswith(informativos):
+            return False
+        normalizado = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", original).strip()
+        # Negação ligada diretamente ao verbo da ação bloqueia mutação.
+        # Não bloqueie conteúdo de nota como "anote que não quero esquecer".
+        if re.search(r"\b(?:nao|não|nunca)\s+(?:me\s+)?(?:anote|anota|salve|salvar|registre|registra|guarde|guarda|crie|criar|agende|abra|abre|inicie|iniciar)\b", normalizado):
+            return False
+        if re.search(r"\b(?:nao|não|nunca)\s+(?:quero|preciso|precisamos)\s+(?:que\s+voce\s+)?(?:anote|salve|registre|guarde|crie|agende|abra|inicie)\b", normalizado):
             return False
         if nome == "salvar_nota":
-            return any(x in original for x in ("anote ", "salve esta nota", "registre esta nota"))
+            return any(x in normalizado for x in (
+                "anote ", "anota ", "salve esta nota", "salvar nota ",
+                "registre esta nota", "registra esta nota", "guarde esta nota",
+            ))
         if nome == "criar_lembrete":
-            return any(x in original for x in ("me lembre", "crie um lembrete", "agende um lembrete"))
+            return any(x in normalizado for x in (
+                "me lembre ", "me lembra ", "crie um lembrete",
+                "criar lembrete ", "agende um lembrete", "me avise ", "lembre me ",
+            ))
         if nome == "abrir_aplicativo":
-            return any(x in original for x in ("abra ", "abre ", "inicie o aplicativo"))
+            return any(x in normalizado for x in (
+                "abra ", "abre ", "inicie o aplicativo", "inicie o ", "inicie a ",
+            ))
         return False
 
     def _executar_chamada_ferramenta(
@@ -247,20 +264,30 @@ class DialogoQwenNixal:
             argumentos = argumentos_raw
         if not isinstance(nome, str) or not isinstance(argumentos, dict):
             return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Chamada inválida."}
-        if nome in self.FERRAMENTAS_MUTAVEIS_DESATIVADAS:
-            return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Ação mutável desativada: o executor não possui autorização por ferramenta."}
         ferramentas = {item["function"]["name"] for item in self._especificacoes_ferramentas(gerenciador)}
         if nome not in ferramentas or nome not in gerenciador.capacidades:
-            return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Ferramenta não registrada/permitida."}
+            return {"tool_call_id": call_id, "name": str(nome), "ok": False, "resultado": "Ferramenta não registrada/permitida."}
+
+        autorizacao = self._pedido_explicitamente_autorizou(nome, pedido_usuario)
+        capacidade = gerenciador.capacidades[nome]
+        politica = getattr(capacidade, "politica", "somente_leitura")
+        if politica == "acao_com_pedido_explicito" and not autorizacao:
+            return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Ação bloqueada: falta pedido explícito do usuário."}
+        if politica == "requer_confirmacao":
+            return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": "Ação pendente de confirmação; não foi executada."}
         try:
             with self._tool_lock:
-                resultado = gerenciador.executar(nome, **argumentos)
+                if "autorizacao_explicita" in inspect.signature(gerenciador.executar).parameters:
+                    resultado = gerenciador.executar(
+                        nome, autorizacao_explicita=autorizacao, **argumentos,
+                    )
+                else:
+                    resultado = gerenciador.executar(nome, **argumentos)
         except Exception as erro:
             return {"tool_call_id": call_id, "name": nome, "ok": False, "resultado": f"Falha segura: {type(erro).__name__}"}
-        if not resultado.sucesso:
-            valor = {"erro": "A ferramenta recusou a solicitação ou não conseguiu concluir a consulta."}
-        else:
-            valor = resultado.resultado
+        valor = resultado.resultado if resultado.sucesso else {
+            "erro": "A ferramenta recusou a solicitação ou não conseguiu concluir a consulta."
+        }
         try:
             texto_resultado = json.dumps(valor, ensure_ascii=False, allow_nan=False, default=str)
         except (TypeError, ValueError):
