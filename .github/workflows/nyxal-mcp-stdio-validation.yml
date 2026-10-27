@@ -1,0 +1,59 @@
+name: Nyxal MCP stdio validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "nyxal_mcp_tools.py"
+      - "teste_mcp_stdio.py"
+      - "nixal_tool_use.py"
+      - "nixal_capacidades.py"
+      - "nixal_integracao_gmail.py"
+      - "nixal_amd_developer_cloud.py"
+      - "deploy/agent/requirements-mcp.txt"
+      - "docs/NYXAL_FERRAMENTAS.md"
+      - ".github/workflows/nyxal-mcp-stdio-validation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "nyxal_mcp_tools.py"
+      - "teste_mcp_stdio.py"
+      - "nixal_tool_use.py"
+      - "nixal_capacidades.py"
+      - "nixal_integracao_gmail.py"
+      - "nixal_amd_developer_cloud.py"
+      - "deploy/agent/requirements-mcp.txt"
+      - "docs/NYXAL_FERRAMENTAS.md"
+      - ".github/workflows/nyxal-mcp-stdio-validation.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: nyxal-mcp-stdio-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate-mcp-stdio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Create isolated optional MCP environment
+        run: |
+          python -m venv "$RUNNER_TEMP/nyxal-mcp-venv"
+          "$RUNNER_TEMP/nyxal-mcp-venv/bin/python" -m pip install --disable-pip-version-check -r deploy/agent/requirements-mcp.txt
+      - name: Compile MCP implementation and smoke test
+        run: |
+          python -m py_compile nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py nixal_integracao_gmail.py nixal_amd_developer_cloud.py
+      - name: Exercise stdio protocol and tool registry
+        run: "$RUNNER_TEMP/nyxal-mcp-venv/bin/python" teste_mcp_stdio.py
