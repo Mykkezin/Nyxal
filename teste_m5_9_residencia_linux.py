@@ -81,8 +81,10 @@ def main() -> None:
     assert 'exec "${BROWSER}"' in shell_principal
     assert "iniciar_nyxos_shell.sh" in diagnostico
 
-    assert "systemctl --user disable --now nyxos-interface.service" in instalador
-    assert "systemctl --user disable --now nyxal-desktop.service" in instalador
+    # O instalador percorre uma allowlist de unidades e usa variável no comando.
+    # Validamos tanto os dois nomes quanto a chamada, sem exigir expansão literal.
+    assert "for unidade in nyxos-interface.service nyxal-desktop.service; do" in instalador
+    assert 'systemctl --user disable --now "${unidade}"' in instalador
     assert "systemctl --user enable nyxos-interface.service" not in instalador
     assert 'self._unidade_habilitada(self.UNIDADE_INTERFACE)' in autoreparo
     assert '"desativada_por_configuracao"' in autoreparo
