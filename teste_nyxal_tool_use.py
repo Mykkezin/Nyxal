@@ -74,6 +74,52 @@ class TestFerramentasNyxal(unittest.TestCase):
         self.assertFalse(result["sucesso"])
         self.assertFalse(result["comandos_arbitrarios_habilitados"])
 
+    def test_catalogo_privado_e_mutavel_desativado_por_padrao(self):
+        from nixal_capacidades import GerenciadorCapacidades
+        from nixal_tool_use import registrar_capacidades_operacionais
+
+        manager = GerenciadorCapacidades()
+        registrar_capacidades_operacionais(manager)
+        nomes = set(manager.capacidades)
+        self.assertIn("pesquisar_web", nomes)
+        self.assertIn("consultar_metar_taf", nomes)
+        self.assertIn("executar_diagnostico", nomes)
+        for nome in (
+            "buscar_arquivos", "ler_arquivo_usuario", "consultar_emails_google",
+            "ler_email_google", "consultar_agenda_google", "consultar_home_assistant",
+            "listar_notas_lembretes", "salvar_nota", "criar_lembrete", "abrir_aplicativo",
+        ):
+            self.assertNotIn(nome, nomes)
+
+    def test_dados_privados_exigem_opt_in_separado_de_acoes(self):
+        from nixal_capacidades import GerenciadorCapacidades
+        from nixal_tool_use import registrar_capacidades_operacionais
+
+        manager = GerenciadorCapacidades()
+        registrar_capacidades_operacionais(manager, incluir_dados_privados=True)
+        nomes = set(manager.capacidades)
+        self.assertIn("buscar_arquivos", nomes)
+        self.assertIn("ler_arquivo_usuario", nomes)
+        self.assertIn("consultar_emails_google", nomes)
+        self.assertIn("listar_notas_lembretes", nomes)
+        self.assertNotIn("salvar_nota", nomes)
+        self.assertNotIn("criar_lembrete", nomes)
+        self.assertNotIn("abrir_aplicativo", nomes)
+
+    def test_acoes_so_aparecem_com_opt_in_mutavel(self):
+        from nixal_capacidades import GerenciadorCapacidades
+        from nixal_tool_use import registrar_capacidades_operacionais
+
+        manager = GerenciadorCapacidades()
+        registrar_capacidades_operacionais(manager, incluir_acoes=True)
+        nomes = set(manager.capacidades)
+        self.assertIn("salvar_nota", nomes)
+        self.assertIn("criar_lembrete", nomes)
+        self.assertIn("abrir_aplicativo", nomes)
+        self.assertNotIn("buscar_arquivos", nomes)
+        self.assertNotIn("consultar_emails_google", nomes)
+
+
     def test_parser_resultado_web(self):
         parser = _DuckDuckGoResults()
         parser.feed('<a class="result__a" href="https://example.test/doc"><span>Fonte <b>oficial</b></span></a>')
