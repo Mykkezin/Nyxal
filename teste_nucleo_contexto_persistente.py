@@ -352,13 +352,19 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
 
     def test_sanitizacao_de_contexto_redige_bearer_e_token_generico(self) -> None:
         entrada = (
-            "Authorization: Bearer bearer_secret_123 "
+            "Standalone Bearer bearer_secret_123 "
+            "Authorization: Bearer authorization_secret_234 "
             "token=plain_secret_456 refresh_token=refresh_secret_789"
         )
         saida = NucleoConversacionalNixal._texto_curto_contexto(entrada)
-        self.assertNotIn("bearer_secret_123", saida)
-        self.assertNotIn("plain_secret_456", saida)
-        self.assertNotIn("refresh_secret_789", saida)
+        for segredo in (
+            "bearer_secret_123",
+            "authorization_secret_234",
+            "plain_secret_456",
+            "refresh_secret_789",
+        ):
+            with self.subTest(segredo=segredo):
+                self.assertNotIn(segredo, saida)
         self.assertIn("Bearer [REDACTED]", saida)
         self.assertIn("token=[REDACTED]", saida)
         self.assertIn("authorization=[REDACTED]", saida)
