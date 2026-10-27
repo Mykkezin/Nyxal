@@ -62,6 +62,8 @@ def main() -> None:
         "--continuar-em-erro --habilitar-aprendizado --habilitar-auto-experimento"
         in residente
     )
+    assert "--habilitar-ae5-descoberta" in residente
+    assert "--habilitar-ae5-descoberta" not in api
     assert "StartLimitIntervalSec=300" in residente
     assert "StartLimitBurst=10" in residente
     assert "--habilitar-auto-experimento" not in api
@@ -84,6 +86,9 @@ def main() -> None:
     assert 'for unidade in nyxal-api.service nyxos-residente.service; do' in instalador
     assert "diagnosticar_nyxos_local.sh" in instalador
     assert "systemctl --user show" in diagnostico
+    assert "prazo = time.monotonic() + 15.0" in diagnostico
+    assert 'time.sleep(0.5)' in diagnostico
+    assert 'conexao.request("GET", "/health"' in diagnostico
     assert "cmp -s" in diagnostico
     assert "NYXAL_API_TOKEN" not in diagnostico
     assert 'PYTHON_BIN="${NYXAL_DIR}/.venv/bin/python"' in instalador
@@ -120,6 +125,7 @@ def main() -> None:
         encoding="utf-8"
     )
     assert "modo_residente=True" in launcher
+    assert '"--habilitar-ae5-descoberta"' in launcher
 
     runtime = (BASE_DIR / "nixal_runtime.py").read_text(
         encoding="utf-8"
@@ -134,7 +140,9 @@ def main() -> None:
     print("SERVICOS: API + RESIDENTE + INTERFACE GRAFICA")
     print("TARGET: nyxos.target")
     print("AE2_AUTOMATICA: HABILITADA_COM_GATES")
+    print("AE5_DESCOBERTA_CONTINUA: HABILITADA_COM_GATES")
     print("AUTOREPARO: API/INTERFACE_COM_LIMITES")
+
 
 def testar_historico_residente_limitado() -> None:
     from nixal_ciclo_residente import CicloResidenteNixOS
