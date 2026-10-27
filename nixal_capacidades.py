@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 import traceback
 from dataclasses import asdict, dataclass
@@ -309,11 +310,20 @@ class GerenciadorCapacidades:
             pass
 
 
-def ativar_ferramentas_operacionais(capacidades: GerenciadorCapacidades | None = None, *, incluir_acoes: bool = True) -> GerenciadorCapacidades:
-    """Registra adaptadores no gerenciador existente; retorna a instância utilizada."""
+def ativar_ferramentas_operacionais(
+    capacidades: GerenciadorCapacidades | None = None,
+    *,
+    incluir_acoes: bool = False,
+    incluir_dados_privados: bool = False,
+) -> GerenciadorCapacidades:
+    """Registra adaptadores com perfil seguro; opt-ins privados/mutáveis são separados."""
     alvo = capacidades if capacidades is not None else GerenciadorCapacidades()
     from nixal_tool_use import registrar_capacidades_operacionais
-    registrar_capacidades_operacionais(alvo, incluir_acoes=incluir_acoes)
+    registrar_capacidades_operacionais(
+        alvo,
+        incluir_acoes=incluir_acoes,
+        incluir_dados_privados=incluir_dados_privados,
+    )
     return alvo
 
 
@@ -323,8 +333,16 @@ def _obter_gerenciador_capacidades() -> GerenciadorCapacidades:
     try:
         return _GERENCIADOR_CAPACIDADES_COMPARTILHADO
     except NameError:
+        incluir_acoes = os.environ.get(
+            "NYXAL_ENABLE_MUTABLE_TOOLS", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        incluir_dados_privados = os.environ.get(
+            "NYXAL_ENABLE_PRIVATE_READ_TOOLS", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}
         _GERENCIADOR_CAPACIDADES_COMPARTILHADO = ativar_ferramentas_operacionais(
-            GerenciadorCapacidades(), incluir_acoes=True
+            GerenciadorCapacidades(),
+            incluir_acoes=incluir_acoes,
+            incluir_dados_privados=incluir_dados_privados,
         )
         return _GERENCIADOR_CAPACIDADES_COMPARTILHADO
 
