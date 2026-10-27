@@ -591,9 +591,31 @@ class VpsNyxOS:
             check=False,
         )
         if created.returncode != 0:
-            disk.unlink(missing_ok=True)
-            seed.unlink(missing_ok=True)
-            raise RuntimeError((created.stderr or created.stdout).strip() or "falha_virt_install")
+            detalhe_falha = (created.stderr or created.stdout).strip() or "falha_virt_install"
+            # virt-install pode falhar depois de registrar o domínio. Só remova
+            # os discos quando uma listagem bem-sucedida confirmar que o nome
+            # não existe; em estado presente/indeterminado, preserve os arquivos
+            # para não deixar um domínio apontando para discos apagados.
+            try:
+                listagem = self._run("list", "--all", "--name", timeout=10)
+            except Exception:
+                listagem = None
+            consulta_confiavel = (
+                listagem is not None
+                and getattr(listagem, "returncode", 1) == 0
+            )
+            dominios = (
+                {linha.strip() for linha in (listagem.stdout or "").splitlines() if linha.strip()}
+                if consulta_confiavel
+                else set()
+            )
+            if consulta_confiavel and nome not in dominios:
+                disk.unlink(missing_ok=True)
+                seed.unlink(missing_ok=True)
+                raise RuntimeError(detalhe_falha)
+            raise RuntimeError(
+                f"{detalhe_falha}; dominio_presente_ou_indeterminado_artefatos_preservados"
+            )
 
         autostart_confirmado: bool | None = None
         avisos: list[str] = []
