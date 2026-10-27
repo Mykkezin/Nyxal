@@ -78,6 +78,8 @@ on:
       - "interface/display/**"
       - "interface/index.html"
       - "interface/js/nyxal-voice-console.js"
+      - "interface/js/nyxal-api-client.js"
+      - "interface/js/nyxal-api-client.test.cjs"
       - "teste_nyxos_voice_console.py"
       - ".github/workflows/nyxal-agent-stack-validation.yml"
       - ".github/workflows/visual-generation-quality.yml"
@@ -150,6 +152,12 @@ jobs:
           npm run lint
           npm run build
       - name: Check voice console JavaScript
+      - name: Check and test shared Nyxal API client
+        run: |
+          node --check interface/js/nyxal-api-client.js
+          node --check interface/js/nyxal-api-client.test.cjs
+          node --test interface/js/nyxal-api-client.test.cjs
+
         run: node --check interface/js/nyxal-voice-console.js
       - name: Compile integrations
         run: |
