@@ -136,7 +136,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
             result = dialogo.responder("Que horas são?")
         self.assertTrue(result["sucesso"])
         self.assertEqual(len(result["ferramentas_executadas"]), dialogo.MAX_TOOL_CALLS)
-        self.assertEqual(len(cliente.chamadas), dialogo.MAX_TOOL_CALLS + 2)
+        self.assertEqual(len(cliente.chamadas), dialogo.MAX_TOOL_CALLS + 1)
         self.assertTrue(result["resposta"].strip())
         self.assertNotIn("tools", cliente.chamadas[-1])
 
@@ -187,6 +187,29 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(len(cliente.chamadas), dialogo.MAX_TOOL_CALLS + 1)
         self.assertNotIn("tools", cliente.chamadas[-1])
         self.assertIn("limite", result["resposta"].lower())
+
+    def test_limite_aplica_a_chamadas_em_lote(self):
+        calls = [
+            {"id": f"call-{n}", "function": {"name": "obter_hora", "arguments": {}}}
+            for n in range(1, 6)
+        ]
+        cliente = ClienteFake([
+            {"message": {"content": "", "tool_calls": calls}},
+            {"message": {"content": "Executei somente as ferramentas permitidas."}},
+        ])
+        dialogo = DialogoQwenNixal(cliente=cliente)
+        manager = GerenciadorCapacidades()
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=manager):
+            result = dialogo.responder("Que horas são?")
+
+        self.assertTrue(result["sucesso"])
+        self.assertEqual(len(result["ferramentas_executadas"]), dialogo.MAX_TOOL_CALLS)
+        self.assertEqual(len(cliente.chamadas), 2)
+        self.assertNotIn("tools", cliente.chamadas[-1])
+        self.assertEqual(
+            [x["tool_call_id"] for x in result["ferramentas_executadas"]],
+            ["call-1", "call-2", "call-3"],
+        )
 
     def test_pergunta_que_menciona_acao_nao_autoriza(self):
         exemplos = [
