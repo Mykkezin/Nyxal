@@ -1,0 +1,13 @@
+[Unit]
+Description=NyxOS — reciclar a interface principal a cada duas horas
+
+[Timer]
+# O primeiro reset acontece duas horas após ativar o timer.
+OnActiveSec=2h
+# Depois, conte duas horas a partir de cada execução do serviço.
+OnUnitActiveSec=2h
+AccuracySec=1min
+Unit=nyxos-interface-reset.service
+
+[Install]
+WantedBy=timers.target
