@@ -15,6 +15,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -339,11 +340,26 @@ class VpsNyxOS:
             raise ValueError("usuario_vps_invalido")
         ssh_public_key = self._validar_chave_ssh(ssh_public_key)
 
+        storage_configurada = Path(self.STORAGE).expanduser()
+        if storage_configurada.is_symlink():
+            raise RuntimeError("storage_vps_link_simbolico")
+        if not storage_configurada.is_dir():
+            raise RuntimeError("storage_vps_nao_preparado")
+        storage = storage_configurada.resolve()
+        self.STORAGE = storage
+
+        seed = storage / f"{nome}-seed.img"
+        user_data_final = storage / f"{nome}-user-data.yaml"
+        metadata_final = storage / f"{nome}-meta-data.yaml"
+        # Do not follow dangling symlinks or overwrite artefacts left by earlier runs.
+        for caminho in (seed, user_data_final, metadata_final):
+            if caminho.is_symlink() or caminho.exists():
+                raise FileExistsError("artefato_cloud_init_ja_existe")
+
         cloud_localds = self._tool("cloud-localds")
         if not cloud_localds:
             raise RuntimeError("cloud_localds_nao_instalado")
 
-        seed = (self.STORAGE / f"{nome}-seed.img").resolve()
         user_data = (
             "#cloud-config\n"
             "users:\n"
@@ -365,16 +381,28 @@ class VpsNyxOS:
             "instance-id: " + nome + "\n"
             "local-hostname: " + nome + "\n"
         )
-        user_data_path = self.STORAGE / f"{nome}-user-data.yaml"
-        metadata_path = self.STORAGE / f"{nome}-meta-data.yaml"
-        user_data_path.write_text(user_data, encoding="utf-8")
-        metadata_path.write_text(metadata, encoding="utf-8")
 
-        try:
+        # Work in a private, unpredictable staging directory on the same filesystem.
+        # The fixed final name is linked only after cloud-localds succeeds; os.link
+        # fails rather than overwriting a path created concurrently by another process.
+        with tempfile.TemporaryDirectory(
+            prefix=f".{nome}-cloud-init-",
+            dir=str(storage),
+        ) as diretorio_temporario:
+            temporario = Path(diretorio_temporario)
+            seed_temporario = temporario / "seed.img"
+            user_data_path = temporario / "user-data.yaml"
+            metadata_path = temporario / "meta-data.yaml"
+
+            with user_data_path.open("x", encoding="utf-8") as arquivo:
+                arquivo.write(user_data)
+            with metadata_path.open("x", encoding="utf-8") as arquivo:
+                arquivo.write(metadata)
+
             result = subprocess.run(
                 [
                     cloud_localds,
-                    str(seed),
+                    str(seed_temporario),
                     str(user_data_path),
                     str(metadata_path),
                 ],
@@ -385,10 +413,22 @@ class VpsNyxOS:
             )
             if result.returncode != 0:
                 raise RuntimeError((result.stderr or result.stdout).strip() or "falha_cloud_localds")
-        finally:
-            user_data_path.unlink(missing_ok=True)
-            metadata_path.unlink(missing_ok=True)
+            if seed_temporario.is_symlink() or not seed_temporario.is_file():
+                raise RuntimeError("saida_cloud_localds_invalida")
 
+            try:
+                os.link(seed_temporario, seed)
+            except FileExistsError as erro:
+                raise FileExistsError("seed_vps_ja_existe") from erro
+            try:
+                # The dedicated DELTA storage uses a service-scoped group/ACL.
+                os.chmod(seed, 0o640)
+            except OSError:
+                try:
+                    seed.unlink()
+                except OSError:
+                    pass
+                raise
         return seed
 
     def provisionar(
@@ -427,11 +467,24 @@ class VpsNyxOS:
         if not self._tool("qemu-img"):
             raise RuntimeError("qemu_img_nao_instalado")
 
-        self.STORAGE.mkdir(parents=True, exist_ok=True)
-        disk = (self.STORAGE / f"{nome}.qcow2").resolve()
-        seed = (self.STORAGE / f"{nome}-seed.img").resolve()
-        if disk.exists() or seed.exists():
-            raise FileExistsError("disco_vps_ja_existe")
+        storage_configurada = Path(self.STORAGE).expanduser()
+        if storage_configurada.is_symlink():
+            raise RuntimeError("storage_vps_link_simbolico")
+        storage_configurada.mkdir(parents=True, exist_ok=True)
+        if storage_configurada.is_symlink() or not storage_configurada.is_dir():
+            raise RuntimeError("storage_vps_invalido")
+        storage = storage_configurada.resolve()
+        self.STORAGE = storage
+
+        # Use unresolved child names for lstat-style symlink checks. Calling
+        # resolve() on a dangling symlink would otherwise hide the link itself.
+        disk = storage / f"{nome}.qcow2"
+        seed = storage / f"{nome}-seed.img"
+        user_data_path = storage / f"{nome}-user-data.yaml"
+        metadata_path = storage / f"{nome}-meta-data.yaml"
+        for caminho in (disk, seed, user_data_path, metadata_path):
+            if caminho.is_symlink() or caminho.exists():
+                raise FileExistsError("artefato_vps_ja_existe")
 
         seed = self._criar_cloud_init(
             nome=nome,
@@ -439,42 +492,71 @@ class VpsNyxOS:
             ssh_public_key=ssh_public_key,
         )
 
-        convert = subprocess.run(
-            [
-                self._tool("qemu-img"),
-                "convert",
-                "-p",
-                "-O",
-                "qcow2",
-                str(source),
-                str(disk),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=1800,
-            check=False,
-        )
-        if convert.returncode != 0:
-            disk.unlink(missing_ok=True)
-            seed.unlink(missing_ok=True)
-            raise RuntimeError((convert.stderr or convert.stdout).strip() or "falha_qemu_img")
+        # Convert/resize the base image in a private staging directory so qemu-img
+        # never writes through a pre-existing disk path. The final hard link is
+        # created exclusively and stays on the storage filesystem.
+        with tempfile.TemporaryDirectory(
+            prefix=f".{nome}-disk-",
+            dir=str(storage),
+        ) as diretorio_temporario:
+            disk_temporario = Path(diretorio_temporario) / f"{nome}.qcow2"
+            convert = subprocess.run(
+                [
+                    self._tool("qemu-img"),
+                    "convert",
+                    "-p",
+                    "-O",
+                    "qcow2",
+                    str(source),
+                    str(disk_temporario),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=1800,
+                check=False,
+            )
+            if convert.returncode != 0:
+                seed.unlink(missing_ok=True)
+                raise RuntimeError((convert.stderr or convert.stdout).strip() or "falha_qemu_img")
 
-        resize = subprocess.run(
-            [
-                self._tool("qemu-img"),
-                "resize",
-                str(disk),
-                f"{int(disk_gb)}G",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            check=False,
-        )
-        if resize.returncode != 0:
-            disk.unlink(missing_ok=True)
-            seed.unlink(missing_ok=True)
-            raise RuntimeError((resize.stderr or resize.stdout).strip() or "falha_resize")
+            resize = subprocess.run(
+                [
+                    self._tool("qemu-img"),
+                    "resize",
+                    str(disk_temporario),
+                    f"{int(disk_gb)}G",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+            if resize.returncode != 0:
+                seed.unlink(missing_ok=True)
+                raise RuntimeError((resize.stderr or resize.stdout).strip() or "falha_resize")
+
+            if disk_temporario.is_symlink() or not disk_temporario.is_file():
+                seed.unlink(missing_ok=True)
+                raise RuntimeError("disco_temporario_invalido")
+            try:
+                os.link(disk_temporario, disk)
+            except FileExistsError as erro:
+                seed.unlink(missing_ok=True)
+                raise FileExistsError("disco_vps_ja_existe") from erro
+            try:
+                # Preserve owner/group from the setgid storage directory but limit
+                # access to its owner and service group, not every local account.
+                os.chmod(disk, 0o660)
+            except OSError:
+                try:
+                    disk.unlink()
+                except OSError:
+                    pass
+                try:
+                    seed.unlink()
+                except OSError:
+                    pass
+                raise
 
         command = [
             self._tool("virt-install"),
@@ -493,6 +575,8 @@ class VpsNyxOS:
             "--import",
             "--network",
             "network=default,model=virtio",
+            "--channel",
+            "unix,target.type=virtio,target.name=org.qemu.guest_agent.0",
             "--graphics",
             "none",
             "--noautoconsole",
@@ -507,16 +591,49 @@ class VpsNyxOS:
             check=False,
         )
         if created.returncode != 0:
-            disk.unlink(missing_ok=True)
-            seed.unlink(missing_ok=True)
-            raise RuntimeError((created.stderr or created.stdout).strip() or "falha_virt_install")
+            detalhe_falha = (created.stderr or created.stdout).strip() or "falha_virt_install"
+            # virt-install pode falhar depois de registrar o domínio. Só remova
+            # os discos quando uma listagem bem-sucedida confirmar que o nome
+            # não existe; em estado presente/indeterminado, preserve os arquivos
+            # para não deixar um domínio apontando para discos apagados.
+            try:
+                listagem = self._run("list", "--all", "--name", timeout=10)
+            except Exception:
+                listagem = None
+            consulta_confiavel = (
+                listagem is not None
+                and getattr(listagem, "returncode", 1) == 0
+            )
+            dominios = (
+                {linha.strip() for linha in (listagem.stdout or "").splitlines() if linha.strip()}
+                if consulta_confiavel
+                else set()
+            )
+            if consulta_confiavel and nome not in dominios:
+                disk.unlink(missing_ok=True)
+                seed.unlink(missing_ok=True)
+                raise RuntimeError(detalhe_falha)
+            raise RuntimeError(
+                f"{detalhe_falha}; dominio_presente_ou_indeterminado_artefatos_preservados"
+            )
 
+        autostart_confirmado: bool | None = None
+        avisos: list[str] = []
         if autostart:
-            self.action(nome, "autostart")
+            resultado_autostart = self.action(nome, "autostart")
+            autostart_confirmado = (
+                isinstance(resultado_autostart, dict)
+                and resultado_autostart.get("sucesso") is True
+            )
+            if not autostart_confirmado:
+                # A VM já foi criada e pode estar em execução. Não sinalize a
+                # provisionação inteira como falha nem afirme que o autostart
+                # foi configurado; devolva um aviso explícito e verificável.
+                avisos.append("autostart_nao_confirmado")
 
         return {
             "sucesso": True,
-            "estado": "vps_criada",
+            "estado": "vps_criada_com_aviso" if avisos else "vps_criada",
             "origem": self.FONTE,
             "nome": nome,
             "memory_mb": int(memory_mb),
@@ -524,6 +641,8 @@ class VpsNyxOS:
             "disk_gb": int(disk_gb),
             "disk": str(disk),
             "autostart": bool(autostart),
+            "autostart_confirmado": autostart_confirmado,
+            "avisos": avisos,
             "username": username,
             "ssh_seed": str(seed),
         }
