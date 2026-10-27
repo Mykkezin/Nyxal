@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import Any
 
 from mcp.server import MCPServer
@@ -47,7 +48,7 @@ def status_ferramentas() -> str:
             "somente_leitura": True,
         },
         "home_assistant": {"configurado": _url_home_assistant() is not None, "somente_leitura": True},
-        "aviao": {"produtos": ["METAR", "TAF", "NOTAM", "cartas"], "metar_taf_fonte": "AviationWeather.gov Data API", "notam_cartas_fonte": "AISWEB/DECEA", "aisweb_configurado": bool(__import__("os").environ.get("NYXAL_AISWEB_API_KEY") and __import__("os").environ.get("NYXAL_AISWEB_API_PASS"))},
+        "aviao": {"produtos": ["METAR", "TAF", "NOTAM", "cartas"], "metar_taf_fonte": "AviationWeather.gov Data API", "notam_cartas_fonte": "AISWEB/DECEA", "aisweb_configurado": bool(os.environ.get("NYXAL_AISWEB_API_KEY") and os.environ.get("NYXAL_AISWEB_API_PASS"))},
         "pesquisa_web": "disponível quando a rede permitir",
         "notas_lembretes": {"arquivo": str(_notas.arquivo), "modo": "somente leitura neste servidor MCP"},
         "comandos_arbitrarios": False,
