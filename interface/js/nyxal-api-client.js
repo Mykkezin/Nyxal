@@ -7,7 +7,7 @@
   }
 
   async function nyxalApiPost(path, options = {}) {
-    const { body, headers = {}, parse = 'json', signal } = options;
+    const { body, headers = {}, parse = 'json', signal, throwOnError = true } = options;
     const response = await fetch(getBase() + path, {
       method: 'POST',
       headers,
@@ -22,7 +22,7 @@
       try { data = await response.json(); } catch (_) { data = null; }
     }
 
-    if (!response.ok) {
+    if (!response.ok && throwOnError) {
       const detail = data?.motivo || data?.erro || data?.detail || ('HTTP ' + response.status);
       const error = new Error('Nyxal API POST ' + path + ': ' + detail);
       error.status = response.status;
