@@ -114,13 +114,14 @@ class TestNyxalFunctionCalling(unittest.TestCase):
 
     def test_mudancas_de_estado_sao_rejeitadas_mesmo_se_capacidade_existir(self):
         manager = self.manager()
+        efeitos = []
         manager.registrar(
             nome="salvar_nota",
             descricao="não expor",
             objetivo="teste",
             exemplos=["teste"],
-            funcao=lambda **_kwargs: {"gravou": True},
-            argumentos={},
+            funcao=lambda **kwargs: efeitos.append(kwargs) or {"gravou": True},
+            argumentos={"titulo": {"tipo": "string", "obrigatorio": True}, "conteudo": {"tipo": "string", "obrigatorio": True}},
             dominios=["teste"],
             evidencias_dominio=["teste"],
         )
@@ -132,7 +133,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         )
         self.assertFalse(resultado["ok"])
         self.assertIn("mutável desativada", resultado["resultado"])
-        self.assertFalse(manager._carregar_registro().get("salvar_nota", {}).get("executado", False))
+        self.assertEqual(efeitos, [])
 
     def test_ferramenta_desconhecida_nao_e_executada(self):
         manager = self.manager()
@@ -146,7 +147,7 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertEqual(resultado["resultado"], "Ferramenta não registrada/permitida.")
 
     def test_loop_de_ferramentas_tem_limite_global_de_chamadas(self):
-        respostas = [mensagem_tool("obter_hora", {}, f"call-{i}") for i in range(8)]
+        respostas = [mensagem_tool("obter_hora", {}, f"call-{i}") for i in range(dialogo_limite := 4)]
         respostas.append({"message": {"content": "Resposta final sem nova ferramenta."}})
         cliente = ClienteFake(respostas)
         dialogo = DialogoQwenNixal(cliente=cliente)
