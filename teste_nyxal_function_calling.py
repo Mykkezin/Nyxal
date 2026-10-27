@@ -681,6 +681,17 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertIn("Objetivo: atualizar a memória", contexto_final)
         self.assertIn("Riscos: vazamento de segredo", contexto_final)
 
+    def test_coordenacao_especialista_ignora_comandos_citados_ou_negados(self):
+        casos_nao_ativos = (
+            'Resuma este texto: "Use modo especialistas para planejar a mudança."',
+            "Explique a frase " + chr(96) + "modo multiagente" + chr(96) + " neste documento.",
+            "Não use modo especialistas nesta resposta.",
+            "Não ative modo multiagente para esta tarefa.",
+        )
+        for texto in casos_nao_ativos:
+            with self.subTest(texto=texto):
+                self.assertFalse(DialogoQwenNixal._pedido_coordenacao_especialistas(texto))
+
     def test_coordenacao_especialista_nao_dispara_em_pergunta_comum(self):
         cliente = ClienteFake([{"message": {"content": "Resposta normal."}}])
         with patch.dict(os.environ, {"NYXAL_LLM_PROVIDER": "ollama"}):
