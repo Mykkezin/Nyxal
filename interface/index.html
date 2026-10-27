@@ -2622,8 +2622,8 @@
             '<p id="nyxalVoicePrompt">Toque no núcleo para ativar a conversa por voz</p>' +
             '<div id="nyxalVoiceMiniStatus">MICROFONE DESATIVADO</div>' +
             '<section class="nyxal-voice-diagnostics" aria-label="Diagnóstico do microfone" aria-live="polite">' +
-              '<div class="nyxal-voice-diagnostics-row"><span>NÍVEL DO MICROFONE</span><output id="nyxalVoiceRms">RMS 0.000</output></div>' +
-              '<div class="nyxal-voice-rms-track" role="meter" aria-label="Nível RMS capturado" aria-valuemin="0" aria-valuemax="0.08" aria-valuenow="0"><span id="nyxalVoiceRmsFill"></span></div>' +
+              '<div class="nyxal-voice-diagnostics-row"><span>NÍVEL DO MICROFONE</span><output id="nyxalVoiceRms">RMS —</output></div>' +
+              '<div class="nyxal-voice-rms-track" role="meter" aria-label="Nível RMS capturado" aria-valuemin="0" aria-valuemax="0.08"><span id="nyxalVoiceRmsFill"></span></div>' +
               '<div id="nyxalVoiceActivity" data-active="false">AGUARDANDO CAPTURA DO MICROFONE</div>' +
             '</section>' +
             '<div id="nyxalVoiceSubtitleMount"></div>' +
@@ -2700,7 +2700,7 @@
     let voiceCaptureStartedAt = 0;
     let voiceSpeechDetectedInCurrentRecording = false;
     let voiceNoiseFloor = 0.003;
-    let voiceRmsAtual = 0;
+    let voiceRmsAtual = null;
 
     let voiceVozDetectada = false;
     let voiceCalibracaoIniciadaAt = 0;
@@ -2766,9 +2766,9 @@
       voiceSpeechDetectedInCurrentRecording = false;
 
       voiceVozDetectada = false;
-      voiceRmsAtual = 0;
+      voiceRmsAtual = null;
       voiceCalibracaoIniciadaAt = performance.now();
-      updateVoiceDiagnostics(0, voiceActivityThreshold(), false);
+      updateVoiceDiagnostics(null, voiceActivityThreshold(), false);
       voiceNoiseFloor = Math.max(
         0.0015,
         Math.min(0.008, voiceNoiseFloor || 0.003)
@@ -2800,25 +2800,31 @@
     }
 
     function updateVoiceDiagnostics(rms = voiceRmsAtual, threshold = voiceActivityThreshold(), speechActive = voiceVozDetectada) {
-      // Só exibimos amostras reais lidas do analisador do microfone.
-      voiceRmsAtual = Number.isFinite(rms) ? Math.max(0, rms) : 0;
+      const sampleAvailable = Number.isFinite(rms) && Boolean(voiceConversationActive && voiceAnalyser);
+      // null significa que ainda não houve uma amostra real do microfone.
+      voiceRmsAtual = sampleAvailable ? Math.max(0, rms) : null;
       const safeThreshold = Number.isFinite(threshold) && threshold > 0
         ? threshold
         : VOICE_MIN_THRESHOLD;
       const level = document.getElementById('nyxalVoiceRms');
-      if (level) level.textContent = `RMS ${voiceRmsAtual.toFixed(3)}`;
+      if (level) level.textContent = sampleAvailable ? `RMS ${voiceRmsAtual.toFixed(3)}` : 'RMS —';
       const fill = document.getElementById('nyxalVoiceRmsFill');
       const maximum = Math.max(VOICE_MAX_THRESHOLD, safeThreshold);
-      const percentage = Math.max(0, Math.min(100, voiceRmsAtual / maximum * 100));
+      const percentage = sampleAvailable
+        ? Math.max(0, Math.min(100, voiceRmsAtual / maximum * 100))
+        : 0;
       if (fill) fill.style.width = `${percentage.toFixed(1)}%`;
       const track = fill?.parentElement;
-      if (track) track.setAttribute('aria-valuenow', voiceRmsAtual.toFixed(3));
+      if (track) {
+        if (sampleAvailable) track.setAttribute('aria-valuenow', voiceRmsAtual.toFixed(3));
+        else track.removeAttribute('aria-valuenow');
+      }
       const activity = document.getElementById('nyxalVoiceActivity');
       if (activity) {
-        activity.textContent = speechActive
-          ? 'FALA DETECTADA'
-          : (voiceConversationActive ? 'ESCUTA ATIVA · SEM FALA' : 'AGUARDANDO CAPTURA DO MICROFONE');
-        activity.dataset.active = String(Boolean(speechActive));
+        activity.textContent = !sampleAvailable
+          ? (voiceConversationActive ? 'AGUARDANDO AMOSTRA DE ÁUDIO' : 'MICROFONE DESATIVADO')
+          : (speechActive ? 'FALA DETECTADA' : 'ESCUTA ATIVA · SEM FALA');
+        activity.dataset.active = String(Boolean(sampleAvailable && speechActive));
       }
     }
 
