@@ -168,5 +168,28 @@ def diagnosticar_sistema(tipo: str) -> str:
     return _json(_executar_diagnostico(tipo))
 
 
+def main() -> None:
+    """Usa stdio por padrão; HTTP local só existe com opt-in e token bearer."""
+    transport = os.environ.get("NYXAL_MCP_TRANSPORT", "stdio").strip().lower()
+    if transport == "stdio":
+        mcp.run()
+        return
+    if transport != "streamable-http":
+        raise SystemExit("NYXAL_MCP_TRANSPORT precisa ser stdio ou streamable-http.")
+
+    from nixal_mcp_runtime import MCPBearerTokenMiddleware, configuracao_mcp_http
+    config = configuracao_mcp_http(os.environ)
+    if config is None:
+        raise SystemExit("MCP HTTP recusado: configure NYXAL_MCP_HTTP_ENABLED=1.")
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise SystemExit("MCP HTTP requer mcp[cli] no ambiente da Nyxal.") from exc
+    app = MCPBearerTokenMiddleware(mcp.streamable_http_app(), config.token)
+    uvicorn.run(
+        app, host=config.host, port=config.port, log_level="warning",
+        access_log=False, server_header=False, date_header=False,
+    )
+
 if __name__ == "__main__":
-    mcp.run()
+    main()

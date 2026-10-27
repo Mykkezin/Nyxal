@@ -2109,14 +2109,27 @@ def main() -> None:
         "POST /api/stt"
     )
 
+    mcp_http_process = None
+    lembretes_iniciados = False
     try:
+        # MCP HTTP opcional: processo separado, ligado ao ciclo de vida desta API.
+        from nixal_mcp_runtime import iniciar_mcp_http, encerrar_mcp_http
+        mcp_http_process = iniciar_mcp_http(BASE_DIR, api_port=PORT)
+        if mcp_http_process is not None:
+            mcp_host = os.environ.get("NYXAL_MCP_HTTP_HOST", "127.0.0.1")
+            mcp_port = int(os.environ.get("NYXAL_MCP_HTTP_PORT", "8765"))
+            print(f"[Nyxal-API] MCP HTTP local autenticado ativo em http://{mcp_host}:{mcp_port}/mcp")
         servico_lembretes.iniciar()
+        lembretes_iniciados = True
         server.serve_forever()
     except KeyboardInterrupt:
         print()
         print("[Nyxal-API] encerrando...")
     finally:
-        servico_lembretes.parar()
+        if mcp_http_process is not None:
+            encerrar_mcp_http(mcp_http_process)
+        if lembretes_iniciados:
+            servico_lembretes.parar()
         server.server_close()
 
 

@@ -90,22 +90,34 @@ A persistência reutilizável está em `~/.local/share/nyxal/notas_lembretes.jso
 
 ### Servidor MCP opcional
 
-Instale a dependência opcional na virtualenv da Nyxal (ela não é necessária para o diálogo principal):
+Instale a dependência na virtualenv da Nyxal (o diálogo Qwen continua funcionando sem o MCP):
 
 ```bash
 cd ~/Nyxal
 ./.venv/bin/python -m pip install -r deploy/agent/requirements-mcp.txt
 ```
 
-Para validar o servidor stdio:
+**HTTP local ligado ao ciclo de vida da API (opcional e desligado por padrão):** defina estas variáveis no ambiente do serviço da Nyxal:
+
+```bash
+export NYXAL_MCP_HTTP_ENABLED=1
+export NYXAL_MCP_HTTP_TOKEN="$(./.venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+# O padrão é 127.0.0.1:8765
+export NYXAL_MCP_HTTP_HOST=127.0.0.1
+export NYXAL_MCP_HTTP_PORT=8765
+```
+
+O token precisa ter 32–256 caracteres ASCII seguros. Não grave o token no Git, logs, argumentos de processo ou frontend. O endpoint é `http://127.0.0.1:8765/mcp`; clientes devem enviar `Authorization: Bearer <token>`. Somente IPs literais de loopback são aceitos. O SDK mantém a proteção de Host/DNS rebinding, requisições sem bearer token são rejeitadas, a inicialização da API falha se o MCP explicitamente habilitado não confirmar readiness e o processo filho é encerrado junto da API.
+
+**Stdio permanece disponível** para clientes MCP que iniciam o servidor como subprocesso:
 
 ```bash
 ./.venv/bin/python teste_mcp_stdio.py
 ```
 
-O processo usa transporte stdio do `MCPServer`. No cliente MCP, configure `command` com o caminho absoluto de `~/Nyxal/.venv/bin/python` e `args` com o caminho absoluto de `~/Nyxal/nyxal_mcp_tools.py`. Não coloque credenciais no arquivo de configuração do cliente.
+No cliente stdio, configure `command` com o caminho absoluto de `~/Nyxal/.venv/bin/python` e `args` com o caminho absoluto de `~/Nyxal/nyxal_mcp_tools.py`. Sem `NYXAL_MCP_TRANSPORT`, o servidor usa stdio.
 
-O MCP expõe consultas web, METAR/TAF, NOTAMs, cartas, Home Assistant somente leitura, busca/leitura limitada de arquivos, Gmail/Calendar, notas e diagnósticos. As ferramentas que leem arquivos pessoais, sensores, Gmail/Calendar ou notas retornam bloqueio até que `NYXAL_ENABLE_PRIVATE_READ_TOOLS=1` esteja definido no ambiente do processo MCP. O servidor não expõe ações para escrita de notas, criação de lembretes ou abertura de aplicativos.
+O MCP expõe consultas web, METAR/TAF, NOTAMs, cartas, Home Assistant somente leitura, busca/leitura limitada de arquivos, Gmail/Calendar, notas e diagnósticos. Leituras de arquivos pessoais, sensores, Gmail/Calendar e notas retornam bloqueio até que `NYXAL_ENABLE_PRIVATE_READ_TOOLS=1` esteja definido no ambiente do processo MCP. O servidor continua sem ações mutáveis.
 
 Para executar os testes locais da branch:
 

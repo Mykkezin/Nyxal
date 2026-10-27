@@ -6,6 +6,8 @@ on:
       - main
       - feat/durable-investigation-context-20261026
     paths:
+      - "nixal_mcp_runtime.py"
+      - "teste_nyxal_mcp_runtime.py"
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
@@ -78,6 +80,8 @@ on:
       - fix/durable-memory-corruption-guard-20261026
       - feat/voz-tempo-real-pipecat
     paths:
+      - "nixal_mcp_runtime.py"
+      - "teste_nyxal_mcp_runtime.py"
       - "nyxal_web_api.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
@@ -206,6 +210,8 @@ jobs:
         run: |
           python3 -m compileall -q \
             nyxal_web_api.py \
+            nixal_mcp_runtime.py \
+            teste_nyxal_mcp_runtime.py \
             nixal_display_routes.py \
             nixal_agent_hub.py \
             nixal_intent_router.py \
@@ -283,6 +289,7 @@ jobs:
             teste_nixal_tool_use \
             teste_nyxal_tool_use \
             teste_nyxal_function_calling \
+            teste_nyxal_mcp_runtime \
             teste_nyxos_voice_console \
             teste_nixal_responses_api \
             teste_nixal_dialogo_router \

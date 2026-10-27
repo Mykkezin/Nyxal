@@ -43,7 +43,7 @@ Altere as variáveis apenas no ambiente autorizado do processo. Não grave crede
 
 - Gmail e Calendar permanecem somente leitura; esta integração não envia e-mails nem altera eventos.
 - Home Assistant permanece somente leitura; não são acionados interruptores, fechaduras, alarmes ou outros dispositivos físicos.
-- O MCP não recebe shell livre e leituras privadas também dependem do opt-in correspondente.
+- O MCP não recebe shell livre; o HTTP opcional exige opt-in, bearer token forte e loopback. Leituras privadas dependem do opt-in correspondente.
 - Dados METAR/TAF, NOTAMs e cartas ajudam na consulta, mas não substituem briefing operacional, fontes oficiais vigentes ou julgamento do piloto.
 - Falta de credenciais, indisponibilidade de rede ou autorização insuficiente devem resultar em estado pendente/erro; não devem ser apresentados como sucesso.
 
