@@ -48,14 +48,13 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('nyxal-face-data-line', self.html)
         self.assertIn('max-height: 52vh', self.html)
         self.assertIn('status.dataset.state', self.html)
-        # Keep the HUD subdued but readable, matching the current console tokens.
         self.assertIn('font-size:12px;letter-spacing:.035em', self.console)
         self.assertIn('min-height:32px;padding:6px 11px', self.console)
         self.assertIn('rgba(145,190,225,.28)', self.console)
-        self.assertIn('nvc-chip.nvc-brand-chip{min-height:30px;padding:5px 9px;border-color:rgba(145,190,225,.25);font-size:11px;letter-spacing:.035em}', self.console)
-        self.assertIn('<div class="nvc-chip nvc-brand-chip">', self.console)
-        self.assertIn('nvc-chip.nvc-brand-chip{font-size:10px;min-height:26px;padding:4px 8px}', self.console)
 
+        self.assertIn("nvc-chip.nvc-brand-chip{min-height:30px;padding:5px 9px;border-color:rgba(145,190,225,.25);font-size:11px;letter-spacing:.035em}", self.console)
+        self.assertIn('<div class="nvc-chip nvc-brand-chip">', self.console)
+        self.assertIn("nvc-chip.nvc-brand-chip{font-size:10px;min-height:26px;padding:4px 8px}", self.console)
     def test_immersive_hologram_has_large_centerpiece_and_spatial_signal_panels(self):
         self.assertIn('viewBox="48 0 264 320"', self.html)
         self.assertIn('nyxal-voice-sidepanel-left', self.html)
@@ -163,6 +162,35 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         for name in ("temperatura", "sensacao", "umidade", "vento"):
             self.assertIn(name + '.innerText = "—";', catch_block)
         self.assertIn('condicao.innerText = "Clima indisponível";', catch_block)
+
+    def test_music_widget_opens_spotify_safely_without_faking_playback(self):
+        self.assertIn('id="spotifyStatus"', self.html)
+        self.assertIn('aria-label="Abrir Spotify Web"', self.html)
+        start = self.html.index("function togglePlayMusic()")
+        end = self.html.index("function addNewEventPrompt()", start)
+        music = self.html[start:end]
+        self.assertIn("window.open('about:blank', '_blank')", music)
+        self.assertIn("popup.opener = null", music)
+        self.assertIn("popup.location.replace('https://open.spotify.com/')", music)
+        self.assertIn("window.__nyxosSpotifyWindow", music)
+        self.assertIn("Pop-up bloqueado", music)
+        self.assertIn("'BLOQUEADO'", music)
+        self.assertNotIn("Reprodução iniciada", music)
+
+    def test_infinity_drag_handles_cancel_resize_storage_and_viewport_bounds(self):
+        self.assertIn("z-index: 9999 !important", self.html)
+        start = self.html.index("function initInfinityDrag()")
+        end = self.html.index("function toggleInfinityHub()", start)
+        drag = self.html[start:end]
+        self.assertIn("document.body.appendChild(hub)", drag)
+        self.assertIn("core.style.touchAction = 'none'", drag)
+        self.assertIn("core.addEventListener('pointercancel', finishDrag)", drag)
+        self.assertIn("core.addEventListener('lostpointercapture'", drag)
+        self.assertIn("window.addEventListener('resize'", drag)
+        self.assertIn("function clampCoordinate(value, viewportSize)", drag)
+        self.assertIn("sessionStorage.setItem(STORAGE_KEY", drag)
+        self.assertIn("passive: false", drag)
+        self.assertIn("core.dataset.dragSuppressed", drag)
 
     def test_main_dashboard_rotates_reflections_every_three_minutes(self):
         self.assertIn('function rotacionarReflexao()', self.html)

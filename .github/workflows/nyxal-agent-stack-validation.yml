@@ -253,10 +253,6 @@ jobs:
             scripts/autorizar_gmail_nyxal.py \
             scripts/configurar_hermes_whatsapp_policy.py \
             scripts/nyxal_letta_memory.py
-      - name: Validate local setup scripts
-        run: |
-          bash -n deploy/agent/configurar_nyxal_agent.sh
-          bash -n deploy/agent/instalar_nyxal_agent.sh
       - name: Validate local configuration scripts
         run: |
           bash -n deploy/agent/configurar_nyxal_agent.sh
@@ -294,6 +290,7 @@ jobs:
       - name: Validate optional MCP stdio implementation on the self-hosted runner
         run: |
           MCP_VENV="$RUNNER_TEMP/nyxal-mcp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          trap 'rm -rf "$MCP_VENV"' EXIT
           python3 -m venv "$MCP_VENV"
           "$MCP_VENV/bin/python" -m pip install --disable-pip-version-check --no-input -r deploy/agent/requirements-mcp.txt
           "$MCP_VENV/bin/python" -m py_compile nyxal_mcp_tools.py teste_mcp_stdio.py nixal_tool_use.py nixal_capacidades.py nixal_integracao_gmail.py nixal_amd_developer_cloud.py

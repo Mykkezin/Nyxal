@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke test for the optional MCP stdio server (Python MCP SDK v2)."""
+"""Smoke test for Nyxal's optional MCP stdio server using the MCP Python SDK v2."""
 
 from __future__ import annotations
 
