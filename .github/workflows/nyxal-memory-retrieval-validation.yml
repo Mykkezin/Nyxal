@@ -1,0 +1,56 @@
+name: Nyxal Memory Retrieval Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "nixal_recuperador_contexto.py"
+      - "teste_nixal_recuperador_contexto.py"
+      - "nixal_memoria_investigacao.py"
+      - "nixal_memoria_conhecimento.py"
+      - "nixal_contexto_historico_relevante.py"
+      - "nixal_contexto_historico_investigacao.py"
+      - "nixal_relevancia_historico_investigacao.py"
+      - ".github/workflows/nyxal-memory-retrieval-validation.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "nixal_recuperador_contexto.py"
+      - "teste_nixal_recuperador_contexto.py"
+      - "nixal_memoria_investigacao.py"
+      - "nixal_memoria_conhecimento.py"
+      - "nixal_contexto_historico_relevante.py"
+      - "nixal_contexto_historico_investigacao.py"
+      - "nixal_relevancia_historico_investigacao.py"
+      - ".github/workflows/nyxal-memory-retrieval-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: memory-retrieval-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-memory-retrieval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile memory modules
+        run: |
+          python -m py_compile \
+            nixal_recuperador_contexto.py \
+            nixal_memoria_investigacao.py \
+            nixal_memoria_conhecimento.py \
+            nixal_contexto_historico_relevante.py \
+            teste_nixal_recuperador_contexto.py
+      - name: Run retrieval tests
+        run: python -m unittest -v teste_nixal_recuperador_contexto
