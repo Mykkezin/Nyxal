@@ -34,6 +34,7 @@ from nixal_habitat import HabitatNixOS
 from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
 from nixal_defesa_autonoma import DefesaAutonoma
+from nixal_executor_defesa_governada import ExecutorDefesaGovernada
 from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_estado_presenca import compor_presenca_efetiva
@@ -117,10 +118,58 @@ OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
 CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 
-# Observação governada: eventos em memória, sem executor nem persistência.
+# Observação e preparação governada: eventos/planos em memória, sem efeitos físicos.
 DEFESA_AUTONOMA_NYXAL = DefesaAutonoma()
+DEFESA_EXECUTOR_GOVERNADO = ExecutorDefesaGovernada()
 DEFESA_EVENTOS_RECIENTES = deque(maxlen=256)
 DEFESA_EVENTOS_LOCK = Lock()
+
+
+def preparar_planos_defesa_dry_run(recomendacoes):
+    """Encaminha recomendações válidas ao gate existente, sempre em modo dry-run."""
+    if not isinstance(recomendacoes, list):
+        return []
+
+    planos = []
+    for recomendacao in recomendacoes[:8]:
+        if not isinstance(recomendacao, dict):
+            continue
+        try:
+            resultado = DEFESA_EXECUTOR_GOVERNADO.preparar(recomendacao)
+        except Exception:
+            # A preparação é observabilidade não crítica: nunca derruba o gate HTTP.
+            resultado = {
+                "sucesso": False,
+                "estado": "preparacao_indisponivel",
+                "executor_ativo": False,
+                "executor_autorizado": False,
+                "efeito_executado": False,
+            }
+        if not isinstance(resultado, dict):
+            resultado = {"sucesso": False, "estado": "preparacao_indisponivel"}
+
+        plano = resultado.get("plano")
+        plano = plano if isinstance(plano, dict) else {}
+        tipo = str(recomendacao.get("tipo", ""))[:80]
+        plano_id = resultado.get("plano_id") or plano.get("plano_id")
+        exige_aprovacao = (
+            True
+            if tipo != "alertar_operador"
+            else bool(plano.get("exige_aprovacao_humana", recomendacao.get("exige_aprovacao_humana", False)))
+        )
+        planos.append({
+            "tipo": tipo,
+            "estado": str(resultado.get("estado", "recomendacao_rejeitada"))[:48],
+            "plano_id": str(plano_id)[:64] if plano_id else None,
+            "expira_em": str(plano.get("expira_em", ""))[:64] or None,
+            "modo": str(plano.get("modo", "dry_run" if resultado.get("sucesso") else "nao_preparado"))[:24],
+            "exige_aprovacao_humana": exige_aprovacao,
+            "aprovacao_verificada": bool(plano.get("aprovacao_verificada", False)),
+            "executor_ativo": False,
+            "executor_autorizado": False,
+            "efeito_executado": False,
+        })
+    return planos
 PIPER_BIN = Path(sys.executable).parent / "piper"
 KOKORO_VOICE = os.environ.get("NYXAL_KOKORO_VOICE", "pf_dora")
 
@@ -852,16 +901,26 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             motivos = motivos if isinstance(motivos, list) else []
             recomendacoes = decisao.get("recomendacoes")
             recomendacoes = recomendacoes if isinstance(recomendacoes, list) else []
+            # Cada recomendação é preparada exatamente uma vez para evitar
+            # criar duplicação idempotente durante a construção do mesmo evento.
+            planos_dry_run = preparar_planos_defesa_dry_run(recomendacoes)
             resumo_recomendacoes = []
+            indice_plano = 0
             for recomendacao in recomendacoes[:8]:
                 if not isinstance(recomendacao, dict):
                     continue
+                resumo_plano = (
+                    planos_dry_run[indice_plano]
+                    if indice_plano < len(planos_dry_run)
+                    else {}
+                )
+                indice_plano += 1
                 resumo_recomendacoes.append({
                     "tipo": str(recomendacao.get("tipo", ""))[:80],
                     "escopo": str(recomendacao.get("escopo", ""))[:128],
                     "motivo": str(recomendacao.get("motivo", ""))[:160],
                     "exige_aprovacao_humana": bool(
-                        recomendacao.get("exige_aprovacao_humana", True)
+                        resumo_plano.get("exige_aprovacao_humana", True)
                     ),
                     "executor_autorizado": False,
                     "efeito_executado": False,
@@ -877,6 +936,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 "severidade": severidade,
                 "motivos": [str(motivo)[:80] for motivo in motivos[:8]],
                 "recomendacoes": resumo_recomendacoes,
+                "planos_dry_run": planos_dry_run,
                 "executor_autorizado": False,
                 "efeito_executado": False,
             }
@@ -1661,8 +1721,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 "eventos": eventos,
                 "limite": 50,
                 "eventos_em_memoria_maximo": 256,
+                "planos_dry_run": DEFESA_EXECUTOR_GOVERNADO.listar_registros(limite=50),
+                "executor_dry_run": DEFESA_EXECUTOR_GOVERNADO.contexto(),
                 "persistencia": False,
                 "executor_ativo": False,
+                "executor_autorizado": False,
+                "efeito_executado": False,
             })
             return
 

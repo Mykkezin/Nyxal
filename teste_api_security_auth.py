@@ -791,5 +791,83 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
                 self.assertFalse(recomendacao.get("efeito_executado"))
 
 
+
+    def test_falha_autenticacao_prepara_plano_dry_run_sem_efeitos(self) -> None:
+        class MotorComRecomendacao:
+            def avaliar(self, _evento):
+                # Simula um produtor interno para cobrir a ligação com o gate.
+                # Os campos de autorização abaixo são deliberadamente falsos/inseguros.
+                return {
+                    "estado": "avaliado",
+                    "evento": {
+                        "tipo": "falha_autenticacao",
+                        "fonte_sinal": "api-auth",
+                        "origem_ip": "203.0.113.44",
+                    },
+                    "severidade": "alta",
+                    "motivos": ["limiar_bloqueio_atingido"],
+                    "recomendacoes": [{
+                        "tipo": "bloqueio_temporario_origem",
+                        "escopo": "203.0.113.44",
+                        "motivo": "Limiar de falhas observado.",
+                        "duracao_segundos": 300,
+                        "exige_aprovacao_humana": False,
+                        "executor_autorizado": True,
+                        "efeito_executado": True,
+                    }],
+                }
+
+        api.API_TOKEN = "token-secreto-de-teste"
+        defesa_original = api.DEFESA_AUTONOMA_NYXAL
+        executor_original = api.DEFESA_EXECUTOR_GOVERNADO
+        eventos_originais = list(api.DEFESA_EVENTOS_RECIENTES)
+
+        def restaurar_estado() -> None:
+            api.DEFESA_AUTONOMA_NYXAL = defesa_original
+            api.DEFESA_EXECUTOR_GOVERNADO = executor_original
+            api.DEFESA_EVENTOS_RECIENTES.clear()
+            api.DEFESA_EVENTOS_RECIENTES.extend(eventos_originais)
+
+        self.addCleanup(restaurar_estado)
+        api.DEFESA_AUTONOMA_NYXAL = MotorComRecomendacao()
+        api.DEFESA_EXECUTOR_GOVERNADO = api.ExecutorDefesaGovernada()
+        api.DEFESA_EVENTOS_RECIENTES.clear()
+
+        status, _ = self.request("GET", "/api/agent/contexto")
+        self.assertEqual(status, 401)
+        status, body = self.request(
+            "GET", "/api/agent/defesa",
+            headers={"Authorization": "Bearer token-secreto-de-teste"},
+        )
+        self.assertEqual(status, 200, body)
+        payload = json.loads(body)
+
+        eventos = payload.get("eventos", [])
+        self.assertEqual(len(eventos), 1)
+        evento = eventos[0]
+        self.assertEqual(evento.get("origem_ip"), "203.0.113.44")
+        planos_evento = evento.get("planos_dry_run", [])
+        self.assertEqual(len(planos_evento), 1)
+        plano_evento = planos_evento[0]
+        self.assertEqual(plano_evento.get("tipo"), "bloqueio_temporario_origem")
+        self.assertEqual(plano_evento.get("estado"), "aguardando_aprovacao")
+        self.assertEqual(plano_evento.get("modo"), "dry_run")
+        self.assertTrue(plano_evento.get("exige_aprovacao_humana"))
+        self.assertFalse(plano_evento.get("aprovacao_verificada"))
+        self.assertFalse(plano_evento.get("executor_ativo"))
+        self.assertFalse(plano_evento.get("executor_autorizado"))
+        self.assertFalse(plano_evento.get("efeito_executado"))
+
+        planos = payload.get("planos_dry_run", [])
+        self.assertEqual(len(planos), 1)
+        self.assertEqual(planos[0].get("modo"), "dry_run")
+        self.assertFalse(planos[0].get("executor_ativo"))
+        self.assertFalse(planos[0].get("executor_autorizado"))
+        self.assertFalse(planos[0].get("efeito_executado"))
+        self.assertFalse(payload.get("executor_dry_run", {}).get("executor_ativo"))
+        self.assertFalse(payload.get("executor_dry_run", {}).get("persistencia_duravel"))
+        self.assertNotIn("token-secreto-de-teste", body)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

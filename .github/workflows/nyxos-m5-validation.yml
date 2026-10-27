@@ -1,48 +1,8 @@
 name: NyxOS M5 — validação do Habitat
 
 on:
-  push:
-    branches:
-      - main
-      - feat/m5-habitat-nyxos
-    paths:
-      - "nixal_habitat.py"
-      - "nixal_processos_habitat.py"
-      - "nixal_persistencia_operacional.py"
-      - "nixal_delta.py"
-      - "nixal_recursos_habitat.py"
-      - "nixal_ciclo_residente.py"
-      - "nixal_auto_experimento_ae2.py"
-      - "nixal_auto_avaliacao_ae3.py"
-      - "nixal_ciclo_evolucao_ae4.py"
-      - "nixal_descoberta_continua_ae5.py"
-      - "corpo_nixal.py"
-      - "nixal_runtime.py"
-      - "nyxal_web_api.py"
-      - "executar_nyxos_residente.py"
-      - "nixal_gateway_atuacao_host.py"
-      - "nixal_controle_processos_aplicativos.py"
-      - "nixal_corpo_termico.py"
-      - "nixal_fisiologia_operacional.py"
-      - "nixal_plano_controle_central.py"
-      - "nixal_presenca_maquina.py"
-      - "nixal_coletor_dataset_dual_ae5.py"
-      - "auditar_evidencias_ae5.py"
-      - "teste_habitat_m5_*.py"
-      - "teste_processos_habitat_m5_*.py"
-      - "teste_persistencia_operacional_m5_*.py"
-      - "teste_delta_m5_*.py"
-      - "teste_recursos_habitat_m5_*.py"
-      - "teste_ciclo_residente_m5_*.py"
-      - "teste_auto_evolucao_ae*.py"
-      - "teste_auto_experimento_ae*.py"
-      - "teste_ae*_ciclo_residente.py"
-      - "teste_auto_avaliacao_ae*.py"
-      - "teste_ciclo_evolucao_ae*.py"
-      - "teste_descoberta_continua_ae*.py"
-      - "teste_m5_*.py"
-      - ".github/workflows/nyxos-m5-validation.yml"
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - main
     paths:
@@ -85,14 +45,14 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   habitat:
-    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin')
     runs-on: self-hosted
     timeout-minutes: 10
     steps:
