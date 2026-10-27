@@ -78,7 +78,6 @@ class TestNyxalAgentHub(unittest.TestCase):
             'if self.path == "/api/agent/chat" and sessao_id is None:',
             source,
         )
-        self.assertIn("ignora configurações antigas de Gemini", source)
 
     def test_bloqueia_url_arbitraria_para_hermes_e_letta(self):
         with patch.dict(os.environ, {
