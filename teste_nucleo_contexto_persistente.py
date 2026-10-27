@@ -6,6 +6,7 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest.mock import Mock
 from pathlib import Path
 
 # O teste usa o adaptador de diálogo com um cliente falso; não inicia um modelo.
@@ -14,6 +15,7 @@ sys.modules.setdefault("ollama", types.SimpleNamespace())
 from nixal_contexto_historico_relevante import ContextoHistoricoRelevanteNixal
 from nixal_dialogo_qwen import DialogoQwenNixal
 from nixal_memoria_investigacao import MemoriaInvestigacaoNixal
+from nixal_memoria_conversacional import MemoriaConversacionalNixal
 from nixal_nucleo_conversacional import NucleoConversacionalNixal
 
 
@@ -64,6 +66,16 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         registro = self.memoria.registrar(sample_cycle())
         self.assertIs(registro.get("sucesso"), True)
         self.contexto = ContextoHistoricoRelevanteNixal(self.memoria)
+
+    def test_ciclo_helper_retorna_copia_e_rejeita_registro_invalido(self) -> None:
+        ciclo = sample_cycle()
+        resultado = self.contexto._ciclo({"id": "registro-teste", "ciclo": ciclo})
+        self.assertEqual(resultado, ciclo)
+        self.assertIsNot(resultado, ciclo)
+        resultado["necessidade"] = "alteração de teste"
+        self.assertNotEqual(ciclo["necessidade"], resultado["necessidade"])
+        self.assertIsNone(self.contexto._ciclo({"id": "sem-ciclo"}))
+        self.assertIsNone(self.contexto._ciclo(None))
 
     def test_consulta_lexical_recupera_registro_com_proveniencia(self) -> None:
         resultado = self.contexto.analisar_consulta(
@@ -116,6 +128,85 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         self.assertIn("runner privado", texto_usuario)
         self.assertIn("access_token=[REDACTED]", texto_usuario)
         self.assertNotIn("abc123", texto_usuario)
+
+    def test_core_ignores_legacy_remote_provider_and_preserves_canonical_session_history(self) -> None:
+        cliente = FakeChatClient()
+        dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
+        hub = Mock()
+        dialogo.agent_hub = hub
+        memoria_conversacional = MemoriaConversacionalNixal()
+        nucleo = NucleoConversacionalNixal(
+            dialogo=dialogo,
+            memoria_conversacional=memoria_conversacional,
+            memoria_investigacao=self.memoria,
+            contexto_historico_relevante=self.contexto,
+        )
+        sessao = "sessao-provider-core"
+        contexto_sistema = {"observabilidade": {"cpu_percent": 12.5}}
+        primeira_mensagem = (
+            "Onde paramos na investigação do runner privado do GitHub Actions?"
+        )
+        resposta_local = (
+            "Encontrei uma investigação anterior; ela é contexto histórico, "
+            "não confirmação do estado atual."
+        )
+
+        entrada = nucleo.interface.criar_entrada(
+            primeira_mensagem, sessao=sessao
+        )
+        entrada["valor"]["opcoes_dialogo"] = {
+            "provedor": "openai",
+            "contexto_sistema": contexto_sistema,
+        }
+        primeira = nucleo.processar(entrada)
+
+        self.assertEqual(primeira["valor"]["modo"], "resposta_conversacional")
+        self.assertEqual(primeira["resposta"], resposta_local)
+        self.assertEqual(len(cliente.calls), 1)
+        self.assertEqual(cliente.calls[0]["model"], "fixture-model")
+        self.assertIn('"cpu_percent":12.5', cliente.calls[0]["messages"][0]["content"])
+        texto_usuario_primeiro = "\n".join(
+            item["content"]
+            for item in cliente.calls[0]["messages"]
+            if item["role"] == "user"
+        )
+        self.assertIn("CONTEXTO DE INVESTIGAÇÕES ANTERIORES", texto_usuario_primeiro)
+        # Seleções legadas como OpenAI/Gemini não reativam o hub externo.
+        hub.responder.assert_not_called()
+
+        segunda_mensagem = "E qual é o próximo passo?"
+        segunda_entrada = nucleo.interface.criar_entrada(
+            segunda_mensagem, sessao=sessao
+        )
+        segunda_entrada["valor"]["opcoes_dialogo"] = {
+            "provedor": "openai",
+            "contexto_sistema": contexto_sistema,
+        }
+        segunda = nucleo.processar(segunda_entrada)
+
+        self.assertEqual(segunda["valor"]["modo"], "resposta_conversacional")
+        self.assertEqual(segunda["resposta"], resposta_local)
+        self.assertEqual(len(cliente.calls), 2)
+        historico_dialogo = cliente.calls[1]["messages"]
+        self.assertIn(
+            {"role": "user", "content": primeira_mensagem},
+            historico_dialogo,
+        )
+        self.assertIn(
+            {"role": "assistant", "content": resposta_local},
+            historico_dialogo,
+        )
+        self.assertEqual(hub.responder.call_count, 0)
+
+        historico_canonico = memoria_conversacional.obter(sessao)["mensagens"]
+        self.assertEqual(
+            [item["papel"] for item in historico_canonico],
+            ["user", "assistant", "user", "assistant"],
+        )
+        self.assertEqual(
+            [item["texto"] for item in historico_canonico][-2:],
+            [segunda_mensagem, resposta_local],
+        )
 
     def test_memoria_corrompida_nao_e_classificada_como_historico_ausente(self) -> None:
         caminho_corrompido = Path(self.tempdir.name) / "memoria_corrompida.json"

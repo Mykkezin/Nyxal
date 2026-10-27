@@ -50,6 +50,7 @@ Princípios:
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 from typing import Any
 
 from nixal_interface import (
@@ -90,6 +91,9 @@ class TransporteConversacionalNixal:
         texto: str,
         nucleo: Any,
         sessao: str | None = None,
+        *,
+        provedor: str | None = None,
+        contexto_sistema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Recebe uma mensagem humana, encaminha ao núcleo e retorna
@@ -121,6 +125,38 @@ class TransporteConversacionalNixal:
             return self._negado(
                 str(exc)
             )
+
+        if provedor is not None:
+            if (
+                not isinstance(provedor, str)
+                or provedor.strip().lower() not in {
+                    "auto", "nyxal", "gemini", "hermes",
+                    "letta", "openai", "grok",
+                }
+            ):
+                return self._negado("O provedor conversacional é inválido.")
+
+        if contexto_sistema is not None:
+            if not isinstance(contexto_sistema, dict):
+                return self._negado("O contexto do sistema precisa ser um objeto JSON.")
+            try:
+                contexto_serializado = json.dumps(
+                    contexto_sistema,
+                    ensure_ascii=False,
+                    allow_nan=False,
+                    separators=(",", ":"),
+                )
+            except (TypeError, ValueError):
+                return self._negado("O contexto do sistema não é JSON válido.")
+            if len(contexto_serializado) > 128000:
+                return self._negado("O contexto do sistema excede 128.000 caracteres.")
+
+        if provedor is not None or contexto_sistema is not None:
+            entrada["valor"]["opcoes_dialogo"] = {}
+            if provedor is not None:
+                entrada["valor"]["opcoes_dialogo"]["provedor"] = provedor.strip().lower()
+            if contexto_sistema is not None:
+                entrada["valor"]["opcoes_dialogo"]["contexto_sistema"] = deepcopy(contexto_sistema)
 
         if not self._interface.validar_entrada(
             entrada
