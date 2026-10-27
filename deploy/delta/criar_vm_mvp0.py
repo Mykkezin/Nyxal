@@ -142,7 +142,7 @@ def main() -> int:
     )
     parser.add_argument("--name", default=DEFAULT_VM_NAME, help="nome novo da VM (padrão: delta-mvp0)")
     parser.add_argument("--image", default=None, help="imagem cloud Ubuntu verificada; padrão: ~/NyxOS/VPS/ubuntu-24.04-server-cloudimg-amd64.img")
-    parser.add_argument("--storage", default=None, help="diretório de discos; padrão: ~/NyxOS/VPS")
+    parser.add_argument("--storage", default=None, help="diretório dedicado de discos acessível ao libvirt; prepare com deploy/delta/preparar_storage_mvp0.sh; não use a home")
     parser.add_argument("--ssh-key-file", default=None, help="caminho para uma chave pública .pub existente")
     parser.add_argument("--memory-mb", type=int, default=2048, help="RAM da VM em MiB (padrão: 2048)")
     parser.add_argument("--vcpus", type=int, default=2, help="vCPUs da VM (padrão: 2)")
