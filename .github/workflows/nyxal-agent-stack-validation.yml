@@ -258,6 +258,9 @@ jobs:
           python3 teste_m5_15_presenca_maquina.py
 
   validate-vps-public-key:
+    # O runner é compartilhado: não lance este job junto com a suíte Agent Stack.
+    needs: validate-agent-stack
+    if: always() && (github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'ci:full') && github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'Mykkezin'))
     # O runner hospedado não está alocando jobs (runner_id=0); usar o Python 3.12
     # já instalado no runner privado para que este gate curto seja executável.
     runs-on: self-hosted
