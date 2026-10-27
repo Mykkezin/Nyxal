@@ -94,7 +94,7 @@ class NyxalPipecatContractTests(unittest.TestCase):
     def test_removes_common_markdown_without_changing_words(self):
         self.assertEqual(
             _spoken_text("## Status\n- Voz **feminina** ativada."),
-            "Status Voz feminina ativada.",
+            "Status. Voz feminina ativada.",
         )
 
 
