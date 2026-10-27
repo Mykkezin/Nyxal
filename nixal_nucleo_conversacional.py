@@ -391,6 +391,8 @@ class NucleoConversacionalNixal:
         resposta["valor"]["memoria_conversacional"] = (
             usuario_registrado or assistente_registrado
         )
+        # Expor somente estado resumido: nunca caminho local nem conteúdo das sessões.
+        resposta["valor"]["memoria_conversacional_estado"] = self.memoria_conversacional.estado()
         resposta["valor"]["conhecimento_permanente"] = False
         resposta["valor"]["arquitetura_modificada"] = False
         contextos_persistidos = contexto_persistido.get("contextos", [])
