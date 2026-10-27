@@ -131,6 +131,57 @@ class TestNyxalFunctionCalling(unittest.TestCase):
         self.assertNotIn("criar_lembrete", nomes)
         self.assertNotIn("abrir_aplicativo", nomes)
 
+    def test_acao_mutavel_legada_sem_politica_nao_executa_mesmo_com_opt_in(self):
+        manager = GerenciadorCapacidades()
+        efeitos = []
+        manager.registrar(
+            nome="salvar_nota",
+            descricao="Capacidade legada sem política explícita",
+            objetivo="Regressão de segurança",
+            exemplos=["teste"],
+            funcao=lambda **kwargs: efeitos.append(kwargs) or {"gravou": True},
+            argumentos={
+                "titulo": {"tipo": "string", "obrigatorio": True},
+                "conteudo": {"tipo": "string", "obrigatorio": True},
+            },
+            dominios=["teste"],
+            evidencias_dominio=["teste"],
+            # Política padrão legado = somente_leitura. Deve falhar fechada.
+        )
+        dialogo = DialogoQwenNixal(cliente=ClienteFake([]))
+        chamada = mensagem_tool(
+            "salvar_nota", {"titulo": "Teste", "conteudo": "Não gravar"},
+        )["message"]["tool_calls"][0]
+        with patch.dict(os.environ, {"NYXAL_ENABLE_MUTABLE_TOOLS": "1"}):
+            resultado = dialogo._executar_chamada_ferramenta(
+                manager, chamada, "Anote que vou revisar a prova.",
+            )
+        self.assertFalse(resultado["ok"])
+        self.assertIn("Política de ação mutável ausente", resultado["resultado"])
+        self.assertEqual(efeitos, [])
+
+    def test_argumentos_json_invalidos_nao_sao_ecoado_como_string_no_historico(self):
+        cliente = ClienteFake([
+            mensagem_tool("pesquisar_web", "{invalid"),
+            {"message": {"content": "Não consegui interpretar os argumentos da consulta."}},
+        ])
+        dialogo = DialogoQwenNixal(cliente=cliente)
+        manager = self.manager()
+        with patch.object(dialogo, "_gerenciador_ferramentas", return_value=manager):
+            resultado = dialogo.responder("Pesquise uma fonte pública.")
+        self.assertTrue(resultado["sucesso"])
+        self.assertFalse(resultado["ferramentas_executadas"][0]["ok"])
+        self.assertEqual(len(cliente.chamadas), 2)
+        mensagens = cliente.chamadas[1]["messages"]
+        chamada_assistente = next(
+            item for item in mensagens
+            if item.get("role") == "assistant" and item.get("tool_calls")
+        )
+        self.assertEqual(
+            chamada_assistente["tool_calls"][0]["function"]["arguments"],
+            {},
+        )
+
     def test_mudancas_de_estado_sao_rejeitadas_mesmo_se_capacidade_existir(self):
         manager = self.manager()
         efeitos = []
