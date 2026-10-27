@@ -6,7 +6,6 @@ ACL, arquivo operacional do host ou serviço real é criado/modificado.
 """
 from __future__ import annotations
 
-import base64
 import hashlib
 import importlib.util
 import io
@@ -78,9 +77,9 @@ class TesteDeltaMVP0(unittest.TestCase):
             stack.enter_context(patch.object(delta.sys, "argv", args))
             stack.enter_context(patch.object(delta.sys, "path", list(delta.sys.path)))
             stack.enter_context(patch.object(delta.sys, "stdin", TerminalFalso(interativo=interativo)))
-            stack.enter_context(patch("builtins.input", return_value=answer))
+            input_mock = stack.enter_context(patch("builtins.input", return_value=answer))
             stack.enter_context(patch.dict(sys.modules, {"nixal_vps": self.fake_vps_module}))
-            stack.enter_context(patch.dict("os.environ", {}, clear=False))
+            stack.enter_context(patch.dict("os.environ", {"NYXOS_VPS_LIBVIRT_URI": "qemu:///system"}, clear=False))
             stack.enter_context(patch.object(delta, "require_tool"))
             stack.enter_context(patch.object(delta, "find_ssh_key", return_value=self.key))
             if erro_imagem is None:
@@ -91,7 +90,6 @@ class TesteDeltaMVP0(unittest.TestCase):
             stack.enter_context(
                 patch.object(delta, "free_space", return_value=(20 * delta.GIB, self.pasta))
             )
-            input_mock = stack.enter_context(patch("builtins.input", return_value=answer))
             stdout = io.StringIO()
             stderr = io.StringIO()
             with redirect_stdout(stdout), redirect_stderr(stderr):
