@@ -73,6 +73,13 @@ def main() -> None:
     assert "Wants=nyxal-api.service nyxos-residente.service" in target
     assert "WantedBy=default.target" in target
     interface = ler("nyxos-interface.service")
+    reset_service = ler("nyxos-interface-reset.service")
+    reset_timer = ler("nyxos-interface-reset.timer")
+    assert "Type=oneshot" in reset_service
+    assert "systemctl --user try-restart nyxos-interface.service" in reset_service
+    assert "OnActiveSec=2h" in reset_timer
+    assert "OnUnitActiveSec=2h" in reset_timer
+    assert "Unit=nyxos-interface-reset.service" in reset_timer
     assert (
         "ExecStart=/usr/bin/bash %h/Nyxal/deploy/systemd/iniciar_nyxos_shell.sh"
         in interface
@@ -84,6 +91,24 @@ def main() -> None:
     assert "systemctl --user disable --now nyxal-desktop.service" in instalador
     assert "systemctl --user disable --now nyxos-interface.service" not in instalador
     assert "systemctl --user enable nyxos-interface.service" in instalador
+    assert 'install -m 0644 "${SCRIPT_DIR}/nyxos-interface-reset.service"' in instalador
+    assert 'install -m 0644 "${SCRIPT_DIR}/nyxos-interface-reset.timer"' in instalador
+    # O timer é instalado, mas reiniciar o navegador é opt-in: pode interromper voz em andamento.
+    linhas_instalador = instalador.splitlines()
+    linha_optin = next(
+        i for i, linha in enumerate(linhas_instalador)
+        if linha.strip() == 'if [[ "${NYXOS_ENABLE_INTERFACE_RESET_TIMER:-0}" == "1" ]]; then'
+    )
+    linha_enable_timer = next(
+        i for i, linha in enumerate(linhas_instalador)
+        if linha.strip() == "systemctl --user enable --now nyxos-interface-reset.timer"
+    )
+    linha_else = next(
+        i for i, linha in enumerate(linhas_instalador[linha_optin + 1:], linha_optin + 1)
+        if linha.strip() == "else"
+    )
+    assert linha_optin < linha_enable_timer < linha_else
+    assert "não ativado automaticamente para evitar interromper a voz" in instalador
     assert "systemctl --user restart nyxos-interface.service" in instalador
     assert 'self._unidade_habilitada(self.UNIDADE_INTERFACE)' in autoreparo
     assert '"desativada_por_configuracao"' in autoreparo
@@ -93,6 +118,8 @@ def main() -> None:
     assert 'systemctl --user restart "${unidade}"' in instalador
     assert 'for unidade in nyxal-api.service nyxos-residente.service; do' in instalador
     assert "diagnosticar_nyxos_local.sh" in instalador
+    assert "nyxos-interface-reset.timer" in diagnostico
+    assert "nyxos-interface-reset.service" in diagnostico
     assert "systemctl --user show" in diagnostico
     assert "prazo = time.monotonic() + 15.0" in diagnostico
     assert 'time.sleep(0.5)' in diagnostico
@@ -123,6 +150,9 @@ def main() -> None:
     assert "senha" not in instalador.lower()
     assert "token" not in instalador.lower()
 
+    assert "systemctl --user disable --now nyxos-interface-reset.timer" in desinstalador
+    assert "nyxos-interface-reset.service" in desinstalador
+    assert "nyxos-interface-reset.timer" in desinstalador
     assert "systemctl --user disable --now nyxos.target" in desinstalador
     assert "rm -f" in desinstalador
     assert "main" not in desinstalador.lower()

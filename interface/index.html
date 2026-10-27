@@ -406,6 +406,9 @@
     }
     #nyxalVoiceSurface #nyxalVoicePrompt { margin: 12px 0 0; color: #e2e8f0; font-size: 15px; font-weight: 400; letter-spacing: .015em; }
     #nyxalVoiceSurface #nyxalVoiceMiniStatus { color: #64748b; font: 10px/1.4 monospace; letter-spacing: .15em; text-transform: uppercase; margin-top: -10px; }
+    #nyxalVoiceSurface .nyxal-voice-backend-status { color:#7890a8; font:8px/1.45 monospace; letter-spacing:.045em; text-align:center; overflow-wrap:anywhere; max-width:100%; }
+    #nyxalVoiceSurface .nyxal-voice-backend-status[data-state="online"] { color:#6ee7b7; }
+    #nyxalVoiceSurface .nyxal-voice-backend-status[data-state="offline"] { color:#fbbf24; }
     #nyxalVoiceSurface .nyxal-voice-diagnostics {
       width: min(300px,76vw); display: grid; gap: 7px; margin-top: -11px;
       color: #64748b; font: 9px/1.4 monospace; letter-spacing: .12em; text-align: left;
@@ -1091,6 +1094,26 @@
     }
 
   </style>
+<style>
+/* Perfil de baixo consumo: preserva o estado visual, remove animações decorativas e blurs caros no shell de voz. */
+html.nyxal-voice-only #nyxalVoiceSurface::before,
+html.nyxal-voice-only #nyxalVoiceSurface::after,
+html.nyxal-voice-only #nyxalVoiceStage::after,
+html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-ring,
+html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-scanline,
+html.nyxal-voice-only #nyxalVoiceSurface .nyxal-signal-visual i,
+html.nyxal-voice-only #nyxalVoiceSurface .nyxal-core-ring,
+html.nyxal-voice-only #nyxalVoiceSurface .nyxal-core-center,
+html.nyxal-voice-only #nyxalVoiceSurface .nyxal-pipeline-step > i,
+html.nyxal-voice-only #nyxalVoiceSurface #globeContainer::before {
+  animation: none !important;
+}
+html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-control-card,
+html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+</style>
 </head>
 
 <body class="min-h-screen bg-[#02050e] text-slate-100 flex flex-col justify-between relative selection:bg-hud-cyan selection:text-black">
@@ -2187,7 +2210,7 @@
 
     function stopVoiceBargeInVadLoop() {
       if (voiceBargeInFrame !== null) {
-        cancelAnimationFrame(voiceBargeInFrame);
+        window.clearTimeout(voiceBargeInFrame);
         voiceBargeInFrame = null;
       }
     }
@@ -2285,7 +2308,7 @@
         };
         setVoiceMicrophoneEnabled(true);
         recorder.start(100);
-        voiceBargeInFrame = requestAnimationFrame(runVoiceBargeInMonitor);
+        voiceBargeInFrame = window.setTimeout(runVoiceBargeInMonitor, NYXAL_VOICE_SAMPLE_INTERVAL_MS);
       } catch (error) {
         voiceBargeInRecorder = null;
         voiceBargeInChunks = [];
@@ -2299,7 +2322,10 @@
         voiceBargeInFrame = null;
         return;
       }
-      const samples = new Float32Array(voiceAnalyser.fftSize);
+      if (!voiceBargeInSampleBuffer || voiceBargeInSampleBuffer.length !== voiceAnalyser.fftSize) {
+        voiceBargeInSampleBuffer = new Float32Array(voiceAnalyser.fftSize);
+      }
+      const samples = voiceBargeInSampleBuffer;
       voiceAnalyser.getFloatTimeDomainData(samples);
       const rms = voiceRms(samples);
       const now = performance.now();
@@ -2338,7 +2364,7 @@
           return;
         }
       }
-      voiceBargeInFrame = requestAnimationFrame(runVoiceBargeInMonitor);
+      voiceBargeInFrame = window.setTimeout(runVoiceBargeInMonitor, NYXAL_VOICE_SAMPLE_INTERVAL_MS);
     }
 
     async function speakGoddessNyxVoice(text, updateSubtitle = true, userContext = "") {
@@ -2557,6 +2583,33 @@
       speakGoddessNyxVoice("Configuração de rede atualizada. Conectando à ponte Nyxal.");
     }
 
+    function updateNyxalVoiceBackendStatus(data, online) {
+      const element = document.getElementById('nyxalVoiceBackendStatus');
+      if (!element) return;
+      const updatedAt = new Date().toLocaleTimeString('pt-BR');
+      if (!online) {
+        element.textContent = `API SEM RESPOSTA · ÚLTIMA TENTATIVA ${updatedAt}`;
+        element.dataset.state = 'offline';
+        element.title = 'A última consulta à API local falhou; a voz pode não conseguir responder.';
+        return;
+      }
+      const resources = data && data.habitat && data.habitat.recursos ? data.habitat.recursos : {};
+      const percentage = (value, label) => {
+        if (value === null || value === undefined || value === '') return null;
+        const number = Number(value);
+        return Number.isFinite(number) && number >= 0 ? `${label} ${Math.round(number)}%` : null;
+      };
+      const details = [
+        'API ONLINE',
+        percentage(resources.cpu && resources.cpu.uso_percentual, 'CPU'),
+        percentage(resources.memoria && resources.memoria.uso_percentual, 'RAM'),
+        `ATUALIZADO ${updatedAt}`
+      ].filter(Boolean);
+      element.textContent = details.join(' · ');
+      element.dataset.state = 'online';
+      element.title = `Última resposta válida da API local às ${updatedAt}. Percentuais dependem dos sensores disponíveis.`;
+    }
+
     // ================= BACKEND STATUS POLLING =================
     function atualizarGaugeSistema(circleId, textId, valor) {
       const circle = document.getElementById(circleId);
@@ -2757,13 +2810,17 @@
       return elemento.innerHTML;
     }
 
+    let nyxalStatusRequestInFlight = false;
     async function fetchNyxalStatus() {
+      if (nyxalStatusRequestInFlight) return;
+      nyxalStatusRequestInFlight = true;
       try {
-        const response = await fetch(`${window.NYXAL_API_BASE}/api/public/status`, { method: 'GET' });
+        const response = await fetch(`${window.NYXAL_API_BASE}/api/public/status`, { method: 'GET', cache: 'no-store', signal: AbortSignal.timeout(8000) });
         
         if (response.ok) {
           const data = await response.json();
           isNyxalOnline = true;
+          updateNyxalVoiceBackendStatus(data, true);
 
           // Update UI elements with real status data
           document.getElementById('headerNyxalStatus').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> ONLINE`;
@@ -2905,6 +2962,7 @@
       } catch (err) {
         // Handle Offline Mode gracefully without crashing
         isNyxalOnline = false;
+        updateNyxalVoiceBackendStatus(null, false);
         document.getElementById('headerNyxalStatus').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> MODO LOCAL`;
         document.getElementById('headerNyxalStatus').className = "flex items-center gap-1.5 text-[10px] text-amber-400 font-rajdhani";
         document.getElementById('footerConnectionStatus').innerHTML = `<i class="fa-solid fa-plane-slash text-[10px]"></i> REDE: OFFLINE (LOCAL)`;
@@ -2912,6 +2970,8 @@
         document.getElementById('nyxalModeBadge').innerText = `MODO: LOCAL`;
         document.getElementById('nyxalCycleBadge').innerText = `CICLOS: OFFLINE`;
         setAiStatusText('MODO LOCAL', 'text-amber-400');
+      } finally {
+        nyxalStatusRequestInFlight = false;
       }
     }
 
@@ -3541,6 +3601,7 @@
             '<section class="nyxal-voice-control-card" aria-label="Controles da conversa por voz">' +
               '<p id="nyxalVoicePrompt">Toque no núcleo para iniciar a conversa</p>' +
               '<div id="nyxalVoiceMiniStatus" data-state="idle">MICROFONE DESATIVADO</div>' +
+              '<div id="nyxalVoiceBackendStatus" class="nyxal-voice-backend-status" data-state="checking" aria-live="polite">API: VERIFICANDO CONEXÃO…</div>' +
               '<section class="nyxal-voice-diagnostics" aria-label="Diagnóstico do microfone" aria-live="polite">' +
                 '<div class="nyxal-voice-diagnostics-row"><span>NÍVEL DO MICROFONE</span><output id="nyxalVoiceRms">RMS —</output></div>' +
                 '<div class="nyxal-voice-rms-track" role="meter" aria-label="Nível RMS capturado" aria-valuemin="0" aria-valuemax="0.08"><span id="nyxalVoiceRmsFill"></span></div>' +
@@ -3629,6 +3690,7 @@
     let voiceAnalyser = null;
     let voiceAnalyserSource = null;
     let voiceVadFrame = null;
+    let voiceVadSampleBuffer = null;
     let voiceMimeType = '';
     let voiceConversationActive = false;
     let voiceConversationBusy = false;
@@ -3646,6 +3708,7 @@
     let voiceBargeInRecorder = null;
     let voiceBargeInChunks = [];
     let voiceBargeInFrame = null;
+    let voiceBargeInSampleBuffer = null;
     let voiceBargeInDetected = false;
     let voiceBargeInHandoff = false;
     let voiceBargeInDiscard = false;
@@ -3653,6 +3716,7 @@
     let voiceBargeSpeechStartedAt = 0;
     let voiceBargeLastSpeechAt = 0;
 
+    const NYXAL_VOICE_SAMPLE_INTERVAL_MS = 40; // 25 Hz: menos CPU, mantendo resposta de voz natural.
     const VOICE_VAD_CALIBRATION_MS = 450;
     const VOICE_VAD_START_MS = 90;
     const VOICE_VAD_SILENCE_MS = 850;
@@ -3698,7 +3762,7 @@
 
     function stopVoiceVadLoop() {
       if (voiceVadFrame !== null) {
-        cancelAnimationFrame(voiceVadFrame);
+        window.clearTimeout(voiceVadFrame);
         voiceVadFrame = null;
       }
     }
@@ -3967,10 +4031,10 @@
         return;
       }
 
-      const data = new Float32Array(
-        voiceAnalyser.fftSize
-      );
-
+      if (!voiceVadSampleBuffer || voiceVadSampleBuffer.length !== voiceAnalyser.fftSize) {
+        voiceVadSampleBuffer = new Float32Array(voiceAnalyser.fftSize);
+      }
+      const data = voiceVadSampleBuffer;
       voiceAnalyser.getFloatTimeDomainData(data);
 
       const rms = voiceRms(data);
@@ -4064,9 +4128,7 @@
         }
       }
 
-      voiceVadFrame = requestAnimationFrame(
-        runContinuousVoiceVad
-      );
+      voiceVadFrame = window.setTimeout(runContinuousVoiceVad, NYXAL_VOICE_SAMPLE_INTERVAL_MS);
     }
 
     function scheduleContinuousVoiceLoop(delay = 0) {
@@ -4081,9 +4143,7 @@
           return;
         }
 
-        voiceVadFrame = requestAnimationFrame(
-          runContinuousVoiceVad
-        );
+        voiceVadFrame = window.setTimeout(runContinuousVoiceVad, NYXAL_VOICE_SAMPLE_INTERVAL_MS);
       };
 
       if (delay > 0) {
@@ -4341,22 +4401,22 @@
       camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
       camera.position.z = 220;
 
-      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false, powerPreference: 'low-power' });
       renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
       container.appendChild(renderer.domElement);
 
       coreGroup = new THREE.Group();
       scene.add(coreGroup);
 
       // Core Inner Dark Energy Sphere
-      const sphereGeo = new THREE.SphereGeometry(62, 32, 32);
+      const sphereGeo = new THREE.SphereGeometry(62, 24, 16);
       const sphereMat = new THREE.MeshBasicMaterial({ color: 0x020a1c, transparent: true, opacity: 0.9 });
       innerCore = new THREE.Mesh(sphereGeo, sphereMat);
       coreGroup.add(innerCore);
 
       // Holographic Cyan Wireframe Geodesic Shell
-      const wireframeGeo = new THREE.IcosahedronGeometry(66, 3);
+      const wireframeGeo = new THREE.IcosahedronGeometry(66, 2);
       const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, wireframe: true, transparent: true, opacity: 0.35 });
       outerGeodesic = new THREE.Mesh(wireframeGeo, wireframeMat);
       coreGroup.add(outerGeodesic);
@@ -4369,7 +4429,7 @@
       coreGroup.add(ringMesh);
 
       // Orbiting Particles / Flight Vector Nodes
-      const count = 140;
+      const count = 72;
       const positions = new Float32Array(count * 3);
       for (let i = 0; i < count; i++) {
         const u = Math.random();
@@ -4405,13 +4465,17 @@
       window.addEventListener('mouseup', () => { isDragging = false; });
 
       function animate() {
-        requestAnimationFrame(animate);
+        if (document.hidden) {
+          window.setTimeout(animate, 1000);
+          return;
+        }
         if (!isDragging) {
           coreGroup.rotation.y += 0.003;
           outerGeodesic.rotation.y -= 0.0015;
           ringMesh.rotation.z += 0.002;
         }
         renderer.render(scene, camera);
+        window.setTimeout(animate, 33); // teto de ~30 FPS; pausa quase total em segundo plano.
       }
       animate();
     }
@@ -4425,7 +4489,7 @@
       let w = (canvas.width = window.innerWidth);
       let h = (canvas.height = window.innerHeight);
 
-      const stars = Array.from({ length: 80 }, () => ({
+      const stars = Array.from({ length: 45 }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
         radius: Math.random() * 1.5,
@@ -4434,6 +4498,10 @@
       }));
 
       function drawBg() {
+        if (document.hidden) {
+          window.setTimeout(drawBg, 1000);
+          return;
+        }
         ctx.clearRect(0, 0, w, h);
         stars.forEach(s => {
           s.alpha += s.speed;
@@ -4443,7 +4511,7 @@
           ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
           ctx.fill();
         });
-        requestAnimationFrame(drawBg);
+        window.setTimeout(drawBg, 50); // 20 FPS basta para o fundo ambiente.
       }
       drawBg();
     }
@@ -4879,7 +4947,7 @@
         initNyxalVoiceOnlySurface();
         initGlobeVoiceControl();
         fetchNyxalStatus();
-        setInterval(fetchNyxalStatus, 15000);
+        setInterval(fetchNyxalStatus, 30000);
         // Solicita a permissão e inicia a escuta residente ao abrir o shell.
         // O navegador continuará exigindo autorização explícita para o microfone.
         window.setTimeout(() => {
@@ -4898,13 +4966,13 @@
         atualizarClima();
         window.setInterval(atualizarClima, 10 * 60 * 1000);
         fetchNyxalObservability();
-        window.setInterval(fetchNyxalObservability, 15000);
-        setInterval(updateLiveClock, 1000);
+        window.setInterval(fetchNyxalObservability, 30000);
+        setInterval(updateLiveClock, 5000);
         updateLiveClock();
         fetchNyxalStatus();
         fetchNyxosOperationalContext();
-        setInterval(fetchNyxalStatus, 5000);
-        setInterval(fetchNyxosOperationalContext, 5000);
+        setInterval(fetchNyxalStatus, 15000);
+        setInterval(fetchNyxosOperationalContext, 30000);
       }
       if ('speechSynthesis' in window) {
         window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
@@ -4912,33 +4980,86 @@
     };
   </script>
 <script>
-function initNyxosOperationalPanel(){
- if(document.getElementById('nyxosOperationalPanel'))return;
- const p=document.createElement('section');p.id='nyxosOperationalPanel';
- p.innerHTML=`<div class="flex items-center justify-between mb-2"><div><div class="text-[9px] font-orbitron tracking-[0.18em] text-hud-cyan">NYXOS • CORPO OPERACIONAL</div><div class="text-[9px] text-slate-500 font-mono">PERCEPÇÃO → FISIOLOGIA → PLANO → GATEWAY</div></div><span id="nyxosOpLive" class="text-[9px] font-mono text-emerald-400">LIVE</span></div>
- <div class="nyxos-op-grid">
- <div class="nyxos-op-cell"><div class="nyxos-op-label">Fisiologia</div><div id="nyxosOpFisio" class="nyxos-op-value">--</div></div>
- <div class="nyxos-op-cell"><div class="nyxos-op-label">Ação planejada</div><div id="nyxosOpAction" class="nyxos-op-value active">--</div></div>
- <div class="nyxos-op-cell"><div class="nyxos-op-label">Temperatura</div><div id="nyxosOpTemp" class="nyxos-op-value">--</div></div>
- <div class="nyxos-op-cell"><div class="nyxos-op-label">Gateway</div><div id="nyxosOpGateway" class="nyxos-op-value">--</div></div></div>
- <div class="mt-2 pt-2 border-t border-slate-800 text-[9px] font-mono text-slate-500"><span>EXECUÇÃO FÍSICA:</span> <span id="nyxosOpPhysical" class="text-amber-400">DESABILITADA</span><span class="mx-1">•</span><span id="nyxosOpPlanId">PLANO --</span></div>`;
- document.body.appendChild(p);
+function initNyxosOperationalPanel() {
+  if (document.getElementById('nyxosOperationalPanel')) return;
+  const panel = document.createElement('section');
+  panel.id = 'nyxosOperationalPanel';
+  panel.innerHTML = `
+    <div class="flex items-center justify-between mb-2">
+      <div>
+        <div class="text-[9px] font-orbitron tracking-[0.18em] text-hud-cyan">NYXOS • CORPO OPERACIONAL</div>
+        <div class="text-[9px] text-slate-500 font-mono">PERCEPÇÃO → FISIOLOGIA → PLANO → GATEWAY</div>
+      </div>
+      <span id="nyxosOpLive" data-state="checking" class="text-[9px] font-mono text-slate-400" title="Aguardando a primeira leitura">VERIFICANDO</span>
+    </div>
+    <div class="nyxos-op-grid">
+      <div class="nyxos-op-cell"><div class="nyxos-op-label">Fisiologia</div><div id="nyxosOpFisio" class="nyxos-op-value">Aguardando</div></div>
+      <div class="nyxos-op-cell"><div class="nyxos-op-label">Ação planejada</div><div id="nyxosOpAction" class="nyxos-op-value active">Aguardando</div></div>
+      <div class="nyxos-op-cell"><div class="nyxos-op-label">Temperatura</div><div id="nyxosOpTemp" class="nyxos-op-value">—</div></div>
+      <div class="nyxos-op-cell"><div class="nyxos-op-label">Gateway</div><div id="nyxosOpGateway" class="nyxos-op-value">Aguardando</div></div>
+    </div>
+    <div class="mt-2 pt-2 border-t border-slate-800 text-[9px] font-mono text-slate-500">
+      <span>EXECUÇÃO FÍSICA:</span> <span id="nyxosOpPhysical" class="text-amber-400">DESABILITADA</span>
+      <span class="mx-1">•</span><span id="nyxosOpPlanId">PLANO —</span>
+    </div>`;
+  document.body.appendChild(panel);
 }
-async function fetchNyxosOperationalContext(){
- try{
-  const r=await fetch(`${window.NYXAL_API_BASE}/api/public/nyxos/contexto`);
-  if(!r.ok)throw new Error('contexto_indisponivel');
-  const d=await r.json(),f=d.fisiologia||{},u=f.ultimo||{},t=u.termico||{},pl=d.plano_central_controle||{},de=pl.decisao||{},g=d.gateway_atuacao||{};
-  document.getElementById('nyxosOpFisio').innerText=String(f.estado_fisiologico||f.estado||'--').replaceAll('_',' ').toUpperCase();
-  document.getElementById('nyxosOpAction').innerText=String(de.acao_planejada||'--').replaceAll('_',' ').toUpperCase();
-  document.getElementById('nyxosOpTemp').innerText=t.temperatura_maxima_c==null?'--':Number(t.temperatura_maxima_c).toFixed(1)+' °C';
-  document.getElementById('nyxosOpGateway').innerText=String(g.estado||(g.executada?'executada':'preparado')).replaceAll('_',' ').toUpperCase();
-  const physical=d.governanca?.execucao_fisica_habilitada===true;
-  document.getElementById('nyxosOpPhysical').innerText=physical?'HABILITADA':'DESABILITADA';
-  document.getElementById('nyxosOpPhysical').className=physical?'text-red-400':'text-amber-400';
-  document.getElementById('nyxosOpPlanId').innerText='PLANO '+String(pl.plano_id||'--').slice(0,14);
-  document.getElementById('nyxosOpLive').innerText='LIVE';
- }catch(e){const x=document.getElementById('nyxosOpLive');if(x){x.innerText='OFFLINE';x.className='text-[9px] font-mono text-rose-400';}}
+
+let nyxosOperationalContextRequestInFlight = false;
+async function fetchNyxosOperationalContext() {
+  if (nyxosOperationalContextRequestInFlight) return;
+  nyxosOperationalContextRequestInFlight = true;
+  let timeoutId = null;
+  try {
+    const controller = new AbortController();
+    timeoutId = window.setTimeout(() => controller.abort(), 7000);
+    const response = await fetch(`${window.NYXAL_API_BASE}/api/public/nyxos/contexto`, {
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`contexto_http_${response.status}`);
+    const data = await response.json();
+    const physiology = data.fisiologia || {};
+    const latest = physiology.ultimo || {};
+    const thermal = latest.termico || {};
+    const plan = data.plano_central_controle || {};
+    const decision = plan.decisao || {};
+    const gateway = data.gateway_atuacao || {};
+
+    document.getElementById('nyxosOpFisio').textContent =
+      String(physiology.estado_fisiologico || physiology.estado || 'NÃO INFORMADO').replaceAll('_', ' ').toUpperCase();
+    document.getElementById('nyxosOpAction').textContent =
+      String(decision.acao_planejada || 'NENHUMA AÇÃO INFORMADA').replaceAll('_', ' ').toUpperCase();
+    document.getElementById('nyxosOpTemp').textContent =
+      thermal.temperatura_maxima_c == null ? '—' : Number(thermal.temperatura_maxima_c).toFixed(1) + ' °C';
+    document.getElementById('nyxosOpGateway').textContent =
+      String(gateway.estado || (gateway.executada ? 'executada' : 'preparado')).replaceAll('_', ' ').toUpperCase();
+
+    const physicalEnabled = data.governanca && data.governanca.execucao_fisica_habilitada === true;
+    const physical = document.getElementById('nyxosOpPhysical');
+    physical.textContent = physicalEnabled ? 'HABILITADA' : 'DESABILITADA';
+    physical.className = physicalEnabled ? 'text-red-400' : 'text-amber-400';
+    document.getElementById('nyxosOpPlanId').textContent = 'PLANO ' + String(plan.plano_id || '—').slice(0, 14);
+
+    const updatedAt = new Date().toLocaleTimeString('pt-BR');
+    const live = document.getElementById('nyxosOpLive');
+    live.textContent = 'OK ' + updatedAt;
+    live.dataset.state = 'online';
+    live.className = 'text-[9px] font-mono text-emerald-400';
+    live.title = 'Última resposta válida da API local às ' + updatedAt + '.';
+  } catch (error) {
+    const live = document.getElementById('nyxosOpLive');
+    if (live) {
+      const failedAt = new Date().toLocaleTimeString('pt-BR');
+      live.textContent = 'SEM CONEXÃO ' + failedAt;
+      live.dataset.state = 'offline';
+      live.className = 'text-[9px] font-mono text-rose-400';
+      live.title = 'A última consulta falhou. Os demais campos podem estar desatualizados.';
+    }
+  } finally {
+    if (timeoutId !== null) window.clearTimeout(timeoutId);
+    nyxosOperationalContextRequestInFlight = false;
+  }
 }
 </script>
   <script src="/interface/js/nyxal-voice-console.js"></script>

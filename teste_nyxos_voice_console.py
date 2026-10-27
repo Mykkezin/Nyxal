@@ -154,7 +154,7 @@ class TestNyxalVoiceConsole(unittest.TestCase):
         self.assertIn('id="weatherIcon"', self.html)
         self.assertIn("icone.className", self.html)
         self.assertIn('window.setInterval(atualizarClima, 10 * 60 * 1000)', self.html)
-        self.assertIn('window.setInterval(fetchNyxalObservability, 15000)', self.html)
+        self.assertIn('window.setInterval(fetchNyxalObservability, 30000)', self.html)
 
     def test_weather_failure_clears_stale_measurements(self):
         climate = self.html[self.html.index("async function atualizarClima()"):self.html.index("function desenharGraficoSistema()", self.html.index("async function atualizarClima()"))]

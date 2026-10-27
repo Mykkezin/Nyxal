@@ -51,6 +51,25 @@ def main() -> None:
         assert ".mp4" not in script, f"{nome} ainda depende do vídeo"
         assert "mpv" not in script, f"{nome} ainda invoca mpv"
 
+    # Regressões de desempenho e clareza do estado operacional da interface.
+    interface = (ROOT / "interface" / "index.html").read_text(encoding="utf-8")
+    for marcador in (
+        "const NYXAL_VOICE_SAMPLE_INTERVAL_MS = 40;",
+        "window.setTimeout(runContinuousVoiceVad, NYXAL_VOICE_SAMPLE_INTERVAL_MS)",
+        "window.setTimeout(runVoiceBargeInMonitor, NYXAL_VOICE_SAMPLE_INTERVAL_MS)",
+        "renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));",
+        "window.setTimeout(animate, 33);",
+        "window.setTimeout(drawBg, 50);",
+        "nyxalVoiceBackendStatus",
+        "updateNyxalVoiceBackendStatus(data, true);",
+        "updateNyxalVoiceBackendStatus(null, false);",
+        "setInterval(fetchNyxosOperationalContext, 30000);",
+    ):
+        assert marcador in interface, f"otimização da interface ausente: {marcador}"
+
+    assert "cancelAnimationFrame(voiceVadFrame)" not in interface
+    assert "cancelAnimationFrame(voiceBargeInFrame)" not in interface
+
     # O shell residente não deve forçar a miniatura de voz nem ocupar a tela em modo kiosk.
     shell = (ROOT / "deploy" / "systemd" / "iniciar_nyxos_shell.sh").read_text(encoding="utf-8")
     assert 'INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/}"' in shell

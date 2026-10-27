@@ -17,7 +17,7 @@ if ! command -v systemctl >/dev/null 2>&1; then
   exit 2
 fi
 
-for unidade in nyxos.target nyxal-api.service nyxos-residente.service nyxos-interface.service; do
+for unidade in nyxos.target nyxal-api.service nyxos-residente.service nyxos-interface.service nyxos-interface-reset.timer nyxos-interface-reset.service; do
   printf '\n--- %s ---\n' "${unidade}"
   if systemctl --user show "${unidade}" \
       --property=LoadState,ActiveState,SubState,Result,ExecMainStatus,NRestarts,FragmentPath \
