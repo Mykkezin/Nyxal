@@ -36,6 +36,7 @@ from nixal_delta import RegistroDeltaNixOS
 from nixal_defesa_autonoma import DefesaAutonoma
 from nixal_executor_defesa_governada import ExecutorDefesaGovernada
 from nixal_auditoria_defesa import RegistroAuditoriaDefesaNixOS
+from nixal_aprovacao_defesa import DiarioAprovacaoDefesa
 from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_estado_presenca import compor_presenca_efetiva
@@ -312,7 +313,13 @@ def _resumir_fila_ordens_api(fila):
 
 # Observação e preparação governada: eventos/planos em memória, sem efeitos físicos.
 DEFESA_AUTONOMA_NYXAL = DefesaAutonoma()
-DEFESA_EXECUTOR_GOVERNADO = ExecutorDefesaGovernada()
+# A aprovação deixa de ser um campo do pedido: só vale se estiver registrada no
+# diário durável por um principal autenticado. O gate continua sem execução —
+# verificar uma aprovação muda o estado do plano simulado e nada mais.
+DEFESA_DIARIO_APROVACOES = DiarioAprovacaoDefesa.do_ambiente()
+DEFESA_EXECUTOR_GOVERNADO = ExecutorDefesaGovernada(
+    verificador_aprovacao=DEFESA_DIARIO_APROVACOES.para_executor(),
+)
 DEFESA_AUDITORIA_DURAVEL = RegistroAuditoriaDefesaNixOS.do_ambiente()
 DEFESA_EVENTOS_RECIENTES = deque(maxlen=256)
 DEFESA_EVENTOS_LOCK = Lock()
@@ -2040,6 +2047,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 "auditoria_duravel": contexto_auditoria,
                 "planos_dry_run": DEFESA_EXECUTOR_GOVERNADO.listar_registros(limite=50),
                 "executor_dry_run": DEFESA_EXECUTOR_GOVERNADO.contexto(),
+                "aprovacoes": DEFESA_DIARIO_APROVACOES.contexto(),
                 # Compatibilidade: planos e executor continuam não persistidos;
                 # a trilha allowlisted de eventos tem seu estado separado acima.
                 "persistencia": False,
