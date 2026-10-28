@@ -227,6 +227,31 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertEqual(status, 400, body)
         self.assertIn("chave_idempotencia_invalida", body)
 
+    def test_ordem_governada_rejeita_campos_inesperados_e_payload_grande(self) -> None:
+        api.PROXY_MODE = False
+
+        class ExecutorFalso:
+            def atender(self, *_args, **_kwargs):
+                raise AssertionError("executor não deve receber payload recusado")
+
+        with patch.object(api, "_obter_executor_ordens_nyxal", return_value=ExecutorFalso()):
+            status, body = self.request(
+                "POST", "/api/agent/orders",
+                body=b'{"ordem":"consulte a hora","comando":"shell arbitrário"}',
+                headers={"Content-Type": "application/json"},
+            )
+            self.assertEqual(status, 400, body)
+            self.assertIn("entrada_invalida", body)
+
+            body_grande = b'{"ordem":"' + (b"x" * (16 * 1024)) + b'"}'
+            status, body = self.request(
+                "POST", "/api/agent/orders",
+                body=body_grande,
+                headers={"Content-Type": "application/json"},
+            )
+            self.assertEqual(status, 413, body)
+            self.assertIn("payload_muito_grande", body)
+
     def test_ordem_governada_rejeita_json_ambiguo_sem_chamar_executor(self) -> None:
         api.PROXY_MODE = False
 
