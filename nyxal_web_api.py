@@ -265,7 +265,7 @@ def _resumir_ordem_api(resultado):
         executada = estado in {"concluida", "falhou", "negada"}
     resumo = _resumir_tarefa_ordem_api(
         tarefa,
-        incluir_resultado=executada,
+        incluir_resultado=executada or estado == "tarefa_ja_existente",
     ) or {}
     return {
         "sucesso": resultado.get("sucesso") is True,
@@ -274,6 +274,7 @@ def _resumir_ordem_api(resultado):
         "valor": {
             "tarefa": resumo,
             "executada": executada,
+            "idempotente": valor.get("idempotente") is True,
             "conhecimento_permanente": False,
             "arquitetura_modificada": False,
         },
@@ -1218,10 +1219,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             payload = _ler_payload_ordem(self)
             if payload is None:
                 return
-            if set(payload) != {"ordem"}:
+            if not {"ordem"}.issubset(payload) or set(payload) - {"ordem", "chave_idempotencia"}:
                 self._send_json(400, {
                     "estado": "entrada_invalida",
-                    "motivo": "Envie somente o campo 'ordem'.",
+                    "motivo": "Envie 'ordem' e, opcionalmente, 'chave_idempotencia'.",
                 })
                 return
             ordem = payload.get("ordem")
@@ -1231,9 +1232,26 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     "motivo": f"A ordem precisa conter de 1 a {MAX_CHARS_ORDEM_API} caracteres.",
                 })
                 return
+            chave_idempotencia = payload.get("chave_idempotencia")
+            if chave_idempotencia is not None and (
+                not isinstance(chave_idempotencia, str)
+                or not chave_idempotencia.strip()
+                or len(chave_idempotencia) > 160
+            ):
+                self._send_json(400, {
+                    "estado": "chave_idempotencia_invalida",
+                    "motivo": "A chave de idempotência precisa ter de 1 a 160 caracteres.",
+                })
+                return
             try:
                 executor = _obter_executor_ordens_nyxal()
-                resultado_ordem = executor.atender(ordem.strip())
+                if chave_idempotencia is None:
+                    resultado_ordem = executor.atender(ordem.strip())
+                else:
+                    resultado_ordem = executor.atender(
+                        ordem.strip(),
+                        chave_idempotencia=chave_idempotencia,
+                    )
                 resposta_ordem = _resumir_ordem_api(resultado_ordem)
             except Exception:
                 # Não refletir caminhos, prompts, argumentos ou detalhes internos do executor.
