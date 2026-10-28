@@ -129,6 +129,27 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         self.assertEqual(first["valor"]["id"], second["valor"]["id"])
         self.assertEqual(self.fila.quantidade(), 1)
 
+    def test_idempotency_keys_reject_credentials_on_ingress_and_reload(self):
+        incoming = self.fila.adicionar(
+            "queue_test_read",
+            chave_idempotencia="token=CANARY_IDEMPOTENCY_INPUT",
+        )
+        self.assertFalse(incoming["sucesso"])
+        self.assertEqual(incoming["estado"], "chave_idempotencia_invalida")
+        self.assertFalse(self.caminho.exists())
+
+        tarefa = self._registro_legado_valido()
+        tarefa["chave_idempotencia"] = "PRIVATE_KEY=CANARY_IDEMPOTENCY_DISK"
+        original = json.dumps(
+            {"versao": "1.0", "tarefas": [tarefa]},
+            separators=(",", ":"),
+        ).encode()
+        self.caminho.write_bytes(original)
+        recarregada = FilaTarefasNixal(self.caminho, self.manager)
+        resultado = recarregada.recarregar()
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(self.caminho.read_bytes(), original)
+
     def test_task_is_persisted_then_claimed_and_completed_once(self):
         added = self.fila.adicionar("queue_test_read")
         self.assertTrue(added["sucesso"])
