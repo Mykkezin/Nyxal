@@ -18,6 +18,7 @@ from teste_gate_relacional import (
 )
 
 from gerenciador_cristal import (
+    abrir_ou_criar_cristal,
     registrar_experiencia,
 )
 
@@ -451,6 +452,21 @@ def executar_pipeline(texto):
 # ============================================================
 
 def main():
+    # Prepara o cristal pelo ponto de entrada único antes de
+    # processar qualquer coisa. Não destrutivo: se já existe,
+    # o conhecimento anterior continua lá.
+    (
+        conceitos,
+        relacoes,
+        blocos,
+    ) = abrir_ou_criar_cristal()
+
+    print()
+    print(
+        f"CRISTAL ABERTO: {len(conceitos)} conceitos, "
+        f"{len(relacoes)} relações, {len(blocos)} blocos."
+    )
+
     texto = input(
         "Digite uma experiência para a Nixal:\n> "
     ).strip()

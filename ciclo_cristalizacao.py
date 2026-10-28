@@ -1,9 +1,15 @@
 import json
-from pathlib import Path
+import copy
+
+from gerenciador_cristal import (
+    caminho_do_projeto,
+    carregar_json_com_seguranca,
+    salvar_json_atomicamente,
+)
 
 MODELO = "qwen2:7b"
 
-ARQUIVO_CRISTAL = Path("memoria/cristal_atual.json")
+ARQUIVO_CRISTAL = caminho_do_projeto("memoria", "cristal_atual.json")
 
 ORIGINAL = """
 Uma hipótese é uma ideia provisória criada para explicar um fenômeno
@@ -63,21 +69,16 @@ def tamanho_bytes(objeto):
 
 
 def carregar_cristal():
-    if ARQUIVO_CRISTAL.exists():
-        with open(ARQUIVO_CRISTAL, "r", encoding="utf-8") as arquivo:
-            return json.load(arquivo)
+    """Lê o cristal atual sem jamais regravar o arquivo.
 
-    ARQUIVO_CRISTAL.parent.mkdir(parents=True, exist_ok=True)
+    A leitura passa pelo gerenciador, então um JSON ilegível é preservado
+    em quarentena em vez de ser sobrescrito pelo estado inicial.
+    """
 
-    with open(ARQUIVO_CRISTAL, "w", encoding="utf-8") as arquivo:
-        json.dump(
-            CRISTAL_INICIAL,
-            arquivo,
-            ensure_ascii=False,
-            indent=2
-        )
-
-    return CRISTAL_INICIAL
+    return carregar_json_com_seguranca(
+        ARQUIVO_CRISTAL,
+        copy.deepcopy(CRISTAL_INICIAL),
+    )
 
 
 def gerar_candidato(cristal_atual):
@@ -200,15 +201,31 @@ def medir_fidelidade(cristal):
 
 
 def salvar_cristal(cristal):
-    ARQUIVO_CRISTAL.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(ARQUIVO_CRISTAL, "w", encoding="utf-8") as arquivo:
-        json.dump(
-            cristal,
-            arquivo,
-            ensure_ascii=False,
-            indent=2
+    if not isinstance(cristal, dict) or not cristal:
+        raise ValueError(
+            "O cristal precisa ser um objeto JSON não vazio; "
+            "nada foi gravado."
         )
+
+    return salvar_json_atomicamente(cristal, ARQUIVO_CRISTAL)
+
+
+def candidato_aceitavel(
+    fidelidade_atual,
+    tamanho_atual,
+    fidelidade_candidato,
+    tamanho_candidato,
+):
+    """Política de aceitação: mais ou igual fidelidade e menos bytes.
+
+    Redução de tamanho nunca vale a perda de conteúdo, então o candidato
+    só substitui a representação atual quando supera os dois critérios.
+    """
+
+    return (
+        fidelidade_candidato >= fidelidade_atual
+        and tamanho_candidato < tamanho_atual
+    )
 
 
 def main():
@@ -246,9 +263,11 @@ def main():
     
     print("\n=== DECISÃO ===")
     
-    if (
-        fidelidade_candidato >= fidelidade_atual
-        and tamanho_candidato < tamanho_atual
+    if candidato_aceitavel(
+        fidelidade_atual,
+        tamanho_atual,
+        fidelidade_candidato,
+        tamanho_candidato,
     ):
         salvar_cristal(candidato)
     

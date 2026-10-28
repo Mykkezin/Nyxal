@@ -1,32 +1,98 @@
 import json
-from pathlib import Path
-import ollama
 
-ARQUIVO = Path("memoria/cristalizacao.json")
+from gerenciador_cristal import (
+    caminho_do_projeto,
+    carregar_json_com_seguranca,
+    salvar_json_atomicamente,
+)
+
+ARQUIVO = caminho_do_projeto("memoria", "cristalizacao.json")
 MODELO = "qwen2:7b"
+
+CAMPOS_OBRIGATORIOS = ("conceito", "essencia", "relacoes", "incerteza")
+
+
+def validar_cristal_semantico(dados):
+    """Confere o schema do cristal JSON antes de qualquer gravação.
+
+    Um candidato malformado precisa falhar aqui, nunca substituir o
+    último estado válido do arquivo.
+    """
+
+    if not isinstance(dados, dict):
+        raise ValueError("O cristal precisa de um objeto JSON no topo.")
+
+    conceitos = dados.get("conceitos")
+
+    if not isinstance(conceitos, dict):
+        raise ValueError("O cristal precisa do campo 'conceitos' como objeto.")
+
+    for nome, cristal in conceitos.items():
+        if not isinstance(nome, str) or not nome:
+            raise ValueError("Todo conceito precisa de um nome não vazio.")
+
+        if not isinstance(cristal, dict):
+            raise ValueError(
+                f"O conceito {nome!r} precisa ser um objeto JSON."
+            )
+
+        for campo in CAMPOS_OBRIGATORIOS:
+            if campo not in cristal:
+                raise ValueError(
+                    f"O conceito {nome!r} perdeu o campo {campo!r}."
+                )
+
+        if cristal["conceito"] != nome:
+            raise ValueError(
+                f"O conceito {nome!r} declara nome diferente "
+                f"({cristal['conceito']!r})."
+            )
+
+        for campo in ("essencia", "incerteza"):
+            if not isinstance(cristal[campo], str):
+                raise ValueError(
+                    f"{nome!r}: {campo} precisa ser texto."
+                )
+
+        if not isinstance(cristal["relacoes"], list):
+            raise ValueError(
+                f"{nome!r}: relacoes precisa ser lista."
+            )
+
+        for relacao in cristal["relacoes"]:
+            if not isinstance(relacao, str):
+                raise ValueError(
+                    f"{nome!r}: cada relação precisa ser texto."
+                )
+
+    return dados
 
 
 def carregar():
-    if ARQUIVO.exists():
-        with open(ARQUIVO, "r", encoding="utf-8") as arquivo:
-            return json.load(arquivo)
-
-    return {"conceitos": {}}
+    # Passa pelo gerenciador para ganho persistência atômica e
+    # quarentena em caso de JSON corrompido. O formato do arquivo
+    # é exatamente o mesmo.
+    return validar_cristal_semantico(
+        carregar_json_com_seguranca(
+            ARQUIVO,
+            {"conceitos": {}},
+        )
+    )
 
 
 def salvar(dados):
-    ARQUIVO.parent.mkdir(parents=True, exist_ok=True)
+    validar_cristal_semantico(dados)
 
-    with open(ARQUIVO, "w", encoding="utf-8") as arquivo:
-        json.dump(
-            dados,
-            arquivo,
-            ensure_ascii=False,
-            indent=2
-        )
+    return salvar_json_atomicamente(
+        dados,
+        ARQUIVO,
+    )
 
 
 def cristalizar(experiencia):
+    # Dependência opcional: só importa quando o modelo é chamado.
+    import ollama
+
     prompt = f"""
 Transforme a experiência abaixo em uma representação compacta.
 
@@ -59,7 +125,30 @@ Responda SOMENTE com JSON válido:
     return json.loads(texto[inicio:fim + 1])
 
 
+def adicionar_conceito(dados, cristal, substituir=False):
+    """Acrescenta um cristal sem descartar uma versão mais nova.
+
+    O arquivo inteiro é revalidado antes de voltar, então um candidato
+    inválido nunca é gravado por cima do último estado válido.
+    """
+
+    anterior = dados["conceitos"].get(cristal["conceito"])
+
+    if anterior is not None and not substituir:
+        raise ValueError(
+            f"O conceito {cristal['conceito']!r} já existe. "
+            "Use substituir=True para alterá-lo."
+        )
+
+    dados["conceitos"][cristal["conceito"]] = cristal
+
+    return validar_cristal_semantico(dados)
+
+
 def reconstruir(cristal):
+    # Dependência opcional: só importa quando o modelo é chamado.
+    import ollama
+
     prompt = f"""
 Você recebeu somente esta representação cristalizada:
 
@@ -79,7 +168,7 @@ Explique também qual informação parece ter sido perdida ou ficou incerta.
     return resposta["message"]["content"]
 
 
-if __name__ == "__main__":
+def main():
 
     experiencia = (
         "Uma hipótese é uma ideia provisória que pode ser testada "
@@ -89,8 +178,7 @@ if __name__ == "__main__":
 
     cristal = cristalizar(experiencia)
 
-    dados = carregar()
-    dados["conceitos"][cristal["conceito"]] = cristal
+    dados = adicionar_conceito(carregar(), cristal)
     salvar(dados)
 
     print("\n=== EXPERIÊNCIA ORIGINAL ===")
@@ -102,3 +190,7 @@ if __name__ == "__main__":
     print("\n=== RECONSTRUÇÃO ===")
     reconstruida = reconstruir(cristal)
     print(reconstruida)
+
+
+if __name__ == "__main__":
+    main()

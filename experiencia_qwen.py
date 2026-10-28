@@ -1,16 +1,25 @@
 import json
 import re
 
-import ollama
+import gerenciador_cristal
 
 from gerenciador_cristal import (
-    ARQUIVO,
     CONCEITOS_BASE,
     RELACOES_BASE,
-    inicializar_cristal,
+    abrir_ou_criar_cristal,
     ler_arquivo,
     registrar_experiencia,
 )
+
+
+def caminho_do_cristal():
+    """Caminho canônico consultado no momento do uso.
+
+    Importar o Path por valor deixaria este módulo apontando para uma
+    cópia antiga sempre que o gerenciador resolver outro destino.
+    """
+
+    return gerenciador_cristal.ARQUIVO
 
 
 # ============================================================
@@ -122,6 +131,10 @@ FRASE:
 # ============================================================
 
 def interpretar(texto):
+    # Dependência opcional: o import pesável acontece só quando o modelo
+    # é de fato chamado, nunca ao carregar o módulo.
+    import ollama
+
     resposta = ollama.chat(
         model=MODELO,
         format="json",
@@ -364,23 +377,26 @@ def main():
     print()
 
     # --------------------------------------------------------
-    # INICIALIZAÇÃO
+    # ABERTURA NÃO DESTRUTIVA
+    #
+    # O cristal nunca é apagado aqui. Se já existe, o conteúdo anterior
+    # é preservado e esta execução apenas acrescenta.
     # --------------------------------------------------------
-
-    inicializar_cristal()
 
     (
         conceitos,
         relacoes,
         blocos,
-    ) = ler_arquivo()
+    ) = abrir_ou_criar_cristal()
+
+    arquivo = caminho_do_cristal()
 
     print(
         "=== CRISTAL INICIAL ==="
     )
 
     print(
-        f"Arquivo: {ARQUIVO}"
+        f"Arquivo: {arquivo}"
     )
 
     print(
@@ -414,7 +430,7 @@ def main():
         )
 
         tamanho_antes = (
-            ARQUIVO.stat().st_size
+            arquivo.stat().st_size
         )
 
         # ----------------------------------------------------
@@ -541,7 +557,7 @@ def main():
             continue
 
         tamanho_depois = (
-            ARQUIVO.stat().st_size
+            arquivo.stat().st_size
         )
 
         crescimento_observado = (
@@ -615,7 +631,7 @@ def main():
 
     print(
         f"Tamanho: "
-        f"{ARQUIVO.stat().st_size} bytes"
+        f"{arquivo.stat().st_size} bytes"
     )
 
 

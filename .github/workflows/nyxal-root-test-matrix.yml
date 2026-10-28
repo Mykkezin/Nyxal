@@ -1,13 +1,17 @@
 name: Nyxal Root Test Matrix
 
 # Inventário de 2026-10-28, recontado em 2026-10-28: a raiz tem 206 testes
-# `teste_*.py` e esta allowlist versionada cobre 88 deles. Cada candidato foi
-# executado isolado, a partir do checkout limpo, e medido por dois critérios:
-# passa com o python3 do runner e não escreve nem no checkout nem fora dele.
+# `teste_*.py` e esta allowlist cobre 88 deles mais testes/teste_persistencia_
+# cristal.py — 89 entradas no total. Cada candidato foi executado isolado, a
+# partir do checkout limpo, e medido por dois critérios: passa com o python3 do
+# runner e não escreve nem no checkout nem fora dele.
 # Ficaram de fora os que gravam em $HOME/Nyxal* (incluindo o checkout
 # operacional vivo, na mesma máquina deste runner) e os que importam
 # nixal_capacidades — 10 dos 118 excluídos, por evidência estática de import.
 # 3 dos 12 `nivel_9_*` estão incluídos; os outros 9 não passaram nos critérios.
+# A única entrada de subdiretório cumpre os mesmos dois critérios: roda com o
+# python3 do runner e só escreve em diretórios temporários, nunca no checkout
+# vivo desta máquina. Por isso o nome do log abaixo sanitiza barras.
 # A contagem desta allowlist é a única fonte de verdade; este comentário é
 # descrição, não gate. A guarda anti-encolhimento abaixo é o gate.
 
@@ -20,6 +24,12 @@ on:
       - "nixal_*.py"
       - "nyxal_*.py"
       - "interface/js/**/*.js"
+      - "testes/**/*.py"
+      - "gerenciador_cristal.py"
+      - "cristalizacao.py"
+      - "ciclo_cristalizacao.py"
+      - "experiencia_qwen.py"
+      - "pipeline_integrado.py"
       - ".github/matriz-validacao-raiz.txt"
       - ".github/workflows/nyxal-root-test-matrix.yml"
   push:
@@ -29,6 +39,12 @@ on:
       - "teste_*.py"
       - "nixal_*.py"
       - "nyxal_*.py"
+      - "testes/**/*.py"
+      - "gerenciador_cristal.py"
+      - "cristalizacao.py"
+      - "ciclo_cristalizacao.py"
+      - "experiencia_qwen.py"
+      - "pipeline_integrado.py"
       - ".github/matriz-validacao-raiz.txt"
       - ".github/workflows/nyxal-root-test-matrix.yml"
   workflow_dispatch:
@@ -83,12 +99,15 @@ jobs:
           while IFS= read -r teste; do
             [ -n "$teste" ] || continue
             execucoes=$((execucoes + 1))
-            if python3 "$teste" >"$RUNNER_TEMP/matriz-raiz/$teste.log" 2>&1; then
+            # A matriz aceita entradas em subdiretório; o nome do log não pode
+            # carregar barra, senão o redirecionamento falha antes do teste.
+            log="$RUNNER_TEMP/matriz-raiz/${teste//\//_}.log"
+            if python3 "$teste" >"$log" 2>&1; then
               echo "OK   $teste"
             else
               falhas=$((falhas + 1))
               echo "FALHA $teste"
-              tail -n 20 "$RUNNER_TEMP/matriz-raiz/$teste.log"
+              tail -n 20 "$log"
             fi
           done < .github/matriz-validacao-raiz.txt
           echo "executados=$execucoes falhas=$falhas"

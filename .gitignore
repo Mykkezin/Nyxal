@@ -41,3 +41,12 @@ saida_cadeia_real_56_4_34.txt
 /memoria_conhecimento_nixal.json.lock
 /.memoria_investigacao_nixal.json.*.tmp
 /.memoria_conhecimento_nixal.json.*.tmp
+
+# Estado operacional da cristalização: cristal autoritativo, backups,
+# checkpoint, quarentena e temporários de escrita atômica são dados de
+# execução, não código-fonte.
+/memoria/cristal/
+/memoria/backups/
+*.bin.corrompido-*
+.*.bin.tmp-*
+/experimentos/cristal_gerenciador_demo.bin
