@@ -13,6 +13,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import nixal_capacidades
+import nixal_fila_tarefas
 from nixal_capacidades import GerenciadorCapacidades
 from nixal_fila_tarefas import FilaTarefasNixal
 
@@ -254,6 +255,77 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         self.assertEqual(fila.recarregar()["estado"], "fila_corrompida_preservada")
         self.assertEqual(self.caminho.read_bytes(), original)
         self.assertFalse(fila.adicionar("queue_test_read")["sucesso"])
+
+
+    @staticmethod
+    def _registro_legado_valido(capacidade: str = "queue_test_read") -> dict:
+        return {
+            "id": "legacy-task-id",
+            "capacidade": capacidade,
+            "argumentos": {},
+            "estado": "concluida",
+            "criado_em": time.time(),
+            "resultado": {"sucesso": True},
+            "erro": None,
+        }
+
+    def test_default_queue_migrates_legacy_snapshot_without_modifying_it(self):
+        legado = self.root / "checkout" / "fila_tarefas_nixal.json"
+        legado.parent.mkdir()
+        destino = self.root / "user-data" / "nyxal" / "fila_tarefas_nixal.json"
+        dados = {"versao": "1.0", "tarefas": [self._registro_legado_valido()]}
+        original = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        legado.write_bytes(original)
+
+        with (
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_PADRAO", destino),
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_LEGADO", legado),
+        ):
+            fila = FilaTarefasNixal(capacidades=self.manager)
+            self.assertEqual(fila.quantidade(), 1)
+
+        self.assertTrue(destino.is_file())
+        self.assertEqual(destino.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(legado.read_bytes(), original)
+        self.assertEqual(json.loads(destino.read_text(encoding="utf-8"))["tarefas"][0]["id"], "legacy-task-id")
+
+    def test_existing_user_queue_takes_precedence_over_legacy_snapshot(self):
+        legado = self.root / "checkout" / "fila_tarefas_nixal.json"
+        legado.parent.mkdir()
+        destino = self.root / "user-data" / "nyxal" / "fila_tarefas_nixal.json"
+        destino.parent.mkdir(parents=True, mode=0o700)
+        dados_legado = {"versao": "1.0", "tarefas": [self._registro_legado_valido()]}
+        dados_usuario = {"versao": "1.0", "tarefas": [self._registro_legado_valido("queue_test_slow_read")]}
+        bytes_legado = json.dumps(dados_legado).encode("utf-8")
+        bytes_usuario = json.dumps(dados_usuario).encode("utf-8")
+        legado.write_bytes(bytes_legado)
+        destino.write_bytes(bytes_usuario)
+        with (
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_PADRAO", destino),
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_LEGADO", legado),
+        ):
+            fila = FilaTarefasNixal(capacidades=self.manager)
+            self.assertEqual(fila.quantidade(), 1)
+            self.assertEqual(fila.listar()[0]["capacidade"], "queue_test_slow_read")
+        self.assertEqual(destino.read_bytes(), bytes_usuario)
+        self.assertEqual(legado.read_bytes(), bytes_legado)
+
+    def test_corrupt_legacy_snapshot_fails_closed_without_creating_blank_queue(self):
+        legado = self.root / "checkout" / "fila_tarefas_nixal.json"
+        legado.parent.mkdir()
+        destino = self.root / "user-data" / "nyxal" / "fila_tarefas_nixal.json"
+        original = b'{"versao":"1.0","tarefas":[broken'
+        legado.write_bytes(original)
+        with (
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_PADRAO", destino),
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_LEGADO", legado),
+        ):
+            fila = FilaTarefasNixal(capacidades=self.manager)
+            resultado = fila.adicionar("queue_test_read")
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "fila_indisponivel_preservada")
+        self.assertFalse(destino.exists())
+        self.assertEqual(legado.read_bytes(), original)
 
 
 if __name__ == "__main__":
