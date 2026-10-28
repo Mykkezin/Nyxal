@@ -671,8 +671,18 @@ class FilaTarefasNixal:
                 "valor": copy.deepcopy(tarefa),
             }
 
-    def executar_proxima(self) -> dict[str, Any]:
-        """Executa uma só capacidade de leitura; claim e finalização são checkpoints atômicos."""
+    def executar_proxima(
+        self,
+        *,
+        tarefa_id_esperado: str | None = None,
+    ) -> dict[str, Any]:
+        """Executa uma capacidade de leitura; pode exigir o ID exato para não associar ordens erradas."""
+        if tarefa_id_esperado is not None and (
+            not isinstance(tarefa_id_esperado, str)
+            or not tarefa_id_esperado.strip()
+            or len(tarefa_id_esperado) > 128
+        ):
+            return self._negado("tarefa_id_invalido", "O ID esperado da tarefa é inválido.")
         tarefa_id: str | None = None
         execucao_id = uuid.uuid4().hex
         with self._bloquear_diretorio():
@@ -697,6 +707,38 @@ class FilaTarefasNixal:
                     },
                 }
             tarefa = next((t for t in self._dados["tarefas"] if t.get("estado") == "pendente"), None)
+            if tarefa_id_esperado is not None:
+                alvo = next(
+                    (t for t in self._dados["tarefas"] if t.get("id") == tarefa_id_esperado),
+                    None,
+                )
+                if alvo is None:
+                    return self._negado(
+                        "tarefa_nao_encontrada",
+                        "A tarefa solicitada não existe na fila.",
+                    )
+                if alvo.get("estado") != "pendente":
+                    return self._negado(
+                        "tarefa_nao_pendente",
+                        "A tarefa solicitada não está pendente e não será repetida.",
+                    )
+                if tarefa is None:
+                    return self._negado(
+                        "tarefa_nao_pendente",
+                        "A tarefa solicitada não está disponível para execução.",
+                    )
+                if tarefa.get("id") != tarefa_id_esperado:
+                    return {
+                        "sucesso": False,
+                        "estado": "tarefa_aguarda_ordem",
+                        "origem": self.FONTE,
+                        "valor": {
+                            "id": tarefa_id_esperado,
+                            "estado": "pendente",
+                            "executada": False,
+                            "ordem_preservada": True,
+                        },
+                    }
             if tarefa is None:
                 return {"sucesso": True, "estado": "fila_vazia", "origem": self.FONTE, "valor": None}
             valido, erro = self._validar_capacidade(tarefa["capacidade"], tarefa["argumentos"])
