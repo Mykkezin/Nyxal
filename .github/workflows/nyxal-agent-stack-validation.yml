@@ -12,6 +12,7 @@ on:
       - "teste_nyxal_mcp_runtime.py"
       - "teste_mcp_http.py"
       - "nyxal_web_api.py"
+      - "nixal_auditoria_defesa.py"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
       - "nixal_intent_router.py"
@@ -64,6 +65,7 @@ on:
       - "teste_nixal_agent_hub.py"
       - "teste_nixal_dialogo_router.py"
       - "teste_api_security_auth.py"
+      - "teste_nixal_auditoria_defesa.py"
       - "teste_nixal_observabilidade_sistema.py"
       - "teste_nixal_capacidade_visual.py"
       - "teste_nixal_integracao_google.py"
@@ -168,6 +170,7 @@ jobs:
         run: |
           python3 -m compileall -q \
             nyxal_web_api.py \
+            nixal_auditoria_defesa.py \
             nixal_mcp_runtime.py \
             teste_nyxal_mcp_runtime.py \
             teste_mcp_http.py \
@@ -211,6 +214,7 @@ jobs:
             teste_nixal_dialogo_router.py \
             teste_nyxos_voice_console.py \
             teste_api_security_auth.py \
+            teste_nixal_auditoria_defesa.py \
             teste_nucleo_contexto_persistente.py \
             teste_nucleo_conversacional.py \
             teste_transporte_conversacional_56_5_2.py \
@@ -274,7 +278,7 @@ jobs:
           python3 teste_nucleo_conversacional.py
           python3 teste_transporte_conversacional_56_5_2.py
           python3 teste_integracao_sessao_transporte_56_5_4.py
-          python3 -m unittest -v teste_api_security_auth.py
+          python3 -m unittest -v teste_api_security_auth.py teste_nixal_auditoria_defesa.py
           python3 teste_contexto_conversacional_56_5_5.py
           python3 teste_contexto_historico_relevante_56_4_21.py
           python3 teste_preparacao_investigacao_56_4_22.py
