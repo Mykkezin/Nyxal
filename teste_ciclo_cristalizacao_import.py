@@ -15,6 +15,7 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory(prefix="nyxal-cristal-import-") as temp_dir:
         env = os.environ.copy()
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
         env["PYTHONPATH"] = os.pathsep.join(
             value
             for value in (str(repo_root), env.get("PYTHONPATH", ""))
