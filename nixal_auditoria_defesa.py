@@ -284,13 +284,23 @@ class RegistroAuditoriaDefesaNixOS:
             base = self._sanitizar(evento)
             fd = self._abrir(escrita=True, criar=True)
         except (OSError, ValueError, TypeError) as erro:
-            return {"sucesso": False, "estado": str(erro)[:64] or "auditoria_indisponivel"}
+            # Não devolva a mensagem original da exceção: pode conter caminhos
+            # locais ou valores vindos da entrada.
+            estado = (
+                "evento_invalido"
+                if isinstance(erro, (ValueError, TypeError))
+                else "auditoria_indisponivel"
+            )
+            return {"sucesso": False, "estado": estado}
 
         try:
             try:
                 registros, tamanho = self._ler_fd(fd)
             except (OSError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as erro:
-                return {"sucesso": False, "estado": str(erro)[:64] or "integridade_auditoria_invalida"}
+                return {
+                    "sucesso": False,
+                    "estado": f"integridade_auditoria_invalida_{type(erro).__name__}"[:64],
+                }
 
             if len(registros) >= self.max_registros:
                 return {"sucesso": False, "estado": "limite_registros_atingido"}
