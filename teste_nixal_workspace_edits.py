@@ -151,7 +151,7 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         )["sucesso"])
 
     def test_apply_does_not_overwrite_preexisting_backup(self):
-        result = preparar_edicao_workspace("src/app.py", "valor = 19\\n")
+        result = preparar_edicao_workspace("src/app.py", "valor = 19\n")
         self.assertTrue(result["sucesso"])
 
         backup_dir = self.data / "workspace-backups"
@@ -166,7 +166,7 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         self.assertFalse(applied["sucesso"])
         self.assertEqual(applied["estado"], "backup_destino_ja_existe")
         self.assertFalse(applied["aplicado"])
-        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\\n")
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\n")
         self.assertEqual(backup.read_bytes(), sentinel)
         self.assertEqual(
             list(backup_dir.glob(f".{result['plano_id']}-*")),
