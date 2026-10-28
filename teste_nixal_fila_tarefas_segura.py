@@ -109,6 +109,11 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         )
         self.assertFalse(with_private_key["sucesso"])
         self.assertEqual(with_private_key["estado"], "argumentos_invalidos")
+        with_private_key_text = self.fila.adicionar(
+            "queue_test_read", {"texto": "PRIVATE_KEY=private-key-in-plain-text"}
+        )
+        self.assertFalse(with_private_key_text["sucesso"])
+        self.assertEqual(with_private_key_text["estado"], "argumentos_invalidos")
         too_large = self.fila.adicionar("queue_test_read", {"texto": "x" * 17000})
         self.assertFalse(too_large["sucesso"])
         self.assertEqual(too_large["estado"], "argumentos_excedem_limite")
@@ -209,6 +214,7 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
             "api_key": "secret-value",
             "ssh_private_key": "private-key-result",
             "message": "Authorization: Bearer private-token",
+            "private_key_text": "PRIVATE_KEY=CANARY_QUEUE_PRIVATE_KEY_TEXT",
             "other": ["z" * 9000 for _ in range(10)],
         }
         self.fila.adicionar("queue_test_read")
@@ -219,6 +225,7 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         self.assertNotIn("secret-value", encoded)
         self.assertNotIn("private-key-result", encoded)
         self.assertNotIn("private-token", encoded)
+        self.assertNotIn("CANARY_QUEUE_PRIVATE_KEY_TEXT", encoded)
         self.assertTrue(stored.get("resultado_truncado"))
 
     def test_failed_capability_is_terminal_not_auto_retried(self):
