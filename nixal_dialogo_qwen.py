@@ -410,10 +410,12 @@ class DialogoQwenNixal:
                 r"^(?:pode|poderia)\s+(?:abrir|iniciar)\s+\S",
             ),
             "preparar_edicao_workspace": (
-                r"^(?:edite|edita|modifique|modifica|altere|altera|corrija|corrige|conserte|conserta|reescreva|reescreve|atualize|atualiza)\s+\S",
+                r"^(?:edite|edita|modifique|modifica|altere|altera|corrija|corrige|conserte|conserta|mude|muda|refatore|refatora|reescreva|reescreve|atualize|atualiza)\s+\S",
                 r"^(?:crie|criar)\s+(?:um\s+)?arquivo\s+\S",
-                r"^(?:quero\s+que\s+(?:voce\s+)?)(?:edite|modifique|altere|corrija|conserte|reescreva|atualize)\s+\S",
-                r"^(?:prepare|preparar)\s+(?:um\s+)?diff\s+(?:para|de)\s+\S",
+                r"^(?:quero\s+que\s+(?:voce\s+)?)(?:edite|modifique|altere|corrija|conserte|mude|refatore|reescreva|atualize)\s+\S",
+                r"^(?:prepare|preparar)\s+(?:um\s+)?(?:diff|proposta)\s+(?:para|de|do|da)\s+\S",
+                r"^(?:prepare|preparar)\s+uma\s+proposta\s+para\s+\S",
+                r"^(?:mostre|mostra|gere|gerar)\s+(?:um\s+)?diff\s+(?:para|de|do|da)\s+\S",
             ),
         }
         return any(re.search(padrao, comando) for padrao in padroes.get(nome, ()))
