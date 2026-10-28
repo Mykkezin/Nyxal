@@ -54,7 +54,7 @@ NYXAL_WORKSPACE_WRITE_ROOT=/caminho/absoluto/do/workspace
 3. Só então `aplicar_edicao_workspace` pode aplicar o plano se o texto atual do usuário e os argumentos concordarem exatamente com o ID. O hash do arquivo é conferido novamente; se alguém o alterou após a proposta, a operação é recusada.
 4. Para arquivo já existente, uma cópia de segurança é escrita em `~/.local/share/nyxal/workspace-backups/` (ou `NYXAL_USER_DATA_DIR/workspace-backups/`) com permissão privada, e o destino é substituído atomicamente. Novos arquivos são criados com permissão privada por padrão.
 
-A raiz autorizada é única por processo; caminhos absolutos, `..`, symlinks, arquivos binários, arquivos acima de 128 KB e nomes/diretórios sensíveis ou operacionais são recusados. Só extensões de texto conhecidas são aceitas. Não há ferramenta de shell livre, exclusão de arquivo, escrita fora da raiz autorizada ou aplicação automática do próprio diff pelo modelo. Os planos ficam apenas em memória; reiniciar o serviço invalida os planos pendentes.
+A raiz autorizada é única por processo; caminhos absolutos, `..`, symlinks, arquivos binários, arquivos acima de 12.000 bytes e nomes/diretórios sensíveis ou operacionais são recusados. Só extensões de texto conhecidas são aceitas. O diff completo precisa caber no limite de revisão (4.500 caracteres); propostas maiores devem ser divididas para que nada seja aplicado com uma prévia truncada. Não há ferramenta de shell livre, exclusão de arquivo, escrita fora da raiz autorizada ou aplicação automática do próprio diff pelo modelo. Os planos ficam apenas em memória; reiniciar o serviço invalida os planos pendentes.
 
 ### Opt-ins do function calling
 
