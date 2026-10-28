@@ -280,8 +280,18 @@ class FilaTarefasNixal:
                 raise FilaTarefasErro("diretorio_da_fila_mudou")
             if stat_fd.st_uid != os.geteuid():
                 raise PermissionError("proprietario_diretorio_da_fila_invalido")
-            if stat.S_IMODE(stat_fd.st_mode) & 0o022:
+            modo_diretorio = stat.S_IMODE(stat_fd.st_mode)
+            if modo_diretorio & 0o022:
+                # Não “consertar” uma pasta gravável por grupo/outros: ela pode
+                # estar sob controle de outro processo e precisa ser recusada.
                 raise PermissionError("diretorio_da_fila_permissivo_para_escrita")
+            if modo_diretorio & 0o077:
+                # Remover leitura/travessia de terceiros de uma pasta que pertence
+                # ao usuário atual, mantendo o arquivo de fila privado por padrão.
+                os.fchmod(fd, 0o700)
+                stat_fd = os.fstat(fd)
+                if stat.S_IMODE(stat_fd.st_mode) & 0o077:
+                    raise PermissionError("diretorio_da_fila_nao_privado")
             fcntl.flock(fd, fcntl.LOCK_EX)
             try:
                 yield
