@@ -57,6 +57,21 @@ def main() -> None:
     assert "--kiosk" not in shell, "o shell não deve forçar o modo tela cheia"
     assert "--new-window" in shell, "a interface deve abrir em janela normal"
 
+    # O registro de sessões da API vive na RAM: após um reinício, o identificador
+    # guardado em sessionStorage deixa de existir. A aba deve abandonar a sessão
+    # morta em vez de repetir a recusa para sempre.
+    interface = (ROOT / "interface" / "index.html").read_text(encoding="utf-8")
+    for marcador_sessao in (
+        "const sessaoMorta = [",
+        '"sessao_nao_valida",',
+        '"sessao_inativa",',
+        "nyxalSessionId = null;",
+        'sessionStorage.removeItem("NYXAL_SESSION_ID");',
+    ):
+        assert marcador_sessao in interface, (
+            f"interface perdeu a recuperação de sessão após reinício: {marcador_sessao}"
+        )
+
     print("NYXOS_STARTUP_CODE_ONLY_OK")
     print("NYXOS_STARTUP_NO_EXTERNAL_ASSETS_OK")
     print("NYXOS_STARTUP_REDUCED_MOTION_OK")
