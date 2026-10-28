@@ -364,6 +364,9 @@ class DialogoQwenNixal:
             "resuma ", "resumir ", "explique ", "analise ", "analise o ",
             "traduza ", "corrija ", "revise ", "classifique ",
         )
+        if nome == "preparar_edicao_workspace":
+            # "Corrija <arquivo>" é um comando explícito de edição, não uma consulta.
+            informativos = tuple(prefixo for prefixo in informativos if prefixo != "corrija ")
         if original.startswith(informativos):
             return False
         normalizado = re.sub(r"[^a-z0-9áàâãéêíóôõúç]+", " ", original).strip()
