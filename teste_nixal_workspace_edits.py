@@ -19,6 +19,7 @@ from nixal_capacidades import GerenciadorCapacidades
 from nixal_dialogo_qwen import DialogoQwenNixal
 from nixal_tool_use import (
     NotasLembretesNixOS,
+    _redigir_preview_workspace,
     aplicar_edicao_workspace,
     preparar_edicao_workspace,
     registrar_capacidades_operacionais,
@@ -150,6 +151,30 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             result["plano_id"], result["confirmacao_exata"]
         )["sucesso"])
 
+    def test_apply_does_not_overwrite_preexisting_backup(self):
+        result = preparar_edicao_workspace("src/app.py", "valor = 19\n")
+        self.assertTrue(result["sucesso"])
+
+        backup_dir = self.data / "workspace-backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        backup = backup_dir / f"{result['plano_id']}.bak"
+        sentinel = b"preserve existing backup"
+        backup.write_bytes(sentinel)
+
+        applied = aplicar_edicao_workspace(
+            result["plano_id"], result["confirmacao_exata"]
+        )
+        self.assertFalse(applied["sucesso"])
+        self.assertEqual(applied["estado"], "backup_destino_ja_existe")
+        self.assertFalse(applied["aplicado"])
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\n")
+        self.assertEqual(backup.read_bytes(), sentinel)
+        self.assertEqual(
+            list(backup_dir.glob(f".{result['plano_id']}-*")),
+            [],
+            "Temporary backup files must be cleaned up on refusal.",
+        )
+
     def test_stale_plan_does_not_overwrite_concurrent_change(self):
         result = preparar_edicao_workspace("src/app.py", "valor = 3\n")
         self.target.write_text("alteração externa\n", encoding="utf-8")
@@ -249,7 +274,10 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             self.assertFalse(protected["sucesso"], nome)
             self.assertEqual(operacional.read_text(encoding="utf-8"), conteudo_original, nome)
 
-        for pasta_sensivel in (".env.d", "backup_estado_2026-10-03", "backups", "voices", "memoria"):
+        for pasta_sensivel in (
+            ".env.d", "backup_estado_2026-10-03", "backups", "backup",
+            "voices", "memoria", "logs", "log", "state", "estado", "fila", "queue",
+        ):
             diretorio = self.workspace / pasta_sensivel
             diretorio.mkdir(exist_ok=True)
             alvo_sensivel = diretorio / "arquivo.py"
@@ -278,6 +306,10 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         self.assertEqual(noop["estado"], "sem_alteracoes")
         self.assertNotIn("plano_id", noop)
 
+    def test_redaction_skips_long_non_secret_lines(self):
+        conteudo = "x" * 12_000
+        self.assertEqual(_redigir_preview_workspace(conteudo), conteudo)
+
     def test_sensitive_old_values_are_redacted_from_diff_preview(self):
         casos = (
             (
@@ -295,6 +327,16 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
                 "authorization: 'Bearer replacement-value'\n",
                 "private-yaml-secret",
             ),
+            (
+                "PRIVATE_KEY=private-ssh-key-material\n",
+                "PRIVATE_KEY=replacement-value\n",
+                "private-ssh-key-material",
+            ),
+            (
+                '{"ssh_private_key": "private-json-key-material"}\n',
+                '{"ssh_private_key": "replacement-value"}\n',
+                "private-json-key-material",
+            ),
         )
         for antigo, novo, segredo in casos:
             self.target.write_text(antigo, encoding="utf-8")
@@ -302,6 +344,10 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             self.assertTrue(result["sucesso"], result)
             self.assertNotIn(segredo, result["diff"])
             self.assertIn("[REDACTED]", result["diff"])
+            if segredo == "private-json-secret":
+                self.assertIn('"api_key": "[REDACTED]"', result["diff"])
+            if segredo == "private-yaml-secret":
+                self.assertIn("authorization: '[REDACTED]'", result["diff"])
 
     def test_apply_refuses_symlinked_backup_directory(self):
         result = preparar_edicao_workspace("src/app.py", "valor = 77\n")
