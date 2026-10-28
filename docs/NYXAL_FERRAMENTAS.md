@@ -148,14 +148,14 @@ A API HTTP reutiliza o `ExecutorOrdensNixal` e a mesma fila privada descrita aci
 - `POST /api/agent/orders/next` executa explicitamente a próxima tarefa pendente. Se não houver tarefa, retorna `fila_vazia`; se outra tarefa já estiver em execução, não inicia uma segunda execução.
 - `GET /api/agent/orders` apresenta contagens e metadados recentes (ID, capacidade, estado e data), sem expor argumentos nem resultados anteriores.
 - As rotas passam pelos mesmos gates de origem/autenticação da API. A ligação loopback direta segue a política local existente; tráfego remoto/proxy exige o Bearer token configurado.
-- Os resumos HTTP não devolvem os argumentos internos selecionados pelo modelo, caminhos locais nem texto bruto de erro. O conteúdo de resultado de uma capacidade de leitura só é devolvido à solicitação autenticada que pediu a execução, após os limites e a redação da fila.
+- Os resumos HTTP não devolvem os argumentos internos selecionados pelo modelo, caminhos locais nem texto bruto de erro. O conteúdo de resultado de uma capacidade de leitura só é devolvido à solicitação autorizada pela política local/Bearer que pediu a execução, após os limites e a redação da fila.
 - O estado `tarefa_enfileirada_aguardando_ordem` é uma resposta `202`: a ordem foi persistida, mas não foi executada porque há uma tarefa anterior. O cliente pode consultar `GET /api/agent/orders` e usar `/next` explicitamente para avançar a fila.
 
 Exemplo de ordem local:
 
 ```bash
-curl --fail-with-body -sS -X POST http://127.0.0.1:8010/api/agent/orders \\
-  -H 'Content-Type: application/json' \\
+curl --fail-with-body -sS -X POST http://127.0.0.1:8010/api/agent/orders \
+  -H 'Content-Type: application/json' \
   -d '{"ordem":"Consulte a hora local","chave_idempotencia":"req-local-001"}'
 ```
 
