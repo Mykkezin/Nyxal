@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-import ollama
 
 MODELO = "qwen2:7b"
 
@@ -82,6 +81,9 @@ def carregar_cristal():
 
 
 def gerar_candidato(cristal_atual):
+    # The optional model dependency is only needed when this operation runs.
+    import ollama
+
     prompt = f"""
 Você está tentando melhorar sua própria representação de conhecimento.
 
@@ -134,6 +136,9 @@ REGRAS:
 
 
 def verificar_requisito(cristal, requisito):
+    # Import lazily so importing this module never requires Ollama.
+    import ollama
+
     prompt = f"""
 Compare o cristal com o requisito.
 
@@ -206,48 +211,53 @@ def salvar_cristal(cristal):
         )
 
 
-print("=== CICLO DE CRISTALIZAÇÃO ===")
+def main():
+    print("=== CICLO DE CRISTALIZAÇÃO ===")
+    
+    cristal_atual = carregar_cristal()
+    
+    tamanho_atual = tamanho_bytes(cristal_atual)
+    fidelidade_atual = medir_fidelidade(cristal_atual)
+    
+    print("\n=== ESTADO ATUAL ===")
+    print(f"Tamanho: {tamanho_atual} bytes")
+    print(f"Fidelidade estimada: {fidelidade_atual:.2f}%")
+    
+    print("\nNixal está tentando encontrar uma representação melhor...")
+    
+    candidato = gerar_candidato(cristal_atual)
+    
+    tamanho_candidato = tamanho_bytes(candidato)
+    fidelidade_candidato = medir_fidelidade(candidato)
+    
+    print("\n=== CANDIDATO ===")
+    print(json.dumps(candidato, ensure_ascii=False, indent=2))
+    
+    print("\n=== COMPARAÇÃO ===")
+    print(
+        f"Atual:    {tamanho_atual} bytes | "
+        f"{fidelidade_atual:.2f}%"
+    )
+    
+    print(
+        f"Candidato: {tamanho_candidato} bytes | "
+        f"{fidelidade_candidato:.2f}%"
+    )
+    
+    print("\n=== DECISÃO ===")
+    
+    if (
+        fidelidade_candidato >= fidelidade_atual
+        and tamanho_candidato < tamanho_atual
+    ):
+        salvar_cristal(candidato)
+    
+        print("ACEITO.")
+        print("A nova representação é menor e preservou a fidelidade.")
+    else:
+        print("REJEITADO.")
+        print("A representação atual continua sendo a melhor versão.")
 
-cristal_atual = carregar_cristal()
 
-tamanho_atual = tamanho_bytes(cristal_atual)
-fidelidade_atual = medir_fidelidade(cristal_atual)
-
-print("\n=== ESTADO ATUAL ===")
-print(f"Tamanho: {tamanho_atual} bytes")
-print(f"Fidelidade estimada: {fidelidade_atual:.2f}%")
-
-print("\nNixal está tentando encontrar uma representação melhor...")
-
-candidato = gerar_candidato(cristal_atual)
-
-tamanho_candidato = tamanho_bytes(candidato)
-fidelidade_candidato = medir_fidelidade(candidato)
-
-print("\n=== CANDIDATO ===")
-print(json.dumps(candidato, ensure_ascii=False, indent=2))
-
-print("\n=== COMPARAÇÃO ===")
-print(
-    f"Atual:    {tamanho_atual} bytes | "
-    f"{fidelidade_atual:.2f}%"
-)
-
-print(
-    f"Candidato: {tamanho_candidato} bytes | "
-    f"{fidelidade_candidato:.2f}%"
-)
-
-print("\n=== DECISÃO ===")
-
-if (
-    fidelidade_candidato >= fidelidade_atual
-    and tamanho_candidato < tamanho_atual
-):
-    salvar_cristal(candidato)
-
-    print("ACEITO.")
-    print("A nova representação é menor e preservou a fidelidade.")
-else:
-    print("REJEITADO.")
-    print("A representação atual continua sendo a melhor versão.")
+if __name__ == "__main__":
+    main()
