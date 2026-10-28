@@ -712,7 +712,9 @@ class FilaTarefasNixal:
                 "iniciado_em": self._agora(),
                 "execucao_id": execucao_id,
             }
-            tarefa.pop("erro", None)
+            # A chave `erro` faz parte do schema persistido; limpe o valor
+            # sem remover o campo obrigatório antes do checkpoint de claim.
+            tarefa["erro"] = None
             try:
                 self._salvar_unlocked()
             except (OSError, ValueError, FilaTarefasErro) as erro_salvar:
