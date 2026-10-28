@@ -57,6 +57,7 @@ teste_nivel_9_integracao_governanca.py
 teste_nivel_9_laboratorio_remoto.py
 teste_nixal_agregador_operacional.py
 teste_nixal_analise_operacional.py
+teste_nixal_aprovacao_defesa.py
 teste_nixal_candidato_aprendizado_operacional.py
 teste_nixal_comparacao_evidencias_operacional.py
 teste_nixal_evidencia_operacional.py
