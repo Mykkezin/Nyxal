@@ -1,7 +1,33 @@
 #!/usr/bin/env python3
 
+"""
+NIXAL — TESTE DA INTEGRAÇÃO SESSÃO ↔ TRANSPORTE
+
+Microetapa 56.5.4
+
+Valida:
+1. criação automática de sessão na primeira mensagem;
+2. reutilização da sessão ativa sem recriação;
+3. encaminhamento de provedor e contexto de sistema isolados por cópia;
+4. separação arquitetural (nada de memória nem conhecimento nesta camada);
+5. consulta e estado ativo;
+6. sessão inexistente;
+7. encerramento e recusa após encerramento;
+8. entrada estruturada e suas validações;
+9. texto vazio e núcleo ausente;
+10. falha ao criar uma nova sessão (sessao_nao_criada / sessao_invalida);
+11. retry da requisição na mesma sessão e retry após queda do transporte;
+12. reinício do processo servidor sobre o ID efêmero da sessão;
+13. ausência de expiração (TTL) como característica da camada.
+
+O histórico conversacional persistente não pertence a esta camada; a
+recuperação depois de reinício real de processo é coberta por
+teste_nixal_memoria_conversacional.py.
+"""
+
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from nixal_gerenciador_sessoes import GerenciadorSessoesNixal
@@ -46,6 +72,47 @@ class TransporteTeste:
             "sucesso": True,
             "estado": "mensagem_processada",
             "origem": "transporte_teste",
+            "sessao": sessao,
+            "resposta": nucleo.processar(texto),
+        }
+
+
+class GerenciadorCriacaoFalha(GerenciadorSessoesNixal):
+    """Simula o esgotamento do armazenamento de sessões em RAM."""
+
+    def criar(self, sessao_id=None) -> dict:
+        return {
+            "sucesso": False,
+            "estado": "operacao_negada",
+            "sessao": None,
+            "erro": "armazenamento indisponível",
+        }
+
+
+class GerenciadorIdInvalido(GerenciadorSessoesNixal):
+    """Simula um gerenciador que confirma a criação sem devolver ID."""
+
+    def criar(self, sessao_id=None) -> dict:
+        return {
+            "sucesso": True,
+            "estado": "sessao_criada",
+            "sessao": None,
+        }
+
+
+class TransporteInstavel:
+    def __init__(self) -> None:
+        self.chamadas = []
+
+    def processar_mensagem(self, texto, nucleo, sessao) -> dict:
+        self.chamadas.append({"texto": texto, "sessao": sessao})
+
+        if len(self.chamadas) == 1:
+            raise RuntimeError("queda transitória do transporte")
+
+        return {
+            "sucesso": True,
+            "estado": "mensagem_processada",
             "sessao": sessao,
             "resposta": nucleo.processar(texto),
         }
@@ -409,6 +476,348 @@ def main() -> None:
     verificar(
         nucleo_ausente.get("sucesso") is False,
         "núcleo ausente é rejeitado",
+    )
+
+    # --------------------------------------------------------
+    # 10 — FALHA AO CRIAR UMA NOVA SESSÃO
+    # --------------------------------------------------------
+
+    transporte_falha = TransporteTeste()
+    integracao_falha = IntegracaoSessaoTransporteNixal(
+        transporte=transporte_falha,
+        sessoes=GerenciadorCriacaoFalha(),
+    )
+
+    resultado_sem_sessao = integracao_falha.processar_mensagem(
+        texto="Não há sessão disponível.",
+        nucleo=nucleo,
+    )
+
+    verificar(
+        resultado_sem_sessao.get("sucesso") is False,
+        "falha ao criar sessão é reportada como erro",
+    )
+
+    verificar(
+        resultado_sem_sessao.get("estado") == "sessao_nao_criada",
+        "estado sessao_nao_criada está correto",
+    )
+
+    verificar(
+        resultado_sem_sessao.get("sessao") is None,
+        "nenhum ID de sessão é inventado na falha de criação",
+    )
+
+    verificar(
+        len(transporte_falha.chamadas) == 0,
+        "recusa por falha de criação não chega ao transporte",
+    )
+
+    transporte_id_invalido = TransporteTeste()
+    integracao_id_invalido = IntegracaoSessaoTransporteNixal(
+        transporte=transporte_id_invalido,
+        sessoes=GerenciadorIdInvalido(),
+    )
+
+    resultado_id_invalido = integracao_id_invalido.processar_mensagem(
+        texto="Sessão sem identificador.",
+        nucleo=nucleo,
+    )
+
+    verificar(
+        resultado_id_invalido.get("estado") == "sessao_invalida",
+        "sessão criada sem ID válido é rejeitada",
+    )
+
+    verificar(
+        len(transporte_id_invalido.chamadas) == 0,
+        "sessão sem ID não é entregue ao transporte",
+    )
+
+    # --------------------------------------------------------
+    # 11 — RETRY DA MESMA REQUISIÇÃO
+    # --------------------------------------------------------
+
+    transporte_retry = TransporteTeste()
+    sessoes_retry = GerenciadorSessoesNixal()
+    integracao_retry = IntegracaoSessaoTransporteNixal(
+        transporte=transporte_retry,
+        sessoes=sessoes_retry,
+    )
+
+    primeira = integracao_retry.processar_mensagem(
+        texto="Repete a mesma coisa.",
+        nucleo=nucleo,
+    )
+    sessao_retry = primeira.get("sessao")
+
+    # Retry do cliente com o mesmo texto: a camada não deduplica,
+    # então o transporte vê as duas tentativas e o cliente recebe a
+    # mesma sessão nas duas.
+    segunda = integracao_retry.processar_mensagem(
+        texto="Repete a mesma coisa.",
+        nucleo=nucleo,
+        sessao_id=sessao_retry,
+    )
+
+    verificar(
+        segunda.get("sucesso") is True,
+        "retry da requisição é aceito pela sessão ativa",
+    )
+
+    verificar(
+        segunda.get("sessao") == sessao_retry,
+        "retry reutiliza a mesma sessão",
+    )
+
+    verificar(
+        segunda.get("valor", {}).get("sessao_criada_agora") is False,
+        "retry não cria uma segunda sessão",
+    )
+
+    verificar(
+        sessoes_retry.listar().get("quantidade") == 1,
+        "retry não duplica sessões no gerenciador",
+    )
+
+    verificar(
+        primeira.get("valor", {}).get("sessao")
+        == segunda.get("valor", {}).get("sessao"),
+        "retry preserva o estado estrutural da sessão",
+    )
+
+    verificar(
+        len(transporte_retry.chamadas) == 2,
+        "retry é entregue ao transporte sem deduplicação nesta camada",
+    )
+
+    # Retry após falha do transporte: a recusa não pode consumir a sessão.
+    transporte_instavel = TransporteInstavel()
+    nucleo_instavel = NucleoTeste()
+    integracao_instavel = IntegracaoSessaoTransporteNixal(
+        transporte=transporte_instavel,
+    )
+
+    queda = integracao_instavel.processar_mensagem(
+        texto="Mensagem que o transporte perdeu.",
+        nucleo=nucleo_instavel,
+    )
+
+    verificar(
+        queda.get("sucesso") is False,
+        "exceção do transporte é reportada como falha",
+    )
+
+    verificar(
+        queda.get("estado") == "transporte_nao_respondeu",
+        "estado transporte_nao_respondeu está correto",
+    )
+
+    sessao_pos_queda = queda.get("sessao")
+
+    verificar(
+        integracao_instavel.sessao_ativa(sessao_pos_queda) is True,
+        "sessão permanece ativa depois da queda do transporte",
+    )
+
+    reapresentacao = integracao_instavel.processar_mensagem(
+        texto="Mensagem que o transporte perdeu.",
+        nucleo=nucleo_instavel,
+        sessao_id=sessao_pos_queda,
+    )
+
+    verificar(
+        reapresentacao.get("sucesso") is True,
+        "retry da mesma mensagem após a queda prospera",
+    )
+
+    verificar(
+        reapresentacao.get("sessao") == sessao_pos_queda,
+        "retry após a queda usa a sessão original",
+    )
+
+    verificar(
+        len(transporte_instavel.chamadas) == 2,
+        "as duas tentativas ficam registradas no transporte",
+    )
+
+    # --------------------------------------------------------
+    # 12 — REINÍCIO DO PROCESSO SERVIDOR
+    # --------------------------------------------------------
+
+    sessoes_antes = GerenciadorSessoesNixal()
+    transporte_reinicio = TransporteTeste()
+    integracao_antes = IntegracaoSessaoTransporteNixal(
+        transporte=transporte_reinicio,
+        sessoes=sessoes_antes,
+    )
+
+    antes_do_reinicio = integracao_antes.processar_mensagem(
+        texto="Conversa antes do reinício.",
+        nucleo=nucleo,
+    )
+    sessao_antes = antes_do_reinicio.get("sessao")
+    chamadas_antes = len(transporte_reinicio.chamadas)
+
+    # O processo morre e renasce: as sessões vivem em RAM, então o
+    # gerenciador novo começa sem nenhuma identidade conhecida.
+    integracao_depois = IntegracaoSessaoTransporteNixal(
+        transporte=transporte_reinicio,
+        sessoes=GerenciadorSessoesNixal(),
+    )
+
+    verificar(
+        integracao_depois.sessao_ativa(sessao_antes) is False,
+        "sessão anterior ao reinício não está ativa no processo novo",
+    )
+
+    replay = integracao_depois.processar_mensagem(
+        texto="Conversa antes do reinício.",
+        nucleo=nucleo,
+        sessao_id=sessao_antes,
+    )
+
+    verificar(
+        replay.get("sucesso") is False,
+        "replay com ID de antes do reinício é rejeitado",
+    )
+
+    verificar(
+        replay.get("estado") == "sessao_nao_valida",
+        "replay após reinício recebe sessao_nao_valida",
+    )
+
+    verificar(
+        replay.get("valor", {}).get("detalhes", {}).get("estado")
+        == "sessao_desconhecida",
+        "rejeição distingue sessão desconhecida de sessão encerrada",
+    )
+
+    verificar(
+        len(transporte_reinicio.chamadas) == chamadas_antes,
+        "replay recusado após reinício não chega ao transporte",
+    )
+
+    depois_do_reinicio = integracao_depois.processar_mensagem(
+        texto="Retomando depois do reinício.",
+        nucleo=nucleo,
+    )
+
+    verificar(
+        depois_do_reinicio.get("sucesso") is True,
+        "mensagem sem ID cria sessão nova após o reinício",
+    )
+
+    verificar(
+        depois_do_reinicio.get("sessao") != sessao_antes,
+        "o ID anterior não é reutilizado: não é credencial durável",
+    )
+
+    verificar(
+        integracao_depois.obter_sessao(sessao_antes).get("estado")
+        == "sessao_desconhecida",
+        "a consulta pós-reinício responde sessão desconhecida",
+    )
+
+    verificar(
+        integracao_depois.obter_sessao(sessao_antes).get("valor") is None,
+        "nenhum conteúdo é recuperado da sessão antiga",
+    )
+
+    # --------------------------------------------------------
+    # 13 — LIMITE DA CAMADA SOBRE O HISTÓRICO
+    # --------------------------------------------------------
+
+    # "Expirada" não existe como estado: o gerenciador só tem ativa e
+    # encerrada, sem TTL. A continuidade do histórico pertence à memória
+    # conversacional, não a esta camada.
+    estrutura_sessao = depois_do_reinicio.get("valor", {}).get("sessao", {})
+
+    verificar(
+        set(estrutura_sessao) == {"id", "estado", "criada_em", "encerrada_em"},
+        "sessão carrega apenas identidade e estado estrutural",
+    )
+
+    verificar(
+        estrutura_sessao.get("estado") == "ativa",
+        "sessão nova após reinício está ativa",
+    )
+
+    verificar(
+        estrutura_sessao.get("encerrada_em") is None,
+        "sessão ativa não possui encerramento registrado",
+    )
+
+    verificar(
+        "Conversa antes do reinício." not in str(estrutura_sessao),
+        "nenhum texto de conversa é transportado pela sessão",
+    )
+
+    verificar(
+        depois_do_reinicio.get("valor", {}).get("mensagem_armazenada") is False,
+        "a camada não armazena a mensagem retomada",
+    )
+
+    verificar(
+        depois_do_reinicio.get("valor", {}).get("memoria_conversacional") is False,
+        "a camada não acessa a memória conversacional",
+    )
+
+    # --------------------------------------------------------
+    # 14 — AUSÊNCIA DE EXPIRAÇÃO (TTL)
+    # --------------------------------------------------------
+
+    # "Expirada" não é um estado desta camada: o gerenciador só conhece
+    # ativa e encerrada. O relógio injetável deixa provar isso em vez de
+    # apenas afirmar — é a evidência de que a sessão é efêmera por
+    # omissão, não por política de expiração.
+    relogio = {"agora": datetime(2026, 1, 1, tzinfo=timezone.utc)}
+    sessoes_sem_ttl = GerenciadorSessoesNixal(relogio=lambda: relogio["agora"])
+    transporte_sem_ttl = TransporteTeste()
+    integracao_sem_ttl = IntegracaoSessaoTransporteNixal(
+        transporte=transporte_sem_ttl,
+        sessoes=sessoes_sem_ttl,
+    )
+
+    antiga = integracao_sem_ttl.processar_mensagem(
+        texto="Sessão criada em 2026.",
+        nucleo=nucleo,
+    )
+    criada_em = antiga.get("valor", {}).get("sessao", {}).get("criada_em")
+
+    verificar(
+        criada_em == "2026-01-01T00:00:00+00:00",
+        "a sessão registra o instante do relógio injetado",
+    )
+
+    relogio["agora"] += timedelta(days=3650)
+
+    depois_dez_anos = integracao_sem_ttl.processar_mensagem(
+        texto="Ainda vale?",
+        nucleo=nucleo,
+        sessao_id=antiga.get("sessao"),
+    )
+
+    verificar(
+        depois_dez_anos.get("sucesso") is True,
+        "sessão de dez anos atrás continua aceitando mensagens",
+    )
+
+    verificar(
+        depois_dez_anos.get("valor", {}).get("sessao", {}).get("estado")
+        == "ativa",
+        "o tempo avançado não altera o estado da sessão",
+    )
+
+    verificar(
+        depois_dez_anos.get("valor", {}).get("sessao", {}).get("criada_em")
+        == criada_em,
+        "a criação não é reescrita pelo relógio",
+    )
+
+    verificar(
+        len(transporte_sem_ttl.chamadas) == 2,
+        "o transporte recebeu as duas mensagens da mesma sessão",
     )
 
     # --------------------------------------------------------
