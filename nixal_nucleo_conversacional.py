@@ -300,6 +300,21 @@ class NucleoConversacionalNixal:
         )
 
         consultar_conversas_anteriores = self._deve_recuperar_conversas_anteriores(texto)
+        detector_especialistas = getattr(
+            DialogoQwenNixal,
+            "_pedido_coordenacao_especialistas",
+            None,
+        )
+        try:
+            coordenacao_especialistas_solicitada = (
+                detector_especialistas(texto) is True
+                if callable(detector_especialistas)
+                else False
+            )
+        except Exception:
+            # Adaptadores antigos e stubs de compatibilidade não oferecem esse recurso.
+            # Nessa situação, o núcleo mantém o fluxo conversacional já existente.
+            coordenacao_especialistas_solicitada = False
         priorizar_dialogo = self._deve_priorizar_dialogo(
             texto,
             historico,
@@ -307,6 +322,10 @@ class NucleoConversacionalNixal:
         if consultar_conversas_anteriores:
             # Recordação explícita também deve entrar no diálogo contextual,
             # mesmo quando a frase não coincide com os marcadores gerais.
+            priorizar_dialogo = True
+        if coordenacao_especialistas_solicitada:
+            # Uma coordenação solicitada pelo usuário precisa passar pelo diálogo,
+            # sem deixar que a seleção de capacidade curta-circuite os especialistas.
             priorizar_dialogo = True
         # /api/agent/chat envia provedor explicitamente: preserve o contrato
         # desse endpoint e não converta um pedido ao modelo em ação local.
@@ -348,6 +367,8 @@ class NucleoConversacionalNixal:
             resultado = self._atender(
                 texto
             )
+
+        coordenacao_especialistas_resumo: dict[str, Any] | None = None
 
         if resultado["atendida"]:
 
@@ -394,6 +415,13 @@ class NucleoConversacionalNixal:
                 texto_dialogo,
                 **argumentos_responder,
             )
+            coordenacao_especialistas_resumo = (
+                self._resumir_coordenacao_especialistas(
+                    resposta_dialogo.get("coordenacao_especialistas")
+                )
+                if isinstance(resposta_dialogo, dict)
+                else None
+            )
 
             if resposta_dialogo.get("sucesso") is True:
 
@@ -421,6 +449,8 @@ class NucleoConversacionalNixal:
         )
 
         resposta["valor"]["modo"] = estado_resposta
+        if coordenacao_especialistas_resumo is not None:
+            resposta["valor"]["coordenacao_especialistas"] = coordenacao_especialistas_resumo
         resposta["valor"]["mensagem_armazenada"] = (
             usuario_registrado and assistente_registrado
         )
@@ -756,6 +786,54 @@ class NucleoConversacionalNixal:
                 "conhecimento_permanente": False,
             })
         return resumidos
+
+    @staticmethod
+    def _resumir_coordenacao_especialistas(
+        valor: Any,
+    ) -> dict[str, Any] | None:
+        """Allowlist de metadados da coordenação; nunca repassa os textos das passagens."""
+        if not isinstance(valor, dict) or valor.get("solicitada") is not True:
+            return None
+
+        estados_permitidos = {
+            "nao_iniciada",
+            "concluida",
+            "indisponivel_fora_do_modelo_local",
+            "cliente_local_indisponivel",
+            "passagem_arquiteto_indisponivel",
+            "passagem_revisor_indisponivel",
+        }
+        estado = valor.get("estado")
+        if not isinstance(estado, str) or estado not in estados_permitidos:
+            estado = "estado_indisponivel"
+
+        perfis_permitidos = {"arquiteto", "revisor_seguranca_qualidade"}
+        perfis_brutos = valor.get("perfis", [])
+        perfis = (
+            [perfil for perfil in perfis_brutos[:2] if isinstance(perfil, str) and perfil in perfis_permitidos]
+            if isinstance(perfis_brutos, list)
+            else []
+        )
+        passagens_brutas = valor.get("passagens", 0)
+        passagens = (
+            passagens_brutas
+            if isinstance(passagens_brutas, int)
+            and not isinstance(passagens_brutas, bool)
+            and 0 <= passagens_brutas <= 2
+            else 0
+        )
+        return {
+            "solicitada": True,
+            "ativa": valor.get("ativa") is True,
+            "estado": estado,
+            "perfis": perfis,
+            "passagens": passagens,
+            "modelo_local": valor.get("modelo_local") is True,
+            "passagens_executaram_ferramentas": valor.get("passagens_executaram_ferramentas") is True,
+            "passagens_executaram_acoes": valor.get("passagens_executaram_acoes") is True,
+            "confiavel_como_instrucao": False,
+            "conteudo_incluido": False,
+        }
 
     def _resumir_memorias_conversacionais(
         self,

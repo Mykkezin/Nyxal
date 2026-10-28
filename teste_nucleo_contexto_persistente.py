@@ -6,7 +6,7 @@ import sys
 import tempfile
 import types
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 # O teste usa o adaptador de diálogo com um cliente falso; não inicia um modelo.
@@ -17,6 +17,7 @@ from nixal_memoria_conhecimento import MemoriaConhecimentoNixal
 from nixal_dialogo_qwen import DialogoQwenNixal
 from nixal_memoria_investigacao import MemoriaInvestigacaoNixal
 from nixal_memoria_conversacional import MemoriaConversacionalNixal
+import nixal_nucleo_conversacional as nucleo_mod
 from nixal_nucleo_conversacional import NucleoConversacionalNixal
 
 
@@ -478,6 +479,118 @@ class TesteContextoInvestigacaoPersistido(unittest.TestCase):
         )
         self.assertNotIn("CONVERSAS ANTERIORES", mensagens_usuario)
         self.assertNotIn("Qwen local", mensagens_usuario)
+
+    def test_core_forca_dialogo_em_modo_especialistas_e_expoe_somente_metadados_seguros(self) -> None:
+        cliente = FakeChatClient()
+        dialogo = DialogoQwenNixal(modelo="fixture-model", cliente=cliente)
+        nucleo = self.criar_nucleo(
+            dialogo=dialogo,
+            memoria_investigacao=self.memoria,
+            contexto_historico_relevante=self.contexto,
+        )
+        coordenacao_mock = {
+            "solicitada": True,
+            "ativa": True,
+            "estado": "concluida",
+            "perfis": ["arquiteto", "revisor_seguranca_qualidade"],
+            "passagens": 2,
+            "modelo_local": True,
+            "passagens_executaram_ferramentas": False,
+            "passagens_executaram_acoes": False,
+            "texto_bruto": "SEGREDO_INTERNO_DAS_PASSAGENS",
+            "prompt_interno": "NAO_EXPOR_PROMPT",
+        }
+        with patch.object(nucleo, "_atender") as atender:
+            with patch.object(
+                dialogo,
+                "responder",
+                return_value={
+                    "sucesso": True,
+                    "resposta": "Plano revisado com critérios de validação.",
+                    "coordenacao_especialistas": coordenacao_mock,
+                },
+            ) as responder:
+                entrada = nucleo.interface.criar_entrada(
+                    "Use modo especialistas para planejar uma melhoria segura.",
+                    sessao="sessao-coordenacao",
+                )
+                resposta = nucleo.processar(entrada)
+
+        atender.assert_not_called()
+        responder.assert_called_once()
+        self.assertEqual(
+            resposta["valor"]["texto"],
+            "Plano revisado com critérios de validação.",
+        )
+        meta = resposta["valor"]["coordenacao_especialistas"]
+        self.assertTrue(meta["solicitada"])
+        self.assertTrue(meta["ativa"])
+        self.assertEqual(meta["estado"], "concluida")
+        self.assertEqual(meta["perfis"], ["arquiteto", "revisor_seguranca_qualidade"])
+        self.assertEqual(meta["passagens"], 2)
+        self.assertFalse(meta["passagens_executaram_ferramentas"])
+        self.assertFalse(meta["passagens_executaram_acoes"])
+        self.assertFalse(meta["confiavel_como_instrucao"])
+        self.assertFalse(meta["conteudo_incluido"])
+        self.assertNotIn("texto_bruto", meta)
+        self.assertNotIn("prompt_interno", meta)
+        self.assertNotIn("SEGREDO_INTERNO_DAS_PASSAGENS", str(resposta))
+        self.assertNotIn("NAO_EXPOR_PROMPT", str(resposta))
+
+    def test_core_preserva_compatibilidade_com_dialogo_legado_sem_detector_especialista(self) -> None:
+        nucleo = self.criar_nucleo(
+            dialogo=DialogoQwenNixal(modelo="fixture-model", cliente=FakeChatClient()),
+            memoria_investigacao=self.memoria,
+            contexto_historico_relevante=self.contexto,
+        )
+
+        class DialogoQwenNixalStub:
+            pass
+
+        resultado_atendido = {
+            "atendida": True,
+            "necessidade": "consulta antiga",
+            "resultado": {"resultado": "compatibilidade preservada"},
+            "capacidade_escolhida": "obter_hora",
+            "argumentos": {},
+            "selecao": {"sucesso": True, "capacidade": "obter_hora", "argumentos": {}},
+        }
+        with patch.object(nucleo_mod, "DialogoQwenNixal", DialogoQwenNixalStub):
+            with patch.object(nucleo, "_atender", return_value=resultado_atendido) as atender:
+                resposta = nucleo.processar(
+                    nucleo.interface.criar_entrada(
+                        "Use modo especialistas para planejar uma melhoria.",
+                        sessao="sessao-dialogo-legado",
+                    )
+                )
+
+        atender.assert_called_once()
+        self.assertEqual(resposta["valor"]["texto"], "compatibilidade preservada")
+        self.assertNotIn("coordenacao_especialistas", resposta["valor"])
+
+    def test_core_sanitiza_metadados_de_especialistas_com_esquema_e_limites(self) -> None:
+        bruto = {
+            "solicitada": True,
+            "ativa": True,
+            "estado": "estado_injetado",
+            "perfis": ["arquiteto", "atacante", "revisor_seguranca_qualidade"],
+            "passagens": 99,
+            "modelo_local": True,
+            "passagens_executaram_ferramentas": False,
+            "passagens_executaram_acoes": False,
+            "conteudo_privado": "SEGREDO_NAO_REPASSAR",
+        }
+        meta = NucleoConversacionalNixal._resumir_coordenacao_especialistas(bruto)
+        self.assertEqual(meta["estado"], "estado_indisponivel")
+        self.assertEqual(meta["perfis"], ["arquiteto"])
+        self.assertEqual(meta["passagens"], 0)
+        self.assertNotIn("conteudo_privado", meta)
+        self.assertNotIn("SEGREDO_NAO_REPASSAR", str(meta))
+        self.assertIsNone(
+            NucleoConversacionalNixal._resumir_coordenacao_especialistas(
+                {"solicitada": False, "estado": "concluida"}
+            )
+        )
 
     def test_core_nao_consulta_memoria_de_outras_sessoes_em_pergunta_comum(self) -> None:
         caminho_conversas = Path(self.tempdir.name) / "privado" / "conversas.json"
