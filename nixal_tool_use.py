@@ -1118,6 +1118,7 @@ def registrar_capacidades_operacionais(
     *,
     incluir_acoes: bool = False,
     incluir_dados_privados: bool = False,
+    incluir_edicao_workspace: bool = False,
     store: NotasLembretesNixOS | None = None,
 ) -> None:
     """Registra ferramentas operacionais com escopo conservador.
@@ -1136,6 +1137,10 @@ def registrar_capacidades_operacionais(
         raise TypeError("incluir_acoes precisa ser booleano.")
     if not isinstance(incluir_dados_privados, bool):
         raise TypeError("incluir_dados_privados precisa ser booleano.")
+    if not isinstance(incluir_edicao_workspace, bool):
+        raise TypeError("incluir_edicao_workspace precisa ser booleano.")
+    if incluir_edicao_workspace and not incluir_acoes:
+        raise ValueError("Edição de workspace exige o opt-in de ações mutáveis.")
     notas = store or NotasLembretesNixOS()
 
     def adicionar(
@@ -1364,10 +1369,59 @@ def registrar_capacidades_operacionais(
         )
 
 
+    if incluir_edicao_workspace:
+        # A ferramenta de proposta nunca grava no destino; a aplicação é outra chamada
+        # e exige uma confirmação de usuário, com identificador vinculado ao hash do alvo.
+        adicionar(
+            "preparar_edicao_workspace",
+            "Prepara um diff para um arquivo textual permitido dentro do workspace configurado. Não aplica mudanças; devolve um ID e um token de confirmação para outro turno.",
+            "Propor uma alteração revisável a um arquivo de projeto autorizado.",
+            ["Prepare uma proposta para corrigir README.md", "Mostre um diff para atualizar um módulo Python"],
+            preparar_edicao_workspace,
+            {
+                "caminho": {
+                    "tipo": "string", "obrigatorio": True,
+                    "descricao": "Caminho relativo do workspace; não use caminho absoluto",
+                    "max_length": 240,
+                },
+                "conteudo": {
+                    "tipo": "string", "obrigatorio": True,
+                    "descricao": "Conteúdo textual completo proposto, até 128.000 caracteres",
+                    "max_length": 128000,
+                },
+            },
+            "workspace_edicao",
+            ["prepare uma edição", "proponha alteração de arquivo", "gere diff de arquivo"],
+            "acao_com_pedido_explicito",
+        )
+        adicionar(
+            "aplicar_edicao_workspace",
+            "Aplica um plano pendente de edição do workspace após a confirmação exata em um turno separado. Revalida hash e cria backup local antes de substituir o arquivo.",
+            "Aplicar uma proposta de arquivo que o operador revisou e confirmou explicitamente.",
+            ["Aplicar a edição depois de confirmar o ID exato do plano"],
+            aplicar_edicao_workspace,
+            {
+                "plano_id": {
+                    "tipo": "string", "obrigatorio": True,
+                    "descricao": "ID de 12 caracteres recebido na proposta",
+                    "max_length": 12,
+                },
+                "confirmacao": {
+                    "tipo": "string", "obrigatorio": True,
+                    "descricao": "Repita exatamente CONFIRMO APLICACAO <PLANO_ID>",
+                    "max_length": 40,
+                },
+            },
+            "workspace_edicao",
+            ["confirmar aplicação de plano", "aplicar edição confirmada"],
+            "acao_com_pedido_explicito",
+        )
+
 __all__ = [
     "NotasLembretesNixOS", "ServicoLembretesNixOS", "registrar_capacidades_operacionais",
     "pesquisar_web", "consultar_metar_taf", "consultar_notam_aisweb", "consultar_cartas_aisweb",
     "consultar_home_assistant",
     "buscar_arquivos", "ler_arquivo_usuario", "consultar_emails_google",
     "ler_email_google", "consultar_agenda_google", "abrir_aplicativo", "executar_diagnostico",
+    "preparar_edicao_workspace", "aplicar_edicao_workspace",
 ]
