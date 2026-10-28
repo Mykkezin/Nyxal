@@ -815,9 +815,10 @@ def executar_diagnostico(tipo: str) -> dict[str, Any]:
 
 
 # Edição de workspace em duas etapas: preparar diff e aplicar com confirmação separada.
-MAX_WORKSPACE_EDIT_BYTES = 128_000
+MAX_WORKSPACE_EDIT_BYTES = 12_000
 _WORKSPACE_PLAN_TTL_SECONDS = 900
 _WORKSPACE_PLAN_LIMIT = 8
+_WORKSPACE_DIFF_REVIEW_LIMIT = 4_500
 _WORKSPACE_PLANS: dict[str, dict[str, Any]] = {}
 _WORKSPACE_PLAN_LOCK = threading.RLock()
 
@@ -961,7 +962,15 @@ def preparar_edicao_workspace(caminho: str, conteudo: str) -> dict[str, Any]:
             tofile=f"b/{relativo}",
             n=3,
         ))
-        diff_preview = _redigir_preview_workspace(diff)[:6000]
+        diff_preview = _redigir_preview_workspace(diff)
+        if len(diff_preview) > _WORKSPACE_DIFF_REVIEW_LIMIT:
+            return {
+                "sucesso": False,
+                "estado": "diff_excede_limite_de_revisao",
+                "limite_diff_chars": _WORKSPACE_DIFF_REVIEW_LIMIT,
+                "aplicado": False,
+                "orientacao": "Divida a alteração em propostas menores para que o diff completo possa ser revisado antes da confirmação.",
+            }
         plano_id = uuid.uuid4().hex[:12]
         agora = time.time()
         plano = {
@@ -997,7 +1006,7 @@ def preparar_edicao_workspace(caminho: str, conteudo: str) -> dict[str, Any]:
             "sha256_proposto": plano["sha256_proposto"],
             "expira_em_segundos": _WORKSPACE_PLAN_TTL_SECONDS,
             "diff": diff_preview,
-            "diff_truncado": len(diff) > len(diff_preview),
+            "diff_truncado": False,
             "aplicado": False,
             "confirmacao_exata": f"CONFIRMO APLICACAO {plano_id}",
             "aviso": "Nada foi escrito. Aplique apenas em outra mensagem após revisar o diff e enviar a confirmação exata.",
@@ -1374,9 +1383,9 @@ def registrar_capacidades_operacionais(
         # e exige uma confirmação de usuário, com identificador vinculado ao hash do alvo.
         adicionar(
             "preparar_edicao_workspace",
-            "Prepara um diff para um arquivo textual permitido dentro do workspace configurado. Não aplica mudanças; devolve um ID e um token de confirmação para outro turno.",
-            "Propor uma alteração revisável a um arquivo de projeto autorizado.",
-            ["Prepare uma proposta para corrigir README.md", "Mostre um diff para atualizar um módulo Python"],
+            "Prepara um diff pequeno para um arquivo textual permitido dentro do workspace configurado. Não aplica mudanças; devolve um ID e um token de confirmação para outro turno.",
+            "Propor uma pequena alteração revisável a um arquivo de projeto autorizado.",
+            ["Prepare uma proposta pequena para corrigir README.md", "Mostre um diff curto para atualizar um módulo Python"],
             preparar_edicao_workspace,
             {
                 "caminho": {
@@ -1386,8 +1395,8 @@ def registrar_capacidades_operacionais(
                 },
                 "conteudo": {
                     "tipo": "string", "obrigatorio": True,
-                    "descricao": "Conteúdo textual completo proposto, até 128.000 caracteres",
-                    "max_length": 128000,
+                    "descricao": "Conteúdo textual completo de uma pequena edição, até 3.000 caracteres",
+                    "max_length": 3000,
                 },
             },
             "workspace_edicao",
