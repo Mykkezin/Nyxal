@@ -43,10 +43,10 @@ catálogo commitado carregam `somente_leitura` e a fila aceita e conclui tarefa.
 
 Uma PR aberta e duas issues abertas — o escopo pendente é pequeno e nomeável.
 
-- **#231** `feat(api): integrar ordens governadas à API local` — OPEN,
-  `MERGEABLE`, `mergeStateStatus: CLEAN`, nenhuma review pendente, 7 checks
-  `SUCCESS`, atualizada com `origin/main` (0 atrás, 59 à frente), 20 arquivos,
-  +4109/−281.
+- **#231** `feat(api): integrar ordens governadas à API local` — aberta na
+  auditoria, `MERGEABLE`, `mergeStateStatus: CLEAN`, sem review pendente, 7 checks
+  `SUCCESS`, 0 commits atrás de `origin/main`. **Integrada em 2026-10-28T02:13:40Z
+  como `a899432`** pelo fluxo normal (merge commit, convenção do repositório).
 - **#167** CI instável, atualizada 2026-10-28. **#103** defesa governada,
   atualizada 2026-10-28.
 
