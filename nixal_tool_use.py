@@ -943,7 +943,7 @@ def _workspace_target(caminho: Any) -> tuple[Path, Path, str]:
 
 def _redigir_preview_workspace(texto: str) -> str:
     """Redige credenciais em formatos KEY=value, YAML e JSON antes de expor o diff."""
-    texto = re.sub(r"(?i)\bBearer\s+[^"'\s,;]+", "Bearer [REDACTED]", texto)
+    texto = re.sub(r"""(?i)\bBearer\s+[^"'\s,;]+""", "Bearer [REDACTED]", texto)
     padrao = re.compile(
         r"""(?i)(["']?[a-z0-9_-]*(?:api[_ -]?key|api[_ -]?token|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)[a-z0-9_-]*["']?\s*[:=]\s*)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^,\s;}\]]+)"""
     )
