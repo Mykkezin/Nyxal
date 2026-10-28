@@ -73,6 +73,10 @@ jobs:
 
       - name: Run every matrix test and report each outcome
         run: |
+          # Isolar o estado por job faz o critério "não escreve fora do checkout" valer
+          # também para os diários duráveis (~/.local/state), que o runner privado
+          # compartilha com a instalação viva. Nenhum dos testes atuais grava neles.
+          export XDG_STATE_HOME="${RUNNER_TEMP:?runner_sem_temp}/nyxal-estado"
           mkdir -p "$RUNNER_TEMP/matriz-raiz"
           falhas=0
           execucoes=0
