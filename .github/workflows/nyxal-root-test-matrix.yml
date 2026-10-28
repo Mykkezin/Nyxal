@@ -8,6 +8,10 @@ name: Nyxal Root Test Matrix
 # mesma máquina deste runner) e os que sujam capacidades_nixal.json (a família
 # nivel_9_* e investigacao_interna_56_4_11). A allowlist versionada ao lado é o
 # único conjunto que este job executa.
+#
+# testes/teste_persistencia_cristal.py entrou no inventário porque cumpre os
+# mesmos dois critérios: roda com o python3 do runner e só escreve em
+# diretórios temporários, nunca no checkout vivo desta máquina.
 
 on:
   pull_request:
@@ -18,6 +22,12 @@ on:
       - "nixal_*.py"
       - "nyxal_*.py"
       - "interface/js/**/*.js"
+      - "testes/**/*.py"
+      - "gerenciador_cristal.py"
+      - "cristalizacao.py"
+      - "ciclo_cristalizacao.py"
+      - "experiencia_qwen.py"
+      - "pipeline_integrado.py"
       - ".github/matriz-validacao-raiz.txt"
       - ".github/workflows/nyxal-root-test-matrix.yml"
   push:
@@ -27,6 +37,12 @@ on:
       - "teste_*.py"
       - "nixal_*.py"
       - "nyxal_*.py"
+      - "testes/**/*.py"
+      - "gerenciador_cristal.py"
+      - "cristalizacao.py"
+      - "ciclo_cristalizacao.py"
+      - "experiencia_qwen.py"
+      - "pipeline_integrado.py"
       - ".github/matriz-validacao-raiz.txt"
       - ".github/workflows/nyxal-root-test-matrix.yml"
   workflow_dispatch:

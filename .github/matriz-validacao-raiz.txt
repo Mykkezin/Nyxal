@@ -85,3 +85,4 @@ teste_recuperacao_investigacao_56_4_17.py
 teste_relevancia_historico_investigacao_56_4_20.py
 teste_reutilizacao.py
 teste_sanidade.py
+testes/teste_persistencia_cristal.py
