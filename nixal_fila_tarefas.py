@@ -135,9 +135,10 @@ class FilaTarefasNixal:
     def _redigir_texto(texto: str) -> str:
         texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
         texto = re.sub(
-            r"(?i)\b(api[_ -]?key|api[_ -]?token|access[_ -]?token|"
-            r"refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|"
-            r"authorization|password|passwd|senha|secret|credential)\b"
+            r"(?i)\b(api[_ -]?key|private[_ -]?key|ssh[_ -]?key|signing[_ -]?key|"
+            r"access[_ -]?key|api[_ -]?token|access[_ -]?token|refresh[_ -]?token|"
+            r"session[_ -]?token|id[_ -]?token|token|authorization|password|passwd|"
+            r"senha|secret|credential)\b"
             r"\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+",
             r"\1=[REDACTED]",
             texto,
