@@ -121,6 +121,25 @@ Nunca grave o token no Git, frontend, mensagens ou logs. O adaptador só faz GET
 
 A persistência reutilizável está em `~/.local/share/nyxal/notas_lembretes.json` (sobrescrita de diretório por `NYXAL_USER_DATA_DIR`). O diretório usa permissão `0700`; o arquivo usa `0600`; gravação é atômica. JSON corrompido não é sobrescrito silenciosamente. O serviço de notificações é iniciado junto da API e depende de sessão desktop/D-Bus e de `notify-send`; portanto, notificações de desktop não são garantidas quando esses componentes não estão disponíveis.
 
+### Fila persistente e checkpoints de tarefas
+
+`nixal_fila_tarefas.py` é a fila existente de tarefas autorizadas; o hardening não cria um segundo planejador. O estado ativo é armazenado em `~/.local/share/nyxal/fila_tarefas_nixal.json` (ou em `$NYXAL_USER_DATA_DIR/fila_tarefas_nixal.json`), fora do checkout Git, com arquivo `0600` e diretório privado `0700` (diretórios legíveis por terceiros são restringidos; diretórios graváveis por grupo/outros são recusados). Na primeira inicialização, se ainda não houver fila privada, o snapshot legado `fila_tarefas_nixal.json` do checkout é validado e copiado uma vez para o local privado; **o snapshot original não é modificado**. Se o snapshot estiver corrompido, for um symlink ou exceder o limite, a inicialização falha fechada em vez de iniciar uma fila vazia e abandonar o estado existente.
+
+Cada mutação relê o arquivo sob lock interprocesso e grava por substituição atômica. A fila é limitada a 500 tarefas e 2 MB, os argumentos são validados contra o catálogo atual, e **somente capacidades com política `somente_leitura` podem ser enfileiradas/executadas** por esta via. Campos de argumento com nomes de credenciais são bloqueados.
+
+- A fila recusa JSON corrompido, versões desconhecidas, symlinks, IDs duplicados e arquivos fora dos limites; o arquivo original é preservado, em vez de ser substituído silenciosamente por uma fila vazia.
+- `chave_idempotencia` opcional evita que uma mesma solicitação seja adicionada duas vezes.
+- Uma tarefa passa por `pendente → executando → concluida/falhou`. Se o processo morrer durante `executando`, a recuperação muda o estado para `resultado_indeterminado` e **não repete automaticamente** a capacidade: o resultado pode ter ocorrido antes da queda.
+- Se outra instância já está executando uma tarefa, os outros workers recebem `tarefa_em_execucao`; o claim e os checkpoints são persistidos antes/depois da chamada.
+- `ExecutorOrdensNixal.atender()` passa o ID exato da tarefa que acabou de enfileirar. Se houver uma tarefa anterior pendente, a nova ordem fica pendente com estado explícito de espera; o executor não executa uma ordem antiga e atribui seu resultado à ordem nova.
+- Resultados são limitados/redigidos antes de serem armazenados. O resultado salvo é um resumo operacional, não uma autorização para executar a capacidade novamente.
+
+A fila atual continua independente do diálogo Qwen; esse endurecimento não habilita shell livre nem executa ações mutáveis em segundo plano. Para testes isolados:
+
+```bash
+./.venv/bin/python -m unittest -v teste_nixal_fila_tarefas_segura
+```
+
 ### Servidor MCP opcional
 
 Instale a dependência na virtualenv da Nyxal (o diálogo Qwen continua funcionando sem o MCP):

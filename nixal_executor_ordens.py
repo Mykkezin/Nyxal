@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from nixal_agente_qwen import AgenteNixalQwen
 from nixal_fila_tarefas import FilaTarefasNixal
+
+if TYPE_CHECKING:
+    from nixal_agente_qwen import AgenteNixalQwen
 
 
 class ExecutorOrdensNixal:
@@ -22,11 +24,14 @@ class ExecutorOrdensNixal:
         agente: AgenteNixalQwen | None = None,
         fila: FilaTarefasNixal | None = None,
     ) -> None:
-        self.agente = (
-            agente
-            if agente is not None
-            else AgenteNixalQwen()
-        )
+        if agente is None:
+            # Defer Ollama import until the real Qwen agent is requested.
+            # The governed queue/executor can be imported and tested without a model runtime.
+            from nixal_agente_qwen import AgenteNixalQwen
+
+            self.agente = AgenteNixalQwen()
+        else:
+            self.agente = agente
 
         self.fila = (
             fila
@@ -118,25 +123,61 @@ class ExecutorOrdensNixal:
         self,
         ordem: str,
     ) -> dict[str, Any]:
-        recebida = self.receber_ordem(
-            ordem
-        )
-
-        if not recebida.get("sucesso"):
+        recebida = self.receber_ordem(ordem)
+        if recebida.get("sucesso") is not True:
             return recebida
 
-        execucao = self.executar_proxima()
+        valor_recebido = recebida.get("valor")
+        tarefa = valor_recebido.get("tarefa") if isinstance(valor_recebido, dict) else None
+        tarefa_id = tarefa.get("id") if isinstance(tarefa, dict) else None
+        if not isinstance(tarefa_id, str) or not tarefa_id:
+            return {
+                "sucesso": False,
+                "estado": "tarefa_enfileirada_sem_id",
+                "origem": self.FONTE,
+                "valor": {"ordem": ordem, "tarefa": tarefa},
+                "motivo": "A fila aceitou a ordem sem devolver um ID de tarefa válido.",
+            }
+
+        # A resposta precisa se referir à ordem recebida. Nunca consuma silenciosamente
+        # uma tarefa anterior e devolva o resultado como se fosse desta ordem.
+        execucao = self.fila.executar_proxima(tarefa_id_esperado=tarefa_id)
+        estado_execucao = execucao.get("estado")
+        if estado_execucao == "tarefa_aguarda_ordem":
+            return {
+                "sucesso": True,
+                "estado": "tarefa_enfileirada_aguardando_ordem",
+                "origem": self.FONTE,
+                "valor": {
+                    "ordem": ordem,
+                    "tarefa": tarefa,
+                    "executada": False,
+                    "execucao": execucao,
+                },
+                "motivo": "A ordem foi persistida e aguardará as tarefas anteriores na fila.",
+            }
+        if estado_execucao == "tarefa_em_execucao":
+            return {
+                "sucesso": True,
+                "estado": "tarefa_enfileirada_aguardando_execucao_anterior",
+                "origem": self.FONTE,
+                "valor": {
+                    "ordem": ordem,
+                    "tarefa": tarefa,
+                    "executada": False,
+                    "execucao": execucao,
+                },
+                "motivo": "A ordem foi persistida; outra tarefa ainda está em execução.",
+            }
 
         return {
             "sucesso": execucao.get("sucesso") is True,
-            "estado": execucao.get("estado"),
+            "estado": estado_execucao,
             "origem": self.FONTE,
             "valor": {
                 "ordem": ordem,
-                "tarefa": recebida.get(
-                    "valor",
-                    {},
-                ).get("tarefa"),
+                "tarefa": tarefa,
+                "executada": estado_execucao in {"concluida", "falhou", "negada"},
                 "execucao": execucao,
             },
         }

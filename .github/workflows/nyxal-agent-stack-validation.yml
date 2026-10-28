@@ -35,6 +35,10 @@ on:
       - "nixal_agente_qwen.py"
       - "nixal_capacidades.py"
       - "nixal_tool_use.py"
+      - "nixal_fila_tarefas.py"
+      - "teste_nixal_fila_tarefas_segura.py"
+      - "teste_fila_tarefas.py"
+      - "nixal_executor_ordens.py"
       - "nyxal_mcp_tools.py"
       - "teste_mcp_stdio.py"
       - "deploy/agent/requirements-mcp.txt"
@@ -191,6 +195,10 @@ jobs:
             nixal_capacidades.py \
             nixal_vps.py \
             nixal_tool_use.py \
+            nixal_fila_tarefas.py \
+            teste_nixal_fila_tarefas_segura.py \
+            teste_fila_tarefas.py \
+            nixal_executor_ordens.py \
             teste_nixal_tool_use.py \
             teste_nixal_workspace_edits.py \
             teste_nyxal_tool_use.py \
@@ -258,6 +266,7 @@ jobs:
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
             teste_nixal_tool_use \
+            teste_nixal_fila_tarefas_segura \
             teste_nixal_workspace_edits \
             teste_nyxal_tool_use \
             teste_nyxal_function_calling \
@@ -275,6 +284,7 @@ jobs:
             teste_nixal_recuperador_contexto \
             teste_nixal_memoria_conversacional \
             teste_memorias_persistencia_segura
+          python3 teste_fila_tarefas.py
           python3 teste_nucleo_conversacional.py
           python3 teste_transporte_conversacional_56_5_2.py
           python3 teste_integracao_sessao_transporte_56_5_4.py
