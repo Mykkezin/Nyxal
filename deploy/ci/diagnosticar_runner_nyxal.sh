@@ -85,7 +85,12 @@ if command -v systemctl >/dev/null 2>&1; then
     done
   fi
   printf '\n-- Timers que podem afetar workspace/temp (nomes, sem comandos) --\n'
-  systemctl list-timers --all --no-legend 2>/dev/null | awk 'tolower($0) ~ /(nyxal|runner|clean|tmp|temp|work)/ {print $1, $2, $3, $4, $5, $6}' || true
+  # NEXT e LAST são datas com largura variável, então a unit nunca está numa
+  # coluna fixa: ela é sempre a penúltima e o serviço acionado é a última.
+  systemctl list-timers --all --no-legend 2>/dev/null | awk '
+    tolower($0) ~ /(nyxal|runner|clean|tmp|temp|work)/ {
+      printf "timer_unit=%s proxima=%s %s %s %s aciona=%s\n", $(NF - 1), $1, $2, $3, $4, $NF
+    }' || true
 else
   printf 'systemd=unavailable\n'
 fi
