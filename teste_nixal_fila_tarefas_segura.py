@@ -310,6 +310,24 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
             "erro": None,
         }
 
+    def test_default_queue_refuses_user_data_path_inside_checkout(self):
+        checkout = self.root / "checkout"
+        checkout.mkdir(mode=0o700)
+        legado = checkout / "fila_tarefas_nixal.json"
+        destino = checkout / "estado-privado" / "fila_tarefas_nixal.json"
+        legacy_bytes = json.dumps({"versao": "1.0", "tarefas": []}).encode("utf-8")
+        legado.write_bytes(legacy_bytes)
+        with (
+            patch.object(nixal_fila_tarefas, "_DIRETORIO_PROJETO", checkout),
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_PADRAO", destino),
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_LEGADO", legado),
+        ):
+            with self.assertRaises(nixal_fila_tarefas.FilaTarefasErro):
+                FilaTarefasNixal(capacidades=self.manager)
+        self.assertFalse(destino.parent.exists())
+        self.assertFalse(destino.exists())
+        self.assertEqual(legado.read_bytes(), legacy_bytes)
+
     def test_default_queue_migrates_legacy_snapshot_without_modifying_it(self):
         legado = self.root / "checkout" / "fila_tarefas_nixal.json"
         legado.parent.mkdir()
@@ -465,6 +483,16 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         pasta = self.root / "unsafe-dir"
         pasta.mkdir(mode=0o700)
         pasta.chmod(0o777)
+        caminho = pasta / "fila.json"
+
+        with self.assertRaises(PermissionError):
+            FilaTarefasNixal(caminho, self.manager)
+        self.assertFalse(caminho.exists())
+
+    def test_group_readable_queue_directory_is_rejected(self):
+        pasta = self.root / "group-readable"
+        pasta.mkdir(mode=0o700)
+        pasta.chmod(0o750)
         caminho = pasta / "fila.json"
 
         with self.assertRaises(PermissionError):
