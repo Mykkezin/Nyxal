@@ -4,12 +4,27 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
+
+
+def _tem_ancestral_simbolico(caminho: Path) -> bool:
+    """Detecta links simbólicos no caminho, incluindo ancestrais ainda inexistentes."""
+    candidato = Path(caminho)
+    while True:
+        try:
+            if candidato.is_symlink():
+                return True
+        except OSError:
+            return True
+        if candidato.parent == candidato:
+            return False
+        candidato = candidato.parent
 
 
 class RegistroTrilhaHTTP:
@@ -79,9 +94,32 @@ class RegistroTrilhaHTTP:
             return "client_error"
         return "server_error"
 
+    def _validar_caminhos_persistencia(self) -> None:
+        """Recusa links simbólicos/FIFOs em todos os arquivos de log e backup."""
+        if _tem_ancestral_simbolico(self.caminho.parent):
+            raise OSError("diretorio_trace_com_link_simbolico")
+        caminhos = [self.caminho]
+        caminhos.extend(
+            self.caminho.with_name(f"{self.caminho.name}.{indice}")
+            for indice in range(1, self.backups + 1)
+        )
+        for caminho in caminhos:
+            if _tem_ancestral_simbolico(caminho):
+                raise OSError("caminho_trace_com_link_simbolico")
+            try:
+                info = caminho.lstat()
+            except FileNotFoundError:
+                continue
+            if not stat.S_ISREG(info.st_mode):
+                raise OSError("arquivo_trace_nao_regular")
+
     def _rotacionar_se_necessario(self, tamanho_novo: int) -> None:
+        self._validar_caminhos_persistencia()
         try:
-            tamanho_atual = self.caminho.stat().st_size
+            info = self.caminho.lstat()
+            if not stat.S_ISREG(info.st_mode):
+                raise OSError("arquivo_trace_nao_regular")
+            tamanho_atual = info.st_size
         except FileNotFoundError:
             tamanho_atual = 0
         if tamanho_atual + tamanho_novo <= self.max_bytes:
@@ -95,10 +133,21 @@ class RegistroTrilhaHTTP:
         for indice in range(self.backups, 0, -1):
             destino = self.caminho.with_name(f"{self.caminho.name}.{indice}")
             origem = self.caminho if indice == 1 else self.caminho.with_name(f"{self.caminho.name}.{indice - 1}")
-            if origem.exists():
-                if destino.exists():
-                    destino.unlink()
-                os.replace(origem, destino)
+            try:
+                info_origem = origem.lstat()
+            except FileNotFoundError:
+                continue
+            if not stat.S_ISREG(info_origem.st_mode):
+                raise OSError("arquivo_trace_nao_regular")
+            try:
+                info_destino = destino.lstat()
+            except FileNotFoundError:
+                info_destino = None
+            if info_destino is not None:
+                if not stat.S_ISREG(info_destino.st_mode):
+                    raise OSError("backup_trace_nao_regular")
+                destino.unlink()
+            os.replace(origem, destino)
 
     def registrar(self, *, request_id: str, method: str, path: str,
                   status_code: int | None, duration_ms: float,
@@ -140,11 +189,24 @@ class RegistroTrilhaHTTP:
                             separators=(",", ":")) + "\n").encode("utf-8")
         try:
             with self._lock:
+                self._validar_caminhos_persistencia()
                 self.caminho.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+                self._validar_caminhos_persistencia()
                 self._rotacionar_se_necessario(len(linha))
-                fd = os.open(str(self.caminho), os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o600)
-                with os.fdopen(fd, "ab") as arquivo:
-                    arquivo.write(linha)
+                self._validar_caminhos_persistencia()
+                flags = os.O_CREAT | os.O_WRONLY | os.O_APPEND
+                flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+                fd = os.open(str(self.caminho), flags, 0o600)
+                try:
+                    if not stat.S_ISREG(os.fstat(fd).st_mode):
+                        raise OSError("arquivo_trace_nao_regular")
+                    os.fchmod(fd, 0o600)
+                    with os.fdopen(fd, "ab") as arquivo:
+                        fd = -1
+                        arquivo.write(linha)
+                finally:
+                    if fd >= 0:
+                        os.close(fd)
         except OSError:
             # Observability must never make the API unavailable.
             return None
