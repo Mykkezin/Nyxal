@@ -1,4 +1,5 @@
-# Nyxal
+# Nyxal<img width="1920" height="1280" alt="arquitetura-nyxal" src="https://github.com/user-attachments/assets/bb4ea213-4094-4428-a646-cddbbd8e91ad" />
+
 
 > **Nyxal is a governed AI runtime evolving toward NyxOS.**
 
