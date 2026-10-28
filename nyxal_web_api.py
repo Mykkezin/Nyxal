@@ -110,6 +110,12 @@ COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
     habilitada=False,
 )
 VPS_NYXOS = VpsNyxOS()
+# A interface local confia no loopback e não envia Bearer. Isso basta para
+# ligar/desligar a máquina, mas não pode autorizar um impacto irreversível.
+ACOES_VPS_IRREVERSIVEIS = frozenset({"destroy", "autostart_off"})
+VPS_ACACOES_IRREVERSIVEIS_HABILITADAS = os.environ.get(
+    "NYXAL_VPS_ACACOES_IRREVERSIVEIS", ""
+).strip().lower() in {"1", "true", "yes", "on"}
 AMD_DEVELOPER_CLOUD = AmdDeveloperCloud()
 AGENTE_NYXAL = NyxalAgentHub()
 # O chat principal usa o mesmo roteador quando há provedores remotos configurados.
@@ -1376,9 +1382,20 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
             try:
                 if self.path == "/api/vps/action":
+                    acao = payload.get("acao")
+                    if acao in ACOES_VPS_IRREVERSIVEIS:
+                        if not VPS_ACACOES_IRREVERSIVEIS_HABILITADAS:
+                            self._send_json(423, {
+                                "estado": "acao_nao_habilitada",
+                                "motivo": "Ações de VM irreversíveis estão desativadas por padrão.",
+                            })
+                            return
+                        # Loopback não é autorização: exige Bearer mesmo no painel local.
+                        if not self._authorized():
+                            return
                     resultado = VPS_NYXOS.action(
                         nome=payload.get("nome"),
-                        acao=payload.get("acao"),
+                        acao=acao,
                     )
                 else:
                     resultado = VPS_NYXOS.provisionar(

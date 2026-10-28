@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import stat
+import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -12,6 +14,22 @@ from pathlib import Path
 from unittest.mock import patch
 
 from nixal_memoria_conversacional import MemoriaConversacionalNixal
+
+
+PROGRAMA_FILHO = """
+import json, sys
+from nixal_memoria_conversacional import MemoriaConversacionalNixal
+memoria = MemoriaConversacionalNixal()
+acao = sys.argv[1]
+if acao == "registrar":
+    saida = memoria.registrar(sys.argv[2], "user", sys.argv[3])
+else:
+    saida = {
+        "mensagens": memoria.obter(sys.argv[2]).get("mensagens", []),
+        "estado": memoria.estado(),
+    }
+print(json.dumps(saida, ensure_ascii=False))
+"""
 
 
 class TesteMemoriaConversacionalNixal(unittest.TestCase):
@@ -284,6 +302,88 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
         self.assertFalse(memoria.registrar("s", "user", "x" * (memoria.MAX_CARACTERES_MENSAGEM + 1))["sucesso"])
         self.assertFalse(memoria.obter("s", limite=True)["sucesso"])
         self.assertFalse(memoria.registrar("s" * (memoria.MAX_CARACTERES_SESSAO + 1), "user", "x")["sucesso"])
+
+    def rodar_processo(self, *argumentos: str) -> subprocess.CompletedProcess:
+        ambiente = dict(os.environ)
+        ambiente["NYXAL_CONVERSATION_MEMORY_PATH"] = str(self.caminho)
+        return subprocess.run(
+            [sys.executable, "-c", PROGRAMA_FILHO, *argumentos],
+            cwd=str(Path(__file__).resolve().parent),
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=ambiente,
+            check=False,
+        )
+
+    def test_reinicio_real_de_processo_recupera_a_conversa_sem_duplicar(self) -> None:
+        """Dois processos distintos pelo mesmo caminho: é o que o systemd reinicia."""
+        gravando = self.rodar_processo("registrar", "sessao-ressonancia", "O projeto usa o NyxOS")
+        self.assertEqual(gravando.returncode, 0, gravando.stderr)
+        primeira = json.loads(gravando.stdout)
+        self.assertTrue(primeira["persistido"])
+
+        lendo = self.rodar_processo("ler", "sessao-ressonancia")
+        self.assertEqual(lendo.returncode, 0, lendo.stderr)
+        segunda = json.loads(lendo.stdout)
+        self.assertEqual(segunda["estado"]["estado"], "persistencia_ativa")
+        self.assertEqual(
+            [mensagem["texto"] for mensagem in segunda["mensagens"]],
+            ["O projeto usa o NyxOS"],
+        )
+
+        gravando = self.rodar_processo("registrar", "sessao-ressonancia", "Segunda mensagem")
+        self.assertEqual(gravando.returncode, 0, gravando.stderr)
+        lendo = self.rodar_processo("ler", "sessao-ressonancia")
+        recuperado = json.loads(lendo.stdout)
+        self.assertEqual(
+            [mensagem["texto"] for mensagem in recuperado["mensagens"]],
+            ["O projeto usa o NyxOS", "Segunda mensagem"],
+        )
+
+    def test_processos_concorrentes_preservam_todas_as_sessoes(self) -> None:
+        sessoes = [f"sessao-{indice}" for indice in range(6)]
+        processos = [self.rodar_processo("registrar", sessao, f"texto de {sessao}") for sessao in sessoes]
+        for processo in processos:
+            self.assertEqual(processo.returncode, 0, processo.stderr)
+
+        memoria = MemoriaConversacionalNixal(caminho=self.caminho)
+        for sessao in sessoes:
+            self.assertTrue(memoria.possui_sessao(sessao), f"{sessao} perdida na concorrência")
+        self.assertEqual(memoria.obter(sessoes[0])["mensagens"][0]["texto"], "texto de sessao-0")
+
+    def test_arquivo_e_lock_criados_por_processo_externo_ficam_privados(self) -> None:
+        self.assertEqual(self.rodar_processo("registrar", "sessao-privada", "oi").returncode, 0)
+        modo_arquivo = stat.S_IMODE(self.caminho.stat().st_mode)
+        modo_diretorio = stat.S_IMODE(self.caminho.parent.stat().st_mode)
+        lock = self.caminho.with_name(self.caminho.name + ".lock")
+        self.assertEqual(modo_arquivo, 0o600)
+        self.assertEqual(modo_diretorio, 0o700)
+        self.assertEqual(stat.S_IMODE(lock.stat().st_mode), 0o600)
+
+    def test_armazeno_indisponivel_degrada_sem_apagar_o_historico(self) -> None:
+        memoria = MemoriaConversacionalNixal(caminho=self.caminho)
+        memoria.registrar("sessao-crítica", "user", "Conteúdo que não pode sumir")
+        conteudo_original = self.caminho.read_bytes()
+
+        self.caminho.parent.chmod(0o500)
+        self.addCleanup(self.caminho.parent.chmod, 0o700)
+        resultado = MemoriaConversacionalNixal(caminho=self.caminho).registrar(
+            "sessao-crítica", "user", "Mensagem durante a falha"
+        )
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "memoria_degradada")
+        self.assertTrue(resultado["arquivo_original_preservado"])
+        self.assertEqual(self.caminho.read_bytes(), conteudo_original)
+
+        self.caminho.parent.chmod(0o700)
+        recuperada = MemoriaConversacionalNixal(caminho=self.caminho)
+        self.assertEqual(
+            recuperada.obter("sessao-crítica")["mensagens"][0]["texto"],
+            "Conteúdo que não pode sumir",
+        )
+        self.assertTrue(recuperada.registrar("sessao-crítica", "user", "Pós-recuperação")["sucesso"])
+        self.assertEqual(recuperada.estado()["estado"], "persistencia_ativa")
 
 
 if __name__ == "__main__":
