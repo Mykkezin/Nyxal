@@ -428,6 +428,15 @@ class FilaTarefasNixal:
             info = self.caminho.stat(follow_symlinks=False)
             if not stat.S_ISREG(info.st_mode):
                 raise FilaTarefasErro("arquivo_da_fila_nao_regular")
+            if info.st_uid != os.geteuid():
+                raise PermissionError("proprietario_arquivo_da_fila_invalido")
+            if stat.S_IMODE(info.st_mode) & 0o077:
+                # O arquivo é do usuário atual e o diretório já foi validado;
+                # remova permissões de leitura/escrita de grupo e outros.
+                os.chmod(self.caminho, 0o600, follow_symlinks=False)
+                info = self.caminho.stat(follow_symlinks=False)
+                if stat.S_IMODE(info.st_mode) & 0o077:
+                    raise PermissionError("permissoes_arquivo_da_fila_nao_privadas")
             if info.st_size > MAX_FILA_BYTES:
                 raise FilaTarefasErro("arquivo_da_fila_excede_limite")
             bruto = self.caminho.read_bytes()
