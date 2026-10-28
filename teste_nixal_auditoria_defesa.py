@@ -138,6 +138,22 @@ class TestAuditoriaDefesaDuravel(unittest.TestCase):
         self.assertFalse(resultado["sucesso"])
         self.assertEqual(self.caminho.read_bytes(), adulterado)
 
+    def test_chave_json_duplicada_e_rejeitada(self) -> None:
+        self.assertTrue(self.auditoria.registrar(evento())["sucesso"])
+        original = self.caminho.read_text(encoding="utf-8").strip()
+        duplicado = original.replace(
+            '"origem_ip":"203.0.113.44"',
+            '"origem_ip":"203.0.113.44","origem_ip":"203.0.113.44"',
+            1,
+        )
+        self.assertNotEqual(duplicado, original)
+        self.caminho.write_text(duplicado + "\n", encoding="utf-8")
+        bytes_adulterados = self.caminho.read_bytes()
+
+        self.assertFalse(self.auditoria.contexto()["integridade_verificada"])
+        self.assertFalse(self.auditoria.registrar(evento(2))["sucesso"])
+        self.assertEqual(self.caminho.read_bytes(), bytes_adulterados)
+
     def test_symlink_de_arquivo_ou_pasta_e_bloqueado(self) -> None:
         self.caminho.parent.mkdir(mode=0o700)
         destino = self.root / "fora.jsonl"
