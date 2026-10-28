@@ -119,6 +119,178 @@ OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
 CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 
+# A fila de ordens é criada sob demanda: importar a API não deve migrar nem
+# tocar no armazenamento privado da fila até que um endpoint de ordens seja usado.
+_EXECUTOR_ORDENS_NYXAL = None
+_EXECUTOR_ORDENS_LOCK = Lock()
+MAX_BYTES_ORDEM_API = 16 * 1024
+MAX_CHARS_ORDEM_API = 2000
+
+
+def _obter_executor_ordens_nyxal():
+    """Reutiliza o catálogo governado do núcleo e o armazenamento privado da fila."""
+    global _EXECUTOR_ORDENS_NYXAL
+    if _EXECUTOR_ORDENS_NYXAL is not None:
+        return _EXECUTOR_ORDENS_NYXAL
+    with _EXECUTOR_ORDENS_LOCK:
+        if _EXECUTOR_ORDENS_NYXAL is not None:
+            return _EXECUTOR_ORDENS_NYXAL
+        from nixal_executor_ordens import ExecutorOrdensNixal
+        from nixal_fila_tarefas import FilaTarefasNixal
+
+        agente = NUCLEO_CONVERSACIONAL.agente
+        fila = FilaTarefasNixal(capacidades=agente.capacidades)
+        _EXECUTOR_ORDENS_NYXAL = ExecutorOrdensNixal(agente=agente, fila=fila)
+        return _EXECUTOR_ORDENS_NYXAL
+
+
+def _json_objeto_sem_chaves_duplicadas(pares):
+    objeto = {}
+    for chave, valor in pares:
+        if chave in objeto:
+            raise ValueError("chaves_json_duplicadas")
+        objeto[chave] = valor
+    return objeto
+
+
+def _json_constante_invalida(_valor):
+    raise ValueError("constante_json_nao_finita")
+
+
+def _ler_payload_ordem(handler, *, max_bytes=MAX_BYTES_ORDEM_API, permitir_vazio=False):
+    """Lê um objeto JSON limitado sem aceitar chaves duplicadas ou constantes não finitas."""
+    try:
+        comprimento = int(handler.headers.get("Content-Length", "0"))
+    except (TypeError, ValueError):
+        handler._send_json(400, {"estado": "entrada_invalida", "motivo": "Content-Length inválido."})
+        return None
+    if comprimento == 0 and permitir_vazio:
+        return {}
+    if comprimento <= 0:
+        handler._send_json(400, {"estado": "entrada_invalida", "motivo": "O corpo JSON é obrigatório."})
+        return None
+    if comprimento > max_bytes:
+        handler._send_json(413, {"estado": "payload_muito_grande", "motivo": "A ordem excede o limite permitido."})
+        return None
+    bruto = handler.rfile.read(comprimento)
+    if len(bruto) != comprimento:
+        handler._send_json(400, {"estado": "entrada_invalida", "motivo": "Corpo HTTP incompleto."})
+        return None
+    try:
+        payload = json.loads(
+            bruto.decode("utf-8"),
+            object_pairs_hook=_json_objeto_sem_chaves_duplicadas,
+            parse_constant=_json_constante_invalida,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError):
+        handler._send_json(400, {"estado": "json_invalido", "motivo": "O corpo precisa ser um objeto JSON UTF-8 válido."})
+        return None
+    if not isinstance(payload, dict):
+        handler._send_json(400, {"estado": "entrada_invalida", "motivo": "O corpo precisa ser um objeto JSON."})
+        return None
+    return payload
+
+
+def _resumir_tarefa_ordem_api(tarefa, *, incluir_resultado=False):
+    """Retorna somente metadados de tarefa; nunca argumentos ou conteúdo bruto da ordem."""
+    if not isinstance(tarefa, dict):
+        return None
+    resumo = {}
+    for campo in ("id", "capacidade", "estado"):
+        valor = tarefa.get(campo)
+        if isinstance(valor, str):
+            resumo[campo] = valor[:160]
+    criado = tarefa.get("criado_em")
+    if isinstance(criado, (int, float)) and not isinstance(criado, bool) and criado == criado and abs(criado) != float("inf"):
+        resumo["criado_em"] = criado
+    if incluir_resultado:
+        resultado = tarefa.get("resultado")
+        if isinstance(resultado, dict):
+            resultado_seguro = {
+                "sucesso": resultado.get("sucesso") is True,
+                "capacidade": resultado.get("capacidade")[:160]
+                if isinstance(resultado.get("capacidade"), str) else resumo.get("capacidade", ""),
+            }
+            if "resultado" in resultado:
+                resultado_seguro["resultado"] = resultado["resultado"]
+            for campo in ("timestamp", "duracao_ms"):
+                valor = resultado.get(campo)
+                if isinstance(valor, (int, float)) and not isinstance(valor, bool) and valor == valor and abs(valor) != float("inf"):
+                    resultado_seguro[campo] = valor
+            resumo["resultado"] = resultado_seguro
+        erro = tarefa.get("erro")
+        if isinstance(erro, str):
+            resumo["erro"] = erro[:500]
+    return resumo
+
+
+def _resumir_ordem_api(resultado):
+    """Sanitiza a resposta do executor para o contrato HTTP, sem expor argumentos selecionados."""
+    if not isinstance(resultado, dict):
+        return {
+            "sucesso": False,
+            "estado": "resultado_invalido",
+            "origem": "api_ordens_governadas",
+            "valor": {},
+        }
+    valor = resultado.get("valor")
+    if not isinstance(valor, dict):
+        valor = {}
+    execucao = valor.get("execucao")
+    if not isinstance(execucao, dict) and isinstance(valor.get("id"), str):
+        execucao = resultado
+    if not isinstance(execucao, dict):
+        execucao = {}
+    valor_execucao = execucao.get("valor")
+    tarefa_final = valor_execucao if isinstance(valor_execucao, dict) and isinstance(valor_execucao.get("id"), str) else None
+    tarefa_recebida = valor.get("tarefa")
+    tarefa = tarefa_final or (tarefa_recebida if isinstance(tarefa_recebida, dict) else None)
+    estado = resultado.get("estado")
+    if not isinstance(estado, str):
+        estado = execucao.get("estado") if isinstance(execucao.get("estado"), str) else "estado_indisponivel"
+    executada = valor.get("executada")
+    if not isinstance(executada, bool):
+        executada = estado in {"concluida", "falhou", "negada"}
+    resumo = _resumir_tarefa_ordem_api(
+        tarefa,
+        incluir_resultado=executada,
+    ) or {}
+    return {
+        "sucesso": resultado.get("sucesso") is True,
+        "estado": estado[:100],
+        "origem": "api_ordens_governadas",
+        "valor": {
+            "tarefa": resumo,
+            "executada": executada,
+            "conhecimento_permanente": False,
+            "arquitetura_modificada": False,
+        },
+    }
+
+
+def _resumir_fila_ordens_api(fila):
+    tarefas = fila.listar()
+    resumo = [
+        _resumir_tarefa_ordem_api(tarefa)
+        for tarefa in tarefas[-50:]
+        if isinstance(tarefa, dict)
+    ]
+    resumo = [item for item in resumo if item is not None]
+    return {
+        "sucesso": True,
+        "estado": "fila_disponivel",
+        "origem": "api_ordens_governadas",
+        "valor": {
+            "quantidade": len(tarefas),
+            "pendentes": sum(1 for tarefa in tarefas if isinstance(tarefa, dict) and tarefa.get("estado") == "pendente"),
+            "executando": sum(1 for tarefa in tarefas if isinstance(tarefa, dict) and tarefa.get("estado") == "executando"),
+            "indeterminadas": sum(1 for tarefa in tarefas if isinstance(tarefa, dict) and tarefa.get("estado") == "resultado_indeterminado"),
+            "tarefas_recentes": resumo,
+            "somente_leitura": True,
+        },
+    }
+
+
 # Observação e preparação governada: eventos/planos em memória, sem efeitos físicos.
 DEFESA_AUTONOMA_NYXAL = DefesaAutonoma()
 DEFESA_EXECUTOR_GOVERNADO = ExecutorDefesaGovernada()
