@@ -1,17 +1,19 @@
 name: Nyxal Root Test Matrix
 
-# Inventário de 2026-10-28: 106 testes da raiz não eram citados por nenhum
-# workflow. Cada candidato foi executado isolado, a partir do checkout limpo, e
-# medido por dois critérios: passa com o python3 do runner e não escreve nem no
-# checkout nem fora dele. 86 cumprem os dois e custam ~5s somados. Ficaram de
-# fora os que gravam em $HOME/Nyxal* (incluindo o checkout operacional vivo, na
-# mesma máquina deste runner) e os que sujam capacidades_nixal.json (a família
-# nivel_9_* e investigacao_interna_56_4_11). A allowlist versionada ao lado é o
-# único conjunto que este job executa.
-#
-# testes/teste_persistencia_cristal.py entrou no inventário porque cumpre os
-# mesmos dois critérios: roda com o python3 do runner e só escreve em
-# diretórios temporários, nunca no checkout vivo desta máquina.
+# Inventário de 2026-10-28, recontado em 2026-10-28: a raiz tem 206 testes
+# `teste_*.py` e esta allowlist cobre 88 deles mais testes/teste_persistencia_
+# cristal.py — 89 entradas no total. Cada candidato foi executado isolado, a
+# partir do checkout limpo, e medido por dois critérios: passa com o python3 do
+# runner e não escreve nem no checkout nem fora dele.
+# Ficaram de fora os que gravam em $HOME/Nyxal* (incluindo o checkout
+# operacional vivo, na mesma máquina deste runner) e os que importam
+# nixal_capacidades — 10 dos 118 excluídos, por evidência estática de import.
+# 3 dos 12 `nivel_9_*` estão incluídos; os outros 9 não passaram nos critérios.
+# A única entrada de subdiretório cumpre os mesmos dois critérios: roda com o
+# python3 do runner e só escreve em diretórios temporários, nunca no checkout
+# vivo desta máquina. Por isso o nome do log abaixo sanitiza barras.
+# A contagem desta allowlist é a única fonte de verdade; este comentário é
+# descrição, não gate. A guarda anti-encolhimento abaixo é o gate.
 
 on:
   pull_request:
@@ -87,6 +89,10 @@ jobs:
 
       - name: Run every matrix test and report each outcome
         run: |
+          # Isolar o estado por job faz o critério "não escreve fora do checkout" valer
+          # também para os diários duráveis (~/.local/state), que o runner privado
+          # compartilha com a instalação viva. Nenhum dos testes atuais grava neles.
+          export XDG_STATE_HOME="${RUNNER_TEMP:?runner_sem_temp}/nyxal-estado"
           mkdir -p "$RUNNER_TEMP/matriz-raiz"
           falhas=0
           execucoes=0
