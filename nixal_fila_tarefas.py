@@ -35,6 +35,7 @@ MAX_ARGUMENTOS_BYTES = 16_000
 MAX_RESULTADO_BYTES = 8_000
 MAX_ERRO_CHARS = 500
 MAX_DEPTH_JSON = 12
+MAX_EXECUCAO_VIVA_SEGUNDOS = 6 * 60 * 60
 ESTADOS_TAREFA = {
     "pendente", "executando", "concluida", "falhou",
     "negada", "resultado_indeterminado",
@@ -72,6 +73,12 @@ class FilaTarefasNixal:
     @staticmethod
     def _agora() -> float:
         return time.time()
+
+    @staticmethod
+    def _numero_finito(valor: Any) -> int | float | None:
+        if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+            return None
+        return valor if math.isfinite(valor) else None
 
     @staticmethod
     def _json_bytes(dados: Any) -> bytes:
@@ -149,8 +156,7 @@ class FilaTarefasNixal:
     @staticmethod
     def _verificar_caminho_sem_symlink(caminho: Path) -> None:
         caminho = caminho.absolute()
-        componentes = list(reversed(caminho.parents)) + [caminho]
-        for componente in componentes:
+        for componente in list(reversed(caminho.parents)) + [caminho]:
             try:
                 if componente.is_symlink():
                     raise FilaTarefasErro("caminho_da_fila_com_symlink")
@@ -159,7 +165,7 @@ class FilaTarefasNixal:
 
     @contextmanager
     def _bloquear_diretorio(self) -> Iterator[None]:
-        """Lock por diretório sem criar um arquivo .lock no repositório."""
+        """Lock interprocesso no diretório da fila; não cria sidecar no repositório."""
         parent = self.caminho.parent
         self._verificar_caminho_sem_symlink(parent)
         parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -252,9 +258,9 @@ class FilaTarefasNixal:
             mesma_maquina = host == host_atual
             vivo = mesma_maquina and self._processo_vivo(pid)
             duracao = self._agora() - iniciado if isinstance(iniciado, (int, float)) else float("inf")
-            # Não repetir automaticamente uma ação que pode já ter ocorrido antes de um crash.
-            if vivo and duracao < 6 * 60 * 60:
+            if vivo and duracao < MAX_EXECUCAO_VIVA_SEGUNDOS:
                 continue
+            # Não repetir uma capacidade que pode ter produzido efeito antes da interrupção.
             tarefa["estado"] = "resultado_indeterminado"
             tarefa["erro"] = (
                 "A execução anterior foi interrompida ou não pode ser verificada; "
@@ -311,13 +317,18 @@ class FilaTarefasNixal:
                 os.fsync(arquivo.fileno())
             self._verificar_caminho_sem_symlink(self.caminho)
             os.replace(temporario, self.caminho)
-            descritor_pasta = os.open(
-                parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
-            )
             try:
-                os.fsync(descritor_pasta)
-            finally:
-                os.close(descritor_pasta)
+                descritor_pasta = os.open(
+                    parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+                )
+                try:
+                    os.fsync(descritor_pasta)
+                finally:
+                    os.close(descritor_pasta)
+            except OSError:
+                # Depois de os.replace, o commit de dados já ocorreu. Não reverter a fila
+                # em memória por uma falha secundária de fsync do diretório.
+                pass
         finally:
             if os.path.exists(temporario):
                 os.unlink(temporario)
@@ -467,7 +478,6 @@ class FilaTarefasNixal:
         """Executa uma só capacidade de leitura; claim e finalização são checkpoints atômicos."""
         tarefa_id: str | None = None
         execucao_id = uuid.uuid4().hex
-        tarefa_em_execucao: dict[str, Any] | None = None
         with self._bloquear_diretorio():
             if not self._carregar_e_recuperar_unlocked():
                 return self._negado(
@@ -538,8 +548,8 @@ class FilaTarefasNixal:
                 "sucesso": sucesso,
                 "capacidade": str(getattr(resultado_capacidade, "capacidade", tarefa_para_executar["capacidade"]))[:120],
                 "resultado": retorno,
-                "timestamp": getattr(resultado_capacidade, "timestamp", None),
-                "duracao_ms": getattr(resultado_capacidade, "duracao_ms", None),
+                "timestamp": self._numero_finito(getattr(resultado_capacidade, "timestamp", None)),
+                "duracao_ms": self._numero_finito(getattr(resultado_capacidade, "duracao_ms", None)),
             }
         except Exception as erro_execucao:
             sucesso = False
