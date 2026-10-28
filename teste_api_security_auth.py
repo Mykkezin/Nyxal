@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import tempfile
+from pathlib import Path
 
 import http.client
 import sys
@@ -26,6 +28,11 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.proxy_original = api.PROXY_MODE
         self.host_original = api.HOST
         self.cors_original = api.CORS_ORIGINS
+        self.auditoria_original = api.DEFESA_AUDITORIA_DURAVEL
+        self.auditoria_temp = tempfile.TemporaryDirectory(prefix="nyxal-audit-test-")
+        api.DEFESA_AUDITORIA_DURAVEL = api.RegistroAuditoriaDefesaNixOS(
+            Path(self.auditoria_temp.name) / "private" / "eventos.jsonl"
+        )
         api.API_TOKEN = ""
         api.PROXY_MODE = True
         api.HOST = "127.0.0.1"
@@ -44,6 +51,8 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         api.PROXY_MODE = self.proxy_original
         api.HOST = self.host_original
         api.CORS_ORIGINS = self.cors_original
+        api.DEFESA_AUDITORIA_DURAVEL = self.auditoria_original
+        self.auditoria_temp.cleanup()
 
     def request_full(
         self, method: str, path: str, *, body: bytes = b"",
@@ -770,6 +779,16 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertEqual(payload.get("executor_ativo"), False)
         self.assertEqual(payload.get("persistencia"), False)
         self.assertEqual(payload.get("eventos_em_memoria_maximo"), 256)
+        auditoria = payload.get("auditoria_duravel", {})
+        self.assertTrue(auditoria.get("persistencia_duravel"), auditoria)
+        self.assertTrue(auditoria.get("integridade_verificada"), auditoria)
+        eventos_persistidos = payload.get("eventos_auditoria_duravel", [])
+        self.assertGreaterEqual(len(eventos_persistidos), 2)
+        for evento_persistido in eventos_persistidos[-2:]:
+            self.assertEqual(evento_persistido.get("fonte_sinal"), "api-auth")
+            self.assertFalse(evento_persistido.get("executor_ativo"))
+            self.assertFalse(evento_persistido.get("executor_autorizado"))
+            self.assertFalse(evento_persistido.get("efeito_executado"))
         self.assertNotIn("token-secreto-de-teste", body)
         self.assertNotIn("TOKEN-INCORRETO", body)
         for evento in eventos:
