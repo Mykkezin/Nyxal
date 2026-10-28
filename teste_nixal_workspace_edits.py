@@ -306,6 +306,7 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
     def test_apply_refuses_symlinked_backup_directory(self):
         result = preparar_edicao_workspace("src/app.py", "valor = 77\n")
         self.assertTrue(result["sucesso"])
+        self.data.mkdir(parents=True, exist_ok=True)
         backup_dir = self.data / "workspace-backups"
         outside = Path(self.temp.name) / "outside-backups"
         outside.mkdir()
