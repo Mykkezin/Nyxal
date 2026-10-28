@@ -40,6 +40,7 @@ teste_formulacao_hipoteses_56_4_12.py
 teste_formulacao_investigacao_56_4_10.py
 teste_gate_modalidade.py
 teste_gerenciador_sessoes_56_5_3.py
+teste_inicio_codigo.py
 teste_integracao_avaliacao_ciclo_hipotese_56_4_34.py
 teste_integracao_controlada.py
 teste_integracao_formulacao_ciclo_hipotese_56_4_29.py
