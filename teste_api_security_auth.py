@@ -154,9 +154,11 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         class ExecutorFalso:
             def __init__(self):
                 self.ordem = None
+                self.chave_idempotencia = None
 
-            def atender(self, ordem):
+            def atender(self, ordem, *, chave_idempotencia=None):
                 self.ordem = ordem
+                self.chave_idempotencia = chave_idempotencia
                 return {
                     "sucesso": True,
                     "estado": "concluida",
@@ -193,7 +195,7 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         with patch.object(api, "_obter_executor_ordens_nyxal", return_value=executor):
             status, body = self.request(
                 "POST", "/api/agent/orders",
-                body=b'{"ordem":"Consulte a hora local."}',
+                body=b'{"ordem":"Consulte a hora local.","chave_idempotencia":"req-local-001"}',
                 headers={"Content-Type": "application/json"},
             )
         self.assertEqual(status, 200, body)
@@ -206,6 +208,24 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         self.assertNotIn("argumentos", body)
         self.assertNotIn("/home/private/nao-expor.txt", body)
         self.assertEqual(executor.ordem, "Consulte a hora local.")
+        self.assertEqual(executor.chave_idempotencia, "req-local-001")
+        self.assertTrue(payload["valor"]["idempotente"] is False)
+
+    def test_ordem_governada_rejeita_chave_idempotencia_invalida_antes_do_executor(self) -> None:
+        api.PROXY_MODE = False
+
+        class ExecutorFalso:
+            def atender(self, *_args, **_kwargs):
+                raise AssertionError("executor não pode receber uma chave inválida")
+
+        with patch.object(api, "_obter_executor_ordens_nyxal", return_value=ExecutorFalso()):
+            status, body = self.request(
+                "POST", "/api/agent/orders",
+                body=b'{"ordem":"Consulte a hora","chave_idempotencia":"   "}',
+                headers={"Content-Type": "application/json"},
+            )
+        self.assertEqual(status, 400, body)
+        self.assertIn("chave_idempotencia_invalida", body)
 
     def test_ordem_governada_rejeita_json_ambiguo_sem_chamar_executor(self) -> None:
         api.PROXY_MODE = False
