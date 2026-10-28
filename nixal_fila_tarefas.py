@@ -329,7 +329,12 @@ class FilaTarefasNixal:
             return False, "erro_de_tarefa_invalido"
         if "chave_idempotencia" in tarefa:
             chave = tarefa["chave_idempotencia"]
-            if not isinstance(chave, str) or not chave.strip() or len(chave) > 160:
+            if (
+                not isinstance(chave, str)
+                or not chave.strip()
+                or len(chave) > 160
+                or self._redigir_texto(chave) != chave
+            ):
                 return False, "chave_idempotencia_invalida"
         if "execucao_dono" in tarefa:
             dono = tarefa["execucao_dono"]
@@ -605,8 +610,12 @@ class FilaTarefasNixal:
             not isinstance(chave_idempotencia, str)
             or not chave_idempotencia.strip()
             or len(chave_idempotencia) > 160
+            or self._redigir_texto(chave_idempotencia) != chave_idempotencia
         ):
-            return self._negado("chave_idempotencia_invalida", "Chave precisa ter de 1 a 160 caracteres.")
+            return self._negado(
+                "chave_idempotencia_invalida",
+                "Chave precisa ter de 1 a 160 caracteres e não pode conter credenciais.",
+            )
         valido, erro = self._validar_capacidade(capacidade, argumentos_copia)
         if not valido:
             return self._negado("capacidade_nao_enfileiravel", erro or "Capacidade recusada.")
