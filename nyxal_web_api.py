@@ -242,9 +242,22 @@ def _resumir_ordem_api(resultado):
     if not isinstance(execucao, dict):
         execucao = {}
     valor_execucao = execucao.get("valor")
-    tarefa_final = valor_execucao if isinstance(valor_execucao, dict) and isinstance(valor_execucao.get("id"), str) else None
+    tarefa_final = (
+        valor_execucao
+        if isinstance(valor_execucao, dict)
+        and isinstance(valor_execucao.get("id"), str)
+        and isinstance(valor_execucao.get("capacidade"), str)
+        else None
+    )
     tarefa_recebida = valor.get("tarefa")
-    tarefa = tarefa_final or (tarefa_recebida if isinstance(tarefa_recebida, dict) else None)
+    tarefa_meta = (
+        valor_execucao
+        if isinstance(valor_execucao, dict) and isinstance(valor_execucao.get("id"), str)
+        else None
+    )
+    tarefa = tarefa_final or (
+        tarefa_recebida if isinstance(tarefa_recebida, dict) else tarefa_meta
+    )
     estado = resultado.get("estado")
     if not isinstance(estado, str):
         estado = execucao.get("estado") if isinstance(execucao.get("estado"), str) else "estado_indisponivel"
