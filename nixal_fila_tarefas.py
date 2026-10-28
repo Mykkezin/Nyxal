@@ -28,12 +28,13 @@ from nixal_capacidades import GerenciadorCapacidades
 
 
 # O estado operacional da fila não deve ser gravado no checkout Git.
+_DIRETORIO_PROJETO = Path(__file__).resolve().parent
 _DIRETORIO_DADOS_PADRAO = Path(
     os.environ.get("NYXAL_USER_DATA_DIR", str(Path.home() / ".local" / "share" / "nyxal"))
 ).expanduser()
 ARQUIVO_FILA_PADRAO = _DIRETORIO_DADOS_PADRAO / "fila_tarefas_nixal.json"
 # Snapshot legado versionado: pode ser migrado uma vez, mas nunca é atualizado pelo runtime.
-ARQUIVO_FILA_LEGADO = Path(__file__).resolve().parent / "fila_tarefas_nixal.json"
+ARQUIVO_FILA_LEGADO = _DIRETORIO_PROJETO / "fila_tarefas_nixal.json"
 VERSAO_FILA = "1.0"
 MAX_TAREFAS = 500
 MAX_FILA_BYTES = 2_000_000
@@ -216,6 +217,14 @@ class FilaTarefasNixal:
         if legado == self.caminho:
             raise FilaTarefasErro("fila_padrao_nao_pode_apontar_para_checkout")
         self._verificar_caminho_sem_symlink(self.caminho)
+        # Mesmo o override explícito deve manter estado fora da árvore Git.
+        diretorio_projeto = Path(_DIRETORIO_PROJETO).resolve()
+        try:
+            self.caminho.relative_to(diretorio_projeto)
+        except ValueError:
+            pass
+        else:
+            raise FilaTarefasErro("fila_padrao_nao_pode_ficar_no_checkout")
         if self.caminho.exists():
             return
         self._verificar_caminho_sem_symlink(legado)
@@ -281,8 +290,8 @@ class FilaTarefasNixal:
                 raise FilaTarefasErro("diretorio_da_fila_mudou")
             if stat_fd.st_uid != os.geteuid():
                 raise PermissionError("proprietario_diretorio_da_fila_invalido")
-            if stat.S_IMODE(stat_fd.st_mode) & 0o022:
-                raise PermissionError("diretorio_da_fila_permissivo_para_escrita")
+            if stat.S_IMODE(stat_fd.st_mode) & 0o077:
+                raise PermissionError("diretorio_da_fila_nao_privado")
             fcntl.flock(fd, fcntl.LOCK_EX)
             try:
                 yield
