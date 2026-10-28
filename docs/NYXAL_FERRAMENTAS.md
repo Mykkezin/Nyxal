@@ -123,7 +123,9 @@ A persistência reutilizável está em `~/.local/share/nyxal/notas_lembretes.jso
 
 ### Fila persistente e checkpoints de tarefas
 
-`nixal_fila_tarefas.py` é a fila existente de tarefas autorizadas; o hardening não cria uma segunda fila. Cada mutação relê o arquivo sob lock interprocesso e grava por substituição atômica. A fila é limitada a 500 tarefas e 2 MB, os argumentos são validados contra o catálogo atual, e **somente capacidades com política `somente_leitura` podem ser enfileiradas/executadas** por esta via. Campos de argumento com nomes de credenciais são bloqueados.
+`nixal_fila_tarefas.py` é a fila existente de tarefas autorizadas; o hardening não cria um segundo planejador. O estado ativo é armazenado em `~/.local/share/nyxal/fila_tarefas_nixal.json` (ou em `$NYXAL_USER_DATA_DIR/fila_tarefas_nixal.json`), fora do checkout Git, com arquivo `0600` e diretório novo `0700`. Na primeira inicialização, se ainda não houver fila privada, o snapshot legado `fila_tarefas_nixal.json` do checkout é validado e copiado uma vez para o local privado; **o snapshot original não é modificado**. Se o snapshot estiver corrompido, for um symlink ou exceder o limite, a inicialização falha fechada em vez de iniciar uma fila vazia e abandonar o estado existente.
+
+Cada mutação relê o arquivo sob lock interprocesso e grava por substituição atômica. A fila é limitada a 500 tarefas e 2 MB, os argumentos são validados contra o catálogo atual, e **somente capacidades com política `somente_leitura` podem ser enfileiradas/executadas** por esta via. Campos de argumento com nomes de credenciais são bloqueados.
 
 - A fila recusa JSON corrompido, versões desconhecidas, symlinks, IDs duplicados e arquivos fora dos limites; o arquivo original é preservado, em vez de ser substituído silenciosamente por uma fila vazia.
 - `chave_idempotencia` opcional evita que uma mesma solicitação seja adicionada duas vezes.
