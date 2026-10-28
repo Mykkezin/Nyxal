@@ -517,6 +517,19 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
             FilaTarefasNixal(caminho, self.manager)
         self.assertFalse(caminho.exists())
 
+    def test_group_readable_queue_directory_is_made_private(self):
+        pasta = self.root / "less-private-dir"
+        pasta.mkdir(mode=0o700)
+        pasta.chmod(0o755)
+        caminho = pasta / "fila.json"
+
+        fila = FilaTarefasNixal(caminho, self.manager)
+        resultado = fila.recarregar()
+
+        self.assertTrue(resultado["sucesso"])
+        self.assertEqual(os.stat(pasta).st_mode & 0o777, 0o700)
+        self.assertFalse(caminho.exists())
+
     def test_legacy_migration_redacts_old_result_and_error(self):
         legado = self.root / "checkout" / "fila_tarefas_nixal.json"
         legado.parent.mkdir()
