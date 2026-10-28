@@ -214,7 +214,7 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
             "api_key": "secret-value",
             "ssh_private_key": "private-key-result",
             "message": "Authorization: Bearer private-token",
-            "private_key_text": "PRIVATE_KEY=CANARY_QUEUE_PRIVATE_KEY_TEXT",
+            "diagnostic": "PRIVATE_KEY=CANARY_QUEUE_PRIVATE_KEY_TEXT",
             "other": ["z" * 9000 for _ in range(10)],
         }
         self.fila.adicionar("queue_test_read")
