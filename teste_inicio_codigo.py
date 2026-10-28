@@ -67,6 +67,36 @@ def main() -> None:
     ):
         assert marcador in interface, f"otimização da interface ausente: {marcador}"
 
+    # O registro de sessões da API vive na RAM: depois de um reinício, o
+    # identificador guardado em sessionStorage da aba deixa de existir. Sem
+    # abandoná-lo, toda mensagem seguinte repete a mesma recusa e a interface
+    # fica presa até abrir outra aba.
+    for marcador_sessao in (
+        'const sessaoMorta = [',
+        '"sessao_nao_valida",',
+        '"sessao_inativa",',
+        "nyxalSessionId = null;",
+        'sessionStorage.removeItem("NYXAL_SESSION_ID");',
+    ):
+        assert marcador_sessao in interface, (
+            f"interface perdeu a recuperação de sessão após reinício: {marcador_sessao}"
+        )
+
+    # O registro de sessões da API vive na RAM: depois de um reinício, o
+    # identificador guardado em sessionStorage da aba deixa de existir. Sem
+    # abandoná-lo, toda mensagem seguinte repete a mesma recusa e a interface
+    # fica presa até abrir outra aba.
+    for marcador_sessao in (
+        'const sessaoMorta = [',
+        '"sessao_nao_valida",',
+        '"sessao_inativa",',
+        "nyxalSessionId = null;",
+        'sessionStorage.removeItem("NYXAL_SESSION_ID");',
+    ):
+        assert marcador_sessao in interface, (
+            f"interface perdeu a recuperação de sessão após reinício: {marcador_sessao}"
+        )
+
     assert "cancelAnimationFrame(voiceVadFrame)" not in interface
     assert "cancelAnimationFrame(voiceBargeInFrame)" not in interface
 

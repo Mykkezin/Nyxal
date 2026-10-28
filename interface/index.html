@@ -3415,6 +3415,22 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
             errorMessage = data.erro;
           }
 
+          // O registro de sessões vive na RAM da API: depois de um reinício o
+          // identificador guardado nesta aba não existe mais e toda mensagem
+          // passaria a falhar igual. Se a recusa é da sessão, a aba abandona o
+          // identificador velho e a próxima mensagem abre uma sessão nova.
+          const sessaoMorta = [
+            "sessao_nao_valida",
+            "sessao_inativa",
+            "sessao_invalida",
+            "sessao_encerrada",
+          ].includes(data?.estado);
+          if (sessaoMorta) {
+            nyxalSessionId = null;
+            sessionStorage.removeItem("NYXAL_SESSION_ID");
+            errorMessage = `${errorMessage} Vou continuar numa conversa nova na próxima mensagem.`;
+          }
+
           showSubtitles(errorMessage);
           await speakGoddessNyxVoice(
             errorMessage,
