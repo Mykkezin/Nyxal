@@ -106,12 +106,12 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             "NYXAL_ENABLE_MUTABLE_TOOLS": "",
             "NYXAL_ENABLE_WORKSPACE_WRITE": "",
         }):
-            prepared = preparar_edicao_workspace("src/app.py", "valor = 7\\n")
+            prepared = preparar_edicao_workspace("src/app.py", "valor = 7\n")
         self.assertFalse(prepared["sucesso"])
         self.assertEqual(prepared["estado"], "workspace_edicao_desativada")
-        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\\n")
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\n")
 
-        plan = preparar_edicao_workspace("src/app.py", "valor = 9\\n")
+        plan = preparar_edicao_workspace("src/app.py", "valor = 9\n")
         with patch.dict(os.environ, {
             "NYXAL_ENABLE_MUTABLE_TOOLS": "",
             "NYXAL_ENABLE_WORKSPACE_WRITE": "",
@@ -119,7 +119,7 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             applied = aplicar_edicao_workspace(plan["plano_id"], plan["confirmacao_exata"])
         self.assertFalse(applied["sucesso"])
         self.assertEqual(applied["estado"], "workspace_edicao_desativada")
-        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\\n")
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\n")
 
     def test_prepare_returns_diff_without_writing_target(self):
         result = preparar_edicao_workspace("src/app.py", "valor = 2\n")
@@ -163,7 +163,7 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         plan_id = result["plano_id"]
         token = result["confirmacao_exata"]
         tool_call = chamada_tool("aplicar_edicao_workspace", {
-            "plano_id": plan_id, "confirmacao": token,
+            "plano_id": plan_id, "confirmacao_exata": token,
         })
         refused = self.dialogo._executar_chamada_ferramenta(
             self.manager, tool_call, "Pode aplicar a edição agora."
@@ -175,7 +175,7 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         accepted = self.dialogo._executar_chamada_ferramenta(
             self.manager, tool_call, token
         )
-        self.assertTrue(accepted["ok"])
+        self.assertTrue(accepted["ok"], accepted)
         self.assertIn('"aplicado": true', accepted["resultado"])
         self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 8\n")
 
