@@ -42,7 +42,8 @@ ESTADOS_TAREFA = {
 }
 _CHAVES_SENSIVEIS = re.compile(
     r"(?i)(?:^|[_-])(?:api[_-]?key|token|secret|password|passwd|senha|"
-    r"credential|authorization|client_secret)(?:$|[_-])"
+    r"credential|authorization|client_secret|private[_-]?key|ssh[_-]?key|"
+    r"signing[_-]?key|access[_-]?key)(?:$|[_-])"
 )
 
 
