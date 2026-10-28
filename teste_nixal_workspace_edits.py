@@ -249,7 +249,10 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             self.assertFalse(protected["sucesso"], nome)
             self.assertEqual(operacional.read_text(encoding="utf-8"), conteudo_original, nome)
 
-        for pasta_sensivel in (".env.d", "backup_estado_2026-10-03", "backups", "voices", "memoria"):
+        for pasta_sensivel in (
+            ".env.d", "backup_estado_2026-10-03", "backups", "backup",
+            "voices", "memoria", "logs", "log", "state", "estado", "fila", "queue",
+        ):
             diretorio = self.workspace / pasta_sensivel
             diretorio.mkdir(exist_ok=True)
             alvo_sensivel = diretorio / "arquivo.py"
@@ -294,6 +297,16 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
                 "authorization: 'Bearer private-yaml-secret'\n",
                 "authorization: 'Bearer replacement-value'\n",
                 "private-yaml-secret",
+            ),
+            (
+                "PRIVATE_KEY=private-ssh-key-material\n",
+                "PRIVATE_KEY=replacement-value\n",
+                "private-ssh-key-material",
+            ),
+            (
+                '{"ssh_private_key": "private-json-key-material"}\n',
+                '{"ssh_private_key": "replacement-value"}\n',
+                "private-json-key-material",
             ),
         )
         for antigo, novo, segredo in casos:
