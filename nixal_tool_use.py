@@ -7,14 +7,18 @@ pelo diálogo local e pelo servidor MCP.
 """
 from __future__ import annotations
 
+import difflib
+import hashlib
 import ipaddress
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import tempfile
 import threading
+import time
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
@@ -808,6 +812,305 @@ def executar_diagnostico(tipo: str) -> dict[str, Any]:
     return {"sucesso": False, "estado": "diagnostico_nao_permitido",
             "permitidos": ["git_status", "servicos_nyxal", "sistema", "processos", "disco", "memoria"],
             "comandos_arbitrarios_habilitados": False}
+
+
+# Edição de workspace em duas etapas: preparar diff e aplicar com confirmação separada.
+MAX_WORKSPACE_EDIT_BYTES = 128_000
+_WORKSPACE_PLAN_TTL_SECONDS = 900
+_WORKSPACE_PLAN_LIMIT = 8
+_WORKSPACE_PLANS: dict[str, dict[str, Any]] = {}
+_WORKSPACE_PLAN_LOCK = threading.RLock()
+
+_WORKSPACE_ALLOWED_SUFFIXES = {
+    ".py", ".md", ".txt", ".json", ".jsonl", ".yaml", ".yml", ".toml", ".ini",
+    ".cfg", ".conf", ".sh", ".bash", ".js", ".mjs", ".cjs", ".ts", ".tsx",
+    ".jsx", ".html", ".css", ".svg", ".xml", ".sql", ".csv", ".properties",
+    ".service", ".desktop",
+}
+_WORKSPACE_ALLOWED_NAMES = {
+    "README", "LICENSE", "Makefile", "Dockerfile", ".gitignore", ".dockerignore",
+}
+_WORKSPACE_PROTECTED_NAMES = {
+    "estado_corpo_nixal.json", "estado_nyxal_runtime.json",
+    "estado_nyxos_operacional.json", "eventos_delta_nyxos.json",
+    "auditoria_atuacao_nyxos.jsonl", "log_nyxal_residente.json",
+    "memoria_aprendizado_nixal.json", "fisiologia_operacional_nyxos.json",
+    "gateway_atuacao_nyxos.json", "presenca_maquina_nyxos.json",
+    "plano_central_controle_nyxos.json",
+}
+
+
+def _workspace_root() -> Path:
+    """Raiz explicitamente configurada; por padrão, o próprio repositório Nyxal."""
+    valor = os.environ.get("NYXAL_WORKSPACE_WRITE_ROOT", str(BASE_DIR)).strip()
+    if not valor:
+        raise ValueError("workspace_nao_configurado")
+    raiz = Path(valor).expanduser().resolve(strict=True)
+    if not raiz.is_dir():
+        raise ValueError("workspace_nao_e_diretorio")
+    return raiz
+
+
+def _workspace_target(caminho: Any) -> tuple[Path, Path, str]:
+    """Resolve somente caminhos relativos, textuais e dentro de uma raiz permitida."""
+    if not isinstance(caminho, str) or not caminho.strip() or len(caminho) > 240:
+        raise ValueError("caminho_invalido")
+    caminho = caminho.strip()
+    if "\x00" in caminho or "\\" in caminho or caminho.startswith(("/", "~")):
+        raise ValueError("somente_caminho_relativo_posix")
+    partes_brutas = caminho.split("/")
+    if any(parte in {"", ".", ".."} for parte in partes_brutas):
+        raise ValueError("caminho_nao_normalizado")
+    caminho_relativo = Path(*partes_brutas)
+    if caminho_relativo.is_absolute() or not caminho_relativo.parts:
+        raise ValueError("caminho_absoluto_bloqueado")
+
+    partes_normalizadas = [parte.casefold() for parte in partes_brutas]
+    if any(parte in _PARTES_SENSIVEIS for parte in partes_normalizadas):
+        raise ValueError("diretorio_sensivel_bloqueado")
+    nome = caminho_relativo.name.casefold()
+    sufixo = caminho_relativo.suffix.casefold()
+    if nome in _NOMES_SENSIVEIS or nome in _WORKSPACE_PROTECTED_NAMES:
+        raise ValueError("arquivo_sensivel_ou_operacional_bloqueado")
+    if sufixo in _EXTENSOES_SENSIVEIS:
+        raise ValueError("extensao_sensivel_bloqueada")
+    if nome not in _WORKSPACE_ALLOWED_NAMES and sufixo not in _WORKSPACE_ALLOWED_SUFFIXES:
+        raise ValueError("tipo_de_arquivo_nao_permitido")
+
+    raiz = _workspace_root()
+    alvo = raiz.joinpath(*partes_brutas)
+    atual = raiz
+    for parte in partes_brutas[:-1]:
+        atual = atual / parte
+        if atual.is_symlink():
+            raise ValueError("symlink_no_caminho_bloqueado")
+        if not atual.exists():
+            raise ValueError("diretorio_pai_inexistente")
+        if not atual.is_dir():
+            raise ValueError("componente_do_caminho_nao_e_diretorio")
+    if alvo.is_symlink():
+        raise ValueError("symlink_de_destino_bloqueado")
+    resolvido = alvo.resolve(strict=False)
+    if resolvido == raiz or raiz not in resolvido.parents:
+        raise ValueError("destino_fora_do_workspace")
+    if alvo.exists() and not alvo.is_file():
+        raise ValueError("destino_nao_e_arquivo_regular")
+    if not alvo.parent.exists() or not alvo.parent.is_dir():
+        raise ValueError("diretorio_pai_inexistente")
+    return raiz, alvo, caminho_relativo.as_posix()
+
+
+def _redigir_preview_workspace(texto: str) -> str:
+    """Evita repetir credenciais de um diff de arquivo na resposta do modelo."""
+    texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
+    texto = re.sub(
+        r"(?i)\b(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|"
+        r"id[_ -]?token|token|authorization|password|senha|secret|credential)\b"
+        r"\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+",
+        r"\1=[REDACTED]",
+        texto,
+    )
+    return texto
+
+
+def preparar_edicao_workspace(caminho: str, conteudo: str) -> dict[str, Any]:
+    """Prepara uma proposta limitada; não modifica o arquivo alvo."""
+    try:
+        raiz, alvo, relativo = _workspace_target(caminho)
+        if not isinstance(conteudo, str):
+            return {"sucesso": False, "estado": "conteudo_invalido", "aplicado": False}
+        if "\x00" in conteudo:
+            return {"sucesso": False, "estado": "conteudo_binario_bloqueado", "aplicado": False}
+        bytes_novos = conteudo.encode("utf-8")
+        if len(bytes_novos) > MAX_WORKSPACE_EDIT_BYTES:
+            return {
+                "sucesso": False,
+                "estado": "conteudo_excede_limite",
+                "limite_bytes": MAX_WORKSPACE_EDIT_BYTES,
+                "aplicado": False,
+            }
+        existe = alvo.exists()
+        bytes_antigos = b""
+        modo_original = None
+        if existe:
+            bytes_antigos = alvo.read_bytes()
+            if len(bytes_antigos) > MAX_WORKSPACE_EDIT_BYTES:
+                return {"sucesso": False, "estado": "arquivo_original_excede_limite", "aplicado": False}
+            if b"\x00" in bytes_antigos:
+                return {"sucesso": False, "estado": "arquivo_binario_bloqueado", "aplicado": False}
+            try:
+                texto_antigo = bytes_antigos.decode("utf-8")
+            except UnicodeDecodeError:
+                return {"sucesso": False, "estado": "arquivo_nao_utf8_bloqueado", "aplicado": False}
+            modo_original = stat.S_IMODE(alvo.stat().st_mode)
+        else:
+            texto_antigo = ""
+        if texto_antigo == conteudo:
+            return {
+                "sucesso": True,
+                "estado": "sem_alteracoes",
+                "caminho": relativo,
+                "aplicado": False,
+                "mensagem": "O conteúdo proposto é idêntico ao arquivo atual.",
+            }
+
+        diff = "".join(difflib.unified_diff(
+            texto_antigo.splitlines(keepends=True),
+            conteudo.splitlines(keepends=True),
+            fromfile=f"a/{relativo}" if existe else "/dev/null",
+            tofile=f"b/{relativo}",
+            n=3,
+        ))
+        diff_preview = _redigir_preview_workspace(diff)[:6000]
+        plano_id = uuid.uuid4().hex[:12]
+        agora = time.time()
+        plano = {
+            "plano_id": plano_id,
+            "raiz": str(raiz),
+            "caminho": relativo,
+            "sha256_original": hashlib.sha256(bytes_antigos).hexdigest() if existe else None,
+            "sha256_proposto": hashlib.sha256(bytes_novos).hexdigest(),
+            "conteudo_novo": conteudo,
+            "modo_original": modo_original,
+            "criado_em": agora,
+            "expira_em": agora + _WORKSPACE_PLAN_TTL_SECONDS,
+        }
+        with _WORKSPACE_PLAN_LOCK:
+            for chave, valor in list(_WORKSPACE_PLANS.items()):
+                if valor.get("expira_em", 0) <= agora:
+                    _WORKSPACE_PLANS.pop(chave, None)
+            if len(_WORKSPACE_PLANS) >= _WORKSPACE_PLAN_LIMIT:
+                return {
+                    "sucesso": False,
+                    "estado": "limite_de_planos_pendentes",
+                    "limite": _WORKSPACE_PLAN_LIMIT,
+                    "aplicado": False,
+                }
+            _WORKSPACE_PLANS[plano_id] = plano
+        return {
+            "sucesso": True,
+            "estado": "plano_preparado",
+            "plano_id": plano_id,
+            "caminho": relativo,
+            "acao_proposta": "atualizar" if existe else "criar",
+            "sha256_original": plano["sha256_original"],
+            "sha256_proposto": plano["sha256_proposto"],
+            "expira_em_segundos": _WORKSPACE_PLAN_TTL_SECONDS,
+            "diff": diff_preview,
+            "diff_truncado": len(diff) > len(diff_preview),
+            "aplicado": False,
+            "confirmacao_exata": f"CONFIRMO APLICACAO {plano_id}",
+            "aviso": "Nada foi escrito. Aplique apenas em outra mensagem após revisar o diff e enviar a confirmação exata.",
+        }
+    except (OSError, ValueError, UnicodeError) as erro:
+        motivo = str(erro) if str(erro) else type(erro).__name__
+        return {"sucesso": False, "estado": motivo[:100], "aplicado": False}
+
+
+def aplicar_edicao_workspace(plano_id: str, confirmacao: str) -> dict[str, Any]:
+    """Aplica apenas o plano em RAM, se a confirmação e o hash do alvo ainda coincidirem."""
+    if not isinstance(plano_id, str) or not re.fullmatch(r"[0-9a-f]{12}", plano_id):
+        return {"sucesso": False, "estado": "plano_id_invalido", "aplicado": False}
+    token_esperado = f"CONFIRMO APLICACAO {plano_id}"
+    if not isinstance(confirmacao, str) or confirmacao.strip().upper() != token_esperado:
+        return {"sucesso": False, "estado": "confirmacao_exata_necessaria", "aplicado": False}
+
+    with _WORKSPACE_PLAN_LOCK:
+        plano = _WORKSPACE_PLANS.get(plano_id)
+        if not isinstance(plano, dict):
+            return {"sucesso": False, "estado": "plano_inexistente_ou_expirado", "aplicado": False}
+        if plano.get("expira_em", 0) <= time.time():
+            _WORKSPACE_PLANS.pop(plano_id, None)
+            return {"sucesso": False, "estado": "plano_expirado", "aplicado": False}
+
+        try:
+            raiz, alvo, relativo = _workspace_target(plano.get("caminho"))
+            if str(raiz) != plano.get("raiz"):
+                return {"sucesso": False, "estado": "workspace_mudou_desde_o_plano", "aplicado": False}
+            bytes_atuais = alvo.read_bytes() if alvo.exists() else None
+            sha_atual = hashlib.sha256(bytes_atuais).hexdigest() if bytes_atuais is not None else None
+            if sha_atual != plano.get("sha256_original"):
+                return {
+                    "sucesso": False,
+                    "estado": "arquivo_alterado_desde_o_plano",
+                    "caminho": relativo,
+                    "aplicado": False,
+                }
+            bytes_novos = plano["conteudo_novo"].encode("utf-8")
+            if hashlib.sha256(bytes_novos).hexdigest() != plano.get("sha256_proposto"):
+                return {"sucesso": False, "estado": "hash_do_plano_invalido", "aplicado": False}
+
+            backup_id = None
+            if bytes_atuais is not None:
+                pasta_backup = DEFAULT_USER_DATA_DIR / "workspace-backups"
+                pasta_backup.mkdir(parents=True, exist_ok=True, mode=0o700)
+                os.chmod(pasta_backup, 0o700)
+                caminho_backup = pasta_backup / f"{plano_id}.bak"
+                fd_backup, temporario_backup = tempfile.mkstemp(prefix=f".{plano_id}-", dir=pasta_backup)
+                try:
+                    with os.fdopen(fd_backup, "wb") as arquivo_backup:
+                        os.fchmod(arquivo_backup.fileno(), 0o600)
+                        arquivo_backup.write(bytes_atuais)
+                        arquivo_backup.flush()
+                        os.fsync(arquivo_backup.fileno())
+                    os.replace(temporario_backup, caminho_backup)
+                finally:
+                    if os.path.exists(temporario_backup):
+                        os.unlink(temporario_backup)
+                backup_id = plano_id
+
+            modo = plano.get("modo_original")
+            modo = modo if isinstance(modo, int) else 0o600
+            fd, temporario = tempfile.mkstemp(prefix=".nyxal-edit-", dir=alvo.parent)
+            try:
+                with os.fdopen(fd, "wb") as arquivo_temporario:
+                    os.fchmod(arquivo_temporario.fileno(), modo)
+                    arquivo_temporario.write(bytes_novos)
+                    arquivo_temporario.flush()
+                    os.fsync(arquivo_temporario.fileno())
+                # Segunda verificação estreita a janela de concorrência externa.
+                atuais_para_verificar = alvo.read_bytes() if alvo.exists() else None
+                sha_verificado = (
+                    hashlib.sha256(atuais_para_verificar).hexdigest()
+                    if atuais_para_verificar is not None else None
+                )
+                if sha_verificado != plano.get("sha256_original"):
+                    return {
+                        "sucesso": False,
+                        "estado": "arquivo_alterado_durante_aplicacao",
+                        "caminho": relativo,
+                        "aplicado": False,
+                        "backup_id": backup_id,
+                    }
+                os.replace(temporario, alvo)
+                try:
+                    descritor_pasta = os.open(alvo.parent, os.O_RDONLY)
+                    try:
+                        os.fsync(descritor_pasta)
+                    finally:
+                        os.close(descritor_pasta)
+                except OSError:
+                    pass
+            finally:
+                if os.path.exists(temporario):
+                    os.unlink(temporario)
+            _WORKSPACE_PLANS.pop(plano_id, None)
+            return {
+                "sucesso": True,
+                "estado": "arquivo_atualizado" if bytes_atuais is not None else "arquivo_criado",
+                "caminho": relativo,
+                "sha256_original": plano.get("sha256_original"),
+                "sha256_final": plano.get("sha256_proposto"),
+                "backup_id": backup_id,
+                "aplicado": True,
+                "shell_executado": False,
+            }
+        except (OSError, ValueError, KeyError, UnicodeError) as erro:
+            return {
+                "sucesso": False,
+                "estado": (str(erro) or type(erro).__name__)[:100],
+                "aplicado": False,
+            }
 
 
 def registrar_capacidades_operacionais(
