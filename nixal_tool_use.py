@@ -841,6 +841,13 @@ _WORKSPACE_PROTECTED_NAMES = {
 }
 
 
+def _workspace_edicao_habilitada() -> bool:
+    """Defesa em profundidade: ambos os opt-ins devem estar ativos no próprio processo."""
+    def ativo(nome: str) -> bool:
+        return os.environ.get(nome, "").strip().casefold() in {"1", "true", "yes", "on"}
+    return ativo("NYXAL_ENABLE_MUTABLE_TOOLS") and ativo("NYXAL_ENABLE_WORKSPACE_WRITE")
+
+
 def _workspace_root() -> Path:
     """Raiz explicitamente configurada; por padrão, o próprio repositório Nyxal."""
     valor = os.environ.get("NYXAL_WORKSPACE_WRITE_ROOT", str(BASE_DIR)).strip()
@@ -917,6 +924,8 @@ def _redigir_preview_workspace(texto: str) -> str:
 
 def preparar_edicao_workspace(caminho: str, conteudo: str) -> dict[str, Any]:
     """Prepara uma proposta limitada; não modifica o arquivo alvo."""
+    if not _workspace_edicao_habilitada():
+        return {"sucesso": False, "estado": "workspace_edicao_desativada", "aplicado": False}
     try:
         raiz, alvo, relativo = _workspace_target(caminho)
         if not isinstance(conteudo, str):
@@ -1019,6 +1028,8 @@ def preparar_edicao_workspace(caminho: str, conteudo: str) -> dict[str, Any]:
 
 def aplicar_edicao_workspace(plano_id: str, confirmacao: str) -> dict[str, Any]:
     """Aplica apenas o plano em RAM, se a confirmação e o hash do alvo ainda coincidirem."""
+    if not _workspace_edicao_habilitada():
+        return {"sucesso": False, "estado": "workspace_edicao_desativada", "aplicado": False}
     if not isinstance(plano_id, str) or not re.fullmatch(r"[0-9a-f]{12}", plano_id):
         return {"sucesso": False, "estado": "plano_id_invalido", "aplicado": False}
     token_esperado = f"CONFIRMO APLICACAO {plano_id}"
