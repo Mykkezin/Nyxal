@@ -1026,14 +1026,14 @@ def preparar_edicao_workspace(caminho: str, conteudo: str) -> dict[str, Any]:
         return {"sucesso": False, "estado": motivo[:100], "aplicado": False}
 
 
-def aplicar_edicao_workspace(plano_id: str, confirmacao: str) -> dict[str, Any]:
+def aplicar_edicao_workspace(plano_id: str, confirmacao_exata: str) -> dict[str, Any]:
     """Aplica apenas o plano em RAM, se a confirmação e o hash do alvo ainda coincidirem."""
     if not _workspace_edicao_habilitada():
         return {"sucesso": False, "estado": "workspace_edicao_desativada", "aplicado": False}
     if not isinstance(plano_id, str) or not re.fullmatch(r"[0-9a-f]{12}", plano_id):
         return {"sucesso": False, "estado": "plano_id_invalido", "aplicado": False}
     token_esperado = f"CONFIRMO APLICACAO {plano_id}"
-    if not isinstance(confirmacao, str) or confirmacao.strip().casefold() != token_esperado.casefold():
+    if not isinstance(confirmacao_exata, str) or confirmacao_exata.strip().casefold() != token_esperado.casefold():
         return {"sucesso": False, "estado": "confirmacao_exata_necessaria", "aplicado": False}
 
     with _WORKSPACE_PLAN_LOCK:
@@ -1427,7 +1427,7 @@ def registrar_capacidades_operacionais(
                     "descricao": "ID de 12 caracteres recebido na proposta",
                     "max_length": 12,
                 },
-                "confirmacao": {
+                "confirmacao_exata": {
                     "tipo": "string", "obrigatorio": True,
                     "descricao": "Repita exatamente CONFIRMO APLICACAO <PLANO_ID>",
                     "max_length": 40,
