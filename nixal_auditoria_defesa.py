@@ -65,6 +65,22 @@ def _json_canonico(dados: dict[str, Any]) -> bytes:
 class RegistroAuditoriaDefesaNixOS:
     """Persiste resumos allowlisted sob um diretório privado do usuário."""
 
+    _CHAVES_REGISTRO = frozenset({
+        "schema", "id", "observado_em", "tipo", "fonte_sinal", "origem_ip",
+        "estado", "severidade", "recomendacoes", "planos_dry_run",
+        "executor_ativo", "executor_autorizado", "efeito_executado",
+        "previous_hash", "entry_hash",
+    })
+
+    @staticmethod
+    def _objeto_sem_chaves_duplicadas(pares: list[tuple[str, Any]]) -> dict[str, Any]:
+        resultado: dict[str, Any] = {}
+        for chave, valor in pares:
+            if chave in resultado:
+                raise ValueError("chaves_json_duplicadas")
+            resultado[chave] = valor
+        return resultado
+
     VERSAO = 1
 
     def __init__(
@@ -159,8 +175,15 @@ class RegistroAuditoriaDefesaNixOS:
         for linha in dados.splitlines():
             if len(linha) > MAX_LINHA_BYTES:
                 raise ValueError("linha_auditoria_excede_limite")
-            item = json.loads(linha.decode("utf-8"))
-            if not isinstance(item, dict) or item.get("schema") != self.VERSAO:
+            item = json.loads(
+                linha.decode("utf-8"),
+                object_pairs_hook=self._objeto_sem_chaves_duplicadas,
+            )
+            if (
+                not isinstance(item, dict)
+                or set(item) != self._CHAVES_REGISTRO
+                or item.get("schema") != self.VERSAO
+            ):
                 raise ValueError("schema_auditoria_invalido")
             hash_registro = item.get("entry_hash")
             anterior = item.get("previous_hash")
@@ -175,6 +198,14 @@ class RegistroAuditoriaDefesaNixOS:
             esperado = hashlib.sha256(_json_canonico(sem_hash)).hexdigest()
             if esperado != hash_registro:
                 raise ValueError("hash_auditoria_invalido")
+
+            # Mesmo um registro com hash recalculado não pode injetar campos
+            # extras ou afirmar execução/autorizações que este módulo proíbe.
+            conteudo = dict(item)
+            conteudo.pop("entry_hash", None)
+            conteudo.pop("previous_hash", None)
+            if self._sanitizar(conteudo) != conteudo:
+                raise ValueError("metadados_auditoria_nao_allowlisted")
             registros.append(item)
             hash_anterior = hash_registro
             if len(registros) > self.max_registros:
