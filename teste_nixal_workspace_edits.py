@@ -302,6 +302,10 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             self.assertTrue(result["sucesso"], result)
             self.assertNotIn(segredo, result["diff"])
             self.assertIn("[REDACTED]", result["diff"])
+            if segredo == "private-json-secret":
+                self.assertIn('"api_key": "[REDACTED]"', result["diff"])
+            if segredo == "private-yaml-secret":
+                self.assertIn("authorization: 'Bearer [REDACTED]'", result["diff"])
 
     def test_apply_refuses_symlinked_backup_directory(self):
         result = preparar_edicao_workspace("src/app.py", "valor = 77\n")
