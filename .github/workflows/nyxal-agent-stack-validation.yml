@@ -38,6 +38,7 @@ on:
       - "teste_mcp_stdio.py"
       - "deploy/agent/requirements-mcp.txt"
       - "teste_nixal_tool_use.py"
+      - "teste_nyxal_workspace_edits.py"
       - "teste_nyxal_tool_use.py"
       - "docs/FERRAMENTAS_OPERACIONAIS_GOVERNADAS.md"
       - "nixal_transporte_conversacional.py"
@@ -188,6 +189,7 @@ jobs:
             nixal_vps.py \
             nixal_tool_use.py \
             teste_nixal_tool_use.py \
+            teste_nixal_workspace_edits.py \
             teste_nyxal_tool_use.py \
             nixal_transporte_conversacional.py \
             nixal_integracao_sessao_transporte.py \
@@ -252,6 +254,7 @@ jobs:
             teste_nixal_display_routes \
             teste_nixal_agent_hub \
             teste_nixal_tool_use \
+            teste_nixal_workspace_edits \
             teste_nyxal_tool_use \
             teste_nyxal_function_calling \
             teste_nyxal_mcp_runtime \
