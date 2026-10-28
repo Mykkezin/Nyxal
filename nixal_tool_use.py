@@ -946,20 +946,43 @@ def _workspace_target(caminho: Any) -> tuple[Path, Path, str]:
 
 
 def _redigir_preview_workspace(texto: str) -> str:
-    """Redige credenciais em formatos KEY=value, YAML e JSON antes de expor o diff."""
+    """Redige credenciais JSON/YAML/KEY=value sem varredura regex quadrática em linhas longas."""
     texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
     padrao = re.compile(
-        r"""(?i)(["']?[a-z0-9_-]*(?:api[_ -]?key|private[_ -]?key|ssh[_ -]?key|signing[_ -]?key|api[_ -]?token|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)[a-z0-9_-]*["']?\s*[:=]\s*)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^,\s;}\]]+)"""
+        r"""(?i)(?P<key>["']?[a-z0-9_.-]+["']?\s*[:=]\s*)(?P<value>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^\s,;}\]]+)"""
+    )
+    marcadores = (
+        "apikey", "privatekey", "sshkey", "signingkey", "accesskey",
+        "apitoken", "accesstoken", "refreshtoken", "sessiontoken", "idtoken",
+        "token", "authorization", "password", "senha", "secret", "credential",
+    )
+    indicadores_linha = (
+        "key", "token", "authorization", "password", "senha", "secret",
+        "credential", "private", "ssh", "signing",
     )
 
-    def redigir_valor(m: re.Match[str]) -> str:
-        valor = m.group(2)
-        if len(valor) >= 2 and valor[0] in {"'", '"'} and valor[-1] == valor[0]:
-            aspas = valor[0]
-            return f"{m.group(1)}{aspas}[REDACTED]{aspas}"
-        return f"{m.group(1)}[REDACTED]"
+    def redigir_linha(linha: str) -> str:
+        # Evita chamar o parser de atribuições para linhas de código/texto sem delimitadores.
+        if not (":" in linha or "=" in linha):
+            return linha
+        reduzida = linha.casefold()
+        if not any(indicador in reduzida for indicador in indicadores_linha):
+            return linha
 
-    return padrao.sub(redigir_valor, texto)
+        def redigir_valor(m: re.Match[str]) -> str:
+            chave = re.sub(r"\s*[:=]\s*$", "", m.group("key"))
+            chave = chave.strip().strip("\"'").casefold()
+            compacta = re.sub(r"[^a-z0-9]+", "", chave)
+            if not any(marcador in compacta for marcador in marcadores):
+                return m.group(0)
+            valor = m.group("value")
+            if len(valor) >= 2 and valor[0] in {"'", '"'} and valor[-1] == valor[0]:
+                return f"{m.group('key')}{valor[0]}[REDACTED]{valor[0]}"
+            return f"{m.group('key')}[REDACTED]"
+
+        return padrao.sub(redigir_valor, linha)
+
+    return "".join(redigir_linha(linha) for linha in texto.splitlines(keepends=True))
 
 
 def preparar_edicao_workspace(caminho: str, conteudo: str) -> dict[str, Any]:
