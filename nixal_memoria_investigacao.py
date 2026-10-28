@@ -28,6 +28,7 @@ import fcntl
 import hashlib
 import json
 import os
+import stat
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -42,6 +43,20 @@ ARQUIVO_MEMORIA_PADRAO = (
     Path(__file__).resolve().parent
     / "memoria_investigacao_nixal.json"
 )
+
+
+def _tem_ancestral_simbolico(caminho: Path) -> bool:
+    """Detecta links simbólicos no caminho lexical, inclusive ancestrais ausentes."""
+    candidato = Path(caminho)
+    while True:
+        try:
+            if candidato.is_symlink():
+                return True
+        except OSError:
+            return True
+        if candidato.parent == candidato:
+            return False
+        candidato = candidato.parent
 
 
 class MemoriaInvestigacaoNixal:
@@ -64,14 +79,31 @@ class MemoriaInvestigacaoNixal:
     def _carregar(self) -> dict[str, Any]:
         """Carrega um arquivo íntegro; corrupção nunca vira memória vazia gravável."""
         self._erro_carregamento = None
+        if _tem_ancestral_simbolico(self.caminho):
+            self._erro_carregamento = "caminho_memoria_com_link_simbolico"
+            return self._estrutura_vazia()
+
+        descritor: int | None = None
         try:
-            with self.caminho.open("rb") as arquivo:
+            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+            descritor = os.open(self.caminho, flags)
+            if not stat.S_ISREG(os.fstat(descritor).st_mode):
+                self._erro_carregamento = "arquivo_memoria_nao_regular"
+                return self._estrutura_vazia()
+            with os.fdopen(descritor, "rb") as arquivo:
+                descritor = None
                 bruto = arquivo.read(MAX_MEMORIA_JSON_BYTES + 1)
         except FileNotFoundError:
             return self._estrutura_vazia()
         except OSError:
             self._erro_carregamento = "arquivo_ilegivel_ou_json_corrompido"
             return self._estrutura_vazia()
+        finally:
+            if descritor is not None:
+                try:
+                    os.close(descritor)
+                except OSError:
+                    pass
 
         if len(bruto) > MAX_MEMORIA_JSON_BYTES:
             self._erro_carregamento = "arquivo_excede_limite_tamanho"
@@ -214,35 +246,48 @@ class MemoriaInvestigacaoNixal:
         registro_id = self._id_registro(ciclo_copia)
 
         # Refresh under an inter-process lock to prevent stale instances overwriting each other.
-        with self._bloquear_escrita():
-            self._dados = self._carregar()
-            if self._erro_carregamento is not None:
-                return self._negado(
-                    f"memoria_degradada:{self._erro_carregamento}; arquivo original preservado."
-                )
-            for registro in self._dados["registros"]:
-                if registro.get("id") == registro_id:
-                    return {
-                        "sucesso": True, "estado": "ja_existente",
-                        "origem": self.FONTE, "valor": copy.deepcopy(registro),
-                    }
-            registro = {
-                "id": registro_id,
-                "versao_memoria": VERSAO_MEMORIA,
-                "ciclo": ciclo_copia,
-            }
-            self._dados["registros"].append(registro)
-            try:
-                self._salvar()
-            except OSError as erro:
+        try:
+            with self._bloquear_escrita():
                 self._dados = self._carregar()
-                if str(erro) == "memoria_excede_limite_tamanho":
+                if self._erro_carregamento is not None:
                     return self._negado(
-                        f"memoria_excede_limite_tamanho:{MAX_MEMORIA_JSON_BYTES}; arquivo anterior preservado."
+                        f"memoria_degradada:{self._erro_carregamento}; arquivo original preservado."
                     )
-                return self._negado(
-                    "falha_persistencia; arquivo anterior preservado quando possível."
-                )
+                for registro in self._dados["registros"]:
+                    if registro.get("id") == registro_id:
+                        return {
+                            "sucesso": True, "estado": "ja_existente",
+                            "origem": self.FONTE, "valor": copy.deepcopy(registro),
+                        }
+                registro = {
+                    "id": registro_id,
+                    "versao_memoria": VERSAO_MEMORIA,
+                    "ciclo": ciclo_copia,
+                }
+                self._dados["registros"].append(registro)
+                try:
+                    self._salvar()
+                except OSError as erro:
+                    self._dados = self._carregar()
+                    if str(erro) == "memoria_excede_limite_tamanho":
+                        return self._negado(
+                            f"memoria_excede_limite_tamanho:{MAX_MEMORIA_JSON_BYTES}; arquivo anterior preservado."
+                        )
+                    return self._negado(
+                        "falha_persistencia; arquivo anterior preservado quando possível."
+                    )
+        except OSError as erro:
+            caminho_inseguro = (
+                _tem_ancestral_simbolico(self.caminho)
+                or _tem_ancestral_simbolico(self.caminho.with_name(self.caminho.name + ".lock"))
+                or "link_simbolico" in str(erro)
+            )
+            motivo = "caminho_memoria_nao_seguro" if caminho_inseguro else "persistencia_indisponivel"
+            self._erro_carregamento = motivo
+            self._dados = self._estrutura_vazia()
+            return self._negado(
+                f"memoria_degradada:{motivo}; arquivo original preservado."
+            )
         return {
             "sucesso": True, "estado": "persistido",
             "origem": self.FONTE, "valor": copy.deepcopy(registro),
@@ -363,19 +408,37 @@ class MemoriaInvestigacaoNixal:
 
     @contextmanager
     def _bloquear_escrita(self):
-        self.caminho.parent.mkdir(parents=True, exist_ok=True)
         lock_path = self.caminho.with_name(self.caminho.name + ".lock")
-        lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+        if _tem_ancestral_simbolico(self.caminho) or _tem_ancestral_simbolico(lock_path):
+            raise OSError("caminho_memoria_com_link_simbolico")
+
+        self.caminho.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if _tem_ancestral_simbolico(self.caminho) or _tem_ancestral_simbolico(lock_path):
+            raise OSError("caminho_memoria_com_link_simbolico")
+
+        flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        lock_fd = os.open(lock_path, flags, 0o600)
         try:
+            if not stat.S_ISREG(os.fstat(lock_fd).st_mode):
+                raise OSError("arquivo_lock_memoria_nao_regular")
             os.fchmod(lock_fd, 0o600)
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
-            yield
+            try:
+                if _tem_ancestral_simbolico(self.caminho):
+                    raise OSError("caminho_memoria_com_link_simbolico")
+                yield
+            finally:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
         finally:
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
             os.close(lock_fd)
 
     def _salvar(self) -> None:
-        self.caminho.parent.mkdir(parents=True, exist_ok=True)
+        if _tem_ancestral_simbolico(self.caminho):
+            raise OSError("caminho_memoria_com_link_simbolico")
+        self.caminho.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if _tem_ancestral_simbolico(self.caminho):
+            raise OSError("caminho_memoria_com_link_simbolico")
+
         texto = json.dumps(self._dados, ensure_ascii=False, indent=2)
         if len(texto.encode("utf-8")) > MAX_MEMORIA_JSON_BYTES:
             raise OSError("memoria_excede_limite_tamanho")
@@ -389,8 +452,13 @@ class MemoriaInvestigacaoNixal:
                 arquivo.write(texto)
                 arquivo.flush()
                 os.fsync(arquivo.fileno())
+            if _tem_ancestral_simbolico(self.caminho):
+                raise OSError("caminho_memoria_com_link_simbolico")
             os.replace(temp_name, self.caminho)
-            dir_fd = os.open(self.caminho.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            if _tem_ancestral_simbolico(self.caminho.parent):
+                raise OSError("caminho_memoria_com_link_simbolico")
+            dir_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+            dir_fd = os.open(self.caminho.parent, dir_flags)
             try:
                 os.fsync(dir_fd)
             finally:
