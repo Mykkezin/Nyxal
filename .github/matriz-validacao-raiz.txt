@@ -45,6 +45,7 @@ teste_inicio_codigo.py
 teste_integracao_avaliacao_ciclo_hipotese_56_4_34.py
 teste_integracao_controlada.py
 teste_integracao_formulacao_ciclo_hipotese_56_4_29.py
+teste_integracao_sessao_transporte_56_5_4.py
 teste_integracao_teste_ciclo_hipotese_56_4_32.py
 teste_interface_56_5_1.py
 teste_leitor_planta_56_4_3.py

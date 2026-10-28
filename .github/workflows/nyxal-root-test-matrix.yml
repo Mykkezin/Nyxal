@@ -1,13 +1,15 @@
 name: Nyxal Root Test Matrix
 
-# Inventário de 2026-10-28: 106 testes da raiz não eram citados por nenhum
-# workflow. Cada candidato foi executado isolado, a partir do checkout limpo, e
-# medido por dois critérios: passa com o python3 do runner e não escreve nem no
-# checkout nem fora dele. 86 cumprem os dois e custam ~5s somados. Ficaram de
-# fora os que gravam em $HOME/Nyxal* (incluindo o checkout operacional vivo, na
-# mesma máquina deste runner) e os que sujam capacidades_nixal.json (a família
-# nivel_9_* e investigacao_interna_56_4_11). A allowlist versionada ao lado é o
-# único conjunto que este job executa.
+# Inventário de 2026-10-28, recontado em 2026-10-28: a raiz tem 206 testes
+# `teste_*.py` e esta allowlist versionada cobre 88 deles. Cada candidato foi
+# executado isolado, a partir do checkout limpo, e medido por dois critérios:
+# passa com o python3 do runner e não escreve nem no checkout nem fora dele.
+# Ficaram de fora os que gravam em $HOME/Nyxal* (incluindo o checkout
+# operacional vivo, na mesma máquina deste runner) e os que importam
+# nixal_capacidades — 10 dos 118 excluídos, por evidência estática de import.
+# 3 dos 12 `nivel_9_*` estão incluídos; os outros 9 não passaram nos critérios.
+# A contagem desta allowlist é a única fonte de verdade; este comentário é
+# descrição, não gate. A guarda anti-encolhimento abaixo é o gate.
 
 on:
   pull_request:
