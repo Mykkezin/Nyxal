@@ -151,6 +151,32 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         self.assertFalse(resultado["sucesso"])
         self.assertEqual(self.caminho.read_bytes(), original)
 
+    def test_idempotency_key_reuses_same_operation_but_rejects_conflicting_operation(self):
+        primeira = self.fila.adicionar(
+            "queue_test_read",
+            chave_idempotencia="req-idempotente-001",
+        )
+        self.assertTrue(primeira["sucesso"])
+        self.assertEqual(primeira["estado"], "pendente")
+
+        repetida = self.fila.adicionar(
+            "queue_test_read",
+            chave_idempotencia="req-idempotente-001",
+        )
+        self.assertTrue(repetida["sucesso"])
+        self.assertEqual(repetida["estado"], "ja_existente")
+        self.assertEqual(repetida["valor"]["id"], primeira["valor"]["id"])
+        self.assertEqual(self.fila.quantidade(), 1)
+
+        conflito = self.fila.adicionar(
+            "queue_test_slow_read",
+            chave_idempotencia="req-idempotente-001",
+        )
+        self.assertFalse(conflito["sucesso"])
+        self.assertEqual(conflito["estado"], "chave_idempotencia_conflito")
+        self.assertEqual(self.fila.quantidade(), 1)
+        self.assertEqual(self.chamadas, 0)
+
     def test_task_is_persisted_then_claimed_and_completed_once(self):
         added = self.fila.adicionar("queue_test_read")
         self.assertTrue(added["sucesso"])
@@ -214,6 +240,41 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         self.assertEqual(resposta["valor"]["execucao"]["estado"], "tarefa_aguarda_ordem")
         self.assertEqual(self.chamadas, 0)
         self.assertEqual(self.fila.quantidade_pendentes(), 2)
+
+    def test_executor_idempotency_key_reuses_completed_task_without_reexecuting(self):
+        class AgenteFalso:
+            def __init__(self, capacidades):
+                self.capacidades = capacidades
+
+            @staticmethod
+            def selecionar_capacidade(_ordem):
+                return {
+                    "sucesso": True,
+                    "capacidade": "queue_test_read",
+                    "argumentos": {},
+                    "motivo": "capacidade de leitura controlada no teste",
+                }
+
+        executor = ExecutorOrdensNixal(agente=AgenteFalso(self.manager), fila=self.fila)
+        primeira = executor.atender(
+            "Consulte a hora local.",
+            chave_idempotencia="req-fila-001",
+        )
+        self.assertTrue(primeira["sucesso"])
+        self.assertEqual(primeira["estado"], "concluida")
+        self.assertEqual(self.chamadas, 1)
+
+        repetida = executor.atender(
+            "Consulte a hora local.",
+            chave_idempotencia="req-fila-001",
+        )
+        self.assertTrue(repetida["sucesso"])
+        self.assertEqual(repetida["estado"], "tarefa_ja_existente")
+        self.assertFalse(repetida["valor"]["executada"])
+        self.assertTrue(repetida["valor"]["idempotente"])
+        self.assertEqual(repetida["valor"]["tarefa"]["id"], primeira["valor"]["tarefa"]["id"])
+        self.assertEqual(self.chamadas, 1)
+        self.assertEqual(self.fila.quantidade_pendentes(), 0)
 
     def test_invalid_expected_task_id_is_rejected_without_execution(self):
         resultado = self.fila.executar_proxima(tarefa_id_esperado=" " * 3)

@@ -650,6 +650,16 @@ class FilaTarefasNixal:
                     None,
                 )
                 if existente is not None:
+                    # A mesma chave só pode identificar a mesma operação lógica.
+                    # Não associar o resultado de uma capacidade anterior a outro pedido.
+                    if (
+                        existente.get("capacidade") != capacidade
+                        or existente.get("argumentos") != argumentos_copia
+                    ):
+                        return self._negado(
+                            "chave_idempotencia_conflito",
+                            "A chave de idempotência já está vinculada a outra capacidade ou a outros argumentos.",
+                        )
                     return {
                         "sucesso": True,
                         "estado": "ja_existente",
