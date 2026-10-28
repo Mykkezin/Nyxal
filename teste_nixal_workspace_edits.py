@@ -59,6 +59,10 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         self.env.start()
         self.addCleanup(self.env.stop)
 
+        self.user_data_patch = patch.object(nixal_tool_use, "DEFAULT_USER_DATA_DIR", self.data)
+        self.user_data_patch.start()
+        self.addCleanup(self.user_data_patch.stop)
+
         self.cap_patch = patch.object(
             nixal_capacidades, "ARQUIVO_CAPACIDADES", base / "capacidades.json"
         )
@@ -96,6 +100,26 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             registrar_capacidades_operacionais(
                 manager, incluir_acoes=False, incluir_edicao_workspace=True
             )
+
+    def test_handlers_stay_disabled_without_both_opt_ins(self):
+        with patch.dict(os.environ, {
+            "NYXAL_ENABLE_MUTABLE_TOOLS": "",
+            "NYXAL_ENABLE_WORKSPACE_WRITE": "",
+        }):
+            prepared = preparar_edicao_workspace("src/app.py", "valor = 7\\n")
+        self.assertFalse(prepared["sucesso"])
+        self.assertEqual(prepared["estado"], "workspace_edicao_desativada")
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\\n")
+
+        plan = preparar_edicao_workspace("src/app.py", "valor = 9\\n")
+        with patch.dict(os.environ, {
+            "NYXAL_ENABLE_MUTABLE_TOOLS": "",
+            "NYXAL_ENABLE_WORKSPACE_WRITE": "",
+        }):
+            applied = aplicar_edicao_workspace(plan["plano_id"], plan["confirmacao_exata"])
+        self.assertFalse(applied["sucesso"])
+        self.assertEqual(applied["estado"], "workspace_edicao_desativada")
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\\n")
 
     def test_prepare_returns_diff_without_writing_target(self):
         result = preparar_edicao_workspace("src/app.py", "valor = 2\n")
