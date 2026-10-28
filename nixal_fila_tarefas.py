@@ -211,20 +211,21 @@ class FilaTarefasNixal:
             except OSError as erro:
                 raise FilaTarefasErro("falha_ao_validar_caminho_da_fila") from erro
 
+    def _verificar_caminho_fora_checkout(self) -> None:
+        raiz = Path(_DIRETORIO_PROJETO).resolve()
+        try:
+            self.caminho.relative_to(raiz)
+        except ValueError:
+            return
+        raise FilaTarefasErro("fila_padrao_nao_pode_ficar_no_checkout")
+
     def _migrar_fila_legada_se_necessario(self) -> None:
         """Copia o snapshot legado para armazenamento privado, sem alterá-lo no checkout."""
         legado = Path(ARQUIVO_FILA_LEGADO).expanduser().absolute()
         if legado == self.caminho:
             raise FilaTarefasErro("fila_padrao_nao_pode_apontar_para_checkout")
         self._verificar_caminho_sem_symlink(self.caminho)
-        # Mesmo o override explícito deve manter estado fora da árvore Git.
-        diretorio_projeto = Path(_DIRETORIO_PROJETO).resolve()
-        try:
-            self.caminho.relative_to(diretorio_projeto)
-        except ValueError:
-            pass
-        else:
-            raise FilaTarefasErro("fila_padrao_nao_pode_ficar_no_checkout")
+        self._verificar_caminho_fora_checkout()
         if self.caminho.exists():
             return
         self._verificar_caminho_sem_symlink(legado)
@@ -272,6 +273,7 @@ class FilaTarefasNixal:
     @contextmanager
     def _bloquear_diretorio(self) -> Iterator[None]:
         """Lock interprocesso no diretório da fila; não cria sidecar no repositório."""
+        self._verificar_caminho_fora_checkout()
         parent = self.caminho.parent
         self._verificar_caminho_sem_symlink(parent)
         parent.mkdir(parents=True, exist_ok=True, mode=0o700)
