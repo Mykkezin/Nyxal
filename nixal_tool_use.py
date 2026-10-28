@@ -832,9 +832,13 @@ _WORKSPACE_ALLOWED_NAMES = {
     "readme", "license", "makefile", "dockerfile", ".gitignore", ".dockerignore",
 }
 _WORKSPACE_PROTECTED_NAMES = {
-    "estado_corpo_nixal.json", "estado_nyxal_runtime.json",
+    # Estado, filas, logs e memórias operacionais: não editáveis pela ferramenta.
+    "estado_corpo_nixal.json", "estado_nixal.json", "estado_nyxal_runtime.json",
     "estado_nyxos_operacional.json", "eventos_delta_nyxos.json",
     "auditoria_atuacao_nyxos.jsonl", "log_nyxal_residente.json",
+    "log_capacidades_nixal.json", "log_nyxal_runtime.json",
+    "log_nyxal_runtime.json.tmp", "fila_tarefas_nixal.json",
+    "memoria_investigacao_nixal.json", "memoria_conhecimento_nixal.json",
     "memoria_aprendizado_nixal.json", "fisiologia_operacional_nyxos.json",
     "gateway_atuacao_nyxos.json", "presenca_maquina_nyxos.json",
     "plano_central_controle_nyxos.json",
@@ -846,6 +850,20 @@ def _workspace_edicao_habilitada() -> bool:
     def ativo(nome: str) -> bool:
         return os.environ.get(nome, "").strip().casefold() in {"1", "true", "yes", "on"}
     return ativo("NYXAL_ENABLE_MUTABLE_TOOLS") and ativo("NYXAL_ENABLE_WORKSPACE_WRITE")
+
+
+def _workspace_tem_componente_simbolico(caminho: Path) -> bool:
+    """Detecta symlinks em um caminho de persistência auxiliar, inclusive ancestrais."""
+    candidato = Path(caminho)
+    while True:
+        try:
+            if candidato.is_symlink():
+                return True
+        except OSError:
+            return True
+        if candidato.parent == candidato:
+            return False
+        candidato = candidato.parent
 
 
 def _workspace_root() -> Path:
@@ -874,7 +892,13 @@ def _workspace_target(caminho: Any) -> tuple[Path, Path, str]:
         raise ValueError("caminho_absoluto_bloqueado")
 
     partes_normalizadas = [parte.casefold() for parte in partes_brutas]
-    if any(parte in _PARTES_SENSIVEIS for parte in partes_normalizadas):
+    if any(
+        parte in _PARTES_SENSIVEIS
+        or parte.startswith(".env")
+        or parte.startswith("backup_")
+        or parte in {"backups", "voices", "memoria"}
+        for parte in partes_normalizadas
+    ):
         raise ValueError("diretorio_sensivel_bloqueado")
     nome = caminho_relativo.name.casefold()
     sufixo = caminho_relativo.suffix.casefold()
@@ -918,17 +942,20 @@ def _workspace_target(caminho: Any) -> tuple[Path, Path, str]:
 
 
 def _redigir_preview_workspace(texto: str) -> str:
-    """Evita repetir credenciais de um diff de arquivo na resposta do modelo."""
+    """Redige credenciais em formatos KEY=value, YAML e JSON antes de expor o diff."""
     texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
-    texto = re.sub(
-        r"(?i)\b([a-z0-9_-]*(?:api[_ -]?key|api[_ -]?token|access[_ -]?token|"
-        r"refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|"
-        r"password|senha|secret|credential)[a-z0-9_-]*)\b"
-        r"\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+",
-        r"\1=[REDACTED]",
-        texto,
+    padrao = re.compile(
+        r"""(?i)(["']?[a-z0-9_-]*(?:api[_ -]?key|api[_ -]?token|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)[a-z0-9_-]*["']?\s*[:=]\s*)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^,\s;}\]]+)"""
     )
-    return texto
+
+    def redigir_valor(m: re.Match[str]) -> str:
+        valor = m.group(2)
+        if len(valor) >= 2 and valor[0] in {"'", '"'} and valor[-1] == valor[0]:
+            aspas = valor[0]
+            return f"{m.group(1)}{aspas}[REDACTED]{aspas}"
+        return f"{m.group(1)}[REDACTED]"
+
+    return padrao.sub(redigir_valor, texto)
 
 
 def preparar_edicao_workspace(caminho: str, conteudo: str) -> dict[str, Any]:
@@ -1073,9 +1100,30 @@ def aplicar_edicao_workspace(plano_id: str, confirmacao_exata: str) -> dict[str,
             backup_id = None
             if bytes_atuais is not None:
                 pasta_backup = DEFAULT_USER_DATA_DIR / "workspace-backups"
+                if (
+                    _workspace_tem_componente_simbolico(DEFAULT_USER_DATA_DIR)
+                    or _workspace_tem_componente_simbolico(pasta_backup)
+                ):
+                    return {
+                        "sucesso": False,
+                        "estado": "diretorio_backup_com_link_simbolico",
+                        "aplicado": False,
+                    }
                 pasta_backup.mkdir(parents=True, exist_ok=True, mode=0o700)
+                if _workspace_tem_componente_simbolico(pasta_backup) or not pasta_backup.is_dir():
+                    return {
+                        "sucesso": False,
+                        "estado": "diretorio_backup_inseguro",
+                        "aplicado": False,
+                    }
                 os.chmod(pasta_backup, 0o700)
                 caminho_backup = pasta_backup / f"{plano_id}.bak"
+                if _workspace_tem_componente_simbolico(caminho_backup):
+                    return {
+                        "sucesso": False,
+                        "estado": "arquivo_backup_com_link_simbolico",
+                        "aplicado": False,
+                    }
                 fd_backup, temporario_backup = tempfile.mkstemp(prefix=f".{plano_id}-", dir=pasta_backup)
                 try:
                     with os.fdopen(fd_backup, "wb") as arquivo_backup:
