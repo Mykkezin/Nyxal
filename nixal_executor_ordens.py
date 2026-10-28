@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from nixal_agente_qwen import AgenteNixalQwen
 from nixal_fila_tarefas import FilaTarefasNixal
+
+if TYPE_CHECKING:
+    from nixal_agente_qwen import AgenteNixalQwen
 
 
 class ExecutorOrdensNixal:
@@ -22,11 +24,14 @@ class ExecutorOrdensNixal:
         agente: AgenteNixalQwen | None = None,
         fila: FilaTarefasNixal | None = None,
     ) -> None:
-        self.agente = (
-            agente
-            if agente is not None
-            else AgenteNixalQwen()
-        )
+        if agente is None:
+            # Defer Ollama import until the real Qwen agent is requested.
+            # The governed queue/executor can be imported and tested without a model runtime.
+            from nixal_agente_qwen import AgenteNixalQwen
+
+            self.agente = AgenteNixalQwen()
+        else:
+            self.agente = agente
 
         self.fila = (
             fila
