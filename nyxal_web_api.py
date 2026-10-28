@@ -218,9 +218,8 @@ def _resumir_tarefa_ordem_api(tarefa, *, incluir_resultado=False):
                 if isinstance(valor, (int, float)) and not isinstance(valor, bool) and valor == valor and abs(valor) != float("inf"):
                     resultado_seguro[campo] = valor
             resumo["resultado"] = resultado_seguro
-        erro = tarefa.get("erro")
-        if isinstance(erro, str):
-            resumo["erro"] = erro[:500]
+        # Erro bruto pode conter caminhos ou detalhes locais; o estado terminal já
+        # distingue falha sem refletir esse conteúdo para o cliente HTTP.
     return resumo
 
 
