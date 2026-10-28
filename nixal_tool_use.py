@@ -1012,7 +1012,7 @@ def aplicar_edicao_workspace(plano_id: str, confirmacao: str) -> dict[str, Any]:
     if not isinstance(plano_id, str) or not re.fullmatch(r"[0-9a-f]{12}", plano_id):
         return {"sucesso": False, "estado": "plano_id_invalido", "aplicado": False}
     token_esperado = f"CONFIRMO APLICACAO {plano_id}"
-    if not isinstance(confirmacao, str) or confirmacao.strip().upper() != token_esperado:
+    if not isinstance(confirmacao, str) or confirmacao.strip().casefold() != token_esperado.casefold():
         return {"sucesso": False, "estado": "confirmacao_exata_necessaria", "aplicado": False}
 
     with _WORKSPACE_PLAN_LOCK:
