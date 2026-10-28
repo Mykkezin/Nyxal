@@ -18,7 +18,9 @@ def carregar(caminho: Path) -> dict[str, Any] | None:
 
 
 def auditar(repositorio: Path, limite: int = 200) -> dict[str, Any]:
-    if not isinstance(limite, int) or limite < 1:
+    # `True` é instância de `int`, então sem a guarda o auditor aceitaria um
+    # booleano como recorte de leitura e devolveria no máximo uma linha.
+    if isinstance(limite, bool) or not isinstance(limite, int) or limite < 1:
         raise ValueError("limite_invalido")
     base = repositorio.resolve()
     if base.is_file():
