@@ -27,7 +27,13 @@ from typing import Any, Iterator
 from nixal_capacidades import GerenciadorCapacidades
 
 
-ARQUIVO_FILA_PADRAO = Path(__file__).resolve().parent / "fila_tarefas_nixal.json"
+# O estado operacional da fila não deve ser gravado no checkout Git.
+_DIRETORIO_DADOS_PADRAO = Path(
+    os.environ.get("NYXAL_USER_DATA_DIR", str(Path.home() / ".local" / "share" / "nyxal"))
+).expanduser()
+ARQUIVO_FILA_PADRAO = _DIRETORIO_DADOS_PADRAO / "fila_tarefas_nixal.json"
+# Snapshot legado versionado: pode ser migrado uma vez, mas nunca é atualizado pelo runtime.
+ARQUIVO_FILA_LEGADO = Path(__file__).resolve().parent / "fila_tarefas_nixal.json"
 VERSAO_FILA = "1.0"
 MAX_TAREFAS = 500
 MAX_FILA_BYTES = 2_000_000
@@ -58,14 +64,22 @@ class FilaTarefasNixal:
 
     def __init__(
         self,
-        caminho: str | Path = ARQUIVO_FILA_PADRAO,
+        caminho: str | Path | None = None,
         capacidades: GerenciadorCapacidades | None = None,
     ) -> None:
-        self.caminho = Path(caminho).expanduser().absolute()
+        usar_caminho_padrao = caminho is None
+        caminho_efetivo = ARQUIVO_FILA_PADRAO if caminho is None else caminho
+        self.caminho = Path(caminho_efetivo).expanduser().absolute()
         self.capacidades = capacidades if capacidades is not None else GerenciadorCapacidades()
         self._dados = self._estrutura_vazia()
         self._erro_carregamento: str | None = None
+        self._falha_migracao: str | None = None
         self._recuperacao_pendente = False
+        if usar_caminho_padrao:
+            try:
+                self._migrar_fila_legada_se_necessario()
+            except (OSError, UnicodeError, ValueError, RecursionError, FilaTarefasErro) as erro:
+                self._falha_migracao = (str(erro) or type(erro).__name__)[:160]
         self.recarregar()
 
     def _estrutura_vazia(self) -> dict[str, Any]:
@@ -163,6 +177,49 @@ class FilaTarefasNixal:
                     raise FilaTarefasErro("caminho_da_fila_com_symlink")
             except OSError as erro:
                 raise FilaTarefasErro("falha_ao_validar_caminho_da_fila") from erro
+
+    def _migrar_fila_legada_se_necessario(self) -> None:
+        """Copia o snapshot legado para armazenamento privado, sem alterá-lo no checkout."""
+        legado = Path(ARQUIVO_FILA_LEGADO).expanduser().absolute()
+        if legado == self.caminho:
+            raise FilaTarefasErro("fila_padrao_nao_pode_apontar_para_checkout")
+        self._verificar_caminho_sem_symlink(self.caminho)
+        if self.caminho.exists():
+            return
+        self._verificar_caminho_sem_symlink(legado)
+        if not legado.exists():
+            return
+
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(legado, flags)
+        except FileNotFoundError:
+            # O snapshot pode ter sido removido por uma atualização concorrente;
+            # nenhum arquivo local foi alterado.
+            return
+        with os.fdopen(fd, "rb") as arquivo:
+            info = os.fstat(arquivo.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                raise FilaTarefasErro("fila_legada_nao_regular")
+            if info.st_size > MAX_FILA_BYTES:
+                raise FilaTarefasErro("fila_legada_excede_limite")
+            bruto = arquivo.read(MAX_FILA_BYTES + 1)
+        if len(bruto) > MAX_FILA_BYTES:
+            raise FilaTarefasErro("fila_legada_excede_limite")
+        def constante_invalida(_: str) -> None:
+            raise ValueError("constante_json_nao_finita")
+        dados = json.loads(bruto.decode("utf-8"), parse_constant=constante_invalida)
+        valido, motivo = self._validar_estrutura(dados)
+        if not valido:
+            raise FilaTarefasErro(f"fila_legada_invalida:{motivo or 'estrutura_desconhecida'}")
+
+        # Várias instâncias podem iniciar juntas; apenas a primeira publica a cópia.
+        with self._bloquear_diretorio():
+            self._verificar_caminho_sem_symlink(self.caminho)
+            if self.caminho.exists():
+                return
+            self._dados = copy.deepcopy(dados)
+            self._salvar_unlocked()
 
     @contextmanager
     def _bloquear_diretorio(self) -> Iterator[None]:
@@ -336,6 +393,9 @@ class FilaTarefasNixal:
         self._recuperacao_pendente = False
 
     def _carregar_e_recuperar_unlocked(self) -> bool:
+        if self._falha_migracao:
+            self._erro_carregamento = f"migracao_legada_recusada:{self._falha_migracao}"[:160]
+            return False
         if not self._carregar_unlocked():
             return False
         if self._recuperacao_pendente:
