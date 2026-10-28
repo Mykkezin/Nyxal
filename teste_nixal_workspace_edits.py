@@ -172,6 +172,18 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         self.assertIn("pedido explícito", refused["resultado"])
         self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\n")
 
+        id_errado = ("0" if not plan_id.startswith("0") else "1") + plan_id[1:]
+        chamada_com_token_errado = chamada_tool("aplicar_edicao_workspace", {
+            "plano_id": plan_id,
+            "confirmacao_exata": f"CONFIRMO APLICACAO {id_errado}",
+        })
+        token_argumento_recusado = self.dialogo._executar_chamada_ferramenta(
+            self.manager, chamada_com_token_errado, token
+        )
+        self.assertFalse(token_argumento_recusado["ok"])
+        self.assertIn("pedido explícito", token_argumento_recusado["resultado"])
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\n")
+
         accepted = self.dialogo._executar_chamada_ferramenta(
             self.manager, tool_call, token
         )
@@ -212,6 +224,13 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         (self.workspace / ".env").write_text("SECRET=valor\n", encoding="utf-8")
         blocked = preparar_edicao_workspace(".env", "SECRET=novo\n")
         self.assertFalse(blocked["sucesso"])
+
+        for nome_sensivel in ("credentials.yaml", "secrets.json", "api_keys.json", "auth.json"):
+            arquivo_sensivel = self.workspace / nome_sensivel
+            arquivo_sensivel.write_text("private-value\n", encoding="utf-8")
+            proposta_sensivel = preparar_edicao_workspace(nome_sensivel, "changed-value\n")
+            self.assertFalse(proposta_sensivel["sucesso"], nome_sensivel)
+            self.assertEqual(arquivo_sensivel.read_text(encoding="utf-8"), "private-value\n")
 
         operacional = self.workspace / "estado_corpo_nixal.json"
         operacional.write_text('{"estado":"preservar"}', encoding="utf-8")
