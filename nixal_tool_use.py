@@ -878,7 +878,16 @@ def _workspace_target(caminho: Any) -> tuple[Path, Path, str]:
         raise ValueError("diretorio_sensivel_bloqueado")
     nome = caminho_relativo.name.casefold()
     sufixo = caminho_relativo.suffix.casefold()
-    if nome in _NOMES_SENSIVEIS or nome in _WORKSPACE_PROTECTED_NAMES:
+    nomes_sensivel_por_padrao = (
+        "credential", "credentials", "secret", "secrets", "token", "tokens",
+        "password", "passwd", "private_key", "private-key", "api_key", "api-key",
+        "apikey", "auth", "oauth", "client_secret",
+    )
+    if (
+        nome in _NOMES_SENSIVEIS
+        or nome in _WORKSPACE_PROTECTED_NAMES
+        or any(parte in nome for parte in nomes_sensivel_por_padrao)
+    ):
         raise ValueError("arquivo_sensivel_ou_operacional_bloqueado")
     if sufixo in _EXTENSOES_SENSIVEIS:
         raise ValueError("extensao_sensivel_bloqueada")
