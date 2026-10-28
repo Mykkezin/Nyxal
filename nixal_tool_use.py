@@ -829,7 +829,7 @@ _WORKSPACE_ALLOWED_SUFFIXES = {
     ".service", ".desktop",
 }
 _WORKSPACE_ALLOWED_NAMES = {
-    "README", "LICENSE", "Makefile", "Dockerfile", ".gitignore", ".dockerignore",
+    "readme", "license", "makefile", "dockerfile", ".gitignore", ".dockerignore",
 }
 _WORKSPACE_PROTECTED_NAMES = {
     "estado_corpo_nixal.json", "estado_nyxal_runtime.json",
