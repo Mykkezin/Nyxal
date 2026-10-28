@@ -35,6 +35,8 @@ from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
 from nixal_defesa_autonoma import DefesaAutonoma
 from nixal_executor_defesa_governada import ExecutorDefesaGovernada
+from nixal_auditoria_defesa import RegistroAuditoriaDefesaNixOS
+from nixal_aprovacao_defesa import DiarioAprovacaoDefesa
 from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_estado_presenca import compor_presenca_efetiva
@@ -109,6 +111,12 @@ COLETOR_DATASET_DUAL_AE5 = ColetorDatasetDualAE5(
     habilitada=False,
 )
 VPS_NYXOS = VpsNyxOS()
+# A interface local confia no loopback e não envia Bearer. Isso basta para
+# ligar/desligar a máquina, mas não pode autorizar um impacto irreversível.
+ACOES_VPS_IRREVERSIVEIS = frozenset({"destroy", "autostart_off"})
+VPS_ACACOES_IRREVERSIVEIS_HABILITADAS = os.environ.get(
+    "NYXAL_VPS_ACACOES_IRREVERSIVEIS", ""
+).strip().lower() in {"1", "true", "yes", "on"}
 AMD_DEVELOPER_CLOUD = AmdDeveloperCloud()
 AGENTE_NYXAL = NyxalAgentHub()
 # O chat principal usa o mesmo roteador quando há provedores remotos configurados.
@@ -120,7 +128,14 @@ CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 
 # Observação e preparação governada: eventos/planos em memória, sem efeitos físicos.
 DEFESA_AUTONOMA_NYXAL = DefesaAutonoma()
-DEFESA_EXECUTOR_GOVERNADO = ExecutorDefesaGovernada()
+# A aprovação deixa de ser um campo do pedido: só vale se estiver registrada no
+# diário durável por um principal autenticado. O gate continua sem execução —
+# verificar uma aprovação muda o estado do plano simulado e nada mais.
+DEFESA_DIARIO_APROVACOES = DiarioAprovacaoDefesa.do_ambiente()
+DEFESA_EXECUTOR_GOVERNADO = ExecutorDefesaGovernada(
+    verificador_aprovacao=DEFESA_DIARIO_APROVACOES.para_executor(),
+)
+DEFESA_AUDITORIA_DURAVEL = RegistroAuditoriaDefesaNixOS.do_ambiente()
 DEFESA_EVENTOS_RECIENTES = deque(maxlen=256)
 DEFESA_EVENTOS_LOCK = Lock()
 
@@ -1093,9 +1108,20 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
             try:
                 if self.path == "/api/vps/action":
+                    acao = payload.get("acao")
+                    if acao in ACOES_VPS_IRREVERSIVEIS:
+                        if not VPS_ACACOES_IRREVERSIVEIS_HABILITADAS:
+                            self._send_json(423, {
+                                "estado": "acao_nao_habilitada",
+                                "motivo": "Ações de VM irreversíveis estão desativadas por padrão.",
+                            })
+                            return
+                        # Loopback não é autorização: exige Bearer mesmo no painel local.
+                        if not self._authorized():
+                            return
                     resultado = VPS_NYXOS.action(
                         nome=payload.get("nome"),
-                        acao=payload.get("acao"),
+                        acao=acao,
                     )
                 else:
                     resultado = VPS_NYXOS.provisionar(
@@ -1723,6 +1749,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 "eventos_em_memoria_maximo": 256,
                 "planos_dry_run": DEFESA_EXECUTOR_GOVERNADO.listar_registros(limite=50),
                 "executor_dry_run": DEFESA_EXECUTOR_GOVERNADO.contexto(),
+                "aprovacoes": DEFESA_DIARIO_APROVACOES.contexto(),
+                # Compatibilidade: planos e executor continuam não persistidos;
+                # a trilha allowlisted de eventos tem seu estado separado acima.
                 "persistencia": False,
                 "executor_ativo": False,
                 "executor_autorizado": False,
