@@ -10,6 +10,8 @@ on:
       - "teste_api_security_auth.py"
       - "nixal_executor_defesa_governada.py"
       - "teste_executor_defesa_governada.py"
+      - "nixal_trilha_defesa.py"
+      - "teste_nixal_trilha_defesa.py"
       - "nixal_defesa_autonoma.py"
       - "teste_defesa_autonoma.py"
       - "docs/DEFESA_AUTONOMA_GOVERNADA.md"
@@ -36,10 +38,14 @@ jobs:
       - name: Verify system Python 3.12
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Compile defense policy and dry-run gate
-        run: python3 -m py_compile nixal_defesa_autonoma.py teste_defesa_autonoma.py nixal_executor_defesa_governada.py teste_executor_defesa_governada.py
+        run: python3 -m py_compile nixal_defesa_autonoma.py teste_defesa_autonoma.py nixal_executor_defesa_governada.py teste_executor_defesa_governada.py nixal_trilha_defesa.py teste_nixal_trilha_defesa.py
       - name: Run defense policy tests
         run: python3 -m unittest teste_defesa_autonoma.py -v
       - name: Run governed dry-run execution gate tests
         run: python3 -m unittest teste_executor_defesa_governada.py -v
+      - name: Run durable defense audit tests
+        run: python3 -m unittest teste_nixal_trilha_defesa.py -v
       - name: Run HTTP authentication and governed defense integration tests
+        env:
+          NYXAL_DEFENSE_AUDIT_PATH: ${{ runner.temp }}/nyxal-defense-audit-${{ github.run_id }}.jsonl
         run: python3 -m unittest teste_api_security_auth.py -v
