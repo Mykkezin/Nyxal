@@ -19,6 +19,7 @@ from nixal_capacidades import GerenciadorCapacidades
 from nixal_dialogo_qwen import DialogoQwenNixal
 from nixal_tool_use import (
     NotasLembretesNixOS,
+    _redigir_preview_workspace,
     aplicar_edicao_workspace,
     preparar_edicao_workspace,
     registrar_capacidades_operacionais,
@@ -280,6 +281,10 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         self.assertTrue(noop["sucesso"])
         self.assertEqual(noop["estado"], "sem_alteracoes")
         self.assertNotIn("plano_id", noop)
+
+    def test_redaction_skips_long_non_secret_lines(self):
+        conteudo = "x" * 12_000
+        self.assertEqual(_redigir_preview_workspace(conteudo), conteudo)
 
     def test_sensitive_old_values_are_redacted_from_diff_preview(self):
         casos = (
