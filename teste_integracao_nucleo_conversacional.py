@@ -37,7 +37,18 @@ Objetivos:
 
 from __future__ import annotations
 
+import os
+import sys
+import time
+import types
 from copy import deepcopy
+from unittest.mock import patch
+
+# A cadeia é validada sem modelo: o runner do CI não tem ollama instalado.
+ollama_fake = types.ModuleType("ollama")
+ollama_fake.chat = lambda **_kwargs: {"message": {"content": "resposta simulada"}}
+ollama_fake.Client = type("Client", (), {})
+sys.modules.setdefault("ollama", ollama_fake)
 
 from nixal_interface import (
     InterfaceConversacionalNixal,
@@ -56,6 +67,15 @@ from nixal_agente_qwen import (
 )
 from nixal_composicao_56_3_9 import (
     CompositorNixal,
+)
+from nixal_dialogo_qwen import (
+    DialogoQwenNixal,
+)
+from nixal_memoria_conversacional import (
+    MemoriaConversacionalNixal,
+)
+from nixal_capacidades import (
+    GerenciadorCapacidades,
 )
 
 
@@ -205,6 +225,14 @@ class CompositorDeterministico(
                 "dominio_origem": (
                     "sistema_computacional"
                 ),
+                "origem": {
+                    "dominios": ["sistema_computacional"],
+                    "melhor_score": 3,
+                    "pontuacoes": {
+                        "sistema_computacional": 3,
+                    },
+                },
+                "classificacao_semantica": None,
                 "capacidades_prioritarias": [
                     "obter_hora"
                 ],
@@ -212,8 +240,45 @@ class CompositorDeterministico(
 
         return {
             "dominio_origem": "externo",
+            "origem": {
+                "dominios": [],
+                "melhor_score": 0,
+                "pontuacoes": {},
+            },
+            "classificacao_semantica": None,
             "capacidades_prioritarias": [],
         }
+
+
+class DialogoDeterministico(
+    DialogoQwenNixal
+):
+
+    """Sem modelo: a cadeia não pode depender de um LLM para ser validada."""
+
+    def __init__(self) -> None:
+        self.provedor = "deterministico"
+        self.modelo = "deterministico"
+        self.cliente = None
+        self.gerenciador_capacidades = None
+        self._ferramentas_operacionais_registradas = False
+        self.chamadas = []
+
+    def responder(
+        self,
+        texto: str,
+        **argumentos,
+    ) -> dict:
+
+        self.chamadas.append(texto)
+
+        return {
+            "sucesso": False,
+            "origem": "dialogo_deterministico",
+            "resposta": None,
+            "erro": "modelo não é usado nesta cadeia",
+        }
+
 
 
 def construir_ambiente():
@@ -241,11 +306,26 @@ def construir_ambiente():
         CompositorDeterministico()
     )
 
+    dialogo = (
+        DialogoDeterministico()
+    )
+
+    # O teste não pode escrever no histórico real do usuário instalado.
+    with patch.dict(
+        os.environ,
+        {MemoriaConversacionalNixal.VARIAVEL_CAMINHO: ""},
+    ):
+        memoria = (
+            MemoriaConversacionalNixal()
+        )
+
     nucleo = (
         NucleoConversacionalNixal(
             interface=interface,
             agente=agente,
             compositor=compositor,
+            dialogo=dialogo,
+            memoria_conversacional=memoria,
         )
     )
 
@@ -386,14 +466,14 @@ def teste_primeira_mensagem() -> None:
 
     verificar(
         resultado["valor"]["mensagem_armazenada"]
-        is False,
-        "mensagem não deve ser armazenada",
+        is True,
+        "mensagem deve ser armazenada na memória conversacional recente",
     )
 
     verificar(
         resultado["valor"]["memoria_conversacional"]
-        is False,
-        "memória conversacional deve permanecer ausente",
+        is True,
+        "memória conversacional recente deve alimentar a cadeia",
     )
 
     verificar(
@@ -536,6 +616,24 @@ def teste_segunda_mensagem_mesma_sessao() -> None:
             "Descobrir o horário atual do sistema.",
         ],
         "fallback por domínio deve usar objetivo canônico",
+    )
+
+    verificar(
+        resposta["valor"]["modo"]
+        == "resposta_capacidade",
+        "capacidade deve responder sem cair no modelo",
+    )
+
+    verificar(
+        nucleo.dialogo.chamadas
+        == [],
+        "cadeia determinística não pode consultar um modelo",
+    )
+
+    verificar(
+        resposta["valor"]["memoria_conversacional_estado"]["permanente"]
+        is False,
+        "memória recente não pode se apresentar como conhecimento permanente",
     )
 
 
@@ -703,11 +801,44 @@ def teste_entrada_invalida() -> None:
     )
 
 
+def teste_relogio_real_da_producao() -> None:
+    """O agente do teste é fixo; a capacidade real continua lendo o sistema."""
+
+    antes = time.localtime()
+    resultado = GerenciadorCapacidades().executar("obter_hora")
+    depois = time.localtime()
+
+    verificar(
+        resultado.sucesso is True,
+        "capacidade obter_hora deve executar",
+    )
+
+    dados = resultado.resultado
+
+    verificar(
+        isinstance(dados, dict)
+        and all(chave in dados for chave in ("hora", "minuto", "segundo")),
+        "obter_hora deve devolver hora, minuto e segundo",
+    )
+
+    if isinstance(dados, dict):
+        executar_horas = (dados["hora"], dados["minuto"], dados["segundo"])
+        verificar(
+            executar_horas
+            in {
+                (antes.tm_hour, antes.tm_min, antes.tm_sec),
+                (depois.tm_hour, depois.tm_min, depois.tm_sec),
+            },
+            "obter_hora deve acompanhar o relógio do sistema, nunca um valor congelado",
+        )
+
+
 def executar_testes() -> None:
 
     teste_construcao()
     teste_primeira_mensagem()
     teste_segunda_mensagem_mesma_sessao()
+    teste_relogio_real_da_producao()
     teste_fechamento_e_rejeicao()
     teste_isolamento_entrada()
     teste_entrada_invalida()

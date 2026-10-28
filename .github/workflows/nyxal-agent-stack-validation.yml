@@ -286,6 +286,7 @@ jobs:
             teste_memorias_persistencia_segura
           python3 teste_fila_tarefas.py
           python3 teste_nucleo_conversacional.py
+          python3 teste_integracao_nucleo_conversacional.py
           python3 teste_transporte_conversacional_56_5_2.py
           python3 teste_integracao_sessao_transporte_56_5_4.py
           python3 -m unittest -v teste_api_security_auth.py teste_nixal_auditoria_defesa.py
