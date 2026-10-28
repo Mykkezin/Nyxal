@@ -66,6 +66,77 @@ class TestRegistroTrilhaHTTP(unittest.TestCase):
             self.assertLessEqual(caminho.stat().st_size, 1024)
             self.assertLessEqual(caminho.with_name("traces.jsonl.1").stat().st_size, 1024)
 
+    def test_arquivo_trace_simbolico_nao_altera_o_alvo(self):
+        with tempfile.TemporaryDirectory() as diretorio:
+            raiz = Path(diretorio)
+            alvo = raiz / "arquivo-real.txt"
+            original = b"conteudo externo que precisa permanecer intacto"
+            alvo.write_bytes(original)
+            caminho = raiz / "traces.jsonl"
+            caminho.symlink_to(alvo)
+            trilha = RegistroTrilhaHTTP(caminho)
+
+            resultado = trilha.registrar(
+                request_id="symlink-target",
+                method="GET",
+                path="/health",
+                status_code=200,
+                duration_ms=1,
+            )
+
+            self.assertIsNone(resultado)
+            self.assertTrue(caminho.is_symlink())
+            self.assertEqual(alvo.read_bytes(), original)
+
+    def test_ancestral_trace_simbolico_nao_cria_diretorios_no_alvo(self):
+        with tempfile.TemporaryDirectory() as diretorio:
+            raiz = Path(diretorio)
+            alvo = raiz / "destino-real"
+            alvo.mkdir(mode=0o700)
+            atalho = raiz / "atalho"
+            atalho.symlink_to(alvo, target_is_directory=True)
+            caminho = atalho / "subdiretorio" / "traces.jsonl"
+            trilha = RegistroTrilhaHTTP(caminho)
+
+            resultado = trilha.registrar(
+                request_id="symlink-parent",
+                method="GET",
+                path="/health",
+                status_code=200,
+                duration_ms=1,
+            )
+
+            self.assertIsNone(resultado)
+            self.assertFalse((alvo / "subdiretorio").exists())
+            self.assertFalse(caminho.exists())
+            self.assertTrue(atalho.is_symlink())
+
+    def test_backup_trace_simbolico_impede_rotacao_e_preserva_alvo(self):
+        with tempfile.TemporaryDirectory() as diretorio:
+            raiz = Path(diretorio)
+            caminho = raiz / "traces.jsonl"
+            original_trace = b"x" * 2048
+            caminho.write_bytes(original_trace)
+            alvo = raiz / "backup-real.txt"
+            original_alvo = b"backup externo intacto"
+            alvo.write_bytes(original_alvo)
+            backup = caminho.with_name(caminho.name + ".1")
+            backup.symlink_to(alvo)
+            trilha = RegistroTrilhaHTTP(caminho, max_bytes=1024, backups=1)
+
+            resultado = trilha.registrar(
+                request_id="symlink-backup",
+                method="GET",
+                path="/health",
+                status_code=200,
+                duration_ms=1,
+            )
+
+            self.assertIsNone(resultado)
+            self.assertEqual(caminho.read_bytes(), original_trace)
+            self.assertTrue(backup.is_symlink())
+            self.assertEqual(alvo.read_bytes(), original_alvo)
+
     def test_configuracao_invalida_e_rejeitada(self):
         with tempfile.TemporaryDirectory() as diretorio:
             with self.assertRaises(ValueError):
