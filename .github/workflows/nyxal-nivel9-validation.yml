@@ -200,8 +200,8 @@ jobs:
       - name: Empacotar projeto completo (somente publicação manual)
         if: github.event_name == 'workflow_dispatch'
         run: |
-          mkdir -p /tmp/nyxal-package
-          git archive --format=zip --output="/tmp/nyxal-package/Nyxal-N10-${GITHUB_SHA}.zip" "${GITHUB_SHA}"
+          mkdir -p "$RUNNER_TEMP/nyxal-package"
+          git archive --format=zip --output="$RUNNER_TEMP/nyxal-package/Nyxal-N10-${GITHUB_SHA}.zip" "${GITHUB_SHA}"
 
       - name: Publicar projeto completo (opcional)
         if: github.event_name == 'workflow_dispatch'
@@ -209,7 +209,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nyxal-projeto-nivel10
-          path: /tmp/nyxal-package/Nyxal-N10-*.zip
+          path: ${{ runner.temp }}/nyxal-package/Nyxal-N10-*.zip
           if-no-files-found: error
           retention-days: 1
       - name: Teste Auto-Evolution AE1
@@ -286,8 +286,8 @@ jobs:
                   "regressoes": estado(job_outcome),
               },
           }
-          Path("/tmp/nyxal-ci-evidence.json").write_text(
+          Path(os.environ["RUNNER_TEMP"], "nyxal-ci-evidence.json").write_text(
               json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8"
           )
           PY
-          python3 nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
+          python3 nixal_decisao_autonoma_ci.py "$RUNNER_TEMP/nyxal-ci-evidence.json"

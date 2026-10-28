@@ -90,11 +90,11 @@ jobs:
               job_outcome=os.getenv("JOB_OUTCOME", "unknown"),
               step_outcomes=outcomes,
           )
-          Path("/tmp/nyxal-ci-evidence.json").write_text(
+          Path(os.environ["RUNNER_TEMP"], "nyxal-ci-evidence.json").write_text(
               json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8"
           )
           PY
-          python3 nixal_decisao_autonoma_ci.py /tmp/nyxal-ci-evidence.json
+          python3 nixal_decisao_autonoma_ci.py "$RUNNER_TEMP/nyxal-ci-evidence.json"
 
       - name: Archive structured CI evidence (manual only)
         if: github.event_name == 'workflow_dispatch'
@@ -102,6 +102,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nyxal-ci-evidence-${{ github.run_id }}
-          path: /tmp/nyxal-ci-evidence.json
+          path: ${{ runner.temp }}/nyxal-ci-evidence.json
           if-no-files-found: warn
           retention-days: 1
