@@ -1,0 +1,97 @@
+name: Nyxal Root Test Matrix
+
+# Inventário de 2026-10-28: 106 testes da raiz não eram citados por nenhum
+# workflow. 84 deles passam com o python3 do runner, custam ~3s somados e não
+# escrevem fora do checkout. Este workflow fecha essa lacuna de cobertura sem
+# tocar nos testes que ainda gravam em $HOME/Nyxal* (bloqueados por efeito
+# colateral em runner self-hosted).
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "teste_*.py"
+      - "nixal_*.py"
+      - "nyxal_*.py"
+      - "interface/js/**/*.js"
+      - ".github/matriz-validacao-raiz.txt"
+      - ".github/workflows/nyxal-root-test-matrix.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "teste_*.py"
+      - "nixal_*.py"
+      - "nyxal_*.py"
+      - ".github/matriz-validacao-raiz.txt"
+      - ".github/workflows/nyxal-root-test-matrix.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  matriz-raiz:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify system Python 3.12
+        run: python3 --version
+
+      - name: Check the allowlist is complete and free of duplicates
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          linhas = Path(".github/matriz-validacao-raiz.txt").read_text(
+              encoding="utf-8"
+          ).splitlines()
+          nomes = [linha.strip() for linha in linhas if linha.strip()]
+          assert nomes, "a matriz de validação está vazia"
+          assert len(nomes) == len(set(nomes)), "há testes duplicados na matriz"
+          from collections import Counter
+          duplicados = [n for n, c in Counter(nomes).items() if c > 1]
+          assert not duplicados, f"testes duplicados: {duplicados}"
+          ausentes = [n for n in nomes if not Path(n).is_file()]
+          assert not ausentes, f"testes listados que não existem: {ausentes}"
+          print(f"matriz validada: {len(nomes)} testes")
+          PY
+
+      - name: Run every matrix test and report each outcome
+        run: |
+          mkdir -p "$RUNNER_TEMP/matriz-raiz"
+          falhas=0
+          execucoes=0
+          while IFS= read -r teste; do
+            [ -n "$teste" ] || continue
+            execucoes=$((execucoes + 1))
+            if python3 "$teste" >"$RUNNER_TEMP/matriz-raiz/$teste.log" 2>&1; then
+              echo "OK   $teste"
+            else
+              falhas=$((falhas + 1))
+              echo "FALHA $teste"
+              tail -n 20 "$RUNNER_TEMP/matriz-raiz/$teste.log"
+            fi
+          done < .github/matriz-validacao-raiz.txt
+          echo "executados=$execucoes falhas=$falhas"
+          if [ "$falhas" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Refuse to pass on zero executions
+        run: |
+          total=$(grep -c '[^[:space:]]' .github/matriz-validacao-raiz.txt)
+          echo "$total"
+          if [ "$total" -lt 80 ]; then
+            echo "a matriz encolheu além do esperado; revalide o inventário"
+            exit 1
+          fi
