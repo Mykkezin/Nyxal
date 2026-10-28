@@ -309,6 +309,59 @@ class TesteExecutorDefesaGovernada(unittest.TestCase):
         self.assertEqual(estados.count("duplicado_idempotente"), 9)
         self.assertEqual(len(self.executor.listar_registros()), 1)
 
+    def test_auditoria_duravel_registra_preparacao_aprovacao_e_expiracao(self) -> None:
+        eventos = []
+        executor = ExecutorDefesaGovernada(
+            ttl_segundos=5,
+            janela_idempotencia_segundos=30,
+            relogio=self.relogio,
+            verificador_aprovacao=lambda comprovante: comprovante.get("ok") is True,
+            auditoria=lambda nome, dados: eventos.append((nome, dict(dados))),
+        )
+
+        pendente = executor.preparar(recomendacao())
+        self.assertEqual(pendente["estado"], "aguardando_aprovacao")
+        aprovado = executor.preparar(recomendacao(), aprovacao={"ok": True})
+        self.assertEqual(aprovado["estado"], "simulacao_preparada")
+        self.assertFalse(aprovado["executor_ativo"])
+        self.assertFalse(aprovado["executor_autorizado"])
+        self.assertFalse(aprovado["efeito_executado"])
+
+        self.relogio.avancar(6)
+        executor.listar_registros()
+        self.assertEqual(
+            [evento for evento, _dados in eventos],
+            ["plano_preparado", "plano_aprovado", "plano_expirado"],
+        )
+        for _evento, dados in eventos:
+            self.assertEqual(dados["modo"], "dry_run")
+            self.assertNotIn("motivo", dados)
+            self.assertNotIn("token", dados)
+        contexto = executor.contexto()
+        self.assertFalse(contexto["persistencia_duravel"])
+        self.assertTrue(contexto["auditoria_duravel"])
+        self.assertFalse(contexto["executor_ativo"])
+
+    def test_falha_de_auditoria_bloqueia_novo_plano_sem_expor_excecao(self) -> None:
+        def falha(_evento, _dados):
+            raise OSError("DADO-PRIVADO-DO-SISTEMA")
+
+        executor = ExecutorDefesaGovernada(
+            relogio=self.relogio,
+            auditoria=falha,
+        )
+        resultado = executor.preparar(recomendacao())
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "auditoria_indisponivel")
+        self.assertFalse(resultado["executor_ativo"])
+        self.assertFalse(resultado["executor_autorizado"])
+        self.assertFalse(resultado["efeito_executado"])
+        self.assertEqual(executor.listar_registros(), [])
+        self.assertNotIn("DADO-PRIVADO-DO-SISTEMA", json.dumps(resultado))
+        contexto = executor.contexto()
+        self.assertTrue(contexto["auditoria_degradada"])
+        self.assertFalse(contexto["auditoria_duravel"])
+
     def test_nao_ha_metodo_de_execucao_fisica(self) -> None:
         self.assertFalse(hasattr(self.executor, "executar"))
         self.assertFalse(hasattr(self.executor, "executar_operacao"))
