@@ -69,6 +69,16 @@ def main() -> None:
     assert "StartLimitIntervalSec=300" in residente
     assert "StartLimitBurst=10" in residente
     assert "--habilitar-auto-experimento" not in api
+
+    # Deriva de instalação: um unit instalado sem esta linha roda em RAM e o
+    # histórico da conversa desaparece a cada reinício, sem nenhum aviso.
+    assert (
+        "Environment=NYXAL_CONVERSATION_MEMORY_PATH=%h/.local/share/nyxal/conversas.json"
+        in api
+    ), "nyxal-api.service precisa declarar o caminho persistente da memória conversacional"
+    assert "Environment=NYXAL_CONVERSATION_MEMORY_PATH=%h/Nyxal" not in api
+    memoria = (BASE_DIR / "nixal_memoria_conversacional.py").read_text(encoding="utf-8")
+    assert 'VARIAVEL_CAMINHO = "NYXAL_CONVERSATION_MEMORY_PATH"' in memoria
     assert "--habilitar-aprendizado" not in api
 
     assert "Wants=nyxal-api.service nyxos-residente.service" in target
