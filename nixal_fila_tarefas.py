@@ -27,6 +27,7 @@ from typing import Any, Iterator
 from nixal_capacidades import GerenciadorCapacidades
 
 
+_DIRETORIO_PROJETO = Path(__file__).resolve().parent
 # O estado operacional da fila não deve ser gravado no checkout Git.
 _DIRETORIO_DADOS_PADRAO = Path(
     os.environ.get("NYXAL_USER_DATA_DIR", str(Path.home() / ".local" / "share" / "nyxal"))
@@ -91,6 +92,13 @@ class FilaTarefasNixal:
         usar_caminho_padrao = caminho is None
         caminho_efetivo = ARQUIVO_FILA_PADRAO if caminho is None else caminho
         self.caminho = Path(caminho_efetivo).expanduser().absolute()
+        projeto = _DIRETORIO_PROJETO.resolve()
+        try:
+            self.caminho.resolve(strict=False).relative_to(projeto)
+        except ValueError:
+            pass
+        else:
+            raise FilaTarefasErro("fila_nao_pode_ficar_no_checkout")
         self.capacidades = capacidades if capacidades is not None else GerenciadorCapacidades()
         self._dados = self._estrutura_vazia()
         self._erro_carregamento: str | None = None
