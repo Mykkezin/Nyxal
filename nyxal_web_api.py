@@ -35,6 +35,7 @@ from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
 from nixal_defesa_autonoma import DefesaAutonoma
 from nixal_executor_defesa_governada import ExecutorDefesaGovernada
+from nixal_auditoria_defesa import RegistroAuditoriaDefesaNixOS
 from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_estado_presenca import compor_presenca_efetiva
@@ -121,6 +122,7 @@ CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 # Observação e preparação governada: eventos/planos em memória, sem efeitos físicos.
 DEFESA_AUTONOMA_NYXAL = DefesaAutonoma()
 DEFESA_EXECUTOR_GOVERNADO = ExecutorDefesaGovernada()
+DEFESA_AUDITORIA_DURAVEL = RegistroAuditoriaDefesaNixOS.do_ambiente()
 DEFESA_EVENTOS_RECIENTES = deque(maxlen=256)
 DEFESA_EVENTOS_LOCK = Lock()
 
@@ -942,6 +944,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             }
             with DEFESA_EVENTOS_LOCK:
                 DEFESA_EVENTOS_RECIENTES.append(registro)
+            resultado_auditoria = DEFESA_AUDITORIA_DURAVEL.registrar(registro)
+            if not resultado_auditoria.get("sucesso"):
+                print(
+                    "[NYXAL_DEFESA] persistencia_auditoria_indisponivel",
+                    file=sys.stderr,
+                )
         except Exception as erro:
             # A telemetria não pode derrubar a barreira de autenticação.
             print(
@@ -1715,14 +1723,20 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         if parsed_path == "/api/agent/defesa":
             with DEFESA_EVENTOS_LOCK:
                 eventos = [dict(item) for item in list(DEFESA_EVENTOS_RECIENTES)[-50:]]
+            contexto_auditoria = DEFESA_AUDITORIA_DURAVEL.contexto()
+            eventos_auditoria = DEFESA_AUDITORIA_DURAVEL.listar(limite=50)
             self._send_json(200, {
                 "sucesso": True,
                 "estado": "defesa_governada_observacao",
                 "eventos": eventos,
                 "limite": 50,
                 "eventos_em_memoria_maximo": 256,
+                "eventos_auditoria_duravel": eventos_auditoria,
+                "auditoria_duravel": contexto_auditoria,
                 "planos_dry_run": DEFESA_EXECUTOR_GOVERNADO.listar_registros(limite=50),
                 "executor_dry_run": DEFESA_EXECUTOR_GOVERNADO.contexto(),
+                # Compatibilidade: planos e executor continuam não persistidos;
+                # a trilha allowlisted de eventos tem seu estado separado acima.
                 "persistencia": False,
                 "executor_ativo": False,
                 "executor_autorizado": False,
