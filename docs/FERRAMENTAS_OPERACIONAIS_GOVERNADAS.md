@@ -29,6 +29,8 @@ Leitura de arquivos pessoais, Gmail, Calendar, Home Assistant e notas/lembretes 
 NYXAL_ENABLE_PRIVATE_READ_TOOLS=1
 ```
 
+Editar arquivos do projeto tem um opt-in separado, `NYXAL_ENABLE_WORKSPACE_WRITE=1`, além de `NYXAL_ENABLE_MUTABLE_TOOLS=1`. A ferramenta primeiro prepara um diff limitado e vinculado ao hash do arquivo; nenhuma escrita acontece até o operador enviar a confirmação exata em uma mensagem posterior. Caminhos fora do workspace, symlinks, arquivos sensíveis/operacionais e diffs grandes demais para revisão completa são recusados. Detalhes e limites estão em `docs/NYXAL_FERRAMENTAS.md`.
+
 Salvar uma nota, criar um lembrete e abrir um aplicativo permitido exigem um opt-in independente:
 
 ```text

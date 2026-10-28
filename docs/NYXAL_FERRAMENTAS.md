@@ -38,6 +38,24 @@ Para ativar, peça explicitamente, por exemplo: `Use modo especialistas para pla
 - Falhas em qualquer passagem são fail-open: a resposta normal continua, sem bloquear o diálogo.
 - A resposta estruturada do núcleo expõe apenas um resumo allowlisted do modo (`estado`, perfis, quantidade de passagens e flags de execução das passagens). Os resumos completos, prompts e textos internos não são retornados pela API.
 
+### Edição governada de arquivos do workspace
+
+A edição de arquivos do projeto usa duas etapas separadas. Ela fica **desativada por padrão** e só é anunciada quando as duas variáveis abaixo estiverem habilitadas no ambiente do serviço:
+
+```bash
+NYXAL_ENABLE_MUTABLE_TOOLS=1
+NYXAL_ENABLE_WORKSPACE_WRITE=1
+# Opcional: raiz específica para a escrita; o padrão é o repositório Nyxal.
+NYXAL_WORKSPACE_WRITE_ROOT=/caminho/absoluto/do/workspace
+```
+
+1. `preparar_edicao_workspace` lê o alvo textual permitido, calcula hash e diff e guarda um plano temporário em memória. Não altera o arquivo. O plano expira em 15 minutos.
+2. O assistente mostra o diff e solicita que o operador envie, em **uma mensagem posterior**, exatamente `CONFIRMO APLICACAO ID_DO_PLANO`.
+3. Só então `aplicar_edicao_workspace` pode aplicar o plano se o texto atual do usuário e os argumentos concordarem exatamente com o ID. O hash do arquivo é conferido novamente; se alguém o alterou após a proposta, a operação é recusada.
+4. Para arquivo já existente, uma cópia de segurança é escrita em `~/.local/share/nyxal/workspace-backups/` (ou `NYXAL_USER_DATA_DIR/workspace-backups/`) com permissão privada, e o destino é substituído atomicamente. Novos arquivos são criados com permissão privada por padrão.
+
+A raiz autorizada é única por processo; caminhos absolutos, `..`, symlinks, arquivos binários, arquivos acima de 12.000 bytes e nomes/diretórios sensíveis ou operacionais são recusados. Só extensões de texto conhecidas são aceitas. O diff completo precisa caber no limite de revisão (4.500 caracteres); propostas maiores devem ser divididas para que nada seja aplicado com uma prévia truncada. Não há ferramenta de shell livre, exclusão de arquivo, escrita fora da raiz autorizada ou aplicação automática do próprio diff pelo modelo. Os planos ficam apenas em memória; reiniciar o serviço invalida os planos pendentes.
+
 ### Opt-ins do function calling
 
 - Para disponibilizar arquivos pessoais, Gmail, agenda, Home Assistant e notas: `NYXAL_ENABLE_PRIVATE_READ_TOOLS=1`.
