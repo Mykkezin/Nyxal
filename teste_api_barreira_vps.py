@@ -12,11 +12,18 @@ from __future__ import annotations
 
 import http.client
 import json
+import sys
 import threading
+import types
 import unittest
 from unittest.mock import patch
 
-import nyxal_web_api as api
+# A barreira é de autenticação, não de modelo: o teste não consulta ollama.
+ollama_fake = types.ModuleType("ollama")
+ollama_fake.chat = lambda **_kwargs: {"message": {"content": "resposta simulada"}}
+sys.modules.setdefault("ollama", ollama_fake)
+
+import nyxal_web_api as api  # noqa: E402
 
 
 class TesteBarreiraVpsIrreversivel(unittest.TestCase):

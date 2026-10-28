@@ -14,6 +14,7 @@ on:
       - "teste_m5_9_residencia_linux.py"
       - "docs/SEGURANCA_API_NYXAL.md"
       - "teste_api_security_auth.py"
+      - "teste_api_barreira_vps.py"
       - "nixal_decisao_autonoma_ci.py"
       - "nixal_evidencia_ci.py"
       - "teste_decisao_autonoma_ci.py"
@@ -38,7 +39,7 @@ jobs:
       - name: Compile API security surface
         id: compile_api
         run: |
-          python3 -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_api_security_auth.py teste_decisao_autonoma_ci.py nixal_decisao_autonoma_ci.py nixal_evidencia_ci.py teste_m5_9_residencia_linux.py
+          python3 -m py_compile nyxal_web_api.py nixal_seguranca_http.py teste_seguranca_api.py teste_api_security_auth.py teste_api_barreira_vps.py teste_decisao_autonoma_ci.py nixal_decisao_autonoma_ci.py nixal_evidencia_ci.py teste_m5_9_residencia_linux.py
       - name: Run deterministic security policy tests
         id: policy_tests
         run: python3 teste_seguranca_api.py
@@ -46,6 +47,10 @@ jobs:
       - name: Run HTTP API security integration tests
         id: http_security
         run: python3 -m unittest teste_api_security_auth.py -v
+
+      - name: Run irreversible VM action barrier tests
+        id: vps_barrier
+        run: python3 -m unittest teste_api_barreira_vps.py -v
 
       - name: Run governed autonomous CI decision tests
         id: decision_policy
@@ -67,6 +72,7 @@ jobs:
           COMPILE_OUTCOME: ${{ steps.compile_api.outcome }}
           POLICY_OUTCOME: ${{ steps.policy_tests.outcome }}
           HTTP_OUTCOME: ${{ steps.http_security.outcome }}
+          VPS_BARRIER_OUTCOME: ${{ steps.vps_barrier.outcome }}
           DECISION_OUTCOME: ${{ steps.decision_policy.outcome }}
           SHELL_OUTCOME: ${{ steps.shell_syntax.outcome }}
           RESIDENCE_OUTCOME: ${{ steps.residence_regression.outcome }}
@@ -77,10 +83,15 @@ jobs:
           from pathlib import Path
           from nixal_evidencia_ci import construir_evidencia_ci
 
+          ordens = ["failure", "cancelled", "skipped", "unknown", "success"]
+          camadas_http = [
+              os.getenv("HTTP_OUTCOME") or "unknown",
+              os.getenv("VPS_BARRIER_OUTCOME") or "unknown",
+          ]
           outcomes = {
               "compilacao": os.getenv("COMPILE_OUTCOME", "unknown"),
               "politica_origem": os.getenv("POLICY_OUTCOME", "unknown"),
-              "integracao_http": os.getenv("HTTP_OUTCOME", "unknown"),
+              "integracao_http": min(camadas_http, key=ordens.index),
               "decisor": os.getenv("DECISION_OUTCOME", "unknown"),
               "shell_syntax": os.getenv("SHELL_OUTCOME", "unknown"),
               "regressoes": os.getenv("RESIDENCE_OUTCOME", "unknown"),
