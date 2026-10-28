@@ -232,11 +232,33 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             self.assertFalse(proposta_sensivel["sucesso"], nome_sensivel)
             self.assertEqual(arquivo_sensivel.read_text(encoding="utf-8"), "private-value\n")
 
-        operacional = self.workspace / "estado_corpo_nixal.json"
-        operacional.write_text('{"estado":"preservar"}', encoding="utf-8")
-        protected = preparar_edicao_workspace("estado_corpo_nixal.json", "{}")
-        self.assertFalse(protected["sucesso"])
-        self.assertEqual(operacional.read_text(encoding="utf-8"), '{"estado":"preservar"}')
+        nomes_operacionais = (
+            "estado_corpo_nixal.json",
+            "estado_nixal.json",
+            "fila_tarefas_nixal.json",
+            "log_capacidades_nixal.json",
+            "log_nyxal_runtime.json",
+            "memoria_investigacao_nixal.json",
+            "memoria_conhecimento_nixal.json",
+        )
+        for nome in nomes_operacionais:
+            operacional = self.workspace / nome
+            conteudo_original = '{"estado":"preservar"}'
+            operacional.write_text(conteudo_original, encoding="utf-8")
+            protected = preparar_edicao_workspace(nome, "{}")
+            self.assertFalse(protected["sucesso"], nome)
+            self.assertEqual(operacional.read_text(encoding="utf-8"), conteudo_original, nome)
+
+        for pasta_sensivel in (".env.d", "backup_estado_2026-10-03", "backups", "voices", "memoria"):
+            diretorio = self.workspace / pasta_sensivel
+            diretorio.mkdir(exist_ok=True)
+            alvo_sensivel = diretorio / "arquivo.py"
+            alvo_sensivel.write_text("nao tocar\n", encoding="utf-8")
+            bloqueado = preparar_edicao_workspace(
+                f"{pasta_sensivel}/arquivo.py", "alterado\n"
+            )
+            self.assertFalse(bloqueado["sucesso"], pasta_sensivel)
+            self.assertEqual(alvo_sensivel.read_text(encoding="utf-8"), "nao tocar\n")
 
         link = self.workspace / "src" / "alias.py"
         link.symlink_to(outside)
@@ -257,11 +279,43 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         self.assertNotIn("plano_id", noop)
 
     def test_sensitive_old_values_are_redacted_from_diff_preview(self):
-        self.target.write_text("API_TOKEN=private-sample-value\n", encoding="utf-8")
-        result = preparar_edicao_workspace("src/app.py", "valor = 2\n")
+        casos = (
+            (
+                "API_TOKEN=private-sample-value\n",
+                "API_TOKEN=replacement-value\n",
+                "private-sample-value",
+            ),
+            (
+                '{"api_key": "private-json-secret", "valor": 1}\n',
+                '{"api_key": "replacement-value", "valor": 2}\n',
+                "private-json-secret",
+            ),
+            (
+                "authorization: 'Bearer private-yaml-secret'\n",
+                "authorization: 'Bearer replacement-value'\n",
+                "private-yaml-secret",
+            ),
+        )
+        for antigo, novo, segredo in casos:
+            self.target.write_text(antigo, encoding="utf-8")
+            result = preparar_edicao_workspace("src/app.py", novo)
+            self.assertTrue(result["sucesso"], result)
+            self.assertNotIn(segredo, result["diff"])
+            self.assertIn("[REDACTED]", result["diff"])
+
+    def test_apply_refuses_symlinked_backup_directory(self):
+        result = preparar_edicao_workspace("src/app.py", "valor = 77\n")
         self.assertTrue(result["sucesso"])
-        self.assertNotIn("private-sample-value", result["diff"])
-        self.assertIn("[REDACTED]", result["diff"])
+        backup_dir = self.data / "workspace-backups"
+        outside = Path(self.temp.name) / "outside-backups"
+        outside.mkdir()
+        backup_dir.symlink_to(outside, target_is_directory=True)
+
+        applied = aplicar_edicao_workspace(result["plano_id"], result["confirmacao_exata"])
+        self.assertFalse(applied["sucesso"])
+        self.assertEqual(applied["estado"], "diretorio_backup_com_link_simbolico")
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\n")
+        self.assertEqual(list(outside.iterdir()), [])
 
 
 if __name__ == "__main__":
