@@ -318,5 +318,25 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
         self.assertEqual(list(outside.iterdir()), [])
 
 
+    def test_workspace_authorization_accepts_explicit_correction_not_review_questions(self):
+        self.assertTrue(
+            self.dialogo._pedido_explicitamente_autorizou(
+                "preparar_edicao_workspace", "corrija src/app.py"
+            )
+        )
+        self.assertTrue(
+            self.dialogo._pedido_explicitamente_autorizou(
+                "preparar_edicao_workspace", "corrija o arquivo src/app.py"
+            )
+        )
+        for pedido in ("como corrijo src/app.py", "corrija src/app.py?", "revise src/app.py"):
+            with self.subTest(pedido=pedido):
+                self.assertFalse(
+                    self.dialogo._pedido_explicitamente_autorizou(
+                        "preparar_edicao_workspace", pedido
+                    )
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
