@@ -202,7 +202,7 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         self.resultado_controlado = {
             "api_key": "secret-value",
             "message": "Authorization: Bearer private-token",
-            "other": "z" * 9000,
+            "other": ["z" * 9000 for _ in range(10)],
         }
         self.fila.adicionar("queue_test_read")
         result = self.fila.executar_proxima()
