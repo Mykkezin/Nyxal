@@ -93,12 +93,15 @@ jobs:
           while IFS= read -r teste; do
             [ -n "$teste" ] || continue
             execucoes=$((execucoes + 1))
-            if python3 "$teste" >"$RUNNER_TEMP/matriz-raiz/$teste.log" 2>&1; then
+            # A matriz aceita entradas em subdiretório; o nome do log não pode
+            # carregar barra, senão o redirecionamento falha antes do teste.
+            log="$RUNNER_TEMP/matriz-raiz/${teste//\//_}.log"
+            if python3 "$teste" >"$log" 2>&1; then
               echo "OK   $teste"
             else
               falhas=$((falhas + 1))
               echo "FALHA $teste"
-              tail -n 20 "$RUNNER_TEMP/matriz-raiz/$teste.log"
+              tail -n 20 "$log"
             fi
           done < .github/matriz-validacao-raiz.txt
           echo "executados=$execucoes falhas=$falhas"

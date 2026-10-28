@@ -273,6 +273,12 @@ subsistema. Ela roda com o `python3` do runner, sem `ollama` e sem escrever no
 checkout — os mesmos dois critérios do inventário original. Evidência local:
 `executados=88 falhas=0`.
 
+Evidência do runner (job `matriz-raiz`, run `40738936479`): as 87 entradas da
+raiz passaram, e a nova falhou antes de executar porque o passo de log montava
+`$RUNNER_TEMP/matriz-raiz/$teste.log` — caminho com barra para entrada em
+subdiretório. O passo agora achata `/` em `_` no nome do log, e a mesma matriz
+roda localmente com `executados=88 falhas=0`.
+
 ---
 
 ## Item 8 — parcial, com evidência do que falta
