@@ -218,6 +218,78 @@ class TesteMemoriasPersistenciaSegura(unittest.TestCase):
         self.assertEqual(escrita.get("estado"), "negado")
         self.assertEqual(path.read_bytes(), original)
 
+    def _store_por_tipo(self, tipo, caminho):
+        if tipo == "investigacao":
+            return MemoriaInvestigacaoNixal(caminho)
+        return MemoriaConhecimentoNixal(caminho)
+
+    def _registrar_por_tipo(self, tipo, memoria):
+        if tipo == "investigacao":
+            return memoria.registrar(ciclo("hipótese de persistência"))
+        return memoria.registrar(candidato("observação de persistência"))
+
+    def test_ancestrais_simbolicos_sao_rejeitados_antes_de_criar_diretorios(self):
+        destino = self.root / "destino-real"
+        destino.mkdir(mode=0o700)
+        link = self.root / "atalho"
+        link.symlink_to(destino, target_is_directory=True)
+
+        for tipo in ("investigacao", "conhecimento"):
+            with self.subTest(tipo=tipo):
+                caminho = link / "nao-criar" / f"{tipo}.json"
+                memoria = self._store_por_tipo(tipo, caminho)
+
+                estado = memoria.recarregar()
+                resultado = self._registrar_por_tipo(tipo, memoria)
+
+                self.assertEqual(estado.get("estado"), "memoria_degradada")
+                self.assertIn("link_simbolico", estado.get("motivo", ""))
+                self.assertEqual(resultado.get("estado"), "negado")
+                self.assertFalse((destino / "nao-criar").exists())
+                self.assertFalse(caminho.exists())
+                self.assertFalse(caminho.with_name(caminho.name + ".lock").exists())
+
+    def test_arquivo_de_memoria_simbolico_nao_e_lido_nem_substituido(self):
+        alvo = self.root / "memoria-real.json"
+        original = b'{"dados":"nao tocar"}'
+        alvo.write_bytes(original)
+
+        for tipo in ("investigacao", "conhecimento"):
+            with self.subTest(tipo=tipo):
+                caminho = self.root / f"{tipo}.json"
+                caminho.symlink_to(alvo)
+                memoria = self._store_por_tipo(tipo, caminho)
+
+                estado = memoria.recarregar()
+                resultado = self._registrar_por_tipo(tipo, memoria)
+
+                self.assertEqual(estado.get("estado"), "memoria_degradada")
+                self.assertIn("link_simbolico", estado.get("motivo", ""))
+                self.assertEqual(resultado.get("estado"), "negado")
+                self.assertTrue(caminho.is_symlink())
+                self.assertEqual(alvo.read_bytes(), original)
+                self.assertFalse(caminho.with_name(caminho.name + ".lock").exists())
+                caminho.unlink()
+
+    def test_lock_simbolico_e_rejeitado_sem_alterar_o_alvo(self):
+        for tipo in ("investigacao", "conhecimento"):
+            with self.subTest(tipo=tipo):
+                caminho = self.root / f"{tipo}.json"
+                lock_alvo = self.root / f"{tipo}-lock-real"
+                original = b"lock externo preservado"
+                lock_alvo.write_bytes(original)
+                lock_path = caminho.with_name(caminho.name + ".lock")
+                lock_path.symlink_to(lock_alvo)
+
+                memoria = self._store_por_tipo(tipo, caminho)
+                resultado = self._registrar_por_tipo(tipo, memoria)
+
+                self.assertEqual(resultado.get("estado"), "negado")
+                self.assertFalse(caminho.exists())
+                self.assertTrue(lock_path.is_symlink())
+                self.assertEqual(lock_alvo.read_bytes(), original)
+                lock_path.unlink()
+
     def test_arquivo_persistido_recebe_permissao_proprietario(self):
         path = self.root / "memoria_investigacao_nixal.json"
         memoria = MemoriaInvestigacaoNixal(path)
