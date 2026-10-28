@@ -947,7 +947,7 @@ def _workspace_target(caminho: Any) -> tuple[Path, Path, str]:
 
 def _redigir_preview_workspace(texto: str) -> str:
     """Redige credenciais JSON/YAML/KEY=value sem varredura regex quadrática em linhas longas."""
-    texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
+    texto = re.sub(r"""(?i)\bBearer\s+[^"'\s,;]+""", "Bearer [REDACTED]", texto)
     padrao = re.compile(
         r"""(?i)(?P<key>["']?[a-z0-9_.-]+["']?\s*[:=]\s*)(?P<value>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^\s,;}\]]+)"""
     )
