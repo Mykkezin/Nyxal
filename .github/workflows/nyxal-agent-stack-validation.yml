@@ -12,6 +12,11 @@ on:
       - "teste_nyxal_mcp_runtime.py"
       - "teste_mcp_http.py"
       - "nyxal_web_api.py"
+      - "nixal_trilha_defesa.py"
+      - "teste_nixal_trilha_defesa.py"
+      - "nixal_executor_defesa_governada.py"
+      - "teste_executor_defesa_governada.py"
+      - "docs/DEFESA_AUTONOMA_GOVERNADA.md"
       - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
       - "nixal_intent_router.py"
@@ -249,6 +254,8 @@ jobs:
           bash -n deploy/voice/diagnosticar_runtime_local.sh
           bash -n deploy/ci/diagnosticar_runner_nyxal.sh
       - name: Run focused unit tests
+        env:
+          NYXAL_DEFENSE_AUDIT_PATH: ${{ runner.temp }}/nyxal-defense-audit-${{ github.run_id }}.jsonl
         run: |
           python3 -m unittest -v \
             teste_nixal_display_routes \
@@ -270,7 +277,10 @@ jobs:
             teste_nucleo_contexto_persistente \
             teste_nixal_recuperador_contexto \
             teste_nixal_memoria_conversacional \
-            teste_memorias_persistencia_segura
+            teste_memorias_persistencia_segura \
+            teste_nixal_trilha_defesa \
+            teste_executor_defesa_governada
+          python3 -m py_compile nixal_trilha_defesa.py teste_nixal_trilha_defesa.py nixal_executor_defesa_governada.py teste_executor_defesa_governada.py
           python3 teste_nucleo_conversacional.py
           python3 teste_transporte_conversacional_56_5_2.py
           python3 teste_integracao_sessao_transporte_56_5_4.py
