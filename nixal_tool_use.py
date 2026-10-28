@@ -905,8 +905,9 @@ def _redigir_preview_workspace(texto: str) -> str:
     """Evita repetir credenciais de um diff de arquivo na resposta do modelo."""
     texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
     texto = re.sub(
-        r"(?i)\b(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|"
-        r"id[_ -]?token|token|authorization|password|senha|secret|credential)\b"
+        r"(?i)\b([a-z0-9_-]*(?:api[_ -]?key|api[_ -]?token|access[_ -]?token|"
+        r"refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|"
+        r"password|senha|secret|credential)[a-z0-9_-]*)\b"
         r"\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+",
         r"\1=[REDACTED]",
         texto,
