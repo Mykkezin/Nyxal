@@ -1,10 +1,12 @@
 name: Nyxal Root Test Matrix
 
 # Inventário de 2026-10-28: 106 testes da raiz não eram citados por nenhum
-# workflow. 84 deles passam com o python3 do runner, custam ~3s somados e não
-# escrevem fora do checkout. Este workflow fecha essa lacuna de cobertura sem
-# tocar nos testes que ainda gravam em $HOME/Nyxal* (bloqueados por efeito
-# colateral em runner self-hosted).
+# workflow. Cada candidato foi executado isolado, a partir do checkout limpo, e
+# medido por dois critérios: passa com o python3 do runner e não escreve nem no
+# checkout nem fora dele. 79 cumprem os dois e custam ~3s somados. Ficaram de
+# fora os que gravam em $HOME/Nyxal* (incluindo o checkout operacional vivo, na
+# mesma máquina deste runner) e os que sujam capacidades_nixal.json. A
+# allowlist versionada ao lado é o único conjunto que este job executa.
 
 on:
   pull_request:
@@ -91,7 +93,7 @@ jobs:
         run: |
           total=$(grep -c '[^[:space:]]' .github/matriz-validacao-raiz.txt)
           echo "$total"
-          if [ "$total" -lt 80 ]; then
+          if [ "$total" -lt 75 ]; then
             echo "a matriz encolheu além do esperado; revalide o inventário"
             exit 1
           fi
