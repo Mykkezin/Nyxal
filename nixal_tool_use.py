@@ -896,7 +896,11 @@ def _workspace_target(caminho: Any) -> tuple[Path, Path, str]:
         parte in _PARTES_SENSIVEIS
         or parte.startswith(".env")
         or parte.startswith("backup_")
-        or parte in {"backups", "voices", "memoria"}
+        or parte in {
+            "backups", "backup", "voices", "memoria",
+            "logs", "log", "state", "states", "estado", "estados",
+            "fila", "filas", "queue", "queues",
+        }
         for parte in partes_normalizadas
     ):
         raise ValueError("diretorio_sensivel_bloqueado")
@@ -945,7 +949,7 @@ def _redigir_preview_workspace(texto: str) -> str:
     """Redige credenciais em formatos KEY=value, YAML e JSON antes de expor o diff."""
     texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
     padrao = re.compile(
-        r"""(?i)(["']?[a-z0-9_-]*(?:api[_ -]?key|api[_ -]?token|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)[a-z0-9_-]*["']?\s*[:=]\s*)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^,\s;}\]]+)"""
+        r"""(?i)(["']?[a-z0-9_-]*(?:api[_ -]?key|private[_ -]?key|ssh[_ -]?key|signing[_ -]?key|api[_ -]?token|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|senha|secret|credential)[a-z0-9_-]*["']?\s*[:=]\s*)("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^,\s;}\]]+)"""
     )
 
     def redigir_valor(m: re.Match[str]) -> str:
