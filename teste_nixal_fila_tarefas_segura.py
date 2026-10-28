@@ -103,6 +103,11 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         with_secret = self.fila.adicionar("queue_test_read", {"api_key": "sample-secret"})
         self.assertFalse(with_secret["sucesso"])
         self.assertEqual(with_secret["estado"], "argumentos_invalidos")
+        with_private_key = self.fila.adicionar(
+            "queue_test_read", {"ssh_private_key": "private-key-sample"}
+        )
+        self.assertFalse(with_private_key["sucesso"])
+        self.assertEqual(with_private_key["estado"], "argumentos_invalidos")
         too_large = self.fila.adicionar("queue_test_read", {"texto": "x" * 17000})
         self.assertFalse(too_large["sucesso"])
         self.assertEqual(too_large["estado"], "argumentos_excedem_limite")
@@ -201,6 +206,7 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
     def test_result_redacts_secrets_and_bounds_large_output(self):
         self.resultado_controlado = {
             "api_key": "secret-value",
+            "ssh_private_key": "private-key-result",
             "message": "Authorization: Bearer private-token",
             "other": ["z" * 9000 for _ in range(10)],
         }
@@ -210,6 +216,7 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         stored = result["valor"]["resultado"]["resultado"]
         encoded = json.dumps(stored, ensure_ascii=False)
         self.assertNotIn("secret-value", encoded)
+        self.assertNotIn("private-key-result", encoded)
         self.assertNotIn("private-token", encoded)
         self.assertTrue(stored.get("resultado_truncado"))
 
