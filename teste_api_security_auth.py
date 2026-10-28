@@ -237,7 +237,7 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
         with patch.object(api, "_obter_executor_ordens_nyxal", return_value=ExecutorFalso()):
             status, body = self.request(
                 "POST", "/api/agent/orders",
-                body=b'{"ordem":"consulte a hora","comando":"shell arbitrário"}',
+                body=b'{"ordem":"consulte a hora","comando":"shell arbitrario"}',
                 headers={"Content-Type": "application/json"},
             )
             self.assertEqual(status, 400, body)
