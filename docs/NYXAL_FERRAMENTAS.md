@@ -144,7 +144,7 @@ A fila atual continua independente do diálogo Qwen; esse endurecimento não hab
 
 A API HTTP reutiliza o `ExecutorOrdensNixal` e a mesma fila privada descrita acima. Ela não cria um planejador separado e não oferece um terminal genérico.
 
-- `POST /api/agent/orders` recebe `{"ordem":"consulte a hora local"}` e pode incluir `chave_idempotencia` (1–160 caracteres) para que o retry da mesma solicitação reutilize a tarefa existente. Use um identificador opaco, nunca credenciais. O agente seleciona uma capacidade do catálogo existente e a fila valida novamente a política e os argumentos; esta via aceita apenas capacidades `somente_leitura`.
+- `POST /api/agent/orders` recebe `{"ordem":"consulte a hora local"}` e pode incluir `chave_idempotencia` (1–160 caracteres) para que o retry da mesma solicitação reutilize a tarefa existente. Use um identificador opaco, nunca credenciais; se a mesma chave for reaproveitada com outra capacidade ou outros argumentos, a fila retorna `chave_idempotencia_conflito` em vez de associar um resultado antigo a um pedido novo. O agente seleciona uma capacidade do catálogo existente e a fila valida novamente a política e os argumentos; esta via aceita apenas capacidades `somente_leitura`.
 - `POST /api/agent/orders/next` executa explicitamente a próxima tarefa pendente. Se não houver tarefa, retorna `fila_vazia`; se outra tarefa já estiver em execução, não inicia uma segunda execução.
 - `GET /api/agent/orders` apresenta contagens e metadados recentes (ID, capacidade, estado e data), sem expor argumentos nem resultados anteriores.
 - As rotas passam pelos mesmos gates de origem/autenticação da API. A ligação loopback direta segue a política local existente; tráfego remoto/proxy exige o Bearer token configurado.
