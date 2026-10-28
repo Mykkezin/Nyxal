@@ -133,14 +133,15 @@ class FilaTarefasNixal:
 
     @staticmethod
     def _redigir_texto(texto: str) -> str:
-        texto = re.sub(r"(?i)\bBearer\s+\S+", "Bearer [REDACTED]", texto)
+        # Não consuma aspas de fechamento ao mascarar Bearer em texto JSON/YAML.
         texto = re.sub(
-            r"(?i)\b(api[_ -]?key|private[_ -]?key|ssh[_ -]?key|signing[_ -]?key|"
-            r"access[_ -]?key|api[_ -]?token|access[_ -]?token|refresh[_ -]?token|"
-            r"session[_ -]?token|id[_ -]?token|token|authorization|password|passwd|"
-            r"senha|secret|credential)\b"
-            r"\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+",
-            r"\1=[REDACTED]",
+            r"""(?i)\bBearer\s+[^"'\s,;]+""",
+            "Bearer [REDACTED]",
+            texto,
+        )
+        texto = re.sub(
+            r"""(?i)(["']?[a-z0-9_-]*(?:api[_ -]?key|private[_ -]?key|ssh[_ -]?key|signing[_ -]?key|access[_ -]?key|api[_ -]?token|access[_ -]?token|refresh[_ -]?token|session[_ -]?token|id[_ -]?token|token|authorization|password|passwd|senha|secret|credential)[a-z0-9_-]*["']?\s*[:=]\s*["']?)(?:Bearer\s+)?[^"'\s,;]+""",
+            r"\1[REDACTED]",
             texto,
         )
         return texto
