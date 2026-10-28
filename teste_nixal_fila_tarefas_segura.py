@@ -328,5 +328,143 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         self.assertEqual(legado.read_bytes(), original)
 
 
+    def test_legacy_results_and_errors_are_redacted_before_listing(self):
+        tarefa = {
+            "id": "legacy-secret-task",
+            "capacidade": "queue_test_read",
+            "argumentos": {},
+            "estado": "concluida",
+            "criado_em": time.time(),
+            "resultado": {
+                "sucesso": True,
+                "api_key": "CANARY_QUEUE_RESULT_KEY",
+                "mensagem": "Authorization: Bearer CANARY_QUEUE_RESULT_TOKEN",
+            },
+            "erro": "falha antiga token=CANARY_QUEUE_ERROR",
+        }
+        self.caminho.write_text(
+            json.dumps({"versao": "1.0", "tarefas": [tarefa]}),
+            encoding="utf-8",
+        )
+        self.caminho.chmod(0o644)
+
+        fila = FilaTarefasNixal(self.caminho, self.manager)
+        dados_listados = fila.listar()
+        serializado = json.dumps(dados_listados, ensure_ascii=False)
+        bytes_persistidos = self.caminho.read_bytes()
+
+        for segredo in (
+            "CANARY_QUEUE_RESULT_KEY",
+            "CANARY_QUEUE_RESULT_TOKEN",
+            "CANARY_QUEUE_ERROR",
+        ):
+            self.assertNotIn(segredo, serializado)
+            self.assertNotIn(segredo.encode(), bytes_persistidos)
+        self.assertEqual(self.caminho.stat().st_mode & 0o777, 0o600)
+        self.assertIn("[REDACTED]", serializado)
+
+    def test_unknown_task_fields_fail_closed_and_original_is_preserved(self):
+        tarefa = {
+            "id": "legacy-extra-field",
+            "capacidade": "queue_test_read",
+            "argumentos": {},
+            "estado": "concluida",
+            "criado_em": time.time(),
+            "resultado": None,
+            "erro": None,
+            "debug_payload": "CANARY_UNKNOWN_FIELD_77",
+        }
+        original = json.dumps(
+            {"versao": "1.0", "tarefas": [tarefa]},
+            separators=(",", ":"),
+        ).encode()
+        self.caminho.write_bytes(original)
+
+        fila = FilaTarefasNixal(self.caminho, self.manager)
+        resultado = fila.recarregar()
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(resultado["estado"], "fila_corrompida_preservada")
+        self.assertEqual(self.caminho.read_bytes(), original)
+        self.assertEqual(fila.listar(), [])
+
+    def test_duplicate_json_keys_fail_closed_and_preserve_original(self):
+        original = (
+            b'{"versao":"1.0","tarefas":[{"id":"duplicate","capacidade":"queue_test_read",'
+            b'"argumentos":{},"estado":"concluida","estado":"pendente","criado_em":1,'
+            b'"resultado":null,"erro":null}]}'
+        )
+        self.caminho.write_bytes(original)
+        fila = FilaTarefasNixal(self.caminho, self.manager)
+        resultado = fila.recarregar()
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(self.caminho.read_bytes(), original)
+
+    def test_extreme_integer_timestamp_fails_closed_without_crashing(self):
+        tarefa = {
+            "id": "extreme-int-time",
+            "capacidade": "queue_test_read",
+            "argumentos": {},
+            "estado": "concluida",
+            "criado_em": 10**400,
+            "resultado": None,
+            "erro": None,
+        }
+        original = json.dumps(
+            {"versao": "1.0", "tarefas": [tarefa]},
+            separators=(",", ":"),
+        ).encode()
+        self.caminho.write_bytes(original)
+
+        fila = FilaTarefasNixal(self.caminho, self.manager)
+        resultado = fila.recarregar()
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(self.caminho.read_bytes(), original)
+
+    def test_world_writable_queue_directory_is_rejected(self):
+        pasta = self.root / "unsafe-dir"
+        pasta.mkdir(mode=0o700)
+        pasta.chmod(0o777)
+        caminho = pasta / "fila.json"
+
+        with self.assertRaises(PermissionError):
+            FilaTarefasNixal(caminho, self.manager)
+        self.assertFalse(caminho.exists())
+
+    def test_legacy_migration_redacts_old_result_and_error(self):
+        legado = self.root / "checkout" / "fila_tarefas_nixal.json"
+        legado.parent.mkdir()
+        destino = self.root / "user-data" / "nyxal" / "fila_tarefas_nixal.json"
+        tarefa = self._registro_legado_valido()
+        tarefa["resultado"] = {
+            "sucesso": True,
+            "access_token": "CANARY_MIGRATION_TOKEN_991",
+            "mensagem": "Authorization: Bearer CANARY_MIGRATION_BEARER_991",
+        }
+        tarefa["erro"] = "token=CANARY_MIGRATION_ERROR_991"
+        original = json.dumps(
+            {"versao": "1.0", "tarefas": [tarefa]},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        legado.write_bytes(original)
+
+        with (
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_PADRAO", destino),
+            patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_LEGADO", legado),
+        ):
+            fila = FilaTarefasNixal(capacidades=self.manager)
+            itens = fila.listar()
+            serializado = json.dumps(itens, ensure_ascii=False)
+            bytes_destino = destino.read_bytes()
+        for segredo in (
+            "CANARY_MIGRATION_TOKEN_991",
+            "CANARY_MIGRATION_BEARER_991",
+            "CANARY_MIGRATION_ERROR_991",
+        ):
+            self.assertNotIn(segredo, serializado)
+            self.assertNotIn(segredo.encode(), bytes_destino)
+        self.assertEqual(legado.read_bytes(), original)
+        self.assertEqual(destino.stat().st_mode & 0o777, 0o600)
+
 if __name__ == "__main__":
     unittest.main()
