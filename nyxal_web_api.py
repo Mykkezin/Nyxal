@@ -35,6 +35,7 @@ from nixal_persistencia_operacional import PersistenciaOperacionalNixOS
 from nixal_delta import RegistroDeltaNixOS
 from nixal_defesa_autonoma import DefesaAutonoma
 from nixal_executor_defesa_governada import ExecutorDefesaGovernada
+from nixal_trilha_defesa import RegistroTrilhaDefesa
 from nixal_recursos_habitat import RecursosHabitatNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 from nixal_estado_presenca import compor_presenca_efetiva
@@ -118,9 +119,25 @@ OBSERVABILIDADE_NYXOS = ObservabilidadeSistemaNixOS()
 GMAIL_NYXOS = IntegracaoGmailNixOS()
 CAPACIDADE_VISUAL_NYXOS = CapacidadeVisualGeminiNixOS()
 
-# Observação e preparação governada: eventos/planos em memória, sem efeitos físicos.
+# Eventos e propostas são observacionais: a trilha é durável, mas os planos seguem voláteis.
+def _caminho_trilha_defesa() -> Path:
+    configurado = os.environ.get("NYXAL_DEFENSE_AUDIT_PATH", "").strip()
+    if configurado:
+        return Path(configurado).expanduser()
+    user_data = os.environ.get("NYXAL_USER_DATA_DIR", "").strip()
+    diretorio = (
+        Path(user_data).expanduser()
+        if user_data
+        else Path.home() / ".local" / "share" / "nyxal"
+    )
+    return diretorio / "defesa-governada.jsonl"
+
+
+DEFESA_TRILHA_NYXAL = RegistroTrilhaDefesa(_caminho_trilha_defesa())
 DEFESA_AUTONOMA_NYXAL = DefesaAutonoma()
-DEFESA_EXECUTOR_GOVERNADO = ExecutorDefesaGovernada()
+DEFESA_EXECUTOR_GOVERNADO = ExecutorDefesaGovernada(
+    auditoria=DEFESA_TRILHA_NYXAL.registrar
+)
 DEFESA_EVENTOS_RECIENTES = deque(maxlen=256)
 DEFESA_EVENTOS_LOCK = Lock()
 
@@ -901,6 +918,21 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             motivos = motivos if isinstance(motivos, list) else []
             recomendacoes = decisao.get("recomendacoes")
             recomendacoes = recomendacoes if isinstance(recomendacoes, list) else []
+            # Primeiro persiste somente metadados allowlisted do sinal autenticado.
+            # A telemetria não deve alterar a resposta 401 nem armazenar segredos.
+            try:
+                DEFESA_TRILHA_NYXAL.registrar("sinal_observado", {
+                    "tipo_evento": "falha_autenticacao",
+                    "fonte_sinal": "api-auth",
+                    "origem_ip": evento.get("origem_ip"),
+                    "severidade": severidade,
+                })
+            except Exception as erro:
+                print(
+                    f"[NYXAL_DEFESA] auditoria_indisponivel={type(erro).__name__}",
+                    file=sys.stderr,
+                )
+
             # Cada recomendação é preparada exatamente uma vez para evitar
             # criar duplicação idempotente durante a construção do mesmo evento.
             planos_dry_run = preparar_planos_defesa_dry_run(recomendacoes)
@@ -1715,6 +1747,8 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         if parsed_path == "/api/agent/defesa":
             with DEFESA_EVENTOS_LOCK:
                 eventos = [dict(item) for item in list(DEFESA_EVENTOS_RECIENTES)[-50:]]
+            contexto_executor = DEFESA_EXECUTOR_GOVERNADO.contexto()
+            contexto_trilha_defesa = DEFESA_TRILHA_NYXAL.contexto()
             self._send_json(200, {
                 "sucesso": True,
                 "estado": "defesa_governada_observacao",
@@ -1722,7 +1756,10 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 "limite": 50,
                 "eventos_em_memoria_maximo": 256,
                 "planos_dry_run": DEFESA_EXECUTOR_GOVERNADO.listar_registros(limite=50),
-                "executor_dry_run": DEFESA_EXECUTOR_GOVERNADO.contexto(),
+                "executor_dry_run": contexto_executor,
+                "trilha_defesa": contexto_trilha_defesa,
+                "auditoria_duravel": bool(contexto_trilha_defesa.get("auditoria_duravel", False)),
+                # Os planos continuam voláteis; somente o histórico de metadados é durável.
                 "persistencia": False,
                 "executor_ativo": False,
                 "executor_autorizado": False,
