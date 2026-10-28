@@ -1202,6 +1202,79 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         ):
             return
 
+        if parsed_path == "/api/agent/orders":
+            payload = _ler_payload_ordem(self)
+            if payload is None:
+                return
+            if set(payload) != {"ordem"}:
+                self._send_json(400, {
+                    "estado": "entrada_invalida",
+                    "motivo": "Envie somente o campo 'ordem'.",
+                })
+                return
+            ordem = payload.get("ordem")
+            if not isinstance(ordem, str) or not ordem.strip() or len(ordem) > MAX_CHARS_ORDEM_API:
+                self._send_json(400, {
+                    "estado": "ordem_invalida",
+                    "motivo": f"A ordem precisa conter de 1 a {MAX_CHARS_ORDEM_API} caracteres.",
+                })
+                return
+            try:
+                executor = _obter_executor_ordens_nyxal()
+                resultado_ordem = executor.atender(ordem.strip())
+                resposta_ordem = _resumir_ordem_api(resultado_ordem)
+            except Exception:
+                # Não refletir caminhos, prompts, argumentos ou detalhes internos do executor.
+                self._send_json(503, {
+                    "estado": "executor_indisponivel",
+                    "motivo": "A ordem não pôde ser processada pelo executor governado.",
+                })
+                return
+            estado_ordem = resposta_ordem.get("estado")
+            if estado_ordem in {
+                "tarefa_enfileirada_aguardando_ordem",
+                "tarefa_enfileirada_aguardando_execucao_anterior",
+            }:
+                status_ordem = 202
+            else:
+                status_ordem = 200 if resposta_ordem.get("sucesso") is True else 422
+            self._send_json(status_ordem, resposta_ordem)
+            return
+
+        if parsed_path == "/api/agent/orders/next":
+            payload = _ler_payload_ordem(self, permitir_vazio=True, max_bytes=4096)
+            if payload is None:
+                return
+            if payload:
+                self._send_json(400, {
+                    "estado": "entrada_invalida",
+                    "motivo": "Esta rota não aceita campos; use um objeto vazio ou corpo vazio.",
+                })
+                return
+            try:
+                executor = _obter_executor_ordens_nyxal()
+                execucao = executor.fila.executar_proxima()
+                resposta_execucao = _resumir_ordem_api({
+                    "sucesso": execucao.get("sucesso") is True,
+                    "estado": execucao.get("estado", "estado_indisponivel"),
+                    "valor": {"execucao": execucao},
+                })
+            except Exception:
+                self._send_json(503, {
+                    "estado": "fila_indisponivel",
+                    "motivo": "A fila governada não pôde executar a próxima tarefa.",
+                })
+                return
+            estado_execucao = resposta_execucao.get("estado")
+            if estado_execucao == "tarefa_em_execucao":
+                status_execucao = 409
+            elif estado_execucao in {"fila_vazia", "concluida"}:
+                status_execucao = 200
+            else:
+                status_execucao = 200 if resposta_execucao.get("sucesso") is True else 422
+            self._send_json(status_execucao, resposta_execucao)
+            return
+
         if self.path == "/api/agent/image":
             if not self._local_ou_autorizado():
                 return
@@ -1820,6 +1893,19 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             or parsed_path.startswith("/api/integracoes/gmail/")
         )
         if is_agent_or_workspace and not self._local_ou_autorizado():
+            return
+
+        if parsed_path == "/api/agent/orders":
+            try:
+                executor = _obter_executor_ordens_nyxal()
+                resposta_fila = _resumir_fila_ordens_api(executor.fila)
+            except Exception:
+                self._send_json(503, {
+                    "estado": "fila_indisponivel",
+                    "motivo": "A fila governada não está disponível.",
+                })
+                return
+            self._send_json(200, resposta_fila)
             return
 
         if parsed_path == "/":
