@@ -230,6 +230,19 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         self.assertTrue(link.is_symlink())
         self.assertEqual(outside.read_bytes(), original)
 
+    def test_redactor_masks_private_key_assignments_and_preserves_quotes(self):
+        casos = {
+            "PRIVATE_KEY=secret-value": "PRIVATE_KEY=[REDACTED]",
+            "ssh_private_key=secret-value": "ssh_private_key=[REDACTED]",
+            '"api_key": "secret-value"': '"api_key": "[REDACTED]"',
+            "authorization: 'Bearer secret-value'": "authorization: '[REDACTED]'",
+        }
+        for original, esperado in casos.items():
+            with self.subTest(original=original):
+                resultado = FilaTarefasNixal._redigir_texto(original)
+                self.assertEqual(resultado, esperado)
+                self.assertNotIn("secret-value", resultado)
+
     def test_result_redacts_secrets_and_bounds_large_output(self):
         self.resultado_controlado = {
             "api_key": "secret-value",
