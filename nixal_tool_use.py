@@ -1131,7 +1131,21 @@ def aplicar_edicao_workspace(plano_id: str, confirmacao_exata: str) -> dict[str,
                         arquivo_backup.write(bytes_atuais)
                         arquivo_backup.flush()
                         os.fsync(arquivo_backup.fileno())
-                    os.replace(temporario_backup, caminho_backup)
+                    # Hard-link publication is atomic and refuses to overwrite an
+                    # existing backup. os.replace() would silently destroy that backup
+                    # if the target name already existed.
+                    try:
+                        os.link(
+                            temporario_backup,
+                            caminho_backup,
+                            follow_symlinks=False,
+                        )
+                    except FileExistsError:
+                        return {
+                            "sucesso": False,
+                            "estado": "backup_destino_ja_existe",
+                            "aplicado": False,
+                        }
                 finally:
                     if os.path.exists(temporario_backup):
                         os.unlink(temporario_backup)
