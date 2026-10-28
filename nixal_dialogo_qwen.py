@@ -454,9 +454,9 @@ class DialogoQwenNixal:
             # exatamente com os argumentos; respostas do modelo não contam como autorização.
             autorizacao = (
                 bool(re.fullmatch(r"[0-9a-f]{12}", plano_id or ""))
-                and pedido_usuario.strip().upper() == token_esperado
+                and pedido_usuario.strip().casefold() == token_esperado.casefold()
                 and isinstance(confirmacao, str)
-                and confirmacao.strip().upper() == token_esperado
+                and confirmacao.strip().casefold() == token_esperado.casefold()
             )
         else:
             autorizacao = self._pedido_explicitamente_autorizou(nome, pedido_usuario)
