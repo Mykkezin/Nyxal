@@ -96,6 +96,8 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
             ("POST", "/api/stt", b"audio"),
             ("POST", "/api/tts", b'{"texto":"teste"}'),
             ("POST", "/api/agent/image", b'{"prompt":"teste"}'),
+            ("POST", "/api/agent/orders", b'{"ordem":"consulte a hora"}'),
+            ("POST", "/api/agent/orders/next", b"{}"),
         ]
         for method, route, body in casos:
             with self.subTest(route=route):
@@ -114,6 +116,7 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
             "/api/amd-cloud/status",
             "/api/agent/status",
             "/api/agent/contexto",
+            "/api/agent/orders",
             "/api/integracoes/google/status",
             "/api/integracoes/google/agenda",
             "/api/integracoes/google/contatos",
@@ -144,6 +147,148 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
                 status, body = self.request("GET", route)
                 self.assertEqual(status, 503)
                 self.assertIn("NYXAL_API_TOKEN", body)
+
+    def test_ordem_governada_retorna_resumo_sem_expor_argumentos(self) -> None:
+        api.PROXY_MODE = False
+
+        class ExecutorFalso:
+            def __init__(self):
+                self.ordem = None
+
+            def atender(self, ordem):
+                self.ordem = ordem
+                return {
+                    "sucesso": True,
+                    "estado": "concluida",
+                    "valor": {
+                        "ordem": ordem,
+                        "tarefa": {
+                            "id": "task-safe-1",
+                            "capacidade": "obter_hora",
+                            "estado": "pendente",
+                            "criado_em": 123.0,
+                            "argumentos": {"caminho": "/home/private/nao-expor.txt"},
+                        },
+                        "executada": True,
+                        "execucao": {
+                            "sucesso": True,
+                            "estado": "concluida",
+                            "valor": {
+                                "id": "task-safe-1",
+                                "capacidade": "obter_hora",
+                                "estado": "concluida",
+                                "criado_em": 123.0,
+                                "argumentos": {"caminho": "/home/private/nao-expor.txt"},
+                                "resultado": {
+                                    "sucesso": True,
+                                    "capacidade": "obter_hora",
+                                    "resultado": {"hora": "14:05"},
+                                },
+                            },
+                        },
+                    },
+                }
+
+        executor = ExecutorFalso()
+        with patch.object(api, "_obter_executor_ordens_nyxal", return_value=executor):
+            status, body = self.request(
+                "POST", "/api/agent/orders",
+                body=b'{"ordem":"Consulte a hora local."}',
+                headers={"Content-Type": "application/json"},
+            )
+        self.assertEqual(status, 200, body)
+        payload = json.loads(body)
+        self.assertTrue(payload["sucesso"])
+        self.assertEqual(payload["estado"], "concluida")
+        self.assertEqual(payload["valor"]["tarefa"]["id"], "task-safe-1")
+        self.assertEqual(payload["valor"]["tarefa"]["capacidade"], "obter_hora")
+        self.assertEqual(payload["valor"]["tarefa"]["resultado"]["resultado"]["hora"], "14:05")
+        self.assertNotIn("argumentos", body)
+        self.assertNotIn("/home/private/nao-expor.txt", body)
+        self.assertEqual(executor.ordem, "Consulte a hora local.")
+
+    def test_ordem_governada_rejeita_json_ambiguo_sem_chamar_executor(self) -> None:
+        api.PROXY_MODE = False
+
+        class ExecutorFalso:
+            def atender(self, _ordem):
+                raise AssertionError("executor não pode ser chamado com JSON ambíguo")
+
+        with patch.object(api, "_obter_executor_ordens_nyxal", return_value=ExecutorFalso()):
+            status, body = self.request(
+                "POST", "/api/agent/orders",
+                body=b'{"ordem":"A","ordem":"B"}',
+                headers={"Content-Type": "application/json"},
+            )
+        self.assertEqual(status, 400, body)
+        self.assertIn("json_invalido", body)
+
+    def test_processar_proxima_ordem_retorna_estado_seguro(self) -> None:
+        api.PROXY_MODE = False
+
+        class FilaFalsa:
+            def executar_proxima(self):
+                return {
+                    "sucesso": True,
+                    "estado": "concluida",
+                    "valor": {
+                        "id": "task-next-1",
+                        "capacidade": "obter_hora",
+                        "estado": "concluida",
+                        "criado_em": 124.0,
+                        "argumentos": {"privado": "não deve ser devolvido"},
+                        "resultado": {
+                            "sucesso": True,
+                            "capacidade": "obter_hora",
+                            "resultado": {"hora": "14:06"},
+                        },
+                    },
+                }
+
+        class ExecutorFalso:
+            fila = FilaFalsa()
+
+        with patch.object(api, "_obter_executor_ordens_nyxal", return_value=ExecutorFalso()):
+            status, body = self.request(
+                "POST", "/api/agent/orders/next",
+                body=b"{}",
+                headers={"Content-Type": "application/json"},
+            )
+        self.assertEqual(status, 200, body)
+        payload = json.loads(body)
+        self.assertTrue(payload["sucesso"])
+        self.assertEqual(payload["valor"]["tarefa"]["id"], "task-next-1")
+        self.assertEqual(payload["valor"]["tarefa"]["resultado"]["resultado"]["hora"], "14:06")
+        self.assertNotIn("argumentos", body)
+        self.assertNotIn("não deve ser devolvido", body)
+
+    def test_listagem_da_fila_retorna_apenas_metadados_seguro(self) -> None:
+        api.PROXY_MODE = False
+
+        class FilaFalsa:
+            def listar(self):
+                return [{
+                    "id": "task-pending-1",
+                    "capacidade": "pesquisar_web",
+                    "estado": "pendente",
+                    "criado_em": 125.0,
+                    "argumentos": {"consulta": "CONSULTA_PRIVADA_NAO_EXIBIR"},
+                    "resultado": None,
+                    "erro": None,
+                }]
+
+        class ExecutorFalso:
+            fila = FilaFalsa()
+
+        with patch.object(api, "_obter_executor_ordens_nyxal", return_value=ExecutorFalso()):
+            status, body = self.request("GET", "/api/agent/orders")
+        self.assertEqual(status, 200, body)
+        payload = json.loads(body)
+        self.assertEqual(payload["valor"]["pendentes"], 1)
+        self.assertEqual(payload["valor"]["tarefas_recentes"][0]["id"], "task-pending-1")
+        self.assertNotIn("argumentos", body)
+        self.assertNotIn("CONSULTA_PRIVADA_NAO_EXIBIR", body)
+        self.assertNotIn("resultado", body)
 
     def test_health_continua_publico_sem_expor_snapshot_operacional(self) -> None:
         status, headers, body = self.request_full("GET", "/health")
