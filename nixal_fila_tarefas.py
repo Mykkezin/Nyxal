@@ -61,6 +61,27 @@ class FilaTarefasNixal:
     """Fila persistente com lock interprocesso, validação e checkpoints seguros."""
 
     FONTE = "fila_tarefas_nixal"
+    _CHAVES_TAREFA_OBRIGATORIAS = frozenset({
+        "id", "capacidade", "argumentos", "estado", "criado_em", "resultado", "erro",
+    })
+    _CHAVES_TAREFA_OPCIONAIS = frozenset({"chave_idempotencia", "execucao_dono"})
+    _CHAVES_DONO_EXECUCAO = frozenset({"host", "pid", "iniciado_em", "execucao_id"})
+
+    @staticmethod
+    def _objeto_sem_chaves_duplicadas(pares: list[tuple[str, Any]]) -> dict[str, Any]:
+        resultado: dict[str, Any] = {}
+        for chave, valor in pares:
+            if chave in resultado:
+                raise ValueError("chaves_json_duplicadas")
+            resultado[chave] = valor
+        return resultado
+
+    @staticmethod
+    def _codigo_erro(erro: Exception) -> str:
+        # Não ecoar paths ou dados da exceção para callers/API.
+        if isinstance(erro, FilaTarefasErro):
+            return (str(erro) or "fila_indisponivel")[:96]
+        return type(erro).__name__
 
     def __init__(
         self,
@@ -75,11 +96,12 @@ class FilaTarefasNixal:
         self._erro_carregamento: str | None = None
         self._falha_migracao: str | None = None
         self._recuperacao_pendente = False
+        self._sanitizacao_pendente = False
         if usar_caminho_padrao:
             try:
                 self._migrar_fila_legada_se_necessario()
             except (OSError, UnicodeError, ValueError, RecursionError, FilaTarefasErro) as erro:
-                self._falha_migracao = (str(erro) or type(erro).__name__)[:160]
+                self._falha_migracao = self._codigo_erro(erro)
         self.recarregar()
 
     def _estrutura_vazia(self) -> dict[str, Any]:
@@ -93,7 +115,11 @@ class FilaTarefasNixal:
     def _numero_finito(valor: Any) -> int | float | None:
         if isinstance(valor, bool) or not isinstance(valor, (int, float)):
             return None
-        return valor if math.isfinite(valor) else None
+        try:
+            finito = math.isfinite(float(valor))
+        except (OverflowError, TypeError, ValueError):
+            return None
+        return valor if finito else None
 
     @staticmethod
     def _json_bytes(dados: Any) -> bytes:
@@ -162,7 +188,11 @@ class FilaTarefasNixal:
                 if not valido:
                     return False, erro
             return True, None
-        if valor is None or isinstance(valor, (str, bool, int)):
+        if isinstance(valor, str):
+            if cls._redigir_texto(valor) != valor:
+                return False, "valor_de_argumento_com_credencial_bloqueado"
+            return True, None
+        if valor is None or isinstance(valor, (bool, int)):
             return True, None
         if isinstance(valor, float) and math.isfinite(valor):
             return True, None
@@ -201,6 +231,8 @@ class FilaTarefasNixal:
             info = os.fstat(arquivo.fileno())
             if not stat.S_ISREG(info.st_mode):
                 raise FilaTarefasErro("fila_legada_nao_regular")
+            if info.st_uid != os.geteuid():
+                raise PermissionError("proprietario_fila_legada_invalido")
             if info.st_size > MAX_FILA_BYTES:
                 raise FilaTarefasErro("fila_legada_excede_limite")
             bruto = arquivo.read(MAX_FILA_BYTES + 1)
@@ -208,7 +240,12 @@ class FilaTarefasNixal:
             raise FilaTarefasErro("fila_legada_excede_limite")
         def constante_invalida(_: str) -> None:
             raise ValueError("constante_json_nao_finita")
-        dados = json.loads(bruto.decode("utf-8"), parse_constant=constante_invalida)
+        dados = json.loads(
+            bruto.decode("utf-8"),
+            parse_constant=constante_invalida,
+            object_pairs_hook=self._objeto_sem_chaves_duplicadas,
+        )
+        dados, _sanitizado = self._sanitizar_dados_persistidos(dados)
         valido, motivo = self._validar_estrutura(dados)
         if not valido:
             raise FilaTarefasErro(f"fila_legada_invalida:{motivo or 'estrutura_desconhecida'}")
@@ -240,6 +277,10 @@ class FilaTarefasNixal:
                 stat_fd.st_ino != stat_path.st_ino or stat_fd.st_dev != stat_path.st_dev
             ):
                 raise FilaTarefasErro("diretorio_da_fila_mudou")
+            if stat_fd.st_uid != os.geteuid():
+                raise PermissionError("proprietario_diretorio_da_fila_invalido")
+            if stat.S_IMODE(stat_fd.st_mode) & 0o022:
+                raise PermissionError("diretorio_da_fila_permissivo_para_escrita")
             fcntl.flock(fd, fcntl.LOCK_EX)
             try:
                 yield
@@ -251,21 +292,60 @@ class FilaTarefasNixal:
     def _validar_registro_tarefa(self, tarefa: Any) -> tuple[bool, str | None]:
         if not isinstance(tarefa, dict):
             return False, "registro_de_tarefa_invalido"
-        if not isinstance(tarefa.get("id"), str) or not tarefa["id"].strip():
+        chaves = set(tarefa)
+        permitidas = self._CHAVES_TAREFA_OBRIGATORIAS | self._CHAVES_TAREFA_OPCIONAIS
+        if not self._CHAVES_TAREFA_OBRIGATORIAS.issubset(chaves) or not chaves.issubset(permitidas):
+            return False, "schema_de_tarefa_desconhecido"
+        if not isinstance(tarefa.get("id"), str) or not tarefa["id"].strip() or len(tarefa["id"]) > 128:
             return False, "id_de_tarefa_invalido"
-        if not isinstance(tarefa.get("capacidade"), str) or not tarefa["capacidade"].strip():
+        if not isinstance(tarefa.get("capacidade"), str) or not tarefa["capacidade"].strip() or len(tarefa["capacidade"]) > 160:
             return False, "capacidade_de_tarefa_invalida"
         if not isinstance(tarefa.get("argumentos"), dict):
             return False, "argumentos_de_tarefa_invalidos"
+        valido_args, erro_args = self._validar_json_limitado(tarefa["argumentos"])
+        if not valido_args:
+            return False, erro_args or "argumentos_de_tarefa_invalidos"
         if tarefa.get("estado") not in ESTADOS_TAREFA:
             return False, "estado_de_tarefa_desconhecido"
         criado = tarefa.get("criado_em")
-        if isinstance(criado, bool) or not isinstance(criado, (int, float)) or not math.isfinite(criado):
+        if self._numero_finito(criado) is None:
             return False, "timestamp_de_tarefa_invalido"
-        if tarefa.get("resultado") is not None and not isinstance(tarefa.get("resultado"), dict):
+        resultado = tarefa.get("resultado")
+        if resultado is not None and not isinstance(resultado, dict):
             return False, "resultado_de_tarefa_invalido"
-        if tarefa.get("erro") is not None and not isinstance(tarefa.get("erro"), str):
+        if isinstance(resultado, dict):
+            try:
+                if len(self._json_bytes(resultado)) > MAX_RESULTADO_BYTES:
+                    return False, "resultado_de_tarefa_excede_limite"
+            except FilaTarefasErro:
+                return False, "resultado_de_tarefa_invalido"
+        erro = tarefa.get("erro")
+        if erro is not None and (
+            not isinstance(erro, str)
+            or len(erro) > MAX_ERRO_CHARS
+            or self._redigir_texto(erro) != erro
+        ):
             return False, "erro_de_tarefa_invalido"
+        if "chave_idempotencia" in tarefa:
+            chave = tarefa["chave_idempotencia"]
+            if not isinstance(chave, str) or not chave.strip() or len(chave) > 160:
+                return False, "chave_idempotencia_invalida"
+        if "execucao_dono" in tarefa:
+            dono = tarefa["execucao_dono"]
+            if (
+                tarefa["estado"] != "executando"
+                or not isinstance(dono, dict)
+                or set(dono) != self._CHAVES_DONO_EXECUCAO
+                or not isinstance(dono.get("host"), str)
+                or not 1 <= len(dono["host"]) <= 255
+                or isinstance(dono.get("pid"), bool)
+                or not isinstance(dono.get("pid"), int)
+                or dono["pid"] <= 0
+                or self._numero_finito(dono.get("iniciado_em")) is None
+                or not isinstance(dono.get("execucao_id"), str)
+                or not 1 <= len(dono["execucao_id"]) <= 64
+            ):
+                return False, "proprietario_execucao_invalido"
         try:
             args_bytes = self._json_bytes(tarefa["argumentos"])
         except FilaTarefasErro:
@@ -275,7 +355,11 @@ class FilaTarefasNixal:
         return True, None
 
     def _validar_estrutura(self, dados: Any) -> tuple[bool, str | None]:
-        if not isinstance(dados, dict) or dados.get("versao") != VERSAO_FILA:
+        if (
+            not isinstance(dados, dict)
+            or set(dados) != {"versao", "tarefas"}
+            or dados.get("versao") != VERSAO_FILA
+        ):
             return False, "versao_ou_raiz_de_fila_desconhecida"
         tarefas = dados.get("tarefas")
         if not isinstance(tarefas, list) or len(tarefas) > MAX_TAREFAS:
@@ -335,6 +419,7 @@ class FilaTarefasNixal:
     def _carregar_unlocked(self) -> bool:
         self._erro_carregamento = None
         self._recuperacao_pendente = False
+        self._sanitizacao_pendente = False
         try:
             self._verificar_caminho_sem_symlink(self.caminho)
             if not self.caminho.exists():
@@ -348,16 +433,23 @@ class FilaTarefasNixal:
             bruto = self.caminho.read_bytes()
             def constante_invalida(_: str) -> None:
                 raise ValueError("constante_json_nao_finita")
-            dados = json.loads(bruto.decode("utf-8"), parse_constant=constante_invalida)
+            dados = json.loads(
+                bruto.decode("utf-8"),
+                parse_constant=constante_invalida,
+                object_pairs_hook=self._objeto_sem_chaves_duplicadas,
+            )
+            dados, sanitizado = self._sanitizar_dados_persistidos(dados)
             valido, motivo = self._validar_estrutura(dados)
             if not valido:
                 raise FilaTarefasErro(motivo or "estrutura_de_fila_invalida")
             self._dados = copy.deepcopy(dados)
+            self._sanitizacao_pendente = sanitizado
             self._recuperar_tarefas_interrompidas()
             return True
         except (OSError, UnicodeError, json.JSONDecodeError, ValueError, RecursionError, FilaTarefasErro) as erro:
             self._dados = self._estrutura_vazia()
-            self._erro_carregamento = (str(erro) or type(erro).__name__)[:160]
+            self._sanitizacao_pendente = False
+            self._erro_carregamento = self._codigo_erro(erro)
             return False
 
     def _salvar_unlocked(self) -> None:
@@ -391,6 +483,7 @@ class FilaTarefasNixal:
             if os.path.exists(temporario):
                 os.unlink(temporario)
         self._recuperacao_pendente = False
+        self._sanitizacao_pendente = False
 
     def _carregar_e_recuperar_unlocked(self) -> bool:
         if self._falha_migracao:
@@ -398,11 +491,11 @@ class FilaTarefasNixal:
             return False
         if not self._carregar_unlocked():
             return False
-        if self._recuperacao_pendente:
+        if self._recuperacao_pendente or self._sanitizacao_pendente:
             try:
                 self._salvar_unlocked()
             except (OSError, ValueError, FilaTarefasErro):
-                self._erro_carregamento = "falha_ao_persistir_recuperacao_de_tarefas"
+                self._erro_carregamento = "falha_ao_persistir_recuperacao_ou_sanitizacao"
                 return False
         return True
 
@@ -439,6 +532,30 @@ class FilaTarefasNixal:
             "resumo": FilaTarefasNixal._redigir_texto(bruto[: limite // 2]),
         }
 
+    @classmethod
+    def _sanitizar_dados_persistidos(cls, dados: Any) -> tuple[Any, bool]:
+        """Redige resultados/erros legados antes que qualquer caller os veja."""
+        if not isinstance(dados, dict) or not isinstance(dados.get("tarefas"), list):
+            return dados, False
+        copia = copy.deepcopy(dados)
+        alterado = False
+        for tarefa in copia["tarefas"]:
+            if not isinstance(tarefa, dict):
+                continue
+            resultado = tarefa.get("resultado")
+            if isinstance(resultado, dict):
+                seguro = cls._resumir_resultado(resultado)
+                if seguro != resultado:
+                    tarefa["resultado"] = seguro
+                    alterado = True
+            erro = tarefa.get("erro")
+            if isinstance(erro, str):
+                seguro_erro = cls._redigir_texto(erro)[:MAX_ERRO_CHARS]
+                if seguro_erro != erro:
+                    tarefa["erro"] = seguro_erro
+                    alterado = True
+        return copia, alterado
+
     @staticmethod
     def _negado(estado: str, motivo: str) -> dict[str, Any]:
         return {"sucesso": False, "estado": estado, "origem": FilaTarefasNixal.FONTE, "motivo": motivo}
@@ -447,7 +564,7 @@ class FilaTarefasNixal:
     def _falha_persistencia(erro: Exception) -> dict[str, Any]:
         return FilaTarefasNixal._negado(
             "falha_persistencia",
-            (str(erro) or type(erro).__name__)[:160],
+            FilaTarefasNixal._codigo_erro(erro),
         )
 
     def adicionar(
