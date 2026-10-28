@@ -507,6 +507,25 @@ class TesteFilaTarefasNixalSegura(unittest.TestCase):
         self.assertFalse(resultado["sucesso"])
         self.assertEqual(self.caminho.read_bytes(), original)
 
+    def test_queue_path_inside_checkout_is_rejected_before_directory_creation(self):
+        projeto = Path(nixal_fila_tarefas.__file__).resolve().parent
+        destino = projeto / ".nyxal-queue-should-never-be-created" / "fila.json"
+
+        with self.assertRaisesRegex(
+            nixal_fila_tarefas.FilaTarefasErro,
+            "fila_nao_pode_ficar_no_checkout",
+        ):
+            FilaTarefasNixal(destino, self.manager)
+        self.assertFalse(destino.parent.exists())
+
+        with patch.object(nixal_fila_tarefas, "ARQUIVO_FILA_PADRAO", destino):
+            with self.assertRaisesRegex(
+                nixal_fila_tarefas.FilaTarefasErro,
+                "fila_nao_pode_ficar_no_checkout",
+            ):
+                FilaTarefasNixal(capacidades=self.manager)
+        self.assertFalse(destino.parent.exists())
+
     def test_world_writable_queue_directory_is_rejected(self):
         pasta = self.root / "unsafe-dir"
         pasta.mkdir(mode=0o700)
