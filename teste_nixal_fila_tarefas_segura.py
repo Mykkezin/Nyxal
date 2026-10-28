@@ -5,18 +5,12 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import threading
 import time
-import types
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
-
-# The executor class needs only the module name at import time; tests inject a
-# no-network placeholder instead of installing or starting Ollama.
-sys.modules.setdefault("ollama", types.SimpleNamespace())
 
 import nixal_capacidades
 import nixal_fila_tarefas
