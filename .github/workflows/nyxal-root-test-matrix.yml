@@ -3,7 +3,7 @@ name: Nyxal Root Test Matrix
 # Inventário de 2026-10-28: 106 testes da raiz não eram citados por nenhum
 # workflow. Cada candidato foi executado isolado, a partir do checkout limpo, e
 # medido por dois critérios: passa com o python3 do runner e não escreve nem no
-# checkout nem fora dele. 85 cumprem os dois e custam ~4s somados. Ficaram de
+# checkout nem fora dele. 86 cumprem os dois e custam ~5s somados. Ficaram de
 # fora os que gravam em $HOME/Nyxal* (incluindo o checkout operacional vivo, na
 # mesma máquina deste runner) e os que sujam capacidades_nixal.json (a família
 # nivel_9_* e investigacao_interna_56_4_11). A allowlist versionada ao lado é o
