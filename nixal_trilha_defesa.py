@@ -93,6 +93,8 @@ class RegistroTrilhaDefesa:
         self.arquivo = Path(caminho_absoluto)
         if self.arquivo.name in {"", ".", ".."}:
             raise ValueError("nome_de_auditoria_invalido")
+        if self.arquivo.parent == Path(os.sep):
+            raise ValueError("diretorio_raiz_nao_permitido_para_auditoria")
         self.max_bytes = max_bytes
         self.max_registros = max_registros
         self._lock_thread = threading.RLock()
@@ -216,6 +218,7 @@ class RegistroTrilhaDefesa:
             if (
                 not stat.S_ISREG(info.st_mode)
                 or info.st_uid != os.geteuid()
+                or info.st_nlink != 1
                 or info.st_mode & 0o077
             ):
                 raise TrilhaDefesaError("arquivo_lock_de_auditoria_inseguro")
@@ -249,6 +252,7 @@ class RegistroTrilhaDefesa:
             if (
                 not stat.S_ISREG(info_antes.st_mode)
                 or info_antes.st_uid != os.geteuid()
+                or info_antes.st_nlink != 1
                 or info_antes.st_mode & 0o077
             ):
                 raise TrilhaDefesaError("arquivo_de_auditoria_nao_privado")
@@ -311,9 +315,13 @@ class RegistroTrilhaDefesa:
             ):
                 raise TrilhaDefesaError("cadeia_de_auditoria_invalida")
             try:
-                datetime.fromisoformat(registro["timestamp_utc"])
+                timestamp = datetime.fromisoformat(registro["timestamp_utc"])
             except ValueError:
                 raise TrilhaDefesaError("timestamp_de_auditoria_invalido") from None
+            if timestamp.tzinfo is None or timestamp.utcoffset() is None or timestamp.utcoffset().total_seconds() != 0:
+                raise TrilhaDefesaError("timestamp_de_auditoria_invalido")
+            if json.dumps(registro, ensure_ascii=False, sort_keys=True).encode("utf-8") != linha:
+                raise TrilhaDefesaError("serializacao_de_auditoria_nao_canonica")
 
             dados_sanitizados = self._sanitizar_dados(registro.get("dados"))
             if dados_sanitizados != registro.get("dados"):
@@ -388,6 +396,7 @@ class RegistroTrilhaDefesa:
                         if (
                             not stat.S_ISREG(info.st_mode)
                             or info.st_uid != os.geteuid()
+                            or info.st_nlink != 1
                             or info.st_mode & 0o077
                             or info.st_size != len(bruto)
                         ):
