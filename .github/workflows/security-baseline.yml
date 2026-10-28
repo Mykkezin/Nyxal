@@ -50,7 +50,13 @@ jobs:
 
       - name: Run irreversible VM action barrier tests
         id: vps_barrier
-        run: python3 -m unittest teste_api_barreira_vps.py -v
+        # Este teste sobe o handler real e não remapeia DEFESA_AUDITORIA_DURAVEL, então
+        # cada falha de autenticação seria anexada ao diário durável do operador: o
+        # runner privado é a mesma máquina da instalação viva e herda o $HOME dela.
+        # RUNNER_TEMP é por job e o runner o apaga no fim.
+        run: |
+          export XDG_STATE_HOME="${RUNNER_TEMP:?runner_sem_temp}/nyxal-estado"
+          python3 -m unittest teste_api_barreira_vps.py -v
 
       - name: Run governed autonomous CI decision tests
         id: decision_policy

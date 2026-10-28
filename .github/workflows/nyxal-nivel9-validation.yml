@@ -116,7 +116,12 @@ jobs:
         run: python3 -m unittest teste_api_security_auth.py -v
 
       - name: Testes privacy-first da trilha HTTP
-        run: python3 -m unittest teste_nixal_trilha_http.py teste_api_trilha_http_e2e.py -v
+        # teste_api_trilha_http_e2e.py dirige o handler real sem remapear o ledger de
+        # defesa; sem isolar o estado, as falhas de autenticação do teste iriam para o
+        # diário durável do operador, já que o runner privado herda o $HOME da instalação viva.
+        run: |
+          export XDG_STATE_HOME="${RUNNER_TEMP:?runner_sem_temp}/nyxal-estado"
+          python3 -m unittest teste_nixal_trilha_http.py teste_api_trilha_http_e2e.py -v
 
       - name: Testes da política de segurança API
         id: api_policy
