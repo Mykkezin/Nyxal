@@ -2,6 +2,7 @@
 """Testes de integridade, limites e privacidade da trilha de defesa."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import stat
@@ -116,6 +117,26 @@ class TestAuditoriaDefesaDuravel(unittest.TestCase):
         resultado = self.auditoria.registrar(evento(2))
         self.assertFalse(resultado["sucesso"])
         self.assertEqual(self.caminho.read_bytes(), corrompido)
+
+    def test_campo_extra_com_hash_recalculado_e_rejeitado(self) -> None:
+        self.assertTrue(self.auditoria.registrar(evento())["sucesso"])
+        registro = json.loads(self.caminho.read_text(encoding="utf-8").strip())
+        registro["headers"] = {"Authorization": "CANARY_FORGED_32"}
+        sem_hash = dict(registro)
+        sem_hash.pop("entry_hash", None)
+        registro["entry_hash"] = hashlib.sha256(
+            json.dumps(sem_hash, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        self.caminho.write_text(
+            json.dumps(registro, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        adulterado = self.caminho.read_bytes()
+
+        self.assertFalse(self.auditoria.contexto()["integridade_verificada"])
+        resultado = self.auditoria.registrar(evento(2))
+        self.assertFalse(resultado["sucesso"])
+        self.assertEqual(self.caminho.read_bytes(), adulterado)
 
     def test_symlink_de_arquivo_ou_pasta_e_bloqueado(self) -> None:
         self.caminho.parent.mkdir(mode=0o700)
