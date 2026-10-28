@@ -142,6 +142,7 @@ class ExecutorDefesaGovernada:
         max_registros: int = MAX_REGISTROS,
         relogio: Callable[[], float] = monotonic,
         verificador_aprovacao: Callable[[dict[str, Any]], bool] | None = None,
+        auditoria: Callable[[str, dict[str, Any]], Any] | None = None,
     ) -> None:
         for nome, valor, minimo, maximo in (
             ("ttl_segundos", ttl_segundos, 1, MAX_TTL_SEGUNDOS),
@@ -154,11 +155,15 @@ class ExecutorDefesaGovernada:
             raise ValueError("relogio_precisa_ser_chamavel")
         if verificador_aprovacao is not None and not callable(verificador_aprovacao):
             raise ValueError("verificador_aprovacao_precisa_ser_chamavel")
+        if auditoria is not None and not callable(auditoria):
+            raise ValueError("auditoria_precisa_ser_chamavel")
 
         self._ttl = ttl_segundos
         self._janela_idempotencia = janela_idempotencia_segundos
         self._relogio = relogio
         self._verificador_aprovacao = verificador_aprovacao
+        self._auditoria = auditoria
+        self._auditoria_degradada = False
         self._registros: deque[dict[str, Any]] = deque(maxlen=max_registros)
         self._idempotencia: OrderedDict[str, tuple[float, str]] = OrderedDict()
         # O prazo monotônico controla apenas a validade do plano dry-run; não
@@ -227,6 +232,55 @@ class ExecutorDefesaGovernada:
             # Aprovação inválida ou serviço indisponível: falhar fechado.
             return False
 
+    def _dados_auditoria(
+        self,
+        registro: dict[str, Any],
+        *,
+        estado: str | None = None,
+        aprovacao_verificada: bool | None = None,
+    ) -> dict[str, Any]:
+        """Seleciona somente metadados allowlisted; nunca persiste motivo livre."""
+        acao = registro.get("acao")
+        acao = acao if isinstance(acao, dict) else {}
+        dados: dict[str, Any] = {
+            "plano_id": registro.get("plano_id"),
+            "tipo": acao.get("tipo"),
+            "escopo": acao.get("escopo"),
+            "estado": estado or registro.get("estado"),
+            "modo": "dry_run",
+            "aprovacao_verificada": (
+                registro.get("aprovacao_verificada", False)
+                if aprovacao_verificada is None else aprovacao_verificada
+            ),
+        }
+        duracao = acao.get("duracao_segundos")
+        if isinstance(duracao, int) and not isinstance(duracao, bool):
+            dados["duracao_segundos"] = duracao
+        return dados
+
+    def _registrar_auditoria(self, evento: str, dados: dict[str, Any]) -> bool:
+        """Persistência configurada falha fechada; nunca ecoa exceções de arquivo."""
+        if self._auditoria is None:
+            return True
+        if self._auditoria_degradada:
+            return False
+        try:
+            self._auditoria(evento, deepcopy(dados))
+            return True
+        except Exception:
+            self._auditoria_degradada = True
+            return False
+
+    @staticmethod
+    def _resultado_auditoria_indisponivel() -> dict[str, Any]:
+        return {
+            "sucesso": False,
+            "estado": "auditoria_indisponivel",
+            "executor_ativo": False,
+            "executor_autorizado": False,
+            "efeito_executado": False,
+        }
+
     def _expirar_idempotencia(self, agora: float) -> None:
         expiradas = [
             chave for chave, (expira_em, _) in self._idempotencia.items()
@@ -260,6 +314,10 @@ class ExecutorDefesaGovernada:
                 None,
             )
             if registro is not None and registro.get("estado") != "expirado":
+                self._registrar_auditoria(
+                    "plano_expirado",
+                    self._dados_auditoria(registro, estado="expirado"),
+                )
                 registro["estado"] = "expirado"
                 registro["expirado_em"] = self._utc().isoformat()
             self._expira_plano_em.pop(plano_id, None)
@@ -293,6 +351,8 @@ class ExecutorDefesaGovernada:
         with self._lock:
             self._expirar_idempotencia(agora)
             self._expirar_planos_dry_run(agora)
+            if self._auditoria is not None and self._auditoria_degradada:
+                return self._resultado_auditoria_indisponivel()
             existente = self._idempotencia.get(chave)
             if existente is not None:
                 _, plano_id = existente
@@ -325,6 +385,13 @@ class ExecutorDefesaGovernada:
                     )
                     if registro_existente is not None:
                         if registro_existente.get("aprovacao_verificada") is not True:
+                            dados_auditoria = self._dados_auditoria(
+                                registro_existente,
+                                estado="simulacao_preparada",
+                                aprovacao_verificada=True,
+                            )
+                            if not self._registrar_auditoria("plano_aprovado", dados_auditoria):
+                                return self._resultado_auditoria_indisponivel()
                             registro_existente["aprovacao_verificada"] = True
                             registro_existente["aprovacao_verificada_em"] = self._utc().isoformat()
                             registro_existente["estado"] = "simulacao_preparada"
@@ -375,6 +442,9 @@ class ExecutorDefesaGovernada:
                 "executor_autorizado": False,
                 "efeito_executado": False,
             }
+            if not self._registrar_auditoria("plano_preparado", self._dados_auditoria(registro)):
+                return self._resultado_auditoria_indisponivel()
+
             if len(self._registros) == self._registros.maxlen:
                 removido = self._registros[0]
                 removido_id = removido.get("plano_id")
@@ -419,7 +489,11 @@ class ExecutorDefesaGovernada:
             "limite_registros": self._registros.maxlen,
             "executor_ativo": False,
             "execucao_fisica_implementada": False,
+            # A trilha pode ser durável; o estado dos planos continua volátil.
             "persistencia_duravel": False,
+            "auditoria_configurada": self._auditoria is not None,
+            "auditoria_duravel": self._auditoria is not None and not self._auditoria_degradada,
+            "auditoria_degradada": self._auditoria_degradada,
             "aprovacao_humana_concede_execucao": False,
         }
 
