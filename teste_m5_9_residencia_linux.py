@@ -24,6 +24,7 @@ def main() -> None:
     desinstalador = ler("desinstalar_nyxos_servicos.sh")
     diagnostico = ler("diagnosticar_nyxos_local.sh")
     shell_principal = ler("iniciar_nyxos_shell.sh")
+    autostart = (BASE_DIR / "deploy" / "autostart" / "nyxos-shell.desktop").read_text(encoding="utf-8")
     autoreparo = (BASE_DIR / "nixal_autoreparo_residente.py").read_text(encoding="utf-8")
 
     for unidade in (api, residente):
@@ -86,6 +87,11 @@ def main() -> None:
     )
     assert "find_browser()" in shell_principal
     assert 'exec "${BROWSER}"' in shell_principal
+    # PR #63: o shell é singleton para evitar janelas duplicadas durante a residência.
+    assert 'LOCK_FILE="${LOCK_DIR}/singleton.lock"' in shell_principal
+    assert 'exec 9>"${LOCK_FILE}"' in shell_principal
+    assert "if ! flock -n 9; then" in shell_principal
+    assert "Exec=%h/Nyxal/deploy/systemd/iniciar_nyxos_shell.sh" in autostart
     assert "iniciar_nyxos_shell.sh" in diagnostico
 
     assert "systemctl --user disable --now nyxal-desktop.service" in instalador

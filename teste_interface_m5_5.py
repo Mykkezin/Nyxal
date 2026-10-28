@@ -73,6 +73,22 @@ def main() -> None:
         "interface mostra identidade e telemetria mínima do processo",
     )
 
+    verificar(
+        'async function atualizarClima()' in texto
+        and 'https://api.open-meteo.com/v1/forecast?latitude=-23.5505&longitude=-46.6333' in texto
+        and 'response.ok' in texto
+        and 'document.getElementById("weatherTemp")' in texto
+        and 'document.getElementById("weatherCond")' in texto,
+        "painel do clima consulta Open-Meteo e valida a resposta HTTP",
+    )
+
+    verificar(
+        'window.setInterval(atualizarClima, 10 * 60 * 1000)' in texto
+        and 'condicao.innerText = "Clima indisponível"' in texto
+        and 'temperatura.innerText = "—"' in texto,
+        "clima atualiza periodicamente e limpa leituras antigas quando falha",
+    )
+
     print()
     print("=" * 64)
     print("TESTE — INTERFACE ORIENTADA AO ESTADO REAL NYXOS M5.5")
