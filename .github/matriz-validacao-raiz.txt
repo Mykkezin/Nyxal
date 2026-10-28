@@ -8,6 +8,7 @@ teste_avaliacao_hipotese_56_4_13.py
 teste_avaliador_desenvolvimento.py
 teste_cadeia_real_56_4_34.py
 teste_candidatos_desenvolvimento.py
+teste_ciclo_cristalizacao_import.py
 teste_ciclo_desenvolvimento.py
 teste_ciclo_mcp_desenvolvimento.py
 teste_ciclo_memoria_hipotese_56_4_16.py
