@@ -150,6 +150,30 @@ class TesteEdicaoWorkspaceGovernada(unittest.TestCase):
             result["plano_id"], result["confirmacao_exata"]
         )["sucesso"])
 
+    def test_apply_does_not_overwrite_preexisting_backup(self):
+        result = preparar_edicao_workspace("src/app.py", "valor = 19\\n")
+        self.assertTrue(result["sucesso"])
+
+        backup_dir = self.data / "workspace-backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        backup = backup_dir / f"{result['plano_id']}.bak"
+        sentinel = b"preserve existing backup"
+        backup.write_bytes(sentinel)
+
+        applied = aplicar_edicao_workspace(
+            result["plano_id"], result["confirmacao_exata"]
+        )
+        self.assertFalse(applied["sucesso"])
+        self.assertEqual(applied["estado"], "backup_destino_ja_existe")
+        self.assertFalse(applied["aplicado"])
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "valor = 1\\n")
+        self.assertEqual(backup.read_bytes(), sentinel)
+        self.assertEqual(
+            list(backup_dir.glob(f".{result['plano_id']}-*")),
+            [],
+            "Temporary backup files must be cleaned up on refusal.",
+        )
+
     def test_stale_plan_does_not_overwrite_concurrent_change(self):
         result = preparar_edicao_workspace("src/app.py", "valor = 3\n")
         self.target.write_text("alteração externa\n", encoding="utf-8")
