@@ -450,15 +450,15 @@ class DialogoQwenNixal:
 
         if nome == "aplicar_edicao_workspace":
             plano_id = argumentos.get("plano_id")
-            confirmacao = argumentos.get("confirmacao")
+            confirmacao_exata = argumentos.get("confirmacao_exata")
             token_esperado = f"CONFIRMO APLICACAO {plano_id}" if isinstance(plano_id, str) else ""
             # A confirmação tem de estar no texto do usuário deste turno e concordar
             # exatamente com os argumentos; respostas do modelo não contam como autorização.
             autorizacao = (
                 bool(re.fullmatch(r"[0-9a-f]{12}", plano_id or ""))
                 and pedido_usuario.strip().casefold() == token_esperado.casefold()
-                and isinstance(confirmacao, str)
-                and confirmacao.strip().casefold() == token_esperado.casefold()
+                and isinstance(confirmacao_exata, str)
+                and confirmacao_exata.strip().casefold() == token_esperado.casefold()
             )
         else:
             autorizacao = self._pedido_explicitamente_autorizou(nome, pedido_usuario)
