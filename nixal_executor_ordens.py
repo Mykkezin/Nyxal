@@ -44,6 +44,8 @@ class ExecutorOrdensNixal:
     def receber_ordem(
         self,
         ordem: str,
+        *,
+        chave_idempotencia: str | None = None,
     ) -> dict[str, Any]:
         if not isinstance(ordem, str) or not ordem.strip():
             return {
@@ -96,12 +98,16 @@ class ExecutorOrdensNixal:
         adicionada = self.fila.adicionar(
             capacidade=capacidade,
             argumentos=argumentos,
+            chave_idempotencia=chave_idempotencia,
         )
+        adicionada_estado = adicionada.get("estado")
 
         return {
             "sucesso": adicionada.get("sucesso") is True,
             "estado": (
-                "tarefa_adicionada"
+                "tarefa_ja_existente"
+                if adicionada.get("sucesso") is True and adicionada_estado == "ja_existente"
+                else "tarefa_adicionada"
                 if adicionada.get("sucesso") is True
                 else "fila_rejeitou_tarefa"
             ),
@@ -122,8 +128,13 @@ class ExecutorOrdensNixal:
     def atender(
         self,
         ordem: str,
+        *,
+        chave_idempotencia: str | None = None,
     ) -> dict[str, Any]:
-        recebida = self.receber_ordem(ordem)
+        recebida = self.receber_ordem(
+            ordem,
+            chave_idempotencia=chave_idempotencia,
+        )
         if recebida.get("sucesso") is not True:
             return recebida
 
@@ -138,6 +149,32 @@ class ExecutorOrdensNixal:
                 "valor": {"ordem": ordem, "tarefa": tarefa},
                 "motivo": "A fila aceitou a ordem sem devolver um ID de tarefa válido.",
             }
+
+        if recebida.get("estado") == "tarefa_ja_existente":
+            estado_existente = tarefa.get("estado") if isinstance(tarefa, dict) else None
+            if estado_existente in {"concluida", "falhou", "negada", "resultado_indeterminado"}:
+                resultado_existente = tarefa.get("resultado", {}) if isinstance(tarefa, dict) else {}
+                sucesso_existente = (
+                    estado_existente == "concluida"
+                    and isinstance(resultado_existente, dict)
+                    and resultado_existente.get("sucesso") is True
+                )
+                return {
+                    "sucesso": sucesso_existente,
+                    "estado": "tarefa_ja_existente",
+                    "origem": self.FONTE,
+                    "valor": {
+                        "ordem": ordem,
+                        "tarefa": tarefa,
+                        "executada": False,
+                        "idempotente": True,
+                        "execucao": {
+                            "sucesso": sucesso_existente,
+                            "estado": estado_existente,
+                            "valor": tarefa,
+                        },
+                    },
+                }
 
         # A resposta precisa se referir à ordem recebida. Nunca consuma silenciosamente
         # uma tarefa anterior e devolva o resultado como se fosse desta ordem.
