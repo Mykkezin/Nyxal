@@ -31,7 +31,7 @@ USER_SYSTEMD_DIR="$TARGET_HOME/.config/systemd/user"
 RUNTIME_DIR="/run/user/$TARGET_UID"
 BUS_SOCKET="$RUNTIME_DIR/bus"
 
-[[ -d "$REPO_DIR/.git" ]] || die "Checkout Git não encontrado em $REPO_DIR. Informe NYXAL_REPO_DIR sem executar git pull."
+git -C "$REPO_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "Checkout Git não encontrado em $REPO_DIR. Informe NYXAL_REPO_DIR sem executar git pull."
 [[ ! -L "$BACKUP_ROOT" ]] || die "O diretório de backup é link simbólico: $BACKUP_ROOT"
 
 # A instalação observada usa systemd --user. Se existir um serviço de sistema
@@ -274,7 +274,7 @@ fi
     echo "--- DIFF UNIT VIVA VS UNIT VERSIONADA ---"
     repo_unit="$REPO_DIR/deploy/systemd/nyxal-api.service"
     if [[ -f "$live_unit" && -f "$repo_unit" ]]; then
-        diff -u "$live_unit" "$repo_unit" || true
+        diff -u <(sed -E '/^[[:space:]]*Environment=/s/=.*$/=[REDACTED_ENVIRONMENT_LINE]/' "$live_unit") <(sed -E '/^[[:space:]]*Environment=/s/=.*$/=[REDACTED_ENVIRONMENT_LINE]/' "$repo_unit") || true
     else
         echo "Comparação indisponível; confira a lista de arquivos ausentes no backup."
     fi
@@ -285,11 +285,17 @@ fi
         head_hash=""
         origin_hash=""
         if [[ -f "$REPO_DIR/$relative" ]]; then working_hash="$(sha256sum "$REPO_DIR/$relative" | awk '{print $1}')"; fi
-        head_hash="$(git -C "$REPO_DIR" show "HEAD:$relative" 2>/dev/null | sha256sum | awk '{print $1}' || true)"
-        origin_hash="$(git -C "$REPO_DIR" show "origin/main:$relative" 2>/dev/null | sha256sum | awk '{print $1}' || true)"
+        if git -C "$REPO_DIR" cat-file -e "HEAD:$relative" 2>/dev/null; then
+            head_hash="$(git -C "$REPO_DIR" show "HEAD:$relative" | sha256sum | awk '{print $1}')"
+        else
+            head_hash="NAO_RASTREADO_NO_HEAD"
+        fi
+        if git -C "$REPO_DIR" cat-file -e "origin/main:$relative" 2>/dev/null; then
+            origin_hash="$(git -C "$REPO_DIR" show "origin/main:$relative" | sha256sum | awk '{print $1}')"
+        else
+            origin_hash="NAO_DISPONIVEL_EM_ORIGIN_MAIN_LOCAL"
+        fi
         [[ -n "$working_hash" ]] || working_hash="AUSENTE"
-        [[ -n "$head_hash" ]] || head_hash="NAO_RASTREADO_NO_HEAD"
-        [[ -n "$origin_hash" ]] || origin_hash="NAO_DISPONIVEL_EM_ORIGIN_MAIN_LOCAL"
         echo "$relative | worktree=$working_hash | HEAD=$head_hash | origin/main-local=$origin_hash"
     done
     echo
