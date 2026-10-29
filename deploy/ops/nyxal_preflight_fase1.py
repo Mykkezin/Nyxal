@@ -201,7 +201,9 @@ def parse_crystal(raw: bytes) -> dict[str, int]:
     }
 
 
-def verify_backup(backup_dir: Path) -> dict[str, int]:
+def verify_backup(backup_dir: Path, expected_archive_sha256: str) -> dict[str, int]:
+    if not HASH_RE.fullmatch(expected_archive_sha256):
+        raise PreflightError("hash_esperado_invalido")
     archive = backup_dir / "estado_vivo.tar.gz"
     checksum_file = backup_dir / "estado_vivo.tar.gz.sha256"
     manifest_file = backup_dir / "manifesto_hashes.txt"
@@ -216,6 +218,8 @@ def verify_backup(backup_dir: Path) -> dict[str, int]:
     archive_raw_hash, archive_size = hash_regular_file(archive, 4 * 1024 * 1024 * 1024)
     if archive_raw_hash != archive_hash_expected:
         raise PreflightError("hash_do_archive_nao_confere")
+    if archive_raw_hash != expected_archive_sha256:
+        raise PreflightError("hash_do_archive_diverge_da_saida_original_da_fase0")
 
     manifest_text = read_regular(manifest_file, 16 * 1024 * 1024).decode("utf-8")
     manifest: dict[str, str] = {}
@@ -627,6 +631,10 @@ def main() -> int:
     parser.add_argument("--home", help="HOME real da conta Nyxal.")
     parser.add_argument("--repo", help="Checkout que será inspecionado; padrão: HOME/Nyxal.")
     parser.add_argument("--backup-dir", required=True, help="Diretório Fase 0 que contém archive, checksum e manifesto.")
+    parser.add_argument(
+        "--expected-archive-sha256", required=True,
+        help="SHA-256 exato impresso pela execução original da Fase 0; ancora a verificação fora do próprio backup.",
+    )
     parser.add_argument("--memory-path", help="Caminho efetivo de conversas.json, se diferente do padrão.")
     parser.add_argument("--state-dir", help="Diretório de estado XDG efetivo, se diferente do padrão.")
     parser.add_argument("--delta-path", help="Caminho efetivo de eventos_delta_nyxos.json.")
@@ -667,7 +675,7 @@ def main() -> int:
                 )
 
         try:
-            summary = verify_backup(backup)
+            summary = verify_backup(backup, args.expected_archive_sha256)
             reporter.add(
                 "OK", "backup_fase0_verificado",
                 f"archive SHA-256, manifesto e payload conferem; arquivos={summary['arquivos']}; bytes_archive={summary['bytes_archive']}",
