@@ -84,6 +84,21 @@ def digest_stream(stream: Any) -> str:
         digest.update(block)
     return digest.hexdigest()
 
+def hash_regular_file(path: Path, max_bytes: int) -> tuple[str, int]:
+    ensure_no_symlink_components(path)
+    try:
+        with path.open("rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                raise PreflightError("nao_e_arquivo_regular")
+            if info.st_size > max_bytes:
+                raise PreflightError("limite_bytes_excedido")
+            return digest_stream(stream), info.st_size
+    except FileNotFoundError:
+        raise PreflightError("arquivo_ausente") from None
+    except OSError:
+        raise PreflightError("arquivo_ilegivel") from None
+
 
 def ensure_no_symlink_components(path: Path) -> None:
     absolute = Path(os.path.abspath(os.fspath(path)))
@@ -198,7 +213,7 @@ def verify_backup(backup_dir: Path) -> dict[str, int]:
     if not match:
         raise PreflightError("checksum_sidecar_invalido")
     archive_hash_expected = match.group(1)
-    archive_raw_hash = hashlib.sha256(read_regular(archive, 4 * 1024 * 1024 * 1024)).hexdigest()
+    archive_raw_hash, archive_size = hash_regular_file(archive, 4 * 1024 * 1024 * 1024)
     if archive_raw_hash != archive_hash_expected:
         raise PreflightError("hash_do_archive_nao_confere")
 
@@ -251,7 +266,7 @@ def verify_backup(backup_dir: Path) -> dict[str, int]:
     for name, expected in manifest.items():
         if archived[name] != expected:
             raise PreflightError("hash_de_payload_nao_confere")
-    return {"arquivos": len(manifest), "bytes_archive": archive.stat().st_size}
+    return {"arquivos": len(manifest), "bytes_archive": archive_size}
 
 
 def check_hash_chain(path: Path, mode: str, owner_uid: int) -> dict[str, int]:
@@ -342,17 +357,17 @@ def active_user_unit(user: str, home: Path, uid: int, unit: str) -> str | None:
         "DBUS_SESSION_BUS_ADDRESS": f"unix:path={socket_path}",
     }
     command = ["systemctl", "--user", "show", "--property=ActiveState", "--value", unit]
+    process_env = os.environ.copy()
+    process_env.update(base_env)
     if os.geteuid() == 0:
         command = [
             "runuser", "-u", user, "--", "env",
             *(f"{key}={value}" for key, value in base_env.items()),
             *command,
         ]
-    else:
-        os.environ.update(base_env)
     try:
         result = subprocess.run(
-            command, capture_output=True, text=True, timeout=5, check=False
+            command, env=process_env, capture_output=True, text=True, timeout=5, check=False
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
