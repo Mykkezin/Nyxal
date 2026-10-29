@@ -319,7 +319,7 @@ fi
     echo "Caminhos ausentes registrados: $(wc -l < "$PAYLOAD_DIR/meta/arquivos_ausentes.txt")"
     echo "Conteúdo de arquivos .env/segredos não foi impresso neste relatório."
     echo "A matriz de hashes no backup cobre todos os arquivos regulares capturados."
-    echo "A Fase 0 não atualiza o checkout nem modifica os dados de estado."
+    echo "A Fase 0 não atualiza o checkout nem sobrescreve os arquivos de estado; a retomada dos serviços pode gerar alterações normais de inicialização."
 } > "$INVENTORY_PATH"
 
 # Manifesto relativo ao payload e ensaio de restauração em diretório temporário.
