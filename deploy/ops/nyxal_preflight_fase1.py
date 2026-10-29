@@ -397,7 +397,7 @@ PATH_OVERRIDE_FLAGS = {
 
 
 def configured_path_override_names(
-    home: Path, user: str, uid: int
+    home: Path, user: str, uid: int, reporter: "Reporter"
 ) -> set[str]:
     """Read config sources but return only names of known path variables, never values."""
     candidates = [
@@ -422,7 +422,19 @@ def configured_path_override_names(
             continue
         try:
             raw = read_regular(path, 1024 * 1024).decode("utf-8")
-        except (PreflightError, UnicodeDecodeError):
+        except PreflightError as exc:
+            reporter.add(
+                "BLOQUEIO", "configuracao_de_caminho_nao_inspecionavel",
+                f"Não foi possível inspecionar uma configuração de ambiente ({str(exc)}); nenhum valor foi exibido.",
+                path,
+            )
+            continue
+        except UnicodeDecodeError:
+            reporter.add(
+                "BLOQUEIO", "configuracao_de_caminho_nao_inspecionavel",
+                "Arquivo de configuração não é UTF-8; caminhos efetivos permanecem desconhecidos.",
+                path,
+            )
             continue
         for key in PATH_OVERRIDE_FLAGS:
             if re.search(rf"(?<![A-Za-z0-9_]){re.escape(key)}\s*=", raw):
@@ -645,7 +657,7 @@ def main() -> int:
             "checkpoint_path": args.checkpoint_path is not None,
             "manager_crystal_path": args.manager_crystal_path is not None,
         }
-        for key in sorted(configured_path_override_names(home, user, uid)):
+        for key in sorted(configured_path_override_names(home, user, uid, reporter)):
             flag_name, flag = PATH_OVERRIDE_FLAGS[key]
             if not supplied_flags[flag_name]:
                 reporter.add(
