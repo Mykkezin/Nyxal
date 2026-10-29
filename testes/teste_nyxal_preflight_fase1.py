@@ -132,6 +132,70 @@ class TesteNyxalPreflightFase1(unittest.TestCase):
             with self.assertRaises(PREFLIGHT.PreflightError):
                 PREFLIGHT.check_hash_chain(path, "approval", os.getuid())
 
+    def test_cadeia_de_auditoria_legada_valida(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "auditoria_atuacao_nyxos.jsonl"
+            previous = "GENESIS"
+            rows = []
+            for sequence in range(1, 3):
+                record = {
+                    "fonte": "auditoria_atuacao_nyxos",
+                    "versao": "5.18.1",
+                    "sequencia": sequence,
+                    "timestamp_epoch_ns": 1761700000000000000 + sequence,
+                    "evento": "teste",
+                    "dados": {"observacao": f"evento-{sequence}"},
+                    "hash_anterior": previous,
+                }
+                record["hash"] = hashlib.sha256(
+                    PREFLIGHT.canonical_json(record)
+                ).hexdigest()
+                previous = record["hash"]
+                rows.append(PREFLIGHT.canonical_json(record))
+            path.write_bytes(b"\n".join(rows) + b"\n")
+            path.chmod(0o600)
+            result = PREFLIGHT.check_legacy_action_audit(path, os.getuid())
+            self.assertEqual(result["registros"], 2)
+
+    def test_cadeia_de_auditoria_legada_maior_que_um_mib_e_validada(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "auditoria_atuacao_nyxos.jsonl"
+            record = {
+                "fonte": "auditoria_atuacao_nyxos",
+                "versao": "5.18.1",
+                "sequencia": 1,
+                "timestamp_epoch_ns": 1761700000000000000,
+                "evento": "teste_grande",
+                "dados": {"payload": "x" * (1024 * 1024 + 128)},
+                "hash_anterior": "GENESIS",
+            }
+            record["hash"] = hashlib.sha256(
+                PREFLIGHT.canonical_json(record)
+            ).hexdigest()
+            path.write_bytes(PREFLIGHT.canonical_json(record) + b"\n")
+            path.chmod(0o600)
+            self.assertGreater(path.stat().st_size, 1024 * 1024)
+            result = PREFLIGHT.check_legacy_action_audit(path, os.getuid())
+            self.assertEqual(result["registros"], 1)
+
+    def test_cadeia_de_auditoria_legada_com_hash_corrompido_e_rejeitada(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "auditoria_atuacao_nyxos.jsonl"
+            record = {
+                "fonte": "auditoria_atuacao_nyxos",
+                "versao": "5.18.1",
+                "sequencia": 1,
+                "timestamp_epoch_ns": 1761700000000000000,
+                "evento": "teste",
+                "dados": {"ok": True},
+                "hash_anterior": "GENESIS",
+                "hash": "0" * 64,
+            }
+            path.write_bytes(PREFLIGHT.canonical_json(record) + b"\n")
+            path.chmod(0o600)
+            with self.assertRaises(PREFLIGHT.PreflightError):
+                PREFLIGHT.check_legacy_action_audit(path, os.getuid())
+
     def test_script_nao_invoca_modulos_de_runtime_ou_mutacoes(self):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertNotRegex(
