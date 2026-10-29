@@ -26,7 +26,8 @@ sudo python3 /tmp/nyxal_preflight_fase1.py \
   --user nyxal \
   --home /home/nyxal \
   --repo /home/nyxal/Nyxal \
-  --backup-dir /var/backups/nyxal/fase0_<timestamp>
+  --backup-dir /var/backups/nyxal/fase0_20261029_003725_067631022 \
+  --expected-archive-sha256 ca920557cbf498205eb2415034a7ba5c263f0372eec8b6f5e25edcf247b21d5a
 ```
 
 Substitua `<timestamp>` pelo nome exato do diretório criado na Fase 0. No caso registrado em 29/10/2026, o diretório foi `/var/backups/nyxal/fase0_20261029_003725_067631022`.
@@ -50,7 +51,7 @@ Nunca cole aqui valores de `.env`, tokens ou credenciais. Se os caminhos efetivo
 
 ## O que é validado
 
-1. SHA-256 do tarball da Fase 0, hashes de cada membro e correspondência exata com o manifesto, sem extrair o arquivo no disco.
+1. SHA-256 do tarball da Fase 0 comparado com o hash impresso pela execução original, hashes de cada membro e correspondência exata com o manifesto, sem extrair o arquivo no disco.
 2. Estado do Git em modo sem escrita opcional do índice, comparação `HEAD`/`origin/main` local e presença dos módulos críticos.
 3. JSONs operacionais conhecidos, contrato do Delta 5.4.0 e estrutura da memória conversacional, sem mostrar o conteúdo.
 4. Formato binário `NXCM` dos cristais, inclusive versão, campos completos, nomes duplicados e referências de IDs; também compara o cristal atual com o checkpoint, mas nunca restaura um deles sobre o outro.
