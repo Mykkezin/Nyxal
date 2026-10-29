@@ -344,7 +344,9 @@ def run_git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def active_user_unit(user: str, home: Path, uid: int, unit: str) -> str | None:
+def user_systemctl_output(
+    user: str, home: Path, uid: int, *args: str
+) -> str | None:
     runtime = Path("/run/user") / str(uid)
     socket_path = runtime / "bus"
     if not socket_path.exists():
@@ -356,7 +358,7 @@ def active_user_unit(user: str, home: Path, uid: int, unit: str) -> str | None:
         "XDG_RUNTIME_DIR": str(runtime),
         "DBUS_SESSION_BUS_ADDRESS": f"unix:path={socket_path}",
     }
-    command = ["systemctl", "--user", "show", "--property=ActiveState", "--value", unit]
+    command = ["systemctl", "--user", *args]
     process_env = os.environ.copy()
     process_env.update(base_env)
     if os.geteuid() == 0:
@@ -373,7 +375,75 @@ def active_user_unit(user: str, home: Path, uid: int, unit: str) -> str | None:
         return None
     if result.returncode != 0:
         return None
-    return result.stdout.strip()
+    return result.stdout
+
+
+def active_user_unit(user: str, home: Path, uid: int, unit: str) -> str | None:
+    output = user_systemctl_output(
+        user, home, uid, "show", "--property=ActiveState", "--value", unit
+    )
+    return output.strip() if output is not None else None
+
+
+PATH_OVERRIDE_FLAGS = {
+    "NYXAL_CONVERSATION_MEMORY_PATH": ("memory_path", "--memory-path"),
+    "XDG_STATE_HOME": ("state_dir", "--state-dir"),
+    "NYXAL_STATE_DIR": ("state_dir", "--state-dir"),
+    "NYXAL_DELTA_PATH": ("delta_path", "--delta-path"),
+    "NYXAL_CRISTAL_ARQUIVO": ("crystal_path", "--crystal-path"),
+    "NYXAL_CRISTAL_LEGADO": ("manager_crystal_path", "--manager-crystal-path"),
+    "NYXAL_CRISTAL_BACKUPS": ("checkpoint_path", "--checkpoint-path"),
+}
+
+
+def configured_path_override_names(
+    home: Path, user: str, uid: int
+) -> set[str]:
+    """Read config sources but return only names of known path variables, never values."""
+    candidates = [
+        home / ".config/nyxal/nyxal.env",
+        home / ".config/systemd/user/nyxal-api.service",
+        home / ".config/systemd/user/nyxos-residente.service",
+    ]
+    for unit_dir in (
+        home / ".config/systemd/user/nyxal-api.service.d",
+        home / ".config/systemd/user/nyxos-residente.service.d",
+    ):
+        try:
+            ensure_no_symlink_components(unit_dir)
+            if unit_dir.is_dir():
+                candidates.extend(sorted(unit_dir.glob("*.conf")))
+        except PreflightError:
+            continue
+
+    found: set[str] = set()
+    for path in candidates:
+        if not path.exists() and not path.is_symlink():
+            continue
+        try:
+            raw = read_regular(path, 1024 * 1024).decode("utf-8")
+        except (PreflightError, UnicodeDecodeError):
+            continue
+        for key in PATH_OVERRIDE_FLAGS:
+            if re.search(rf"(?<![A-Za-z0-9_]){re.escape(key)}\\s*=", raw):
+                found.add(key)
+
+    # Also inspect the user manager/unit effective Environment properties.
+    # Values remain in memory and are never logged; only allow-listed names escape.
+    for unit in ("nyxal-api.service", "nyxos-residente.service"):
+        unit_env = user_systemctl_output(
+            user, home, uid, "show", "--property=Environment", "--value", unit
+        )
+        if unit_env:
+            for key in PATH_OVERRIDE_FLAGS:
+                if re.search(rf"(?<![A-Za-z0-9_]){re.escape(key)}=", unit_env):
+                    found.add(key)
+    manager_env = user_systemctl_output(user, home, uid, "show-environment")
+    if manager_env:
+        for key in PATH_OVERRIDE_FLAGS:
+            if re.search(rf"(?m)^{re.escape(key)}=", manager_env):
+                found.add(key)
+    return found
 
 
 class Reporter:
@@ -566,6 +636,23 @@ def main() -> int:
         print(f"Backup Fase 0: {backup}")
         print("Modo: leitura; sem imports de runtime; sem reparos; sem alterações de serviços.")
         print()
+
+        supplied_flags = {
+            "memory_path": args.memory_path is not None,
+            "state_dir": args.state_dir is not None,
+            "delta_path": args.delta_path is not None,
+            "crystal_path": args.crystal_path is not None,
+            "checkpoint_path": args.checkpoint_path is not None,
+            "manager_crystal_path": args.manager_crystal_path is not None,
+        }
+        for key in sorted(configured_path_override_names(home, user, uid)):
+            flag_name, flag = PATH_OVERRIDE_FLAGS[key]
+            if not supplied_flags[flag_name]:
+                reporter.add(
+                    "BLOQUEIO", "override_de_caminho_nao_confirmado",
+                    f"A configuração contém {key}; passe {flag} com o caminho efetivo confirmado localmente. O valor configurado não foi exibido.",
+                    home,
+                )
 
         try:
             summary = verify_backup(backup)
