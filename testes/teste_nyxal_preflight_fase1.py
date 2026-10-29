@@ -71,12 +71,14 @@ class TesteNyxalPreflightFase1(unittest.TestCase):
             archive_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
             checksum.write_text(f"{archive_hash}  estado_vivo.tar.gz\n", encoding="utf-8")
 
-            summary = PREFLIGHT.verify_backup(backup)
+            summary = PREFLIGHT.verify_backup(backup, archive_hash)
             self.assertEqual(summary["arquivos"], 1)
+            with self.assertRaises(PREFLIGHT.PreflightError):
+                PREFLIGHT.verify_backup(backup, "0" * 64)
 
             checksum.write_text(f"{'0' * 64}  estado_vivo.tar.gz\n", encoding="utf-8")
             with self.assertRaises(PREFLIGHT.PreflightError):
-                PREFLIGHT.verify_backup(backup)
+                PREFLIGHT.verify_backup(backup, archive_hash)
 
     def test_manifesto_nao_aceita_travessia_de_caminho(self):
         with tempfile.TemporaryDirectory() as temporary:
