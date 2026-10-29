@@ -27,6 +27,9 @@ HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 MAX_JSON_BYTES = 32 * 1024 * 1024
 MAX_AUDIT_BYTES = 1_048_576
 MAX_AUDIT_LINE_BYTES = 4096
+MAX_LEGACY_AUDIT_BYTES = 128 * 1024 * 1024
+MAX_LEGACY_AUDIT_LINE_BYTES = 8 * 1024 * 1024
+MAX_LEGACY_AUDIT_RECORDS = 500_000
 AUDIT_KEYS = {
     "schema", "id", "observado_em", "tipo", "fonte_sinal", "origem_ip",
     "estado", "severidade", "recomendacoes", "planos_dry_run",
@@ -319,19 +322,67 @@ def check_hash_chain(path: Path, mode: str, owner_uid: int) -> dict[str, int]:
     return {"registros": count, "bytes": len(raw)}
 
 
-def check_generic_jsonl(path: Path) -> int:
-    raw = read_regular(path, MAX_AUDIT_BYTES)
-    if raw and not raw.endswith(b"\n"):
-        raise PreflightError("ultima_linha_incompleta")
-    count = 0
-    for line in raw.splitlines():
-        if len(line) > MAX_AUDIT_LINE_BYTES:
-            raise PreflightError("linha_excede_limite")
-        item = strict_json(line)
-        if not isinstance(item, dict):
-            raise PreflightError("registro_nao_e_objeto")
-        count += 1
-    return count
+def check_legacy_action_audit(path: Path, owner_uid: int) -> dict[str, int]:
+    """Valida a cadeia M5.18 em streaming; replica o contrato do módulo sem importá-lo."""
+    ensure_no_symlink_components(path)
+    try:
+        with path.open("rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                raise PreflightError("nao_e_arquivo_regular")
+            if info.st_uid != owner_uid:
+                raise PreflightError("proprietario_do_diario_invalido")
+            if stat.S_IMODE(info.st_mode) & 0o077:
+                raise PreflightError("permissoes_do_diario_nao_privadas")
+            if info.st_size > MAX_LEGACY_AUDIT_BYTES:
+                raise PreflightError("limite_total_de_auditoria_legada_excedido")
+            total_bytes = info.st_size
+            previous = "GENESIS"
+            count = 0
+            while True:
+                line = stream.readline(MAX_LEGACY_AUDIT_LINE_BYTES + 1)
+                if not line:
+                    break
+                if len(line) > MAX_LEGACY_AUDIT_LINE_BYTES:
+                    raise PreflightError("linha_de_auditoria_legada_excede_limite")
+                if not line.endswith(b"\n"):
+                    raise PreflightError("ultima_linha_incompleta")
+                line = line[:-1]
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line.decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
+                    raise PreflightError("json_de_auditoria_legada_invalido") from None
+                if not isinstance(record, dict):
+                    raise PreflightError("registro_de_auditoria_legada_invalido")
+                sequence = record.get("sequencia")
+                if (
+                    isinstance(sequence, bool)
+                    or not isinstance(sequence, int)
+                    or sequence != count + 1
+                    or record.get("hash_anterior") != previous
+                ):
+                    raise PreflightError("sequencia_ou_hash_anterior_da_auditoria_legada_invalido")
+                stored_hash = record.get("hash")
+                if not isinstance(stored_hash, str) or not HASH_RE.fullmatch(stored_hash):
+                    raise PreflightError("hash_da_auditoria_legada_invalido")
+                unsigned = dict(record)
+                unsigned.pop("hash", None)
+                expected_hash = hashlib.sha256(canonical_json(unsigned)).hexdigest()
+                if stored_hash != expected_hash:
+                    raise PreflightError("hash_da_auditoria_legada_nao_confere")
+                previous = stored_hash
+                count += 1
+                if count > MAX_LEGACY_AUDIT_RECORDS:
+                    raise PreflightError("limite_de_registros_da_auditoria_legada_excedido")
+            return {"registros": count, "bytes": total_bytes}
+    except PreflightError:
+        raise
+    except FileNotFoundError:
+        raise PreflightError("arquivo_ausente") from None
+    except OSError:
+        raise PreflightError("arquivo_ilegivel") from None
 
 
 def run_git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -775,10 +826,10 @@ def main() -> int:
 
         legacy_audit = repo / "auditoria_atuacao_nyxos.jsonl"
         try:
-            count = check_generic_jsonl(legacy_audit)
+            summary = check_legacy_action_audit(legacy_audit, uid)
             reporter.add(
-                "ALERTA", "auditoria_legada_precisa_de_validacao_semantica",
-                f"JSONL legível; registros={count}; cadeia específica não foi atestada por este preflight.",
+                "OK", "auditoria_legada_cadeia_valida",
+                f"cadeia M5.18 verificada; registros={summary['registros']}; bytes={summary['bytes']}",
                 legacy_audit,
             )
         except PreflightError as exc:
