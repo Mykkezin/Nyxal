@@ -87,3 +87,4 @@ teste_relevancia_historico_investigacao_56_4_20.py
 teste_reutilizacao.py
 teste_sanidade.py
 testes/teste_persistencia_cristal.py
+testes/teste_nyxal_fase0.py
