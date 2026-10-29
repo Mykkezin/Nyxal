@@ -91,6 +91,7 @@ class GerenciadorCapacidades:
             str,
             Capacidade,
         ] = {}
+        self._inicializando = True
 
         # A corrupção de um catálogo existente nunca autoriza substituí-lo por defaults.
         self._preservar_catalogo_corrompido = False
@@ -284,6 +285,8 @@ class GerenciadorCapacidades:
             },
         )
 
+        self._inicializando = False
+
     # ============================================================
     # REGISTRO PERSISTENTE
     # ============================================================
@@ -315,6 +318,9 @@ class GerenciadorCapacidades:
     def _salvar_registro(
         self,
     ) -> None:
+
+        if getattr(self, "_inicializando", False):
+            return
 
         if self._preservar_catalogo_corrompido:
             return
