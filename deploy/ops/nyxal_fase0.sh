@@ -19,7 +19,7 @@ TARGET_HOME="$(printf '%s' "$PASSWD_ENTRY" | cut -d: -f6)"
 
 REPO_DIR="${NYXAL_REPO_DIR:-$TARGET_HOME/Nyxal}"
 BACKUP_ROOT="${NYXAL_BACKUP_ROOT:-/var/backups/nyxal}"
-TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+TIMESTAMP="$(date +%Y%m%d_%H%M%S_%N)"
 BACKUP_DIR="$BACKUP_ROOT/fase0_$TIMESTAMP"
 PAYLOAD_DIR="$BACKUP_DIR/payload"
 INVENTORY_PATH="$BACKUP_DIR/divergencias.log"
@@ -49,7 +49,7 @@ run_user() {
 run_user show-environment >/dev/null 2>&1 || die "Não foi possível consultar o systemd --user da conta $TARGET_USER."
 
 install -d -m 700 -o root -g root "$BACKUP_ROOT"
-install -d -m 700 -o root -g root "$BACKUP_DIR"
+mkdir -m 700 "$BACKUP_DIR" || die "Não foi possível reservar um diretório de backup único: $BACKUP_DIR"
 install -d -m 700 -o root -g root "$PAYLOAD_DIR"
 install -d -m 700 "$PAYLOAD_DIR/meta"
 
