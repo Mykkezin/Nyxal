@@ -96,7 +96,7 @@ class TesteNyxalPreflightFase1(unittest.TestCase):
             checksum.write_text(f"{archive_hash}  estado_vivo.tar.gz\n", encoding="utf-8")
             manifest.write_text(f"{'0' * 64}  payload/../outside\n", encoding="utf-8")
             with self.assertRaises(PREFLIGHT.PreflightError):
-                PREFLIGHT.verify_backup(backup)
+                PREFLIGHT.verify_backup(backup, archive_hash)
 
     def test_cadeia_de_aprovacao_valida(self):
         with tempfile.TemporaryDirectory() as temporary:
