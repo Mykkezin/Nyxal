@@ -53,6 +53,12 @@ mkdir -m 700 "$BACKUP_DIR" || die "Não foi possível reservar um diretório de 
 install -d -m 700 -o root -g root "$PAYLOAD_DIR"
 install -d -m 700 "$PAYLOAD_DIR/meta"
 
+# Preservar também todas as alterações rastreadas, inclusive arquivos fora
+# da lista de estado. Esses patches ficam somente dentro do backup privado.
+git -C "$REPO_DIR" diff --binary HEAD -- > "$PAYLOAD_DIR/meta/worktree_vs_HEAD.patch"
+git -C "$REPO_DIR" diff --binary --cached > "$PAYLOAD_DIR/meta/index_vs_HEAD.patch"
+git -C "$REPO_DIR" status --porcelain=v1 -z > "$PAYLOAD_DIR/meta/git_status_porcelain.bin"
+
 WAS_ACTIVE=()
 for unit in "$API_UNIT" "$RESIDENT_UNIT"; do
     if run_user is-active --quiet "$unit"; then WAS_ACTIVE+=("$unit"); fi
