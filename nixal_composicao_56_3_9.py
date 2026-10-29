@@ -26,6 +26,7 @@ Objetivos:
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -45,8 +46,15 @@ LIMIAR_COBERTURA_PLANO = 0.55
 
 LIMIAR_ADERENCIA_DOMINIO = 1
 
-ARQUIVO_CAPACIDADES = Path(
-    "capacidades_nixal.json"
+_STATE_DIR_ENV = os.environ.get("NYXAL_STATE_DIR", "").strip()
+_STATE_DIR = Path(_STATE_DIR_ENV).expanduser() if _STATE_DIR_ENV else None
+if _STATE_DIR is not None and not _STATE_DIR.is_absolute():
+    _STATE_DIR = Path(__file__).resolve().parent / _STATE_DIR
+
+ARQUIVO_CAPACIDADES = (
+    _STATE_DIR.resolve() / "capacidades_nixal.json"
+    if _STATE_DIR is not None
+    else Path("capacidades_nixal.json")
 )
 
 

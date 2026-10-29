@@ -62,6 +62,12 @@ from nixal_trilha_http import RegistroTrilhaHTTP
 
 
 BASE_DIR = Path(__file__).resolve().parent
+STATE_DIR = Path(
+    os.environ.get("NYXAL_STATE_DIR", str(BASE_DIR))
+).expanduser()
+if not STATE_DIR.is_absolute():
+    STATE_DIR = BASE_DIR / STATE_DIR
+STATE_DIR = STATE_DIR.resolve()
 TRILHA_HTTP = RegistroTrilhaHTTP.do_ambiente()
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
@@ -93,14 +99,14 @@ INTEGRACAO_CONVERSACIONAL = IntegracaoSessaoTransporteNixal(
 )
 HABITAT_NYXOS = HabitatNixOS()
 PERSISTENCIA_OPERACIONAL = PersistenciaOperacionalNixOS(
-    BASE_DIR / "estado_nyxos_operacional.json"
+    STATE_DIR / "estado_nyxos_operacional.json"
 )
 DELTA_NYXOS = RegistroDeltaNixOS(
-    BASE_DIR / "eventos_delta_nyxos.json"
+    STATE_DIR / "eventos_delta_nyxos.json"
 )
 RECURSOS_HABITAT = RecursosHabitatNixOS(BASE_DIR)
 PRESENCA_MAQUINA = PresencaMaquinaNixOS(
-    arquivo=BASE_DIR / "presenca_maquina_nyxos.json"
+    arquivo=STATE_DIR / "presenca_maquina_nyxos.json"
 )
 DESCOBERTA_CONTINUA_AE5 = DescobertaContinuaGovernadaAE5(
     repositorio=BASE_DIR,
@@ -474,7 +480,7 @@ def read_machine_presence() -> dict:
     """Lê a presença residente do arquivo atualizado pelo próprio ciclo."""
     try:
         return PresencaMaquinaNixOS(
-            arquivo=BASE_DIR / "presenca_maquina_nyxos.json"
+            arquivo=STATE_DIR / "presenca_maquina_nyxos.json"
         ).contexto()
     except Exception as erro:
         return {
