@@ -4,7 +4,7 @@
 
 Esta alteração prepara exclusivamente a Fase 0: backup verificável e inventário de divergências. A Fase 1 não deve ser ligada ao systemd antes de executar a Fase 0, revisar o relatório e confirmar os caminhos reais no host.
 
-O script não atualiza o checkout, não executa git pull, não apaga estado operacional e não altera configurações da instalação. Ele pausa temporariamente apenas as unidades systemd de usuário que já estavam ativas, captura os dados, verifica os hashes e tenta restaurar exatamente o conjunto de serviços que estava ativo. Se houver uma unit system-level ativa com o mesmo nome, ou se os caminhos de estado contiverem links simbólicos, o script aborta para evitar atuar sobre uma instalação ambígua.
+O script não atualiza o checkout, não executa git pull, não apaga estado operacional e não altera configurações da instalação. Ele pausa temporariamente apenas as unidades systemd de usuário que já estavam ativas, captura os dados, verifica os hashes e tenta restaurar exatamente o conjunto de serviços que estava ativo. A retomada normal do residente pode atualizar contadores/eventos de inicialização; o arquivo de backup representa o estado capturado antes dessa retomada. Se houver uma unit system-level ativa com o mesmo nome, ou se os caminhos de estado contiverem links simbólicos, o script aborta para evitar atuar sobre uma instalação ambígua.
 
 ## Diferenças importantes em relação ao rascunho inicial
 
