@@ -38,8 +38,15 @@ from typing import Any, Callable
 
 BASE_DIR = Path(__file__).resolve().parent
 
+_STATE_DIR_ENV = os.environ.get("NYXAL_STATE_DIR", "").strip()
+_STATE_DIR = Path(_STATE_DIR_ENV).expanduser() if _STATE_DIR_ENV else None
+if _STATE_DIR is not None and not _STATE_DIR.is_absolute():
+    _STATE_DIR = BASE_DIR / _STATE_DIR
+
 ARQUIVO_CAPACIDADES = (
-    BASE_DIR / "capacidades_nixal.json"
+    _STATE_DIR.resolve() / "capacidades_nixal.json"
+    if _STATE_DIR is not None
+    else BASE_DIR / "capacidades_nixal.json"
 )
 
 ARQUIVO_LOG = (
