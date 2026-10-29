@@ -425,7 +425,7 @@ def configured_path_override_names(
         except (PreflightError, UnicodeDecodeError):
             continue
         for key in PATH_OVERRIDE_FLAGS:
-            if re.search(rf"(?<![A-Za-z0-9_]){re.escape(key)}\\s*=", raw):
+            if re.search(rf"(?<![A-Za-z0-9_]){re.escape(key)}\s*=", raw):
                 found.add(key)
 
     # Also inspect the user manager/unit effective Environment properties.
