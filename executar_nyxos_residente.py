@@ -77,7 +77,36 @@ def main() -> int:
         action="store_true",
         help="Ativa explicitamente a descoberta contínua governada de valor econômico.",
     )
+    parser.add_argument(
+        "--habilitar-ae1-descoberta",
+        action="store_true",
+        help="Ativa explicitamente a descoberta AE1.",
+    )
+    parser.add_argument(
+        "--habilitar-ae4-ciclo-evolucao",
+        action="store_true",
+        help="Ativa explicitamente o ciclo de evolução AE4.",
+    )
+    parser.add_argument(
+        "--habilitar-autoreparo-residente",
+        action="store_true",
+        help="Ativa o autorreparo apenas no checkout canônico ~/Nyxal.",
+    )
     args = parser.parse_args()
+
+    if args.habilitar_ae5_descoberta and not args.habilitar_ae4_ciclo_evolucao:
+        parser.error(
+            "--habilitar-ae5-descoberta requer "
+            "--habilitar-ae4-ciclo-evolucao"
+        )
+
+    if args.habilitar_autoreparo_residente:
+        checkout_canonico = (Path.home() / "Nyxal").resolve()
+        if BASE_DIR.resolve() != checkout_canonico:
+            parser.error(
+                "autorreparo bloqueado fora do checkout canônico ~/Nyxal; "
+                "os alvos systemd são unidades compartilhadas do usuário"
+            )
 
     solicitacao_evolucao = SolicitacaoEvolucaoNixal(repositorio=BASE_DIR)
     runtime = NyxalRuntime(
@@ -85,19 +114,33 @@ def main() -> int:
         modo_residente=True,
         aprendizado_habilitado=args.habilitar_aprendizado,
     )
-    auto_evolucao = AutoEvolucaoGovernadaNixOS(BASE_DIR)
+    habilitar_ae1 = (
+        args.habilitar_ae1_descoberta
+        or args.habilitar_ae4_ciclo_evolucao
+    )
+    auto_evolucao = (
+        AutoEvolucaoGovernadaNixOS(BASE_DIR)
+        if habilitar_ae1
+        else None
+    )
     auto_experimento = AutoExperimentoIsoladoAE2(
         runtime,
         runtime.solicitacao_evolucao,
         habilitada=args.habilitar_auto_experimento,
     )
-    auto_avaliacao = AutoAvaliacaoAE3()
-    ciclo_evolucao_ae4 = CicloEvolucaoResidenteAE4(
-        auto_evolucao,
-        auto_experimento,
-        auto_avaliacao,
-        repositorio=BASE_DIR,
+    auto_avaliacao = (
+        AutoAvaliacaoAE3()
+        if args.habilitar_ae4_ciclo_evolucao
+        else None
     )
+    ciclo_evolucao_ae4 = None
+    if args.habilitar_ae4_ciclo_evolucao:
+        ciclo_evolucao_ae4 = CicloEvolucaoResidenteAE4(
+            auto_evolucao,
+            auto_experimento,
+            auto_avaliacao,
+            repositorio=BASE_DIR,
+        )
     descoberta_continua_ae5 = DescobertaContinuaGovernadaAE5(
         repositorio=BASE_DIR,
         habilitada=args.habilitar_ae5_descoberta,
@@ -114,7 +157,11 @@ def main() -> int:
     presenca_maquina = PresencaMaquinaNixOS(
         arquivo=BASE_DIR / "presenca_maquina_nyxos.json",
     )
-    autoreparo_residente = AutoreparoResidenteNixOS()
+    autoreparo_residente = (
+        AutoreparoResidenteNixOS()
+        if args.habilitar_autoreparo_residente
+        else None
+    )
     plano_central_controle = PlanoCentralControleNixOS(
         arquivo=BASE_DIR / "plano_central_controle_nyxos.json",
     )
@@ -178,7 +225,14 @@ def main() -> int:
             else "DESABILITADA"
         )
     )
-    print("AE3 — AVALIAÇÃO: HABILITADA")
+    print(
+        "AE3 — AVALIAÇÃO: "
+        + (
+            "HABILITADA"
+            if contexto["auto_avaliacao_ae3_habilitada"]
+            else "DESABILITADA"
+        )
+    )
     print("AE4 — CICLO DE EVOLUÇÃO: " + ("HABILITADO" if contexto["ciclo_evolucao_ae4_habilitado"] else "DESABILITADO"))
     print("AE5 — DESCOBERTA CONTÍNUA: " + ("HABILITADA" if contexto["descoberta_continua_ae5_habilitada"] else "DESABILITADA"))
     print("AE5 — DATASETS DUAIS: " + ("HABILITADOS" if contexto["coleta_dataset_dual_ae5_habilitada"] else "DESABILITADOS"))
@@ -187,7 +241,14 @@ def main() -> int:
     print("M5.16 — ADAPTADOR HOST: CONTROLADO / SOMENTE LEITURA")
     print("M5.17 — SANDBOX FÍSICO: DISPONÍVEL / DESABILITADO")
     print("M5.18 — AUDITORIA DE ATUAÇÃO: HABILITADA")
-    print("M5.25 — AUTOREPARO API/DESKTOP: HABILITADO")
+    print(
+        "M5.25 — AUTOREPARO API/DESKTOP: "
+        + (
+            "HABILITADO"
+            if contexto["autoreparo_residente_habilitado"]
+            else "DESABILITADO"
+        )
+    )
     print("=" * 64)
 
     return 0 if all(
