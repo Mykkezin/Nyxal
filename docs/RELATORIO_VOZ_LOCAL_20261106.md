@@ -32,8 +32,9 @@ Data: 2026-11-06 · Branch: `feat/palmas-openjarvis` · Commit-base: `1f43e6e`
 - Foi incluída normalização de `Nixau`/`Nixal`/`Nicsal` no comando de repouso, novas hotwords e um limiar de palmas configurável; a transcrição sintética ainda não foi reexecutada usando o novo prompt/hotwords do agente.
 - Benchmark concorrente curto (Ollama `qwen2:7b`, Whisper base int8 e Kokoro `pf_dora`): janela de 11,02 s; Ollama 10,87 s (16 tokens medidos); Whisper 1,70 s para 2,41 s de áudio; Kokoro 2,41 s de áudio; RSS máximo do cgroup Ollama 4,80 GiB; CPU máxima do cgroup 150,7% de um núcleo; mínimo de 8,12 GiB disponíveis. Após o teste, `ollama ps` ficou vazio, o modelo foi descarregado e a RAM disponível marcou 9,0 GiB (swap usado 2,3 MiB). É uma amostra curta e não representa estabilidade prolongada nem utilização de VRAM.
 - Uma primeira coleta concorrente de CPU/RSS varrendo `/proc` foi interrompida por overhead excessivo do próprio monitor. A execução final usou os contadores leves do cgroup Ollama e terminou normalmente; nenhum dado Nyxal foi acessado.
-- `deploy/voice/verificar_api_nyxal.py` não foi executado: o script envia duas mensagens reais para `/api/chat` e persiste a sessão na memória conversacional configurada pela unidade API. Como essa unidade não existe e a instrução exige preservar memória, não iniciei a API por um caminho alternativo nem executei esse smoke test.
-- Sem API não foi feita chamada real de chat, sessão contínua ou teste end-to-end. A unidade de voz não foi instalada/ativada e o serviço não pode ser declarado operacional.
+- `deploy/voice/verificar_api_nyxal.py` foi executado; retornou `FALHA API: /health: URLError` antes de qualquer POST (as duas mensagens de teste não foram enviadas).
+- A tentativa de início manual de `nyxal_pipecat_agent.py` encerrou no preflight com `ConnectionRefusedError` em `127.0.0.1:8010`, antes de abrir o microfone. Sem API não houve chamada real de chat, sessão contínua ou teste end-to-end.
+- As alterações estão no commit `4317d3f` publicado em `origin/feat/palmas-openjarvis`. A unidade de voz não foi instalada/ativada e o serviço não pode ser declarado operacional.
 
 ## Aceite físico ainda necessário
 
