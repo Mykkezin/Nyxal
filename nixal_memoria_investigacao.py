@@ -39,10 +39,12 @@ VERSAO_MEMORIA = "56.4.15"
 MAX_MEMORIA_JSON_BYTES = 32 * 1024 * 1024
 MAX_REGISTROS_LEITURA_RECENTE = 5000
 
-ARQUIVO_MEMORIA_PADRAO = (
-    Path(__file__).resolve().parent
-    / "memoria_investigacao_nixal.json"
-)
+ARQUIVO_MEMORIA_PADRAO = Path(
+    os.environ.get(
+        "NYXAL_INVESTIGATION_MEMORY_PATH",
+        str(Path(__file__).resolve().parent / "memoria_investigacao_nixal.json"),
+    )
+).expanduser()
 
 
 def _tem_ancestral_simbolico(caminho: Path) -> bool:

@@ -37,10 +37,12 @@ from typing import Any
 VERSAO_MEMORIA = "1.0"
 MAX_MEMORIA_JSON_BYTES = 32 * 1024 * 1024
 
-ARQUIVO_MEMORIA_PADRAO = (
-    Path(__file__).resolve().parent
-    / "memoria_conhecimento_nixal.json"
-)
+ARQUIVO_MEMORIA_PADRAO = Path(
+    os.environ.get(
+        "NYXAL_KNOWLEDGE_MEMORY_PATH",
+        str(Path(__file__).resolve().parent / "memoria_conhecimento_nixal.json"),
+    )
+).expanduser()
 
 
 def _tem_ancestral_simbolico(caminho: Path) -> bool:
