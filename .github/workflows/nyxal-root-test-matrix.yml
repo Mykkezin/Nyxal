@@ -119,6 +119,9 @@ jobs:
             exit 1
           fi
 
+      - name: Run isolated memory and crystal regression suite
+        run: bash validar_memoria_cristal_isolado.sh
+
       - name: Refuse to pass on zero executions
         run: |
           total=$(grep -c '[^[:space:]]' .github/matriz-validacao-raiz.txt)
