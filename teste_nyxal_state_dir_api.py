@@ -25,13 +25,18 @@ class TestDiretorioEstadoAPI(unittest.TestCase):
                 "USER": "nyxal-test",
                 "LOGNAME": "nyxal-test",
                 "LANG": "C.UTF-8",
+                "PYTHONDONTWRITEBYTECODE": "1",
                 "XDG_CONFIG_HOME": str(home / ".config"),
                 "XDG_CACHE_HOME": str(home / ".cache"),
                 "XDG_STATE_HOME": str(home / ".local/state"),
                 "XDG_DATA_HOME": str(home / ".local/share"),
                 "NYXAL_USER_DATA_DIR": str(home / ".local/share/nyxal"),
                 "NYXAL_STATE_DIR": str(state),
+                "NYXAL_CONVERSATION_MEMORY_PATH": str(state / "conversas.json"),
+                "NYXAL_INVESTIGATION_MEMORY_PATH": str(state / "memoria_investigacao.json"),
+                "NYXAL_KNOWLEDGE_MEMORY_PATH": str(state / "memoria_conhecimento.json"),
                 "NYXAL_HTTP_TRACE_ENABLED": "0",
+                "NYXAL_FUNCTION_CALLING_ENABLED": "0",
                 "NYXAL_MCP_HTTP_ENABLED": "0",
                 "NYXAL_API_HOST": "127.0.0.1",
                 "NYXAL_API_PORT": "18010",
@@ -50,6 +55,9 @@ nomes = (
     "estado_nyxos_operacional.json",
     "eventos_delta_nyxos.json",
     "presenca_maquina_nyxos.json",
+    "memoria_investigacao_nixal.json",
+    "memoria_conhecimento_nixal.json",
+    "log_capacidades_nixal.json",
 )
 antes = {
     nome: (repo / nome).read_bytes()
@@ -85,6 +93,18 @@ import nixal_composicao_56_3_9 as compositor
 
 assert Path(capacidades.ARQUIVO_CAPACIDADES).resolve() == catalogo_estado
 assert Path(compositor.ARQUIVO_CAPACIDADES).resolve() == catalogo_estado
+assert Path(capacidades.ARQUIVO_LOG).resolve() == (
+    state / "log_capacidades_nixal.json"
+)
+
+import nixal_memoria_investigacao as memoria_investigacao
+import nixal_memoria_conhecimento as memoria_conhecimento
+assert memoria_investigacao.ARQUIVO_MEMORIA_PADRAO.resolve() == (
+    state / "memoria_investigacao.json"
+)
+assert memoria_conhecimento.ARQUIVO_MEMORIA_PADRAO.resolve() == (
+    state / "memoria_conhecimento.json"
+)
 
 depois = {
     nome: (repo / nome).read_bytes()

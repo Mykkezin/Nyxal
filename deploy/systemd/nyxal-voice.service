@@ -1,0 +1,24 @@
+[Unit]
+Description=Nyxal — assistente de voz local (duas palmas)
+Documentation=file:%h/Nyxal-voz/docs/VOZ_CONVERSACIONAL_TEMPO_REAL.md
+After=nyxal-api.service sound.target
+Wants=sound.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Nyxal-voz
+EnvironmentFile=-%h/.config/nyxal/nyxal.env
+Environment=NYXAL_API_BASE=http://127.0.0.1:8010
+Environment=NYXAL_PIPECAT_LOG_LEVEL=INFO
+ExecStartPre=/usr/bin/curl --fail --silent --show-error --max-time 4 http://127.0.0.1:8010/health
+ExecStart=%h/.local/share/nyxal-voice-pipecat/venv/bin/python %h/Nyxal-voz/deploy/voice/nyxal_pipecat_agent.py
+Restart=on-failure
+RestartSec=8
+NoNewPrivileges=true
+CapabilityBoundingSet=
+UMask=0077
+
+[Install]
+WantedBy=default.target

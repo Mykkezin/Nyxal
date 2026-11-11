@@ -68,6 +68,16 @@ STATE_DIR = Path(
 if not STATE_DIR.is_absolute():
     STATE_DIR = BASE_DIR / STATE_DIR
 STATE_DIR = STATE_DIR.resolve()
+# A memória conversacional persistente usa o diretório privado do usuário por
+# padrão. Testes/ambientes isolados continuam podendo definir este caminho.
+os.environ.setdefault(
+    "NYXAL_CONVERSATION_MEMORY_PATH",
+    str(
+        STATE_DIR / "conversas.json"
+        if os.environ.get("NYXAL_STATE_DIR")
+        else Path.home() / ".local" / "share" / "nyxal" / "conversas.json"
+    ),
+)
 TRILHA_HTTP = RegistroTrilhaHTTP.do_ambiente()
 HOST = os.environ.get("NYXAL_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NYXAL_API_PORT", "8010"))
@@ -1793,25 +1803,20 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         provedor_conversa: str | None = None
         contexto_sistema_conversa: dict[str, Any] | None = None
-        if self.path == "/api/agent/chat":
-            provedor_solicitado = payload.get("provedor")
+        if self.path == "/api/agent/chat" or payload.get("provedor") is not None:
+            provedor_solicitado = payload.get("provedor", "nyxal")
             if provedor_solicitado is not None and not isinstance(provedor_solicitado, str):
                 self._send_json(400, {"estado": "provedor_invalido", "motivo": "O campo provedor precisa ser texto."})
                 return
-            # O chat textual é sempre local. O valor enviado pelo cliente não pode
-            # reativar provedores externos; contexto operacional continua sendo
-            # coletado em modo somente leitura para que o Qwen responda com dados atuais.
-            provedor = "nyxal"
+            provedor = provedor_solicitado.strip().lower()
             try:
                 provedor_resolvido = AGENTE_NYXAL.resolve_provider(provedor)
-                if provedor_resolvido != "nyxal":
-                    raise RuntimeError("A política de conversa local foi violada.")
-                provedor_conversa = "nyxal"
+                provedor_conversa = provedor_resolvido
                 contexto_sistema_conversa = {}
-                if _precisa_contexto_sistema(mensagem):
+                if provedor_resolvido == "nyxal" and _precisa_contexto_sistema(mensagem):
                     contexto_sistema_conversa["observabilidade"] = OBSERVABILIDADE_NYXOS.snapshot()
                     contexto_sistema_conversa["residencia"] = residencia_snapshot()
-                if _precisa_contexto_email(mensagem):
+                if provedor_resolvido == "nyxal" and _precisa_contexto_email(mensagem):
                     try:
                         status_google = GMAIL_NYXOS.status()
                         contexto_sistema_conversa["gmail"] = (
@@ -1826,21 +1831,21 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                             "somente_leitura": True,
                             "motivo": "Não foi possível consultar o Gmail nesta solicitação.",
                         }
-                if _precisa_contexto_agenda(mensagem):
+                if provedor_resolvido == "nyxal" and _precisa_contexto_agenda(mensagem):
                     try:
                         contexto_sistema_conversa["agenda"] = GMAIL_NYXOS.listar_eventos(limite=12, dias=14)
                     except Exception:
                         contexto_sistema_conversa["agenda"] = {
                             "estado": "agenda_indisponivel", "somente_leitura": True,
                         }
-                if _precisa_contexto_contatos(mensagem):
+                if provedor_resolvido == "nyxal" and _precisa_contexto_contatos(mensagem):
                     try:
                         contexto_sistema_conversa["contatos"] = GMAIL_NYXOS.listar_contatos(limite=25)
                     except Exception:
                         contexto_sistema_conversa["contatos"] = {
                             "estado": "contatos_indisponiveis", "somente_leitura": True,
                         }
-                if _precisa_contexto_drive(mensagem):
+                if provedor_resolvido == "nyxal" and _precisa_contexto_drive(mensagem):
                     try:
                         contexto_sistema_conversa["google_drive"] = GMAIL_NYXOS.listar_arquivos_drive(limite=25)
                     except Exception:
@@ -1864,7 +1869,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 return
 
         try:
-            if self.path == "/api/agent/chat":
+            if provedor_conversa is not None:
                 resultado = INTEGRACAO_CONVERSACIONAL.processar_mensagem(
                     texto=mensagem,
                     nucleo=NUCLEO_CONVERSACIONAL,
@@ -1900,7 +1905,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             else None
         )
 
-        if self.path == "/api/agent/chat" and isinstance(resposta_estruturada, dict):
+        if provedor_conversa is not None and isinstance(resposta_estruturada, dict):
             dados_resposta = resposta_estruturada.get("valor")
             if (
                 isinstance(dados_resposta, dict)
@@ -1930,6 +1935,13 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
         )
 
         resposta["sessao"] = resultado.get("sessao")
+        if isinstance(resposta_estruturada, dict):
+            valor_resposta = resposta_estruturada.get("valor")
+            if isinstance(valor_resposta, dict):
+                for campo in ("modelo", "provedor", "mensagens_consideradas"):
+                    valor = valor_resposta.get(campo)
+                    if isinstance(valor, (str, int)):
+                        resposta[campo] = valor
 
         self._send_json(
             200 if resultado.get("sucesso") else 422,

@@ -1,12 +1,15 @@
 import json
 
 from gerenciador_cristal import (
-    caminho_do_projeto,
+    resolver_caminho,
     carregar_json_com_seguranca,
     salvar_json_atomicamente,
 )
 
-ARQUIVO = caminho_do_projeto("memoria", "cristalizacao.json")
+ARQUIVO = resolver_caminho(
+    "memoria/cristalizacao.json",
+    "NYXAL_CRISTALIZACAO_ARQUIVO",
+)
 MODELO = "qwen2:7b"
 
 CAMPOS_OBRIGATORIOS = ("conceito", "essencia", "relacoes", "incerteza")

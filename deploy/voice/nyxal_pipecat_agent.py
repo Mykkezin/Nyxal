@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from nixal_seguranca_http import host_loopback
+from nyxal_clap_wake import TwoClapDetector, is_rest_command
 from nyxal_voice_prosody import (
     choose_speech_profile,
     clean_speech_text,
@@ -35,6 +36,7 @@ from nyxal_voice_prosody import (
 import aiohttp
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import (
+    AudioRawFrame,
     TranscriptionFrame,
     TTSSpeakFrame,
     TTSUpdateSettingsFrame,
@@ -171,6 +173,27 @@ class TurnState:
 
     def __init__(self) -> None:
         self.generation = 0
+        self.sleeping = True
+
+
+class ClapWakeProcessor(FrameProcessor):
+    """Gate microphone audio until an intentional two-clap wake gesture."""
+
+    def __init__(self, turn_state: TurnState, threshold: float = 0.18) -> None:
+        super().__init__()
+        self._state = turn_state
+        self._claps = TwoClapDetector(threshold=threshold)
+
+    async def process_frame(self, frame, direction: FrameDirection) -> None:
+        await super().process_frame(frame, direction)
+        if direction == FrameDirection.DOWNSTREAM and isinstance(frame, AudioRawFrame):
+            if self._state.sleeping:
+                if self._claps.feed(frame.audio):
+                    self._state.sleeping = False
+                    logger.info("[nyxal-voz] duas palmas detectadas; escuta de conversa ativada")
+                # Never send clap or ambient audio to VAD/STT.
+                return
+        await self.push_frame(frame, direction)
 
 
 class BargeInProcessor(FrameProcessor):
@@ -269,6 +292,16 @@ class NyxalChatProcessor(FrameProcessor):
         if direction == FrameDirection.DOWNSTREAM and isinstance(frame, TranscriptionFrame):
             utterance = frame.text.strip()
             if not utterance:
+                return
+
+            if is_rest_command(utterance):
+                self._turn_state.generation += 1
+                await self.push_frame(
+                    TTSSpeakFrame("Certo. Vou entrar em repouso. Duas palmas me despertam."),
+                    FrameDirection.DOWNSTREAM,
+                )
+                self._turn_state.sleeping = True
+                logger.info("[nyxal-voz] comando verbal de repouso reconhecido")
                 return
 
             generation_at_request = self._turn_state.generation
@@ -371,6 +404,10 @@ async def main() -> None:
         audio_idle_timeout=1.0,
     )
     barge_in = BargeInProcessor(turn_state)
+    clap_wake = ClapWakeProcessor(
+        turn_state,
+        threshold=_clamped_float("NYXAL_CLAP_THRESHOLD", 0.18, 0.08, 0.85),
+    )
 
     stt = WhisperSTTService(
         device="cpu",
@@ -379,8 +416,8 @@ async def main() -> None:
             model=model,
             language=Language.PT,
             no_speech_prob=0.6,
-            hotwords="Nyxal NyxOS Ollama Kokoro Qwen",
-            initial_prompt="Conversa natural em português brasileiro sobre a assistente Nyxal e o sistema NyxOS.",
+            hotwords="Nyxal Nixal Nixau NyxOS Ollama Kokoro Qwen",
+            initial_prompt="Conversa natural em português brasileiro sobre a assistente Nyxal (pronuncia-se Nixal) e o sistema NyxOS.",
         ),
     )
     tts = KokoroTTSService(
@@ -395,6 +432,7 @@ async def main() -> None:
     pipeline = Pipeline(
         [
             transport.input(),
+            clap_wake,
             vad,
             barge_in,
             stt,
@@ -414,8 +452,8 @@ async def main() -> None:
     runner = WorkerRunner()
     await runner.add_workers(worker)
 
-    logger.info("[nyxal-voz] ouvindo continuamente; Ctrl+C encerra o teste")
-    logger.info("[nyxal-voz] fale naturalmente; uma nova fala deve interromper a resposta anterior")
+    logger.info("[nyxal-voz] modo repouso; duas palmas próximas ativam a conversa")
+    logger.info("[nyxal-voz] em conversa, nova fala interrompe a resposta anterior")
     await runner.run()
 
 

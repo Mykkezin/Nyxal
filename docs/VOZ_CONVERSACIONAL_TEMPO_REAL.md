@@ -4,7 +4,7 @@
 
 Evoluir o orbe da Nyxal de um ciclo sequencial de gravação → transcrição → geração completa do áudio → reprodução para uma conversa de voz contínua, com resposta local, voz feminina, reprodução assíncrona e interrupção quando o usuário começa a falar novamente.
 
-O protótipo é experimental. Não substitui o núcleo conversacional, a memória ou a API existentes, e não ativa captura automática por conta própria no sistema estável.
+O agente local usa a arquitetura de pipeline como referência, sem instalar ou duplicar Runtime, memória, Delta ou governança da Nyxal. A unidade systemd é opt-in e não é ativada pelo repositório.
 
 ## Diagnóstico atual
 
@@ -36,7 +36,9 @@ Microfone / PyAudio
   → saída de áudio local
 ```
 
-O processador de interrupção também incrementa um identificador de geração. Se uma nova fala começa enquanto a API ainda está produzindo uma resposta, o resultado antigo é descartado e não deve ser reproduzido. O processamento HTTP é assíncrono; o transporte de áudio do Pipecat escreve no dispositivo por um executor dedicado.
+O processador de interrupção também incrementa um identificador de geração. Se uma nova fala começa enquanto a API ainda está produzindo uma resposta, o resultado antigo é descartado e não deve ser reproduzido. O processamento HTTP é assíncrono; o transporte de áudio do Pipecat escreve no dispositivo por um executor dedicado. Em repouso, `ClapWakeProcessor` consome os frames localmente e só encaminha áudio após dois transientes curtos separados por 120–950 ms. Não há palavra de ativação nem transcrição do ambiente nesse estado.
+
+Os comandos “Nyxal, pode descansar”, “Nyxal, entre em repouso”, “Nyxal, vá dormir” e “parar de ouvir” são tratados antes do `/api/chat`; a frase não é adicionada à conversa persistente. Variantes fonéticas comuns do STT (`Nixau`, `Nixal`, `Nicsal`) são aceitas no nome durante esse comando. O limiar de palmas pode ser ajustado por `NYXAL_CLAP_THRESHOLD` entre 0,08 e 0,85 (padrão 0,18).
 
 ## Dependências e armazenamento
 
@@ -112,6 +114,25 @@ Faça os testes em branch experimental e não rode dois ouvintes de microfone em
 
 Recomenda-se usar fones durante a avaliação, porque o protótipo não adiciona cancelamento acústico de eco: o microfone pode captar a voz reproduzida nos alto-falantes e iniciar uma interrupção falsa.
 
+### Inicialização controlada com systemd de usuário
+
+`deploy/systemd/nyxal-voice.service` faz preflight da API em loopback e reinicia o agente somente após falha, com limite de cinco partidas em cinco minutos. A unidade não é instalada nem ativada automaticamente. Após conferir o caminho do clone e validar o áudio manualmente, instale e inicie por decisão explícita:
+
+```bash
+mkdir -p ~/.config/systemd/user
+install -m 0644 deploy/systemd/nyxal-voice.service ~/.config/systemd/user/nyxal-voice.service
+systemctl --user daemon-reload
+systemctl --user enable --now nyxal-voice.service
+```
+
+Para rollback, `systemctl --user disable --now nyxal-voice.service` e remova somente a unidade instalada em `~/.config/systemd/user/nyxal-voice.service`. A API e o residente Nyxal não são controlados por esta unidade.
+
+Teste determinístico do algoritmo, sem dispositivo de áudio:
+
+```bash
+python3 -m unittest discover -s deploy/voice -p 'test_nyxal_clap_wake.py' -v
+```
+
 ## Critérios de aceite antes de qualquer ativação automática
 
 - Voz ouvida é Kokoro `pf_dora`, sem fallback para `espeak-ng`.
@@ -121,7 +142,7 @@ Recomenda-se usar fones durante a avaliação, porque o protótipo não adiciona
 - Falha/timeout da API não encerra o pipeline de áudio.
 - Transcrições e respostas não são gravadas nos logs do protótipo.
 - Consumo de CPU/RAM, latência até a primeira fala, falsa interrupção e perda de transcrições são medidos na máquina de destino.
-- A integração não muda a configuração estável nem habilita o serviço automaticamente.
+- O serviço de voz pode ser habilitado/desabilitado pelo usuário e não altera unidades da API/residente.
 
 ## Prosódia contextual e naturalidade pt-BR
 

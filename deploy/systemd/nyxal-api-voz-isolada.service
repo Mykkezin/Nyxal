@@ -1,0 +1,32 @@
+[Unit]
+Description=Nyxal API — ambiente isolado para validação de voz
+StartLimitIntervalSec=180
+StartLimitBurst=3
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Nyxal-voz
+ExecStartPre=/usr/bin/install -d -m 0700 -- %h/.local/state/nyxal-voice-api-isolated %h/.local/state/nyxal-voice-api-isolated/home/.config %h/.local/state/nyxal-voice-api-isolated/home/.local/state %h/.local/state/nyxal-voice-api-isolated/home/.local/share %h/.local/state/nyxal-voice-api-isolated/home/.cache %h/.local/state/nyxal-voice-api-isolated/config/nyxal %h/.local/state/nyxal-voice-api-isolated/user-data %h/.local/state/nyxal-voice-api-isolated/tmp
+ExecStart=/usr/bin/env -i HOME=%h/.local/state/nyxal-voice-api-isolated/home USER=%u LOGNAME=%u PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TMPDIR=%h/.local/state/nyxal-voice-api-isolated/tmp XDG_CONFIG_HOME=%h/.local/state/nyxal-voice-api-isolated/home/.config XDG_STATE_HOME=%h/.local/state/nyxal-voice-api-isolated/home/.local/state XDG_DATA_HOME=%h/.local/state/nyxal-voice-api-isolated/home/.local/share XDG_CACHE_HOME=%h/.local/state/nyxal-voice-api-isolated/home/.cache NYXAL_STATE_DIR=%h/.local/state/nyxal-voice-api-isolated NYXAL_CONVERSATION_MEMORY_PATH=%h/.local/state/nyxal-voice-api-isolated/conversas.json NYXAL_INVESTIGATION_MEMORY_PATH=%h/.local/state/nyxal-voice-api-isolated/memoria_investigacao.json NYXAL_KNOWLEDGE_MEMORY_PATH=%h/.local/state/nyxal-voice-api-isolated/memoria_conhecimento.json NYXAL_HTTP_TRACE_ENABLED=0 NYXAL_CONFIG_DIR=%h/.local/state/nyxal-voice-api-isolated/config/nyxal NYXAL_GOOGLE_CLIENT_FILE=%h/.local/state/nyxal-voice-api-isolated/config/nyxal/google-oauth-client.json NYXAL_GOOGLE_TOKEN_FILE=%h/.local/state/nyxal-voice-api-isolated/config/nyxal/google-workspace-token.json NYXAL_GMAIL_TOKEN_FILE=%h/.local/state/nyxal-voice-api-isolated/config/nyxal/google-workspace-token.json NYXAL_USER_DATA_DIR=%h/.local/state/nyxal-voice-api-isolated/user-data NYXAL_API_HOST=127.0.0.1 NYXAL_API_PORT=8010 NYXAL_LLM_PROVIDER=ollama NYXAL_AGENT_PROVIDER=nyxal NYXAL_CONVERSATIONAL_MODEL=qwen2:7b NYXAL_FUNCTION_CALLING_ENABLED=0 NYXAL_ENABLE_PRIVATE_READ_TOOLS=0 NYXAL_ENABLE_MUTABLE_TOOLS=0 NYXAL_ENABLE_WORKSPACE_WRITE=0 NYXAL_VPS_ACACOES_IRREVERSIVEIS=0 NYXAL_MCP_HTTP_ENABLED=0 OLLAMA_HOST=http://127.0.0.1:11434 %h/.venvs/nyxal-green-release/bin/python -B %h/Nyxal-voz/nyxal_web_api.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+CapabilityBoundingSet=
+UMask=0077
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/state/nyxal-voice-api-isolated
+ProtectClock=true
+ProtectKernelLogs=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=127.0.0.0/8 ::1/128

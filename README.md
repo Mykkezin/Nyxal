@@ -100,6 +100,10 @@ The current architectural phase is closed at M5.24. The next phase must be deriv
 
 ## Optional inference backend
 
+Para iniciar localmente a interface e a API conversacional, consulte [Execução local](EXECUCAO_LOCAL.md) e use `./executar_nyxal.sh`.
+
+Integração seletiva e auditoria de compatibilidade com OpenJarvis: [docs/OPENJARVIS_INTEGRATION.md](docs/OPENJARVIS_INTEGRATION.md).
+
 Nyxal can route conversational inference to an AMD Developer Cloud GPU VM through an OpenAI-compatible endpoint (for example, vLLM with ROCm). Ollama remains the default. This integration is opt-in, does not provision or start cloud instances, and preserves the existing governed evolution model.
 
 Setup, environment variables, SSH tunneling and connection checks: [AMD Developer Cloud — Nyxal/NyxOS](docs/AMD_DEVELOPER_CLOUD_NYXOS.md).

@@ -44,7 +44,10 @@ from dataclasses import asdict
 from difflib import SequenceMatcher
 from typing import Any
 
-import ollama
+try:
+    import ollama
+except ImportError:  # cliente HTTP nativo, sem exigir pacote Python adicional
+    import nixal_ollama_http as ollama
 
 from nixal_capacidades import (
     GerenciadorCapacidades,

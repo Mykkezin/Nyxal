@@ -50,7 +50,9 @@ ARQUIVO_CAPACIDADES = (
 )
 
 ARQUIVO_LOG = (
-    BASE_DIR / "log_capacidades_nixal.json"
+    _STATE_DIR.resolve() / "log_capacidades_nixal.json"
+    if _STATE_DIR is not None
+    else BASE_DIR / "log_capacidades_nixal.json"
 )
 
 MAX_TAMANHO_ARQUIVO = (

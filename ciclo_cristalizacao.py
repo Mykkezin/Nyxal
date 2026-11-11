@@ -2,14 +2,17 @@ import json
 import copy
 
 from gerenciador_cristal import (
-    caminho_do_projeto,
+    resolver_caminho,
     carregar_json_com_seguranca,
     salvar_json_atomicamente,
 )
 
 MODELO = "qwen2:7b"
 
-ARQUIVO_CRISTAL = caminho_do_projeto("memoria", "cristal_atual.json")
+ARQUIVO_CRISTAL = resolver_caminho(
+    "memoria/cristal_atual.json",
+    "NYXAL_CRISTAL_CICLO_ARQUIVO",
+)
 
 ORIGINAL = """
 Uma hipótese é uma ideia provisória criada para explicar um fenômeno

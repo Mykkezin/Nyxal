@@ -23,7 +23,10 @@ import threading
 import unicodedata
 from typing import Any
 
-import ollama
+try:
+    import ollama
+except ImportError:  # cliente HTTP nativo, sem exigir pacote Python adicional
+    import nixal_ollama_http as ollama
 
 from nixal_amd_developer_cloud import AmdCloudChatClient, AmdDeveloperCloud
 
@@ -934,6 +937,40 @@ class DialogoQwenNixal:
             }
         )
 
+        # Provedores externos exigem seleção explícita; a memória canônica
+        # continua sendo registrada pelo núcleo conversacional.
+        if provedor in {"openai", "grok"} and self.agent_hub is not None:
+            try:
+                resposta_hub = self.agent_hub.responder(
+                    texto.strip(), sessao=sessao, provedor=provedor,
+                    contexto_sistema=contexto_sistema,
+                    historico_externo=[
+                        {"role": item["role"], "content": item["content"]}
+                        for item in mensagens[1:-1]
+                        if item.get("role") in {"user", "assistant"}
+                    ],
+                )
+            except Exception as erro:
+                return {
+                    "sucesso": False, "estado": "provedor_indisponivel",
+                    "origem": self.FONTE, "resposta": None,
+                    "erro": f"Falha no provedor selecionado: {type(erro).__name__}.",
+                }
+            if not isinstance(resposta_hub, dict) or resposta_hub.get("sucesso") is not True:
+                return {
+                    "sucesso": False, "estado": "provedor_indisponivel",
+                    "origem": self.FONTE, "resposta": None,
+                    "erro": "O provedor selecionado não produziu uma resposta.",
+                }
+            return {
+                "sucesso": True, "estado": "resposta_gerada", "origem": self.FONTE,
+                "resposta": resposta_hub["resposta"],
+                "modelo": resposta_hub.get("modelo") or provedor,
+                "provedor": provedor, "mensagens_consideradas": len(mensagens) - 1,
+                "permanente": False, "versao_dialogo": self.VERSAO,
+                "ferramentas_executadas": [], "quantidade_ferramentas": 0,
+            }
+
         # A coordenação multi-papel só roda quando o usuário a pede explicitamente.
         # As passagens são locais, sem ferramentas, curtas e falham abertas.
         contexto_especialistas, estado_especialistas = self._coordenar_especialistas(
@@ -945,9 +982,7 @@ class DialogoQwenNixal:
                 "content": contexto_especialistas,
             })
 
-        # Modo de conversa somente Nyxal: nenhum provedor externo é chamado,
-        # mesmo que variáveis de ambiente antigas ainda mencionem Gemini/OpenAI.
-        # A resposta final continua usando o ciclo normal de ferramentas governadas.
+        # O respondente local usa o ciclo normal de ferramentas governadas.
         try:
             resposta, resultados_ferramentas = self._chat_com_ferramentas(
                 mensagens, texto.strip()

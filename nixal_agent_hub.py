@@ -22,7 +22,7 @@ from nixal_intent_router import TelemetriaRoteador, classificar_intencao, ordem_
 from nixal_responses_api import provider_configured as provider_responses_configured, ask as ask_responses_api
 
 
-KNOWN_PROVIDERS = {"auto", "nyxal"}
+KNOWN_PROVIDERS = {"auto", "nyxal", "openai", "grok"}
 
 _SHARED_AGENT_HUB: Any = None
 _SHARED_AGENT_HUB_LOCK = threading.Lock()
@@ -225,8 +225,11 @@ class NyxalAgentHub:
         return identity[:16000] + "\n\nRestrições operacionais adicionais:\n" + self.PROMPT_BASE
 
     def provider_configured(self, provider: str) -> bool:
-        # Modo de conversa somente Nyxal: credenciais externas não habilitam outros respondentes.
-        return provider == "nyxal"
+        if provider == "nyxal":
+            return True
+        if provider in {"openai", "grok"}:
+            return provider_responses_configured(provider)
+        return False
 
     def resolve_provider(self, requested: str | None = None) -> str:
         if requested is None:
@@ -235,11 +238,12 @@ class NyxalAgentHub:
         else:
             provider = requested.lower().strip()
         if provider not in KNOWN_PROVIDERS:
-            raise ValueError(
-                "Esta instalação está em modo somente Nyxal; provedores externos estão desativados."
-            )
-        # Mesmo o modo auto resolve local; nenhum segredo externo pode ativar um responder.
-        return "nyxal"
+            raise ValueError("Provedor conversacional desconhecido.")
+        if provider == "auto":
+            return "nyxal"
+        if not self.provider_configured(provider):
+            raise RuntimeError(f"O provedor '{provider}' não está configurado.")
+        return provider
 
     def contexto(self) -> dict[str, Any]:
         requested = _env("NYXAL_AGENT_PROVIDER", "nyxal").lower()
@@ -254,9 +258,9 @@ class NyxalAgentHub:
             "sucesso": True,
             "estado": "agente_local",
             "origem": "nyxal_agent_hub",
-            "modo_conversa": "somente_nyxal_local",
-            "provedor_solicitado": "nyxal",
-            "provedor_resolvido": "nyxal",
+            "modo_conversa": "provedor_configuravel",
+            "provedor_solicitado": requested,
+            "provedor_resolvido": active,
             "ultimo_provedor": self._last_provider,
             "provedores": {
                 "nyxal_qwen": {"configurado": True, "papel": "fallback local"},
@@ -525,6 +529,11 @@ class NyxalAgentHub:
             "sucesso": True,
             "estado": "resposta_gerada",
             "provedor": resolved,
+            "modelo": (
+                _env("NYXAL_OPENAI_MODEL") if resolved == "openai"
+                else _env("NYXAL_GROK_MODEL") if resolved == "grok"
+                else resolved
+            ),
             "resposta": answer.strip(),
             "sessao": new_session or sessao,
             "memoria": memory_sync,
