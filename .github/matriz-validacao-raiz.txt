@@ -28,6 +28,7 @@ teste_cristal_binario.py
 teste_cristal_expansivel.py
 teste_cristal_expansivel_v2.py
 teste_cristal_persistente.py
+teste_cristal_state_dir_isolation.py
 teste_diagnostico_autorreprentacao_56_4_8.py
 teste_dicionario_binario.py
 teste_estado_composicao_56_4_7.py
