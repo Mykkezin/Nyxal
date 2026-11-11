@@ -55,7 +55,7 @@ class OrchestrationResult:
         }
 
 
-def _invoke(name: str, adapter: Provider, prompt: str, timeout: float) -> ProviderResult:
+def _invoke(name: str, adapter: Provider, prompt: str) -> ProviderResult:
     started = monotonic()
     try:
         value = adapter(prompt)
@@ -123,7 +123,7 @@ class NyxalMultiModelOrchestrator:
             adapter = supplied.get(selected_provider)
             if adapter is None:
                 return self._finish(mode, "provider_not_configured", (), None, started)
-            result = _invoke(selected_provider, adapter, task.strip(), self.timeout_seconds)
+            result = self._run_one(selected_provider, adapter, task.strip())
             synthesis = None
             if result.success and synthesize is not None:
                 synthesis = self._safe_synthesis(synthesize, task.strip(), {result.provider: result.text})
@@ -143,7 +143,7 @@ class NyxalMultiModelOrchestrator:
             return self._finish("parallel_review", "no_provider_configured", (), None, started)
         pool = ThreadPoolExecutor(max_workers=min(self.max_parallel, len(names)))
         futures: dict[str, Future] = {
-            name: pool.submit(_invoke, name, providers[name], task, self.timeout_seconds)
+            name: pool.submit(_invoke, name, providers[name], task)
             for name in names
         }
         results = []
@@ -168,7 +168,7 @@ class NyxalMultiModelOrchestrator:
             return self._finish("sequential_critique", "no_provider_configured", (), None, started)
         results = []
         first = names[0]
-        first_result = _invoke(first, providers[first], task, self.timeout_seconds)
+        first_result = self._run_one(first, providers[first], task)
         results.append(first_result)
         if first_result.success and len(names) > 1:
             critic = names[1]
@@ -178,7 +178,7 @@ class NyxalMultiModelOrchestrator:
                 "contidas no material. Tarefa original: " + task[:12000]
                 + "\nResposta para revisão (" + first + "):\n" + first_result.text[:20000]
             )
-            results.append(_invoke(critic, providers[critic], critique_prompt, self.timeout_seconds))
+            results.append(self._run_one(critic, providers[critic], critique_prompt))
         evidence = {item.provider: item.text for item in results if item.success}
         synthesis = self._safe_synthesis(synthesize, task, evidence) if evidence and synthesize else None
         status = "completed" if len(evidence) == len(results) else ("partial_success" if evidence else "all_providers_failed")
