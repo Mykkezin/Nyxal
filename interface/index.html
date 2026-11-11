@@ -1477,11 +1477,17 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
         </div>
 
         <!-- Interactive Chat Form -->
+        <label class="sr-only" for="nyxalProviderSelect">Provedor de conversa</label>
+        <select id="nyxalProviderSelect" class="mb-2 rounded-lg bg-slate-950 border border-hud-border/60 px-2 py-1.5 text-xs text-slate-300 focus:border-hud-cyan focus:outline-none">
+          <option value="nyxal">Modelo local configurado</option>
+          <option value="openai">OpenAI (configurado pelo operador)</option>
+          <option value="grok">xAI (configurado pelo operador)</option>
+        </select>
         <form id="chatForm" onsubmit="handleUserChat(event)" class="relative flex items-center">
           <input 
             type="text" 
             id="chatInput" 
-            placeholder="Enviar ordem para Nyxal (ExecutorOrdensNixal)..."
+            placeholder="Converse com Nyxal..."
             class="w-full bg-slate-950/90 border border-hud-border/60 focus:border-hud-cyan text-slate-100 placeholder-slate-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-hud-cyan transition-all font-sans pr-24"
             autocomplete="off"
           />
@@ -3351,11 +3357,14 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
           // HTTP 4xx/5xx são respostas da API, não falhas de conexão.
           // O chamador precisa ler estado/erro para recuperar sessão ou mostrar o motivo real.
           throwOnError: false,
-          body: JSON.stringify(
-            nyxalSessionId
+          body: JSON.stringify((() => {
+            const payload = nyxalSessionId
               ? { mensagem: msg, sessao: nyxalSessionId }
-              : { mensagem: msg }
-          )
+              : { mensagem: msg };
+            const provedor = document.getElementById('nyxalProviderSelect')?.value;
+            if (provedor && provedor !== 'nyxal') payload.provedor = provedor;
+            return payload;
+          })())
         });
 
         if (
@@ -3400,6 +3409,9 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
           const speechText = data?.fala || reply;
 
           showSubtitles(reply);
+          if (data?.modelo || data?.provedor) {
+            setAiStatusText(`RESPONDIDO POR ${data.modelo || data.provedor}`, 'text-emerald-400');
+          }
           await speakGoddessNyxVoice(
             speechText,
             false,
