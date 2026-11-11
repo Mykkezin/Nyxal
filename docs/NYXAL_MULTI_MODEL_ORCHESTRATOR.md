@@ -160,3 +160,19 @@ Fase E — revisão:
 ## Decisão
 
 Esta branch registra a proposta e os limites necessários. Ela não habilita integração remota e não deve ser mesclada até que a implementação, os testes e a revisão arquitetural sejam concluídos.
+
+
+## 12. Implementação isolada nesta branch
+
+Foram adicionados:
+
+- `nixal_multi_model_orchestrator.py`: coordenador sem clientes de rede ou leitura de credenciais. Recebe adaptadores OpenAI/Gemini por injeção, limita os provedores aceitos, oferece modo local, seleção única, revisão paralela e crítica sequencial. Erros retornam apenas a classe da exceção, não mensagens potencialmente sensíveis.
+- `teste_nixal_multi_model_orchestrator.py`: testes unitários para modo local sem chamadas, execução paralela, síntese injetada pela Nyxal, falha parcial, seleção explícita, crítica sequencial, validação de entradas e não exposição de mensagens de exceção.
+
+Comando de teste na raiz do checkout:
+
+```bash
+python3 -m unittest teste_nixal_multi_model_orchestrator.py -v
+```
+
+Limite desta entrega: o coordenador ainda não está conectado ao endpoint de chat nem aos adaptadores reais do Agent Hub. Portanto, a criação dos arquivos não comprova que Gemini ou OpenAI estejam conectados, autenticados ou aptos a responder. Essa integração requer uma etapa separada de wiring, revisão do contrato de sessão e testes locais. Nenhuma chamada remota foi feita por esta implementação.
