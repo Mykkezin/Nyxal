@@ -171,6 +171,9 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
     def test_caminho_personalizado_em_diretorio_compartilhado_falha_sem_alterar_permissoes(self) -> None:
         compartilhado = Path(self.tmp.name) / "compartilhado"
         compartilhado.mkdir(mode=0o755)
+        # A umask do processo pode reduzir 0755 para 0700; fixe o modo
+        # explicitamente para garantir que este teste exercite uma pasta compartilhada.
+        compartilhado.chmod(0o755)
         caminho = compartilhado / "conversas.json"
         antes = stat.S_IMODE(compartilhado.stat().st_mode)
 
