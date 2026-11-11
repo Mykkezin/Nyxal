@@ -30,6 +30,8 @@ on:
       - "ciclo_cristalizacao.py"
       - "experiencia_qwen.py"
       - "pipeline_integrado.py"
+      - "validar_memoria_cristal_isolado.sh"
+      - "docs/ISOLAMENTO_MEMORIA_CRISTAL.md"
       - ".github/matriz-validacao-raiz.txt"
       - ".github/workflows/nyxal-root-test-matrix.yml"
   push:
@@ -45,6 +47,8 @@ on:
       - "ciclo_cristalizacao.py"
       - "experiencia_qwen.py"
       - "pipeline_integrado.py"
+      - "validar_memoria_cristal_isolado.sh"
+      - "docs/ISOLAMENTO_MEMORIA_CRISTAL.md"
       - ".github/matriz-validacao-raiz.txt"
       - ".github/workflows/nyxal-root-test-matrix.yml"
   workflow_dispatch:
