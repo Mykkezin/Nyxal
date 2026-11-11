@@ -46,10 +46,11 @@ from pathlib import Path
 # ARQUIVO_LEGADO = formato temporário antigo. Continuamos
 #                  lendo e migrando por cópia, nunca por deleção.
 #
-# Os três caminhos são resolvidos a partir da raiz do projeto, então
-# abrir o cristal funciona igual não importa o diretório de trabalho
-# do processo. Cada um tem override por variável de ambiente, usado
-# por testes e por instalações fora do padrão.
+# Os caminhos respeitam esta precedência:
+# 1. override específico por variável de ambiente;
+# 2. caminho relativo a NYXAL_STATE_DIR, quando configurado;
+# 3. caminho histórico ancorado na raiz do projeto.
+# Assim, testes e instalações isoladas não escrevem no checkout residente.
 # ============================================================
 
 RAIZ_PROJETO = Path(__file__).resolve().parent
