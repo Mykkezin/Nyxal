@@ -92,6 +92,19 @@ class NyxalMultiModelOrchestrator:
         self.timeout_seconds = float(timeout_seconds)
         self.max_parallel = int(max_parallel)
 
+    def _run_one(self, name: str, adapter: Provider, prompt: str) -> ProviderResult:
+        pool = ThreadPoolExecutor(max_workers=1)
+        future = pool.submit(_invoke, name, adapter, prompt)
+        try:
+            return future.result(timeout=self.timeout_seconds)
+        except FutureTimeout:
+            future.cancel()
+            return ProviderResult(name, False, error="Timeout", elapsed_ms=int(self.timeout_seconds * 1000))
+        except Exception as exc:
+            return ProviderResult(name, False, error=type(exc).__name__)
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+
     def run(
         self,
         task: str,
