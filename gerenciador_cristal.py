@@ -67,6 +67,10 @@ def resolver_caminho(caminho_relativo, variavel_ambiente):
             override,
         ).expanduser().resolve()
 
+    state_dir = os.environ.get("NYXAL_STATE_DIR", "").strip()
+    if state_dir:
+        return (Path(state_dir).expanduser() / caminho_relativo).resolve()
+
     return (RAIZ_PROJETO / caminho_relativo).resolve()
 
 
