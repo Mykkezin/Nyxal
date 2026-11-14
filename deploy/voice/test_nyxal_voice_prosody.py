@@ -6,7 +6,9 @@ import unittest
 from nyxal_voice_prosody import (
     choose_speech_profile,
     clean_speech_text,
+    extract_quoted_scene_text,
     prepare_spoken_reply,
+    resolve_voice_mode_command,
 )
 
 
@@ -87,6 +89,21 @@ class VoiceProsodyTests(unittest.TestCase):
     def test_unknown_voice_mode_is_rejected(self):
         with self.assertRaises(ValueError):
             choose_speech_profile("", "Olá.", mode="improvisado")
+
+    def test_voice_mode_commands_require_exact_whole_utterances(self):
+        self.assertEqual(resolve_voice_mode_command("Modo Cena."), "cena")
+        self.assertEqual(resolve_voice_mode_command("CORTA"), "padrao")
+        self.assertIsNone(resolve_voice_mode_command("Vamos entrar em Modo Cena"))
+        self.assertIsNone(resolve_voice_mode_command("corta o texto"))
+        self.assertIsNone(resolve_voice_mode_command(None))
+
+    def test_quoted_scene_text_is_one_shot(self):
+        self.assertEqual(extract_quoted_scene_text('"Eu voltei."'), "Eu voltei.")
+        self.assertEqual(extract_quoted_scene_text("“Não acabou.”"), "Não acabou.")
+        self.assertEqual(extract_quoted_scene_text("«Eu entendi.»."), "Eu entendi.")
+        self.assertEqual(extract_quoted_scene_text("'Uma fala curta'."), "Uma fala curta")
+        self.assertIsNone(extract_quoted_scene_text("Eu voltei."))
+        self.assertIsNone(extract_quoted_scene_text('""'))
 
     def test_speed_is_clamped_and_bad_base_is_safe(self):
         self.assertAlmostEqual(choose_speech_profile("", "Olá.", 999).speed, 1.2)
