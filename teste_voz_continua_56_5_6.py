@@ -224,7 +224,8 @@ def main() -> None:
     )
 
     verificar(
-        all(
+        PIPECAT.exists()
+        and all(
             token in pipecat
             for token in (
                 "_voice_mode_command",
@@ -232,6 +233,7 @@ def main() -> None:
                 "perfil_resposta",
                 "self._voice_mode",
                 "mode=active_mode",
+                "await self._speak(quoted_scene, mode=\"cena\")",
             )
         ),
         "adaptador Pipecat reconhece os mesmos comandos e aplica o perfil de cena",
