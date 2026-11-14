@@ -75,6 +75,10 @@ _HURRY_CUES = (
     "vai direto ao ponto", "rapidinho", "to atrasado", "estou atrasado",
     "tenho pouco tempo", "sem enrolacao", "resuma rapido", "resume rapido",
 )
+_SLOWER_CUES = (
+    "mais devagar", "sinta o peso das palavras", "fale mais devagar",
+    "mais pausado", "desacelere",
+)
 _EMPATHY_CUES = (
     "sinto muito", "entendo", "estou aqui", "to aqui", "vamos com calma",
     "respira", "lamento", "pode contar comigo", "nao precisa passar por isso",
@@ -128,6 +132,8 @@ def choose_speech_profile(
         style, factor = "focused", 0.97
     elif _contains_any(user_text, _HURRY_CUES):
         style, factor = "brisk", 1.08
+    elif _contains_any(user_text, _SLOWER_CUES):
+        style, factor = ("scene_slow", 0.82) if mode == "cena" else ("deliberate", 0.86)
     elif mode == "cena":
         style, factor = "scene", 0.90
     elif (
