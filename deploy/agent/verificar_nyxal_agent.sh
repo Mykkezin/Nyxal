@@ -104,16 +104,18 @@ if google.get("proximo_passo"):
     print(f"  próximo passo Google: {google['proximo_passo']}")
 
 try:
-    request = urllib.request.Request(base + "/display/", headers={"Accept": "text/html"})
+    request = urllib.request.Request(base + "/", headers={"Accept": "text/html"})
     with urllib.request.urlopen(request, timeout=8) as response:
         content_type = response.headers.get("Content-Type", "")
+        html = response.read(1024 * 1024 + 1).decode("utf-8", errors="replace")
         if response.status != 200 or "text/html" not in content_type:
             raise RuntimeError(f"HTTP {response.status}, Content-Type={content_type}")
-        print("[OK] Nyxal Display servido em /display/")
+        if len(html) > 1024 * 1024 or 'id="nyxalAvatar"' not in html:
+            raise RuntimeError("a resposta não contém a interface única com a personagem Nyxal")
+        print("[OK] Interface única NyxOS servida em /")
 except Exception as exc:
     failures += 1
-    print(f"[FALHA] Nyxal Display /display/: {type(exc).__name__}: {exc}")
-    print("  Execute: bash deploy/display/instalar_nyxos_display.sh")
+    print(f"[FALHA] Interface única NyxOS /: {type(exc).__name__}: {exc}")
 
 if test_voice:
     try:

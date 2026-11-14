@@ -34,17 +34,32 @@ Uma rotina diária remove os ZIPs completos antigos com o nome exato
 `nyxal-projeto-nivel10`, pois a nova regra de retenção não se aplica
 retroativamente aos artefatos já existentes. Outros artefatos não são apagados. A consulta à lista de artefatos falha fechada: se `gh api --paginate` retornar erro, o job encerra antes de tentar exclusões. A suíte de armazenamento contém uma regressão estática para manter essa garantia e o filtro de nome/idade.
 
-## Animação de inicialização sem vídeo
+## Interface única e redução de artefatos
 
-`interface/assets/nyxos-startup.mp4` (4.316.200 bytes; cerca de 4,12 MiB) foi
-removido da árvore atual. A abertura usa `interface/startup.html`, uma animação
-local em HTML/CSS/canvas com núcleo luminoso, órbitas, satélites, scanlines,
-estrelas e barra de progresso. Ela não depende de bibliotecas ou mídia remotas,
-respeita `prefers-reduced-motion` e segue para a interface local após a sequência.
-Os dois launchers usam a página local; não precisam de um reprodutor de vídeo. O parâmetro `next` só aceita URL HTTP/HTTPS sem credenciais, com host `127.0.0.1`, `localhost` ou loopback IPv6, porta exatamente `8010`, caminho `/` ou `/index.html`, sem query nem fragmento. Destinos externos, serviços em outras portas, outros caminhos da API, esquemas executáveis e valores malformados voltam à interface local. O teste de regressão verifica a allowlist de host/porta, o caminho permitido e a ausência de query/fragmento.
+A experiência visual ativa do NyxOS agora tem um único ponto de entrada:
+`interface/index.html`. O parâmetro `?modo=voz` altera a apresentação dessa
+mesma página e reutiliza a mesma personagem, o chat e os fluxos de STT/TTS; não
+instala nem carrega um segundo aplicativo.
 
-A animação segue a identidade visual do NyxOS, mas não é declarada uma reprodução
-quadro a quadro do vídeo original, pois essa equivalência não foi verificada.
+Foram retirados os protótipos HTML duplicados (`index-legacy.html` e
+`nyxos-panel.html`), a página de splash separada (`startup.html`) e o
+Display React passivo, que não tinha chat nem integração com o agente. Também
+foram removidos o builder, o roteador e os testes exclusivos desse aplicativo.
+Os launchers abrem diretamente a API local. Os endereços antigos `/display/`
+e das páginas removidas respondem com redirecionamento HTTP 308 para `/`, e
+um bundle antigo em `interface/display/dist` não pode mais interceptar a raiz.
+
+A remoção dos arquivos rastreados elimina aproximadamente **696.028 bytes
+(680 KiB / 0,66 MiB)** de fontes e assets duplicados da árvore atual. Esse
+número não inclui eventuais diretórios locais `node_modules` ou `dist` que
+tenham sido gerados e ignorados pelo Git. O histórico Git também conserva os
+blobs dos commits antigos; a redução vale para novos checkouts e pacotes, não
+reescreve o histórico nem remove arquivos ignorados que já existam no PC.
+
+A personagem holográfica, a telemetria, as ferramentas, a conversa e os
+recursos de voz permanecem na interface principal. A animação de splash foi
+deliberadamente removida para que a abertura do NyxOS leve diretamente à
+experiência única.
 
 ## Limites de medição
 

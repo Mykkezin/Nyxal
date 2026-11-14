@@ -45,7 +45,7 @@ Essas bases são úteis, mas **não comprovam ainda** uma imagem NyxOS inicializ
 ```text
 ┌──────────────────────────────────────────────────────────────┐
 │ ESPAÇO DO USUÁRIO                                             │
-│ NyxOS Display / shell / acessibilidade / configurações        │
+│ Interface única NyxOS / shell / acessibilidade / configurações │
 └─────────────────────────────┬────────────────────────────────┘
                               │ API autenticada
 ┌─────────────────────────────▼────────────────────────────────┐

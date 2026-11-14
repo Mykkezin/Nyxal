@@ -283,19 +283,22 @@ def main() -> None:
     )
 
     verificar(
-        'if parsed_path == "/":' in api,
-        "API aceita o parâmetro ?modo=voz na rota raiz",
+        'if parsed_path == "/":' in api
+        and 'caminho = caminho_interface("index.html")' in api
+        and "caminho_display" not in api,
+        "API entrega a mesma interface principal, sem depender de um Display compilado",
     )
 
     verificar(
-        'parse_qs(urlsplit(self.path).query).get("modo", [""])[0] == "voz"' in api
-        and 'caminho_interface("index.html")' in api,
-        "modo de voz prefere a interface enxuta mesmo quando existe um display compilado antigo",
+        'get("modo") === "voz"' in interface
+        and "initNyxalVoiceOnlySurface" in interface,
+        "modo de voz é uma variação da mesma página e reutiliza a personagem",
     )
 
     verificar(
-        'INTERFACE_URL}" != *"modo=voz"*' in shell,
-        "shell de voz ignora o splash antigo e abre diretamente a conversa",
+        'LAUNCH_URL="${INTERFACE_URL}"' in shell
+        and "startup.html" not in shell,
+        "shell abre diretamente a interface única, sem página intermediária",
     )
 
     # ------------------------------------------------------------

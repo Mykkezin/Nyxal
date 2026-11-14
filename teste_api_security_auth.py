@@ -418,6 +418,33 @@ class TestSegurancaAPIHTTP(unittest.TestCase):
                         "http://localhost:3000",
                     )
 
+    def test_interface_unica_e_redirecionamentos_legados(self) -> None:
+        with patch.object(api, "PROXY_MODE", False):
+            status, headers, html = self.request_full("GET", "/")
+            self.assertEqual(status, 200)
+            self.assertTrue(headers.get("content-type", "").startswith("text/html"))
+            self.assertIn('id="nyxalAvatar"', html)
+            self.assertIn('id="nyxalCharacterSvg"', html)
+
+            for path in (
+                "/display",
+                "/display/",
+                "/display/index.html",
+                "/display/assets/old-app.js",
+                "/interface/index-legacy.html",
+                "/interface/nyxos-panel.html",
+                "/interface/startup.html",
+            ):
+                with self.subTest(path=path):
+                    status, redirect_headers, _body = self.request_full("GET", path)
+                    self.assertEqual(status, 308)
+                    self.assertEqual(redirect_headers.get("location"), "/")
+
+            status, _headers, voice_html = self.request_full("GET", "/?modo=voz")
+            self.assertEqual(status, 200)
+            self.assertIn('id="nyxalAvatar"', voice_html)
+            self.assertIn("NYXAL_VOICE_ONLY_MODE", voice_html)
+
     def test_token_ausente_e_incorreto_sao_rejeitados_quando_configurado(self) -> None:
         api.API_TOKEN = "segredo-configurado"
         status, body = self.request(
