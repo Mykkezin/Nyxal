@@ -256,6 +256,12 @@ jobs:
           bash -n deploy/voice/instalar_pipecat_experimental.sh
           bash -n deploy/voice/diagnosticar_runtime_local.sh
           bash -n deploy/ci/diagnosticar_runner_nyxal.sh
+      - name: Verify unified interface, voice mode, and HTTP aliases
+        run: |
+          python3 teste_inicio_codigo.py
+          python3 teste_voz_continua_56_5_6.py
+          python3 -m unittest -v teste_api_security_auth.TestSegurancaAPIHTTP.test_interface_unica_e_redirecionamentos_legados
+
       - name: Run focused unit tests
         run: |
           python3 -m unittest -v \
@@ -285,8 +291,6 @@ jobs:
           python3 teste_transporte_conversacional_56_5_2.py
           python3 teste_integracao_sessao_transporte_56_5_4.py
           python3 -m unittest -v teste_api_security_auth.py teste_nixal_auditoria_defesa.py
-          python3 teste_inicio_codigo.py
-          python3 teste_voz_continua_56_5_6.py
           python3 teste_contexto_conversacional_56_5_5.py
           python3 teste_contexto_historico_relevante_56_4_21.py
           python3 teste_preparacao_investigacao_56_4_22.py
