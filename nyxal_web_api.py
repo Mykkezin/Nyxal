@@ -1610,11 +1610,23 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                     },
                 )
                 return
+            perfil_voz = payload.get("perfil_voz", "padrao")
+            if not isinstance(perfil_voz, str) or perfil_voz not in {"padrao", "cena"}:
+                self._send_json(
+                    400,
+                    {
+                        "estado": "perfil_voz_invalido",
+                        "motivo": "O perfil de voz precisa ser 'padrao' ou 'cena'.",
+                    },
+                )
+                return
+
             contexto_usuario = contexto_usuario[:4000]
             perfil_fala = choose_speech_profile(
                 contexto_usuario,
                 texto,
                 KOKORO_SPEED,
+                mode=perfil_voz,
             )
             texto_falado = prepare_spoken_reply(
                 texto,
@@ -1777,6 +1789,19 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
 
         mensagem = payload.get("mensagem")
         sessao_id = payload.get("sessao")
+        perfil_resposta = payload.get("perfil_resposta")
+        if perfil_resposta is not None and (
+            not isinstance(perfil_resposta, str)
+            or perfil_resposta not in {"padrao", "cena"}
+        ):
+            self._send_json(
+                400,
+                {
+                    "estado": "perfil_resposta_invalido",
+                    "motivo": "O perfil de resposta precisa ser 'padrao' ou 'cena'.",
+                },
+            )
+            return
 
         if not isinstance(mensagem, str) or not mensagem.strip():
             self._send_json(
@@ -1869,20 +1894,19 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
                 return
 
         try:
+            argumentos_conversa = {
+                "texto": mensagem,
+                "nucleo": NUCLEO_CONVERSACIONAL,
+                "sessao_id": sessao_id,
+            }
             if provedor_conversa is not None:
-                resultado = INTEGRACAO_CONVERSACIONAL.processar_mensagem(
-                    texto=mensagem,
-                    nucleo=NUCLEO_CONVERSACIONAL,
-                    sessao_id=sessao_id,
-                    provedor=provedor_conversa,
-                    contexto_sistema=contexto_sistema_conversa,
-                )
-            else:
-                resultado = INTEGRACAO_CONVERSACIONAL.processar_mensagem(
-                    texto=mensagem,
-                    nucleo=NUCLEO_CONVERSACIONAL,
-                    sessao_id=sessao_id,
-                )
+                argumentos_conversa["provedor"] = provedor_conversa
+                argumentos_conversa["contexto_sistema"] = contexto_sistema_conversa
+            if perfil_resposta is not None:
+                argumentos_conversa["perfil_resposta"] = perfil_resposta
+            resultado = INTEGRACAO_CONVERSACIONAL.processar_mensagem(
+                **argumentos_conversa,
+            )
         except Exception as erro:
             self._send_json(
                 500,
