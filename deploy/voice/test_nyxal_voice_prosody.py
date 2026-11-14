@@ -58,7 +58,35 @@ class VoiceProsodyTests(unittest.TestCase):
             "Pode me ajudar?", "Quer que eu explique de outro jeito?", 1.0
         )
         self.assertEqual(profile.style, "curious")
-        self.assertAlmostEqual(profile.speed, 0.98)
+        self.assertAlmostEqual(profile.speed, 0.97)
+
+    def test_standard_voice_uses_measured_mature_delivery(self):
+        profile = choose_speech_profile("", "Podemos resolver isso com calma.", 1.0)
+        self.assertEqual(profile.style, "calm")
+        self.assertAlmostEqual(profile.speed, 0.96)
+        self.assertEqual(profile.mode, "padrao")
+
+    def test_scene_mode_slows_and_adds_deliberate_sentence_pauses(self):
+        profile = choose_speech_profile("", "Eu tentei. Mas não consegui.", 1.0, mode="cena")
+        self.assertEqual(profile.style, "scene")
+        self.assertEqual(profile.mode, "cena")
+        self.assertAlmostEqual(profile.speed, 0.90)
+        self.assertFalse(profile.conversational)
+        self.assertEqual(
+            prepare_spoken_reply("Eu tentei. Mas não consegui.", profile=profile),
+            "Eu tentei… Mas não consegui.",
+        )
+
+    def test_safety_clarity_overrides_scene_theatrics(self):
+        profile = choose_speech_profile(
+            "", "Perigo. Afaste-se imediatamente.", 1.0, mode="cena"
+        )
+        self.assertEqual(profile.style, "focused")
+        self.assertAlmostEqual(profile.speed, 0.97)
+
+    def test_unknown_voice_mode_is_rejected(self):
+        with self.assertRaises(ValueError):
+            choose_speech_profile("", "Olá.", mode="improvisado")
 
     def test_speed_is_clamped_and_bad_base_is_safe(self):
         self.assertEqual(choose_speech_profile("", "Olá.", 999).speed, 1.25)
