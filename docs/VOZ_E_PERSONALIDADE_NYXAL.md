@@ -19,6 +19,7 @@ A instrução de cena é uma constante confiável do prompt, não texto colocado
 
 - `Modo Cena`: ativa o perfil de cena para os próximos turnos da interface ou da sessão de voz contínua Pipecat.
 - `Corta`: desativa a cena e restaura o perfil padrão.
+- `Mais devagar, sinta o peso das palavras`: reduz a velocidade da próxima resposta; não troca o modo nem altera prioridades de segurança.
 - Texto inteiramente delimitado por aspas retas, aspas curvas ou aspas angulares: é lido como uma cena pontual. Não altera o estado persistente do perfil.
 - Na rota Pipecat, o estado fica no processador de conversa enquanto a sessão de voz permanecer ativa.
 
