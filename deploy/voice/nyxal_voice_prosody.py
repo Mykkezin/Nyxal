@@ -82,7 +82,7 @@ def choose_speech_profile(
     Kokoro adapter exposes speed and voice selection, but not independent pitch,
     breath, or emotion controls; this profile never claims otherwise.
     """
-    if mode not in {"padrao", "cena"}:
+    if not isinstance(mode, str) or mode not in {"padrao", "cena"}:
         raise ValueError("O modo de voz precisa ser 'padrao' ou 'cena'.")
 
     try:
