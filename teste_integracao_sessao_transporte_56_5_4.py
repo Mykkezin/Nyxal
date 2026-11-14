@@ -57,6 +57,7 @@ class TransporteTeste:
         *,
         provedor: str | None = None,
         contexto_sistema: dict | None = None,
+        perfil_resposta: str | None = None,
     ) -> dict:
         self.chamadas.append(
             {
@@ -65,6 +66,7 @@ class TransporteTeste:
                 "sessao": sessao,
                 "provedor": provedor,
                 "contexto_sistema": contexto_sistema,
+                "perfil_resposta": perfil_resposta,
             }
         )
 
@@ -277,6 +279,36 @@ def main() -> None:
     verificar(
         transporte.chamadas[-1]["contexto_sistema"]["observabilidade"]["cpu_percent"] == 15.0,
         "contexto é isolado por cópia profunda antes do transporte",
+    )
+
+    resultado_perfil = integracao.processar_mensagem(
+        texto="Leia esta fala com intenção.",
+        nucleo=nucleo,
+        sessao_id=sessao_id,
+        perfil_resposta="cena",
+    )
+    verificar(
+        resultado_perfil.get("sucesso") is True,
+        "perfil de cena atravessa a integração de sessão",
+    )
+    verificar(
+        transporte.chamadas[-1]["perfil_resposta"] == "cena",
+        "integração entrega o perfil de cena ao transporte",
+    )
+
+    perfil_invalido = integracao.processar_mensagem(
+        texto="Perfil inválido.",
+        nucleo=nucleo,
+        sessao_id=sessao_id,
+        perfil_resposta="improvisado",
+    )
+    verificar(
+        perfil_invalido.get("sucesso") is False,
+        "perfil de resposta fora da allowlist é recusado",
+    )
+    verificar(
+        len(transporte.chamadas) == 4,
+        "perfil inválido não chega ao transporte",
     )
 
     # --------------------------------------------------------
