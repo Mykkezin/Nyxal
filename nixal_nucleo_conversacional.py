@@ -290,7 +290,7 @@ class NucleoConversacionalNixal:
                 kwargs_dialogo["contexto_sistema"] = json.loads(contexto_json)
             perfil_resposta = opcoes_dialogo.get("perfil_resposta")
             if perfil_resposta is not None:
-                if perfil_resposta not in {"padrao", "cena"}:
+                if not isinstance(perfil_resposta, str) or perfil_resposta not in {"padrao", "cena"}:
                     return self.interface.criar_resposta(
                         "O perfil de resposta é inválido.",
                         sessao=sessao,
