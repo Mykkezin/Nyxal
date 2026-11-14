@@ -137,7 +137,10 @@ class TransporteConversacionalNixal:
             ):
                 return self._negado("O provedor conversacional é inválido.")
 
-        if perfil_resposta is not None and perfil_resposta not in {"padrao", "cena"}:
+        if perfil_resposta is not None and (
+            not isinstance(perfil_resposta, str)
+            or perfil_resposta not in {"padrao", "cena"}
+        ):
             return self._negado("O perfil de resposta é inválido.")
 
         if contexto_sistema is not None:
