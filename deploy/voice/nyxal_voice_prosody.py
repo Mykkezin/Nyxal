@@ -34,6 +34,35 @@ def _contains_any(text: str, cues: tuple[str, ...]) -> bool:
     return any(cue in folded for cue in cues)
 
 
+def resolve_voice_mode_command(value: str) -> str | None:
+    """Resolve exact whole-utterance voice controls without matching normal prose."""
+    if not isinstance(value, str):
+        return None
+    command = " ".join(value.casefold().strip().split()).rstrip(".!?…").strip()
+    if command == "modo cena":
+        return "cena"
+    if command == "corta":
+        return "padrao"
+    return None
+
+
+def extract_quoted_scene_text(value: str) -> str | None:
+    """Return one-shot speech only when the complete input is quoted."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    # Allow punctuation just outside the closing quote as sentence punctuation.
+    text = re.sub(r"[.!?…]+\\s*$", "", text).rstrip()
+    if len(text) < 3:
+        return None
+    closing = {'"': '"', "'": "'", "“": "”", "‘": "’", "«": "»"}
+    expected = closing.get(text[0])
+    if expected is None or text[-1] != expected:
+        return None
+    spoken = text[1:-1].strip()
+    return spoken or None
+
+
 _DISTRESS_CUES = (
     "estou triste", "to triste", "estou mal", "to mal", "me sinto mal",
     "com medo", "tenho medo", "ansioso", "ansiosa", "desesperado",
