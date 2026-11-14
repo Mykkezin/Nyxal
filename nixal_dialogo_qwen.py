@@ -835,7 +835,7 @@ class DialogoQwenNixal:
                 "resposta": None,
                 "erro": "O campo provedor precisa ser texto.",
             }
-        if perfil_resposta not in {"padrao", "cena"}:
+        if not isinstance(perfil_resposta, str) or perfil_resposta not in {"padrao", "cena"}:
             return {
                 "sucesso": False,
                 "estado": "perfil_resposta_invalido",
