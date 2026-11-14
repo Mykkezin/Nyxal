@@ -21,6 +21,10 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 INTERFACE = BASE_DIR / "interface" / "index.html"
 API = BASE_DIR / "nyxal_web_api.py"
+CORE = BASE_DIR / "nixal_nucleo_conversacional.py"
+TRANSPORT = BASE_DIR / "nixal_transporte_conversacional.py"
+SESSION_TRANSPORT = BASE_DIR / "nixal_integracao_sessao_transporte.py"
+DIALOG = BASE_DIR / "nixal_dialogo_qwen.py"
 
 
 TESTES = 0
@@ -56,6 +60,10 @@ def main() -> None:
 
     interface = INTERFACE.read_text(encoding="utf-8")
     api = API.read_text(encoding="utf-8")
+    core = CORE.read_text(encoding="utf-8")
+    transport = TRANSPORT.read_text(encoding="utf-8")
+    session_transport = SESSION_TRANSPORT.read_text(encoding="utf-8")
+    dialog = DIALOG.read_text(encoding="utf-8")
 
     # ------------------------------------------------------------
     # Voz contínua
@@ -201,6 +209,16 @@ def main() -> None:
         and "mode=perfil_voz" in api
         and "perfil_resposta" in api,
         "API aplica prosódia contextual e valida os perfis de voz e resposta",
+    )
+
+    verificar(
+        all(
+            "perfil_resposta" in source
+            for source in (core, transport, session_transport, dialog)
+        )
+        and "PROMPT_ESTILO_PROVEDOR" in dialog
+        and "PROMPT_MODO_CENA" in dialog,
+        "identidade padrão e direção de cena atravessam o diálogo e as fronteiras de sessão",
     )
 
     verificar(
