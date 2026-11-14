@@ -976,7 +976,11 @@ class DialogoQwenNixal:
                         if item.get("role") in {"user", "assistant"}
                     ],
                     prompt_sistema_extra=(
-                        self.PROMPT_MODO_CENA if perfil_resposta == "cena" else None
+                        self.PROMPT_ESTILO_PROVEDOR
+                        + (
+                            "\\n\\n" + self.PROMPT_MODO_CENA
+                            if perfil_resposta == "cena" else ""
+                        )
                     ),
                 )
             except Exception as erro:
