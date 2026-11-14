@@ -196,16 +196,22 @@ def main() -> None:
         and "contexto_usuario" in api
         and "speed=velocidade" in api
         and "piper_length_scale" in api
-        and '"--length_scale"' in api,
-        "API principal aplica prosódia contextual e velocidade adaptativa",
+        and '"--length_scale"' in api
+        and "perfil_voz" in api
+        and "mode=perfil_voz" in api
+        and "perfil_resposta" in api,
+        "API aplica prosódia contextual e valida os perfis de voz e resposta",
     )
 
     verificar(
         "contexto_usuario: String(userContext ||" in interface
-        and "speakBrowserFallback(text, userContext)" in interface
+        and "speakBrowserFallback(text, userContext, voiceMode)" in interface
+        and "NYXAL_VOICE_PROFILE_KEY" in interface
+        and "detectNyxalVoiceModeCommand" in interface
+        and "extractNyxalQuotedSceneText" in interface
         and "tomAcolhedor" in interface
         and "tomPressa" in interface,
-        "interface compartilha contexto apenas com o TTS local e adapta o fallback",
+        "interface transporta o perfil de voz, comandos de cena e adapta o fallback",
     )
 
     verificar(
