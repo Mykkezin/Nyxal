@@ -244,7 +244,7 @@ class NucleoConversacionalNixal:
         kwargs_dialogo: dict[str, Any] = {}
 
         if opcoes_dialogo is not None:
-            if not isinstance(opcoes_dialogo, dict) or set(opcoes_dialogo) - {"provedor", "contexto_sistema"}:
+            if not isinstance(opcoes_dialogo, dict) or set(opcoes_dialogo) - {"provedor", "contexto_sistema", "perfil_resposta"}:
                 return self.interface.criar_resposta(
                     "As opções do diálogo são inválidas.",
                     sessao=sessao,
@@ -288,6 +288,15 @@ class NucleoConversacionalNixal:
                         estado="opcoes_dialogo_invalidas",
                     )
                 kwargs_dialogo["contexto_sistema"] = json.loads(contexto_json)
+            perfil_resposta = opcoes_dialogo.get("perfil_resposta")
+            if perfil_resposta is not None:
+                if not isinstance(perfil_resposta, str) or perfil_resposta not in {"padrao", "cena"}:
+                    return self.interface.criar_resposta(
+                        "O perfil de resposta é inválido.",
+                        sessao=sessao,
+                        estado="opcoes_dialogo_invalidas",
+                    )
+                kwargs_dialogo["perfil_resposta"] = perfil_resposta
 
         historico = self._obter_historico(
             sessao

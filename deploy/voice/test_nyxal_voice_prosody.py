@@ -6,7 +6,9 @@ import unittest
 from nyxal_voice_prosody import (
     choose_speech_profile,
     clean_speech_text,
+    extract_quoted_scene_text,
     prepare_spoken_reply,
+    resolve_voice_mode_command,
 )
 
 
@@ -33,7 +35,7 @@ class VoiceProsodyTests(unittest.TestCase):
             "Consegui passar na prova!", "Parabéns, você conseguiu!", 1.0
         )
         self.assertEqual(profile.style, "upbeat")
-        self.assertAlmostEqual(profile.speed, 1.04)
+        self.assertAlmostEqual(profile.speed, 1.03)
 
     def test_user_in_a_hurry_gets_a_brisk_but_not_extreme_delivery(self):
         profile = choose_speech_profile(
@@ -58,11 +60,82 @@ class VoiceProsodyTests(unittest.TestCase):
             "Pode me ajudar?", "Quer que eu explique de outro jeito?", 1.0
         )
         self.assertEqual(profile.style, "curious")
-        self.assertAlmostEqual(profile.speed, 0.98)
+        self.assertAlmostEqual(profile.speed, 0.97)
+
+    def test_standard_voice_uses_measured_mature_delivery(self):
+        profile = choose_speech_profile("", "Podemos resolver isso com calma.", 1.0)
+        self.assertEqual(profile.style, "calm")
+        self.assertAlmostEqual(profile.speed, 0.96)
+        self.assertEqual(profile.mode, "padrao")
+
+    def test_live_slowdown_direction_is_applied_to_the_next_reply(self):
+        scene = choose_speech_profile(
+            "Mais devagar, sinta o peso das palavras.",
+            "Eu compreendi.",
+            1.0,
+            mode="cena",
+        )
+        self.assertEqual(scene.style, "scene_slow")
+        self.assertAlmostEqual(scene.speed, 0.82)
+
+        standard = choose_speech_profile(
+            "Fale mais devagar, por favor.",
+            "Vamos por partes.",
+            1.0,
+        )
+        self.assertEqual(standard.style, "deliberate")
+        self.assertAlmostEqual(standard.speed, 0.86)
+
+    def test_safety_priority_overrides_live_slowdown(self):
+        profile = choose_speech_profile(
+            "Mais devagar.",
+            "Perigo. Afaste-se imediatamente.",
+            1.0,
+            mode="cena",
+        )
+        self.assertEqual(profile.style, "focused")
+        self.assertAlmostEqual(profile.speed, 0.97)
+
+    def test_scene_mode_slows_and_adds_deliberate_sentence_pauses(self):
+        profile = choose_speech_profile("", "Eu tentei. Mas não consegui.", 1.0, mode="cena")
+        self.assertEqual(profile.style, "scene")
+        self.assertEqual(profile.mode, "cena")
+        self.assertAlmostEqual(profile.speed, 0.90)
+        self.assertFalse(profile.conversational)
+        self.assertEqual(
+            prepare_spoken_reply("Eu tentei. Mas não consegui.", profile=profile),
+            "Eu tentei… Mas não consegui.",
+        )
+
+    def test_safety_clarity_overrides_scene_theatrics(self):
+        profile = choose_speech_profile(
+            "", "Perigo. Afaste-se imediatamente.", 1.0, mode="cena"
+        )
+        self.assertEqual(profile.style, "focused")
+        self.assertAlmostEqual(profile.speed, 0.97)
+
+    def test_unknown_voice_mode_is_rejected(self):
+        with self.assertRaises(ValueError):
+            choose_speech_profile("", "Olá.", mode="improvisado")
+
+    def test_voice_mode_commands_require_exact_whole_utterances(self):
+        self.assertEqual(resolve_voice_mode_command("Modo Cena."), "cena")
+        self.assertEqual(resolve_voice_mode_command("CORTA"), "padrao")
+        self.assertIsNone(resolve_voice_mode_command("Vamos entrar em Modo Cena"))
+        self.assertIsNone(resolve_voice_mode_command("corta o texto"))
+        self.assertIsNone(resolve_voice_mode_command(None))
+
+    def test_quoted_scene_text_is_one_shot(self):
+        self.assertEqual(extract_quoted_scene_text('"Eu voltei."'), "Eu voltei.")
+        self.assertEqual(extract_quoted_scene_text("“Não acabou.”"), "Não acabou.")
+        self.assertEqual(extract_quoted_scene_text("«Eu entendi.»."), "Eu entendi.")
+        self.assertEqual(extract_quoted_scene_text("'Uma fala curta'."), "Uma fala curta")
+        self.assertIsNone(extract_quoted_scene_text("Eu voltei."))
+        self.assertIsNone(extract_quoted_scene_text('""'))
 
     def test_speed_is_clamped_and_bad_base_is_safe(self):
-        self.assertEqual(choose_speech_profile("", "Olá.", 999).speed, 1.25)
-        self.assertEqual(choose_speech_profile("", "Olá.", "bad").speed, 1.0)
+        self.assertAlmostEqual(choose_speech_profile("", "Olá.", 999).speed, 1.2)
+        self.assertAlmostEqual(choose_speech_profile("", "Olá.", "bad").speed, 0.96)
 
     def test_markdown_headings_and_lists_get_a_pause_boundary(self):
         self.assertEqual(

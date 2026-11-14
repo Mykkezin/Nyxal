@@ -21,6 +21,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 INTERFACE = BASE_DIR / "interface" / "index.html"
 API = BASE_DIR / "nyxal_web_api.py"
+CORE = BASE_DIR / "nixal_nucleo_conversacional.py"
+TRANSPORT = BASE_DIR / "nixal_transporte_conversacional.py"
+SESSION_TRANSPORT = BASE_DIR / "nixal_integracao_sessao_transporte.py"
+DIALOG = BASE_DIR / "nixal_dialogo_qwen.py"
+PIPECAT = BASE_DIR / "deploy" / "voice" / "nyxal_pipecat_agent.py"
 
 
 TESTES = 0
@@ -56,6 +61,11 @@ def main() -> None:
 
     interface = INTERFACE.read_text(encoding="utf-8")
     api = API.read_text(encoding="utf-8")
+    core = CORE.read_text(encoding="utf-8")
+    transport = TRANSPORT.read_text(encoding="utf-8")
+    session_transport = SESSION_TRANSPORT.read_text(encoding="utf-8")
+    dialog = DIALOG.read_text(encoding="utf-8")
+    pipecat = PIPECAT.read_text(encoding="utf-8")
 
     # ------------------------------------------------------------
     # Voz contínua
@@ -196,16 +206,50 @@ def main() -> None:
         and "contexto_usuario" in api
         and "speed=velocidade" in api
         and "piper_length_scale" in api
-        and '"--length_scale"' in api,
-        "API principal aplica prosódia contextual e velocidade adaptativa",
+        and '"--length_scale"' in api
+        and "perfil_voz" in api
+        and "mode=perfil_voz" in api
+        and "perfil_resposta" in api,
+        "API aplica prosódia contextual e valida os perfis de voz e resposta",
+    )
+
+    verificar(
+        all(
+            "perfil_resposta" in source
+            for source in (core, transport, session_transport, dialog)
+        )
+        and "PROMPT_ESTILO_PROVEDOR" in dialog
+        and "PROMPT_MODO_CENA" in dialog,
+        "identidade padrão e direção de cena atravessam o diálogo e as fronteiras de sessão",
+    )
+
+    verificar(
+        PIPECAT.exists()
+        and all(
+            token in pipecat
+            for token in (
+                "_voice_mode_command",
+                "_quoted_scene_text",
+                "perfil_resposta",
+                "self._voice_mode",
+                "mode=active_mode",
+                "await self._speak(quoted_scene, mode=\"cena\")",
+            )
+        ),
+        "adaptador Pipecat reconhece os mesmos comandos e aplica o perfil de cena",
     )
 
     verificar(
         "contexto_usuario: String(userContext ||" in interface
-        and "speakBrowserFallback(text, userContext)" in interface
+        and "speakBrowserFallback(text, userContext, voiceMode)" in interface
+        and "NYXAL_VOICE_PROFILE_KEY" in interface
+        and "detectNyxalVoiceModeCommand" in interface
+        and "extractNyxalQuotedSceneText" in interface
+        and "tomDevagar" in interface
+        and "utterance.rate = alertaDireta" in interface
         and "tomAcolhedor" in interface
         and "tomPressa" in interface,
-        "interface compartilha contexto apenas com o TTS local e adapta o fallback",
+        "interface transporta o perfil de voz, comandos de cena e adapta o fallback",
     )
 
     verificar(

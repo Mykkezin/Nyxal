@@ -96,6 +96,7 @@ class IntegracaoSessaoTransporteNixal:
         *,
         provedor: str | None = None,
         contexto_sistema: dict[str, Any] | None = None,
+        perfil_resposta: str | None = None,
     ) -> dict[str, Any]:
         """
         Processa uma mensagem dentro de uma sessão.
@@ -130,12 +131,19 @@ class IntegracaoSessaoTransporteNixal:
             return self._negado("O provedor conversacional é inválido.")
         if contexto_sistema is not None and not isinstance(contexto_sistema, dict):
             return self._negado("O contexto do sistema precisa ser um objeto.")
+        if perfil_resposta is not None and (
+            not isinstance(perfil_resposta, str)
+            or perfil_resposta not in {"padrao", "cena"}
+        ):
+            return self._negado("O perfil de resposta é inválido.")
 
         opcoes_transporte: dict[str, Any] = {}
         if provedor is not None:
             opcoes_transporte["provedor"] = provedor.strip().lower()
         if contexto_sistema is not None:
             opcoes_transporte["contexto_sistema"] = deepcopy(contexto_sistema)
+        if perfil_resposta is not None:
+            opcoes_transporte["perfil_resposta"] = perfil_resposta
 
         # --------------------------------------------------------
         # OBTENÇÃO OU CRIAÇÃO DA SESSÃO

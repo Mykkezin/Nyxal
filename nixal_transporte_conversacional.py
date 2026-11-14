@@ -94,6 +94,7 @@ class TransporteConversacionalNixal:
         *,
         provedor: str | None = None,
         contexto_sistema: dict[str, Any] | None = None,
+        perfil_resposta: str | None = None,
     ) -> dict[str, Any]:
         """
         Recebe uma mensagem humana, encaminha ao núcleo e retorna
@@ -136,6 +137,12 @@ class TransporteConversacionalNixal:
             ):
                 return self._negado("O provedor conversacional é inválido.")
 
+        if perfil_resposta is not None and (
+            not isinstance(perfil_resposta, str)
+            or perfil_resposta not in {"padrao", "cena"}
+        ):
+            return self._negado("O perfil de resposta é inválido.")
+
         if contexto_sistema is not None:
             if not isinstance(contexto_sistema, dict):
                 return self._negado("O contexto do sistema precisa ser um objeto JSON.")
@@ -151,12 +158,14 @@ class TransporteConversacionalNixal:
             if len(contexto_serializado) > 128000:
                 return self._negado("O contexto do sistema excede 128.000 caracteres.")
 
-        if provedor is not None or contexto_sistema is not None:
+        if provedor is not None or contexto_sistema is not None or perfil_resposta is not None:
             entrada["valor"]["opcoes_dialogo"] = {}
             if provedor is not None:
                 entrada["valor"]["opcoes_dialogo"]["provedor"] = provedor.strip().lower()
             if contexto_sistema is not None:
                 entrada["valor"]["opcoes_dialogo"]["contexto_sistema"] = deepcopy(contexto_sistema)
+            if perfil_resposta is not None:
+                entrada["valor"]["opcoes_dialogo"]["perfil_resposta"] = perfil_resposta
 
         if not self._interface.validar_entrada(
             entrada

@@ -20,6 +20,7 @@ class SpeechProfile:
     style: str
     speed: float
     conversational: bool
+    mode: str = "padrao"
 
 
 def _fold(text: str) -> str:
@@ -33,6 +34,35 @@ def _contains_any(text: str, cues: tuple[str, ...]) -> bool:
     return any(cue in folded for cue in cues)
 
 
+def resolve_voice_mode_command(value: str) -> str | None:
+    """Resolve exact whole-utterance voice controls without matching normal prose."""
+    if not isinstance(value, str):
+        return None
+    command = " ".join(value.casefold().strip().split()).rstrip(".!?…").strip()
+    if command == "modo cena":
+        return "cena"
+    if command == "corta":
+        return "padrao"
+    return None
+
+
+def extract_quoted_scene_text(value: str) -> str | None:
+    """Return one-shot speech only when the complete input is quoted."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    # Allow punctuation just outside the closing quote as sentence punctuation.
+    text = re.sub(r"[.!?…]+\s*$", "", text).rstrip()
+    if len(text) < 3:
+        return None
+    closing = {'"': '"', "'": "'", "“": "”", "‘": "’", "«": "»"}
+    expected = closing.get(text[0])
+    if expected is None or text[-1] != expected:
+        return None
+    spoken = text[1:-1].strip()
+    return spoken or None
+
+
 _DISTRESS_CUES = (
     "estou triste", "to triste", "estou mal", "to mal", "me sinto mal",
     "com medo", "tenho medo", "ansioso", "ansiosa", "desesperado",
@@ -44,6 +74,10 @@ _HURRY_CUES = (
     "responda rapido", "responde rapido", "seja breve",
     "vai direto ao ponto", "rapidinho", "to atrasado", "estou atrasado",
     "tenho pouco tempo", "sem enrolacao", "resuma rapido", "resume rapido",
+)
+_SLOWER_CUES = (
+    "mais devagar", "sinta o peso das palavras", "fale mais devagar",
+    "mais pausado", "desacelere",
 )
 _EMPATHY_CUES = (
     "sinto muito", "entendo", "estou aqui", "to aqui", "vamos com calma",
@@ -73,13 +107,17 @@ def choose_speech_profile(
     user_text: str,
     reply_text: str,
     base_speed: float = 1.0,
+    mode: str = "padrao",
 ) -> SpeechProfile:
-    """Choose a restrained delivery using utterance/reply semantics.
+    """Choose a restrained Brazilian Portuguese delivery profile.
 
-    Priority is safety/clarity, support, celebration, then questions/default.
-    Kokoro supports speed changes, not independent pitch, breath, or emotion
-    controls, so the profile avoids pretending to control unsupported features.
+    The scene mode is an explicit acting direction, not a voice clone. The local
+    Kokoro adapter exposes speed and voice selection, but not independent pitch,
+    breath, or emotion controls; this profile never claims otherwise.
     """
+    if not isinstance(mode, str) or mode not in {"padrao", "cena"}:
+        raise ValueError("O modo de voz precisa ser 'padrao' ou 'cena'.")
+
     try:
         base = float(base_speed)
     except (TypeError, ValueError):
@@ -89,11 +127,15 @@ def choose_speech_profile(
     user_folded = f" {_fold(user_text)} "
     reply_folded = f" {_fold(reply_text)} "
 
-    # A clear safety instruction should remain measured and easy to understand.
+    # Safety and urgency preserve intelligibility even during dramatic delivery.
     if _contains_any(reply_text, _FOCUSED_CUES):
         style, factor = "focused", 0.97
     elif _contains_any(user_text, _HURRY_CUES):
         style, factor = "brisk", 1.08
+    elif _contains_any(user_text, _SLOWER_CUES):
+        style, factor = ("scene_slow", 0.82) if mode == "cena" else ("deliberate", 0.86)
+    elif mode == "cena":
+        style, factor = "scene", 0.90
     elif (
         _contains_any(user_text, _DISTRESS_CUES)
         or _contains_any(reply_text, _EMPATHY_CUES)
@@ -106,17 +148,25 @@ def choose_speech_profile(
             and not _contains_any(user_text, _NEGATIVE_OUTCOME_CUES)
         )
     ) and not _contains_any(user_text, _NEGATIVE_OUTCOME_CUES):
-        style, factor = "upbeat", 1.04
+        style, factor = "upbeat", 1.03
     elif reply_text.rstrip().endswith("?"):
-        style, factor = "curious", 0.98
+        style, factor = "curious", 0.97
     else:
-        style, factor = "calm", 1.0
+        style, factor = "calm", 0.96
 
-    # Stay near the configured base rate: dramatic speed swings sound synthetic.
     speed = min(1.25, max(0.75, base * factor))
     cues = " " + user_folded.strip() + " " + reply_folded.strip() + " "
-    conversational = style != "focused" and _contains_any(cues, _CASUAL_CUES)
-    return SpeechProfile(style=style, speed=round(speed, 3), conversational=conversational)
+    conversational = (
+        mode == "padrao"
+        and style != "focused"
+        and _contains_any(cues, _CASUAL_CUES)
+    )
+    return SpeechProfile(
+        style=style,
+        speed=round(speed, 3),
+        conversational=conversational,
+        mode=mode,
+    )
 
 
 def clean_speech_text(value: str) -> str:
@@ -189,6 +239,14 @@ def prepare_spoken_reply(
                 text,
                 flags=re.IGNORECASE,
             )
+    if profile.mode == "cena":
+        # A regular full stop before another sentence becomes a measured pause.
+        # Existing questions, exclamations and ellipses retain their force.
+        text = re.sub(
+            r"(?<![.!?…])\.(\s+)(?=[A-ZÀ-ÖØ-Þ“\"(])",
+            r"…\1",
+            text,
+        )
     text = re.sub(r"\s+([,.;:!?])", r"\1", text)
     text = re.sub(r"\s{2,}", " ", text).strip()
     if text and text[-1] not in ".!?…":

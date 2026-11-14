@@ -29,7 +29,9 @@ from nyxal_clap_wake import TwoClapDetector, is_rest_command
 from nyxal_voice_prosody import (
     choose_speech_profile,
     clean_speech_text,
+    extract_quoted_scene_text as _quoted_scene_text,
     prepare_spoken_reply,
+    resolve_voice_mode_command as _voice_mode_command,
 )
 
 # Load user-local settings without overriding values injected by systemd/shell.
@@ -108,11 +110,19 @@ def _extract_reply(payload: Any) -> str:
     return ""
 
 
-def _chat_payload(utterance: str, session_id: str | None) -> dict[str, str]:
+def _chat_payload(
+    utterance: str,
+    session_id: str | None,
+    response_mode: str = "padrao",
+) -> dict[str, str]:
     """Build a request compatible with the API's server-owned session lifecycle."""
+    if not isinstance(response_mode, str) or response_mode not in {"padrao", "cena"}:
+        raise ValueError("O perfil de resposta precisa ser 'padrao' ou 'cena'.")
     request = {"mensagem": utterance}
     if isinstance(session_id, str) and session_id.strip():
         request["sessao"] = session_id
+    if response_mode == "cena":
+        request["perfil_resposta"] = "cena"
     return request
 
 
@@ -236,6 +246,7 @@ class NyxalChatProcessor(FrameProcessor):
         self._turn_state = turn_state
         self._tts = tts
         self._base_speed = base_speed
+        self._voice_mode = "padrao"
         self._http: aiohttp.ClientSession | None = None
 
     async def setup(self, setup: FrameProcessorSetup) -> None:
@@ -248,13 +259,17 @@ class NyxalChatProcessor(FrameProcessor):
             await self._http.close()
         await super().cleanup()
 
-    async def _ask_nyxal(self, utterance: str) -> str:
+    async def _ask_nyxal(
+        self,
+        utterance: str,
+        response_mode: str = "padrao",
+    ) -> str:
         if self._http is None:
             raise RuntimeError("HTTP conversation client is not initialized")
 
         async with self._http.post(
             f"{self._api_base}/api/chat",
-            json=_chat_payload(utterance, self._session_id),
+            json=_chat_payload(utterance, self._session_id, response_mode),
             headers=_api_request_headers(self._api_base),
         ) as response:
             if response.status < 200 or response.status >= 300:
@@ -286,6 +301,32 @@ class NyxalChatProcessor(FrameProcessor):
         self._session_id = session_id
         return reply
 
+    async def _speak(self, text: str, user_text: str = "", mode: str | None = None) -> None:
+        active_mode = self._voice_mode if mode is None else mode
+        profile = choose_speech_profile(
+            user_text,
+            text,
+            self._base_speed,
+            mode=active_mode,
+        )
+        spoken_text = prepare_spoken_reply(text, user_text, profile)
+        logger.info(
+            "[nyxal-voz] perfil de fala={} velocidade={}",
+            profile.style,
+            profile.speed,
+        )
+        await self.push_frame(
+            TTSUpdateSettingsFrame(
+                delta=KokoroTTSService.Settings(speed=profile.speed),
+                service=self._tts,
+            ),
+            FrameDirection.DOWNSTREAM,
+        )
+        await self.push_frame(
+            TTSSpeakFrame(spoken_text),
+            FrameDirection.DOWNSTREAM,
+        )
+
     async def process_frame(self, frame, direction: FrameDirection) -> None:
         await super().process_frame(frame, direction)
 
@@ -296,19 +337,39 @@ class NyxalChatProcessor(FrameProcessor):
 
             if is_rest_command(utterance):
                 self._turn_state.generation += 1
-                await self.push_frame(
-                    TTSSpeakFrame("Certo. Vou entrar em repouso. Duas palmas me despertam."),
-                    FrameDirection.DOWNSTREAM,
+                await self._speak(
+                    "Certo. Vou entrar em repouso. Duas palmas me despertam.",
+                    utterance,
                 )
                 self._turn_state.sleeping = True
                 logger.info("[nyxal-voz] comando verbal de repouso reconhecido")
+                return
+
+            voice_command = _voice_mode_command(utterance)
+            if voice_command is not None:
+                self._turn_state.generation += 1
+                self._voice_mode = voice_command
+                if voice_command == "cena":
+                    acknowledgement = (
+                        "Modo Cena ativado. Vou interpretar com mais intenção, "
+                        "intensidade e pausas deliberadas."
+                    )
+                else:
+                    acknowledgement = "Corta. Voltei ao modo padrão."
+                await self._speak(acknowledgement, mode=voice_command)
+                return
+
+            quoted_scene = _quoted_scene_text(utterance)
+            if quoted_scene is not None:
+                self._turn_state.generation += 1
+                await self._speak(quoted_scene, mode="cena")
                 return
 
             generation_at_request = self._turn_state.generation
             api_request_started_at = time.perf_counter()
             logger.info("[nyxal-voz] transcrição concluída; consultando o núcleo conversacional")
             try:
-                reply = await self._ask_nyxal(utterance)
+                reply = await self._ask_nyxal(utterance, self._voice_mode)
             except (aiohttp.ClientError, asyncio.TimeoutError, RuntimeError, ValueError) as error:
                 detail = str(error).strip()
                 logger.error(
@@ -327,30 +388,8 @@ class NyxalChatProcessor(FrameProcessor):
                 return
 
             if reply:
-                profile = choose_speech_profile(
-                    utterance,
-                    reply,
-                    self._base_speed,
-                )
-                spoken_reply = prepare_spoken_reply(reply, utterance, profile)
-                logger.info(
-                    "[nyxal-voz] perfil de fala={} velocidade={}",
-                    profile.style,
-                    profile.speed,
-                )
-                # Settings updates are routed to this TTS service before its next utterance.
-                await self.push_frame(
-                    TTSUpdateSettingsFrame(
-                        delta=KokoroTTSService.Settings(speed=profile.speed),
-                        service=self._tts,
-                    ),
-                    FrameDirection.DOWNSTREAM,
-                )
                 logger.info("[nyxal-voz] iniciando reprodução de voz")
-                await self.push_frame(
-                    TTSSpeakFrame(spoken_reply),
-                    FrameDirection.DOWNSTREAM,
-                )
+                await self._speak(reply, utterance)
             return
 
         await self.push_frame(frame, direction)
