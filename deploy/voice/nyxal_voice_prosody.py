@@ -52,7 +52,7 @@ def extract_quoted_scene_text(value: str) -> str | None:
         return None
     text = value.strip()
     # Allow punctuation just outside the closing quote as sentence punctuation.
-    text = re.sub(r"[.!?…]+\\s*$", "", text).rstrip()
+    text = re.sub(r"[.!?…]+\s*$", "", text).rstrip()
     if len(text) < 3:
         return None
     closing = {'"': '"', "'": "'", "“": "”", "‘": "’", "«": "»"}
