@@ -12,8 +12,14 @@ on:
       - "teste_nyxal_mcp_runtime.py"
       - "teste_mcp_http.py"
       - "nyxal_web_api.py"
+      - "interface/index.html"
+      - "teste_inicio_codigo.py"
+      - "teste_voz_continua_56_5_6.py"
+      - "deploy/systemd/iniciar_nyxos_shell.sh"
+      - "deploy/systemd/iniciar_nyxos_interface.sh"
+      - "deploy/systemd/instalar_nyxos_servicos.sh"
+      - "deploy/agent/verificar_nyxal_agent.sh"
       - "nixal_auditoria_defesa.py"
-      - "nixal_display_routes.py"
       - "nixal_agent_hub.py"
       - "nixal_intent_router.py"
       - "nixal_responses_api.py"
@@ -65,7 +71,6 @@ on:
       - "nixal_ciclo_residente.py"
       - "nixal_presenca_maquina.py"
       - "executar_nyxos_residente.py"
-      - "teste_nixal_display_routes.py"
       - "teste_nixal_agent_hub.py"
       - "teste_nixal_dialogo_router.py"
       - "teste_api_security_auth.py"
@@ -85,8 +90,6 @@ on:
       - "teste_auto_evolucao_ae1.py"
       - "teste_m5_15_presenca_maquina.py"
       - "teste_m5_9_residencia_linux.py"
-      - "interface/display/**"
-      - "interface/index.html"
       - "interface/js/nyxal-voice-console.js"
       - "interface/js/nyxal-api-client.js"
       - "interface/js/nyxal-api-client.test.cjs"
@@ -127,7 +130,7 @@ jobs:
         run: python3 -c 'import sys; assert sys.version_info[:2] == (3, 12), sys.version'
       - name: Verify system Node.js 22 and npm
         run: node -e 'const v=process.versions.node.split(".").map(Number); if(v[0]!==22) process.exit(1); console.log(process.version)' && npm --version
-      - name: Check inline JavaScript in the legacy Nyxal interface
+      - name: Check inline JavaScript in the single NyxOS interface
         run: |
           python3 - <<'PY'
           import re
@@ -157,12 +160,6 @@ jobs:
               raise SystemExit("Nenhum script JavaScript inline foi verificado.")
           print(f"JavaScript inline validado: {checked} scripts")
           PY
-      - name: Build passive Nyxal Display
-        working-directory: interface/display
-        run: |
-          npm install --ignore-scripts --no-audit --no-fund --package-lock=false
-          npm run lint
-          npm run build
       - name: Check voice console JavaScript
         run: node --check interface/js/nyxal-voice-console.js
       - name: Check and test shared Nyxal API client
@@ -178,7 +175,6 @@ jobs:
             nixal_mcp_runtime.py \
             teste_nyxal_mcp_runtime.py \
             teste_mcp_http.py \
-            nixal_display_routes.py \
             nixal_agent_hub.py \
             nixal_intent_router.py \
             nixal_responses_api.py \
@@ -260,10 +256,15 @@ jobs:
           bash -n deploy/voice/instalar_pipecat_experimental.sh
           bash -n deploy/voice/diagnosticar_runtime_local.sh
           bash -n deploy/ci/diagnosticar_runner_nyxal.sh
+      - name: Verify unified interface, voice mode, and HTTP aliases
+        run: |
+          python3 teste_inicio_codigo.py
+          python3 teste_voz_continua_56_5_6.py
+          python3 -m unittest -v teste_api_security_auth.TestSegurancaAPIHTTP.test_interface_unica_e_redirecionamentos_legados
+
       - name: Run focused unit tests
         run: |
           python3 -m unittest -v \
-            teste_nixal_display_routes \
             teste_nixal_agent_hub \
             teste_nixal_tool_use \
             teste_nixal_fila_tarefas_segura \

@@ -3,7 +3,7 @@
 ## Arquitetura pretendida
 
 ```text
-Nyxal Display
+Interface única NyxOS (`interface/index.html`)
     ↓ POST /api/agent/chat
 Nyxal Core / NixalAgentHub
     ├── Hermes Agent API (agente executor e gateway de mensagens)
@@ -176,7 +176,7 @@ cd ~/Nyxal
 bash deploy/agent/verificar_nyxal_agent.sh
 ```
 
-Esse comando verifica a saúde da API, os endpoints do agente, a observabilidade local, o estado OAuth do Google Workspace e se o Display é servido em **http://127.0.0.1:8010/display/**. Os campos **configurado** indicam apenas que as credenciais/arquivos existem e passam pelas verificações locais — não significam que o provedor remoto respondeu.
+Esse comando verifica a saúde da API, os endpoints do agente, a observabilidade local, o estado OAuth do Google Workspace e se a interface principal é servida em **http://127.0.0.1:8010/**. Os campos **configurado** indicam apenas que as credenciais/arquivos existem e passam pelas verificações locais — não significam que o provedor remoto respondeu.
 
 Para também testar a geração real de voz e conferir que a API devolve um arquivo WAV, execute:
 

@@ -11,8 +11,8 @@ on:
       - "nixal_capacidades.py"
       - "nixal_runtime.py"
       - "teste_limites_armazenamento.py"
-      - "interface/startup.html"
-      - "interface/assets/nyxos-startup.mp4"
+      - "interface/index.html"
+      - "nyxal_web_api.py"
       - "deploy/systemd/iniciar_nyxos_shell.sh"
       - "deploy/systemd/iniciar_nyxos_interface.sh"
       - "teste_inicio_codigo.py"
@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   storage-and-startup:
-    name: Storage limits and code-only startup
+    name: Storage limits and single-interface regression
     runs-on: self-hosted
     timeout-minutes: 5
     steps:
@@ -46,7 +46,7 @@ jobs:
       - name: Test generated log size limits
         run: python3 -m unittest teste_limites_armazenamento.py -v
 
-      - name: Test code-only startup animation
+      - name: Test single-interface consolidation
         run: python3 teste_inicio_codigo.py
 
       - name: Validate launcher shell syntax

@@ -72,9 +72,81 @@
       animation: none !important;
     }
     .nyxal-presence-stage {
+      position: relative;
       isolation: isolate;
-      background: radial-gradient(ellipse at 50% 42%, rgba(31,91,151,.27), transparent 48%),
-        radial-gradient(ellipse at 50% 100%, rgba(95,43,151,.17), transparent 57%), #020611;
+      height: clamp(360px, 42vh, 440px) !important;
+      min-height: 360px;
+      background:
+        radial-gradient(ellipse at 50% 42%, rgba(31,91,151,.34), transparent 49%),
+        radial-gradient(ellipse at 50% 100%, rgba(95,43,151,.2), transparent 58%),
+        linear-gradient(180deg, rgba(3,10,25,.92), #020611 82%);
+      box-shadow: inset 0 0 70px rgba(24,94,156,.10);
+    }
+    .nyxal-presence-stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .2;
+      background-image:
+        radial-gradient(circle, rgba(191,235,255,.72) .7px, transparent 1px),
+        linear-gradient(rgba(0,242,254,.035) 1px, transparent 1px);
+      background-size: 37px 37px, 100% 34px;
+      mask-image: radial-gradient(ellipse at 50% 43%, #000 8%, transparent 76%);
+    }
+    .nyxal-presence-stage #nyxalAvatar {
+      inset: 0;
+      padding-top: 8px;
+    }
+    .nyxal-presence-stage #nyxalCharacterSvg {
+      width: min(100%, 400px);
+      max-width: 400px;
+      height: 100%;
+      filter: drop-shadow(0 0 26px rgba(65,173,238,.19));
+    }
+    .nyxal-lunar-sigil {
+      position: absolute;
+      top: 37px;
+      left: 50%;
+      z-index: 13;
+      width: 25px;
+      height: 25px;
+      transform: translateX(-50%) rotate(-18deg);
+      border: 1px solid rgba(190,239,255,.72);
+      border-radius: 50%;
+      background: linear-gradient(145deg, #e7fbff, #68bde8 72%, #8b8df4);
+      box-shadow: 0 0 12px rgba(116,218,255,.42), 0 0 28px rgba(116,128,255,.18);
+      opacity: .88;
+      pointer-events: none;
+    }
+    .nyxal-lunar-sigil::after {
+      content: "";
+      position: absolute;
+      top: -4px;
+      right: -6px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #030a18;
+      box-shadow: -2px 2px 5px rgba(2,8,22,.4);
+    }
+    .nyxal-lunar-sigil::before {
+      content: "✦";
+      position: absolute;
+      top: -12px;
+      right: -12px;
+      z-index: 1;
+      color: #d8f7ff;
+      font: 10px/1 sans-serif;
+      text-shadow: 0 0 8px rgba(125,211,252,.9);
+    }
+    @media (max-width: 640px) {
+      .nyxal-presence-stage {
+        height: 370px !important;
+        min-height: 350px;
+      }
+      .nyxal-lunar-sigil { top: 28px; }
     }
     .nyxal-stage-grid {
       position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.34;
@@ -92,7 +164,7 @@
     }
     .nyxal-stage-ring::after { inset:-12px; border-color:rgba(0,242,254,.12); transform:rotateX(68deg); }
     .nyxal-avatar { position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; }
-    #nyxalCharacterSvg { display:block; width:min(100%,320px); height:100%; overflow:visible; }
+    #nyxalCharacterSvg { display:block; width:min(100%,400px); max-width:400px; height:100%; overflow:visible; }
     #nyxalCharacterSvg .avatar-breath { transform-origin:160px 220px; animation:nyxalBreath 4.5s ease-in-out infinite; }
     #nyxalCharacterSvg .avatar-hair-strand { fill:none; stroke:rgba(82,213,255,.42); stroke-width:1.4; stroke-linecap:round; }
     #nyxalCharacterSvg .avatar-eye-glow { filter:url(#nyxalNeon); }
@@ -1545,10 +1617,11 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
         </div>
 
         <!-- Video Hologram Container -->
-        <div class="relative w-full h-72 rounded-xl bg-slate-950/90 border border-hud-cyan/40 overflow-hidden flex items-center justify-center my-1 group">
+        <div class="relative w-full h-[420px] rounded-xl bg-slate-950/90 border border-hud-cyan/40 overflow-hidden flex items-center justify-center my-1 group nyxal-presence-stage">
           
           <!-- Goddess Nyx Voice Aura Glow -->
           <div id="avatarVoiceAura" class="absolute w-52 h-52 rounded-full bg-gradient-to-r from-hud-cyan/20 via-hud-purple/20 to-hud-blue/20 blur-xl voice-aura-nyx pointer-events-none z-0"></div>
+          <div class="nyxal-lunar-sigil" aria-hidden="true"></div>
 
           <!-- Futuristic Target Overlay -->
           <div class="absolute inset-0 pointer-events-none z-20 border border-hud-cyan/20 p-2 flex flex-col justify-between text-[8px] font-mono text-hud-cyan/70">
@@ -1631,6 +1704,9 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
                 <path d="M160 185 L160 213 Q180 231 200 213 L200 185" fill="url(#nyxalSkin)"/>
                 <path d="M129 116 Q131 67 180 65 Q231 68 232 119 L224 162 Q217 193 180 201 Q143 193 136 162 Z" fill="url(#nyxalSkin)" fill-opacity=".9" stroke="#bdf7ff" stroke-opacity=".96" stroke-width="1.35" filter="url(#nyxalHoloFaceGlow)"/>
                 <path d="M128 130 Q115 91 139 65 Q159 43 190 52 Q227 50 238 88 Q243 109 231 138 L218 106 Q199 102 184 84 Q168 105 143 111 L140 150 Z" fill="url(#nyxalHair)" stroke="#b8e8ff" stroke-opacity=".72" stroke-width="1.2"/>
+                <path d="M137 87 C119 107 117 140 122 173 C126 197 133 218 145 237 L151 218 C141 195 138 172 140 149 L143 112 Z" fill="url(#nyxalHair)" stroke="#b8e8ff" stroke-opacity=".62" stroke-width="1"/>
+                <path d="M223 87 C241 107 243 140 238 173 C234 197 227 218 215 237 L209 218 C219 195 222 172 220 149 L217 112 Z" fill="url(#nyxalHair)" stroke="#b8e8ff" stroke-opacity=".62" stroke-width="1"/>
+                <path d="M132 112 Q121 156 137 211 M228 112 Q239 156 223 211" fill="none" stroke="#d9f4ff" stroke-opacity=".55" stroke-width="1.4" stroke-linecap="round"/>
                 <path d="M141 130 Q155 119 169 130" fill="none" stroke="#172d4c" stroke-width="4" stroke-linecap="round"/>
                 <path d="M191 130 Q205 119 219 130" fill="none" stroke="#172d4c" stroke-width="4" stroke-linecap="round"/>
                 <path d="M146 139 Q157 132 169 139" fill="none" stroke="#76e4ff" stroke-width="2.4" stroke-linecap="round"/>
@@ -1645,7 +1721,7 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
                 <path d="M130 214 L109 251 L132 246 M230 214 L251 251 L228 246" fill="none" stroke="#6cccf2" stroke-opacity=".65" stroke-width="2"/>
                 <path d="M180 237 L180 274" stroke="#7dd3fc" stroke-opacity=".8" stroke-width="1.5"/>
                 <circle cx="180" cy="240" r="8" fill="#0b223c" stroke="#83ddff" stroke-width="1.2"/>
-                <path d="M180 233 L185 240 L180 247 L175 240 Z" fill="#a5f3fc"/>
+                <path d="M181 232 C172 234 170 245 177 250 C182 253 189 250 191 244 C184 248 176 242 179 235 C179.5 234 180 233 181 232 Z" fill="#a5f3fc"/>
                 <g class="nyxal-holo-face-data" clip-path="url(#nyxalFaceDataClip)" pointer-events="none">
                   <path class="nyxal-face-data-line" d="M143 112 H157 L166 121 H194 L203 112 H217" opacity=".42"/>
                   <path class="nyxal-face-data-line" d="M147 149 H164 L173 155 H187 L196 149 H213" opacity=".3" style="animation-delay:-1.2s"/>

@@ -44,7 +44,6 @@ from nixal_descoberta_continua_ae5 import DescobertaContinuaGovernadaAE5
 from nixal_coletor_dataset_dual_ae5 import ColetorDatasetDualAE5
 from nixal_vps import VpsNyxOS
 from nixal_amd_developer_cloud import AmdDeveloperCloud
-from nixal_display_routes import resolve_display_file
 from nixal_agent_hub import NyxalAgentHub
 from nixal_observabilidade_sistema import ObservabilidadeSistemaNixOS
 from nixal_integracao_gmail import IntegracaoGmailNixOS
@@ -523,16 +522,6 @@ def read_nyxos_contexto() -> dict:
 
 def caminho_interface(relativo: str) -> Path | None:
     raiz = (BASE_DIR / "interface").resolve()
-    candidato = (raiz / relativo).resolve()
-    try:
-        candidato.relative_to(raiz)
-    except ValueError:
-        return None
-    return candidato if candidato.is_file() else None
-
-
-def caminho_display(relativo: str) -> Path | None:
-    raiz = (BASE_DIR / "interface" / "display" / "dist").resolve()
     candidato = (raiz / relativo).resolve()
     try:
         candidato.relative_to(raiz)
@@ -1981,14 +1970,9 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if parsed_path == "/":
-            # O modo de voz usa a interface principal que contém a captura contínua,
-            # STT, conversa e TTS. Não deixe um dist antigo do Display interceptá-lo.
-            modo_voz = parse_qs(urlsplit(self.path).query).get("modo", [""])[0] == "voz"
-            caminho = (
-                caminho_interface("index.html")
-                if modo_voz
-                else (caminho_display("index.html") or caminho_interface("index.html"))
-            )
+            # Uma única interface: o modo ?modo=voz é apresentado pelo próprio HTML.
+            # Não permita que um bundle Display antigo sobrescreva o dashboard principal.
+            caminho = caminho_interface("index.html")
             if caminho is None:
                 self._send_json(404, {"estado": "interface_indisponivel"})
                 return
@@ -2002,20 +1986,23 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             return
 
         if parsed_path == "/display" or parsed_path.startswith("/display/"):
-            relativo = parsed_path.removeprefix("/display/") if parsed_path.startswith("/display/") else ""
-            relativo = relativo.lstrip("/") or "index.html"
-            caminho = resolve_display_file(BASE_DIR / "interface" / "display" / "dist", self.path)
-            if caminho is None:
-                self._send_json(404, {"estado": "display_arquivo_nao_encontrado", "arquivo": relativo})
-                return
-            corpo = caminho.read_bytes()
-            tipo = mimetypes.guess_type(str(caminho))[0] or "application/octet-stream"
-            self.send_response(200)
-            self.send_header("Content-Type", tipo)
-            self.send_header("Content-Length", str(len(corpo)))
+            self.send_response(308)
+            self.send_header("Location", "/")
+            self.send_header("Content-Length", "0")
             self._send_security_headers()
             self.end_headers()
-            self.wfile.write(corpo)
+            return
+
+        if parsed_path in {
+            "/interface/index-legacy.html",
+            "/interface/nyxos-panel.html",
+            "/interface/startup.html",
+        }:
+            self.send_response(308)
+            self.send_header("Location", "/")
+            self.send_header("Content-Length", "0")
+            self._send_security_headers()
+            self.end_headers()
             return
 
         if self.path.startswith("/interface/"):

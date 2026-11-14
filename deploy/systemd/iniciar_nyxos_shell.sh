@@ -5,11 +5,9 @@ NYXAL_DIR="${HOME}/Nyxal"
 # Abra o painel completo em janela normal, sem a miniatura sempre cobrindo os outros apps.
 # O modo simplificado de voz continua disponível por configuração explícita, mas não é mais o padrão.
 INTERFACE_URL="${NYXOS_INTERFACE_URL:-http://127.0.0.1:8010/}"
-STARTUP_PAGE="${NYXAL_DIR}/interface/startup.html"
 RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 LOCK_DIR="${RUNTIME_DIR}/nyxos-shell"
 LOCK_FILE="${LOCK_DIR}/singleton.lock"
-STARTUP_MARKER="${LOCK_DIR}/startup-video.played"
 BROWSER_PROFILE="${NYXOS_BROWSER_PROFILE:-${HOME}/.config/nyxos/browser}"
 API_HEALTH_URL="${NYXOS_API_HEALTH_URL:-http://127.0.0.1:8010/health}"
 
@@ -54,22 +52,8 @@ if [[ -z "${BROWSER}" ]]; then
     exit 1
 fi
 
-# O splash é HTML/CSS/canvas local, sem dependências externas ou arquivo de vídeo.
-# Reutiliza o marcador antigo para não repetir a animação na mesma sessão gráfica.
+# Abra sempre o dashboard único servido pela API local.
 LAUNCH_URL="${INTERFACE_URL}"
-# Se o destino for a página completa, pode exibir a animação local de inicialização uma vez.
-if [[ "${INTERFACE_URL}" != *"modo=voz"* && -f "${STARTUP_PAGE}" && ! -f "${STARTUP_MARKER}" ]]; then
-    if command -v python3 >/dev/null 2>&1; then
-        STARTUP_FILE_URL="$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve().as_uri())' "${STARTUP_PAGE}")"
-        ENCODED_NEXT_URL="$(python3 -c 'import sys; from urllib.parse import quote; print(quote(sys.argv[1], safe=""))' "${INTERFACE_URL}")"
-        if [[ -n "${STARTUP_FILE_URL}" && -n "${ENCODED_NEXT_URL}" ]]; then
-            touch "${STARTUP_MARKER}"
-            LAUNCH_URL="${STARTUP_FILE_URL}?next=${ENCODED_NEXT_URL}"
-        fi
-    else
-        echo "AVISO: python3 não encontrado; abrindo a interface sem animação de inicialização." >&2
-    fi
-fi
 
 # A janela pode ser movida/minimizada e deixa de se impor sobre o desktop.
 case "$(basename "${BROWSER}")" in
