@@ -1865,7 +1865,7 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
     }
 
     function extractNyxalQuotedSceneText(value) {
-      const text = String(value || '').trim();
+      const text = String(value || '').trim().replace(/[.!?…]+\s*$/, '').trim();
       if (text.length < 3) return null;
       const closing = {
         '"': '"',
