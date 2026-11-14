@@ -1839,6 +1839,47 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
     const VOICE_UI_IDLE_HIDE_MS = 60000;
     let isNyxalOnline = false;
     let nyxalSessionId = sessionStorage.getItem('NYXAL_SESSION_ID') || null;
+    const NYXAL_VOICE_PROFILE_KEY = 'NYXAL_VOICE_PROFILE';
+    let nyxalVoiceProfile = sessionStorage.getItem(NYXAL_VOICE_PROFILE_KEY) === 'cena'
+      ? 'cena'
+      : 'padrao';
+
+    function setNyxalVoiceProfile(profile) {
+      nyxalVoiceProfile = profile === 'cena' ? 'cena' : 'padrao';
+      try {
+        sessionStorage.setItem(NYXAL_VOICE_PROFILE_KEY, nyxalVoiceProfile);
+      } catch (_) {
+        // A sessão continua funcional mesmo quando o armazenamento está bloqueado.
+      }
+    }
+
+    function detectNyxalVoiceModeCommand(value) {
+      const command = String(value || '')
+        .normalize('NFD')
+        .replace(/[\\u0300-\\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[.!?…]+$/g, '')
+        .trim();
+      if (command === 'modo cena') return 'cena';
+      if (command === 'corta') return 'padrao';
+      return null;
+    }
+
+    function extractNyxalQuotedSceneText(value) {
+      const text = String(value || '').trim();
+      if (text.length < 3) return null;
+      const closing = {
+        '"': '"',
+        "'": "'",
+        '“': '”',
+        '‘': '’',
+        '«': '»'
+      };
+      const expected = closing[text[0]];
+      if (!expected || text[text.length - 1] !== expected) return null;
+      const content = text.slice(1, -1).trim();
+      return content || null;
+    }
 
     // WEB AUDIO SYNTHESIZER FOR HUD SFX & VOICE REVERB
     let audioCtx = null;
@@ -2017,7 +2058,7 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
     let currentNyxalAudioSource = null;
     let cancelCurrentNyxalSpeech = null;
 
-    function speakBrowserFallback(text, userContext = "") {
+    function speakBrowserFallback(text, userContext = "", voiceMode = "padrao") {
       return new Promise((resolve) => {
         if (!('speechSynthesis' in window)) {
           resolve(false);
@@ -2043,8 +2084,10 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
         const tomPressa = /\b(estou com pressa|to com pressa|tenho pressa|responda rapido|responde rapido|seja breve|vai direto ao ponto|rapidinho|to atrasado|estou atrasado|tenho pouco tempo|sem enrolacao)\b/.test(perfilTexto);
         const tomAcolhedor = /\b(sinto muito|estou aqui|lamento|vamos com calma|respira|estou triste|to triste|estou mal|to mal|com medo|tenho medo|me sinto sozinho|me sinto sozinha|perdi alguem|alguem morreu)\b/.test(perfilTexto);
         const tomPositivo = /\b(parabens|conseguiu|deu certo|boa noticia|mandou bem|excelente)\b/.test(perfilTexto);
-        utterance.pitch = 0.96;
-        utterance.rate = alertaDireta ? 0.98 : tomPressa ? 1.08 : tomAcolhedor ? 0.93 : tomPositivo ? 1.03 : 0.98;
+        // Estes ajustes só afetam o fallback SpeechSynthesis do navegador.
+        // O Kokoro usa voz treinada + velocidade e não expõe controle de pitch.
+        utterance.pitch = voiceMode === 'cena' ? 0.94 : 0.91;
+        utterance.rate = alertaDireta ? 0.98 : voiceMode === 'cena' ? 0.90 : tomPressa ? 1.08 : tomAcolhedor ? 0.92 : tomPositivo ? 1.02 : 0.94;
         utterance.volume = 1.0;
 
         let concluido = false;
@@ -2373,7 +2416,12 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
       voiceBargeInFrame = window.setTimeout(runVoiceBargeInMonitor, NYXAL_VOICE_SAMPLE_INTERVAL_MS);
     }
 
-    async function speakGoddessNyxVoice(text, updateSubtitle = true, userContext = "") {
+    async function speakGoddessNyxVoice(
+      text,
+      updateSubtitle = true,
+      userContext = "",
+      voiceMode = nyxalVoiceProfile
+    ) {
       if (!text) return;
 
       if (voiceConversationActive) startVoiceBargeInCapture();
@@ -2403,7 +2451,8 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             texto: text,
-            contexto_usuario: String(userContext || "").slice(0, 4000)
+            contexto_usuario: String(userContext || "").slice(0, 4000),
+            perfil_voz: voiceMode === "cena" ? "cena" : "padrao"
           }),
           parse: 'blob'
         });
@@ -2415,7 +2464,7 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
         if (!voiceBargeInDetected) await tocarAudioTtsComContexto(blob);
       } catch (err) {
         console.warn('TTS local indisponível; usando voz do navegador:', err);
-        if (!voiceBargeInDetected) await speakBrowserFallback(text, userContext);
+        if (!voiceBargeInDetected) await speakBrowserFallback(text, userContext, voiceMode);
       } finally {
         const foiInterrompida = voiceBargeInDetected || voiceBargeInHandoff;
         if (!foiInterrompida) {
@@ -3319,6 +3368,29 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
       ].includes(data.estado);
     }
 
+    async function executarAtalhoDeVozNyxal(texto, perfilVoz) {
+      const conversaContinua = voiceConversationActive === true;
+      if (conversaContinua) {
+        voiceConversationBusy = true;
+        setVoiceMicrophoneEnabled(false);
+      }
+      setHologramProcessing(false);
+      showSubtitles(texto);
+      try {
+        await speakGoddessNyxVoice(texto, false, "", perfilVoz);
+      } finally {
+        if (
+          conversaContinua &&
+          voiceConversationActive &&
+          !voiceBargeInHandoff &&
+          !voiceBargeInDetected
+        ) {
+          voiceConversationBusy = false;
+          resumeContinuousListening();
+        }
+      }
+    }
+
     async function sendNyxalMessage(
       msg,
       permitirRecuperacaoSessao = true,
@@ -3326,6 +3398,30 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
       if (!msg) return;
 
       playHudSound('send');
+
+      const comandoVoz = detectNyxalVoiceModeCommand(msg);
+      if (comandoVoz === 'cena') {
+        setNyxalVoiceProfile('cena');
+        await executarAtalhoDeVozNyxal(
+          'Modo Cena ativado. Vou interpretar com mais intensidade, intenção e pausas deliberadas.',
+          'cena'
+        );
+        return;
+      }
+      if (comandoVoz === 'padrao') {
+        setNyxalVoiceProfile('padrao');
+        await executarAtalhoDeVozNyxal(
+          'Corta. Voltei ao modo padrão.',
+          'padrao'
+        );
+        return;
+      }
+
+      const textoEntreAspas = extractNyxalQuotedSceneText(msg);
+      if (textoEntreAspas) {
+        await executarAtalhoDeVozNyxal(textoEntreAspas, 'cena');
+        return;
+      }
 
       const conversaContinua =
         voiceConversationActive === true;
@@ -3361,6 +3457,7 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
             const payload = nyxalSessionId
               ? { mensagem: msg, sessao: nyxalSessionId }
               : { mensagem: msg };
+            if (nyxalVoiceProfile === 'cena') payload.perfil_resposta = 'cena';
             const provedor = document.getElementById('nyxalProviderSelect')?.value;
             if (provedor && provedor !== 'nyxal') payload.provedor = provedor;
             return payload;
