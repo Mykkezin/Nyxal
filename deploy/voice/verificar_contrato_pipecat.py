@@ -9,6 +9,8 @@ from nyxal_pipecat_agent import (
     _api_request_headers,
     _chat_payload,
     _extract_reply,
+    _quoted_scene_text,
+    _voice_mode_command,
     _returned_session_id,
     _spoken_text,
 )
@@ -77,6 +79,33 @@ class NyxalPipecatContractTests(unittest.TestCase):
                 "sessao": "sessao-real-123",
             },
         )
+
+    def test_scene_profile_is_forwarded_to_the_chat_api(self):
+        self.assertEqual(
+            _chat_payload("Leia esta fala.", "sessao-real-123", "cena"),
+            {
+                "mensagem": "Leia esta fala.",
+                "sessao": "sessao-real-123",
+                "perfil_resposta": "cena",
+            },
+        )
+
+    def test_invalid_response_profile_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "perfil de resposta"):
+            _chat_payload("Teste.", None, "teatral")
+
+    def test_mode_commands_are_exact_and_case_insensitive(self):
+        self.assertEqual(_voice_mode_command("Modo Cena."), "cena")
+        self.assertEqual(_voice_mode_command("CORTA"), "padrao")
+        self.assertIsNone(_voice_mode_command("Vamos entrar em Modo Cena agora"))
+        self.assertIsNone(_voice_mode_command("corta o texto pela metade"))
+
+    def test_quoted_scene_text_is_one_shot(self):
+        self.assertEqual(_quoted_scene_text('"Eu voltei."'), "Eu voltei.")
+        self.assertEqual(_quoted_scene_text("“Não acabou.”"), "Não acabou.")
+        self.assertEqual(_quoted_scene_text("«Eu entendi.»"), "Eu entendi.")
+        self.assertIsNone(_quoted_scene_text("Eu voltei."))
+        self.assertIsNone(_quoted_scene_text('""'))
 
     def test_adopts_session_returned_by_the_api(self):
         self.assertEqual(
