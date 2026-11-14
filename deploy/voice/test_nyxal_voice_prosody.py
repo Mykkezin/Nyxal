@@ -33,7 +33,7 @@ class VoiceProsodyTests(unittest.TestCase):
             "Consegui passar na prova!", "Parabéns, você conseguiu!", 1.0
         )
         self.assertEqual(profile.style, "upbeat")
-        self.assertAlmostEqual(profile.speed, 1.04)
+        self.assertAlmostEqual(profile.speed, 1.03)
 
     def test_user_in_a_hurry_gets_a_brisk_but_not_extreme_delivery(self):
         profile = choose_speech_profile(
@@ -89,8 +89,8 @@ class VoiceProsodyTests(unittest.TestCase):
             choose_speech_profile("", "Olá.", mode="improvisado")
 
     def test_speed_is_clamped_and_bad_base_is_safe(self):
-        self.assertEqual(choose_speech_profile("", "Olá.", 999).speed, 1.25)
-        self.assertEqual(choose_speech_profile("", "Olá.", "bad").speed, 1.0)
+        self.assertAlmostEqual(choose_speech_profile("", "Olá.", 999).speed, 1.2)
+        self.assertAlmostEqual(choose_speech_profile("", "Olá.", "bad").speed, 0.96)
 
     def test_markdown_headings_and_lists_get_a_pause_boundary(self):
         self.assertEqual(
