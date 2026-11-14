@@ -21,7 +21,7 @@ A instrução de cena é uma constante confiável do prompt, não texto colocado
 - `Corta`: desativa a cena e restaura o perfil padrão.
 - Texto inteiramente delimitado por aspas retas, aspas curvas ou aspas angulares: é lido como uma cena pontual. Não altera o estado persistente do perfil.
 
-O modo persistente fica em `sessionStorage` por aba. Abrir uma nova aba começa no modo padrão. Atualizar a página na mesma aba preserva a escolha. O comando `Corta` sempre restaura o padrão.
+O modo persistente fica em `sessionStorage`, isolado por sessão de aba; não é uma preferência global nem altera outras abas. Atualizar a página na mesma sessão preserva a escolha. O comando `Corta` sempre restaura o padrão.
 
 ## Pipeline de áudio e limites reais
 
