@@ -110,7 +110,7 @@ def _extract_reply(payload: Any) -> str:
 
 def _voice_mode_command(value: str) -> str | None:
     """Recognize explicit, whole-utterance controls; do not match ordinary prose."""
-    command = " ".join(str(value or "").casefold().strip().split()).rstrip(".!?…")
+    command = " ".join(str(value or "").casefold().strip().split()).rstrip(".!?…").strip()
     if command == "modo cena":
         return "cena"
     if command == "corta":
@@ -137,7 +137,7 @@ def _chat_payload(
     response_mode: str = "padrao",
 ) -> dict[str, str]:
     """Build a request compatible with the API's server-owned session lifecycle."""
-    if response_mode not in {"padrao", "cena"}:
+    if not isinstance(response_mode, str) or response_mode not in {"padrao", "cena"}:
         raise ValueError("O perfil de resposta precisa ser 'padrao' ou 'cena'.")
     request = {"mensagem": utterance}
     if isinstance(session_id, str) and session_id.strip():
