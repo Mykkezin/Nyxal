@@ -26,10 +26,13 @@ def main() -> None:
         "interface/index-legacy.html",
         "interface/nyxos-panel.html",
         "interface/startup.html",
-        "interface/display",
+        "interface/display/index.html",
+        "interface/display/package.json",
+        "interface/display/src/App.tsx",
         "nixal_display_routes.py",
         "teste_nixal_display_routes.py",
-        "deploy/display",
+        "deploy/display/preparar_nyxos_display.sh",
+        "deploy/display/instalar_nyxos_display.sh",
     )
     for relativo in removidos:
         assert not (ROOT / relativo).exists(), f"interface duplicada ainda existe: {relativo}"

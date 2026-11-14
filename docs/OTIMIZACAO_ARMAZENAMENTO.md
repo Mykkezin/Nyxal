@@ -63,10 +63,12 @@ experiência única.
 
 ## Limites de medição
 
-A árvore recursiva atual de `main` consultada em 2026-10-26 soma **13,16 MiB**
-(502 arquivos); a branch de otimização soma **3,74 MiB** (496 arquivos), incluindo
-a nova página de inicialização. A soma dos tamanhos dos arquivos rastreados cai em
-**9,43 MiB (71,62%)**. Os três arquivos dominantes removidos da árvore ativa são
+Na medição histórica de 2026-10-26, anterior à consolidação descrita
+acima, a árvore recursiva de `main` somava **13,16 MiB** (502 arquivos); a
+branch de otimização daquela medição somava **3,74 MiB** (496 arquivos), incluindo
+a página de inicialização que foi removida nesta consolidação. A soma dos tamanhos
+dos arquivos rastreados naquela comparação caiu em **9,43 MiB (71,62%)**. Os
+três arquivos dominantes removidos naquela medição foram
 o vídeo de inicialização (4.316.200 bytes), `log_capacidades_nixal.json`
 (3.712.509 bytes) e `saida_cadeia_real_56_4_34.txt` (1.163.129 bytes).
 A API do GitHub reportou `size=16545 KB` para o repositório na consulta mais recente. O número global continua incluindo os objetos
