@@ -245,6 +245,8 @@ def main() -> None:
         and "NYXAL_VOICE_PROFILE_KEY" in interface
         and "detectNyxalVoiceModeCommand" in interface
         and "extractNyxalQuotedSceneText" in interface
+        and "tomDevagar" in interface
+        and "extractNyxalQuotedSceneText" in interface
         and "tomAcolhedor" in interface
         and "tomPressa" in interface,
         "interface transporta o perfil de voz, comandos de cena e adapta o fallback",
