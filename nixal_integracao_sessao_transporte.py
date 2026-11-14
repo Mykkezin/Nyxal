@@ -131,7 +131,10 @@ class IntegracaoSessaoTransporteNixal:
             return self._negado("O provedor conversacional é inválido.")
         if contexto_sistema is not None and not isinstance(contexto_sistema, dict):
             return self._negado("O contexto do sistema precisa ser um objeto.")
-        if perfil_resposta is not None and perfil_resposta not in {"padrao", "cena"}:
+        if perfil_resposta is not None and (
+            not isinstance(perfil_resposta, str)
+            or perfil_resposta not in {"padrao", "cena"}
+        ):
             return self._negado("O perfil de resposta é inválido.")
 
         opcoes_transporte: dict[str, Any] = {}
