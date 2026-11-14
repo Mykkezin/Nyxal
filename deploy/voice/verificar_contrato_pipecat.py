@@ -104,6 +104,7 @@ class NyxalPipecatContractTests(unittest.TestCase):
         self.assertEqual(_quoted_scene_text('"Eu voltei."'), "Eu voltei.")
         self.assertEqual(_quoted_scene_text("“Não acabou.”"), "Não acabou.")
         self.assertEqual(_quoted_scene_text("«Eu entendi.»"), "Eu entendi.")
+        self.assertEqual(_quoted_scene_text("«Eu entendi.»."), "Eu entendi.")
         self.assertIsNone(_quoted_scene_text("Eu voltei."))
         self.assertIsNone(_quoted_scene_text('""'))
 
