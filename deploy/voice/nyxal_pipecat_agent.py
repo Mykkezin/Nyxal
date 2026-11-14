@@ -29,7 +29,9 @@ from nyxal_clap_wake import TwoClapDetector, is_rest_command
 from nyxal_voice_prosody import (
     choose_speech_profile,
     clean_speech_text,
+    extract_quoted_scene_text as _quoted_scene_text,
     prepare_spoken_reply,
+    resolve_voice_mode_command as _voice_mode_command,
 )
 
 # Load user-local settings without overriding values injected by systemd/shell.
@@ -106,29 +108,6 @@ def _extract_reply(payload: Any) -> str:
                 return _spoken_text(candidate)
 
     return ""
-
-
-def _voice_mode_command(value: str) -> str | None:
-    """Recognize explicit, whole-utterance controls; do not match ordinary prose."""
-    command = " ".join(str(value or "").casefold().strip().split()).rstrip(".!?…").strip()
-    if command == "modo cena":
-        return "cena"
-    if command == "corta":
-        return "padrao"
-    return None
-
-
-def _quoted_scene_text(value: str) -> str | None:
-    """Extract a whole quoted utterance for one-shot dramatic TTS."""
-    text = str(value or "").strip()
-    if len(text) < 3:
-        return None
-    closing = {'"': '"', "'": "'", "“": "”", "‘": "’", "«": "»"}
-    expected = closing.get(text[0])
-    if expected is None or text[-1] != expected:
-        return None
-    spoken = text[1:-1].strip()
-    return spoken or None
 
 
 def _chat_payload(
