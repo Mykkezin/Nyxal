@@ -17,9 +17,10 @@ A instrução de cena é uma constante confiável do prompt, não texto colocado
 
 ## Comandos na interface
 
-- `Modo Cena`: ativa o perfil de cena para os próximos turnos da aba.
+- `Modo Cena`: ativa o perfil de cena para os próximos turnos da interface ou da sessão de voz contínua Pipecat.
 - `Corta`: desativa a cena e restaura o perfil padrão.
 - Texto inteiramente delimitado por aspas retas, aspas curvas ou aspas angulares: é lido como uma cena pontual. Não altera o estado persistente do perfil.
+- Na rota Pipecat, o estado fica no processador de conversa enquanto a sessão de voz permanecer ativa.
 
 O modo persistente fica em `sessionStorage`, isolado por sessão de aba; não é uma preferência global nem altera outras abas. Atualizar a página na mesma sessão preserva a escolha. O comando `Corta` sempre restaura o padrão.
 
