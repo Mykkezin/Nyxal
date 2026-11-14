@@ -68,6 +68,34 @@ class VoiceProsodyTests(unittest.TestCase):
         self.assertAlmostEqual(profile.speed, 0.96)
         self.assertEqual(profile.mode, "padrao")
 
+    def test_live_slowdown_direction_is_applied_to_the_next_reply(self):
+        scene = choose_speech_profile(
+            "Mais devagar, sinta o peso das palavras.",
+            "Eu compreendi.",
+            1.0,
+            mode="cena",
+        )
+        self.assertEqual(scene.style, "scene_slow")
+        self.assertAlmostEqual(scene.speed, 0.82)
+
+        standard = choose_speech_profile(
+            "Fale mais devagar, por favor.",
+            "Vamos por partes.",
+            1.0,
+        )
+        self.assertEqual(standard.style, "deliberate")
+        self.assertAlmostEqual(standard.speed, 0.86)
+
+    def test_safety_priority_overrides_live_slowdown(self):
+        profile = choose_speech_profile(
+            "Mais devagar.",
+            "Perigo. Afaste-se imediatamente.",
+            1.0,
+            mode="cena",
+        )
+        self.assertEqual(profile.style, "focused")
+        self.assertAlmostEqual(profile.speed, 0.97)
+
     def test_scene_mode_slows_and_adds_deliberate_sentence_pauses(self):
         profile = choose_speech_profile("", "Eu tentei. Mas não consegui.", 1.0, mode="cena")
         self.assertEqual(profile.style, "scene")
