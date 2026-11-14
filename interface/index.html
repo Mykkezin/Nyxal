@@ -1856,7 +1856,6 @@ html.nyxal-voice-only #nyxalVoiceSurface .nyxal-voice-sidepanel {
     function detectNyxalVoiceModeCommand(value) {
       const command = String(value || '')
         .normalize('NFD')
-        .replace(/[\\u0300-\\u036f]/g, '')
         .toLowerCase()
         .replace(/[.!?…]+$/g, '')
         .trim();
