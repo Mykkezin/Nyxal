@@ -978,7 +978,7 @@ class DialogoQwenNixal:
                     prompt_sistema_extra=(
                         self.PROMPT_ESTILO_PROVEDOR
                         + (
-                            "\\n\\n" + self.PROMPT_MODO_CENA
+                            chr(10) * 2 + self.PROMPT_MODO_CENA
                             if perfil_resposta == "cena" else ""
                         )
                     ),
