@@ -25,6 +25,7 @@ CORE = BASE_DIR / "nixal_nucleo_conversacional.py"
 TRANSPORT = BASE_DIR / "nixal_transporte_conversacional.py"
 SESSION_TRANSPORT = BASE_DIR / "nixal_integracao_sessao_transporte.py"
 DIALOG = BASE_DIR / "nixal_dialogo_qwen.py"
+PIPECAT = BASE_DIR / "deploy" / "voice" / "nyxal_pipecat_agent.py"
 
 
 TESTES = 0
@@ -64,6 +65,7 @@ def main() -> None:
     transport = TRANSPORT.read_text(encoding="utf-8")
     session_transport = SESSION_TRANSPORT.read_text(encoding="utf-8")
     dialog = DIALOG.read_text(encoding="utf-8")
+    pipecat = PIPECAT.read_text(encoding="utf-8")
 
     # ------------------------------------------------------------
     # Voz contínua
@@ -219,6 +221,20 @@ def main() -> None:
         and "PROMPT_ESTILO_PROVEDOR" in dialog
         and "PROMPT_MODO_CENA" in dialog,
         "identidade padrão e direção de cena atravessam o diálogo e as fronteiras de sessão",
+    )
+
+    verificar(
+        all(
+            token in pipecat
+            for token in (
+                "_voice_mode_command",
+                "_quoted_scene_text",
+                "perfil_resposta",
+                "self._voice_mode",
+                "mode=active_mode",
+            )
+        ),
+        "adaptador Pipecat reconhece os mesmos comandos e aplica o perfil de cena",
     )
 
     verificar(
