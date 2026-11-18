@@ -375,7 +375,7 @@ def main() -> None:
         f"TESTES EXECUTADOS: {len(resultados)}"
     )
     print(
-        f"FALHAS: {sum(not resultado for resultado in resultados)}"
+        f"FALHAS: {sum(not resultado_item for resultado_item in resultados)}"
     )
     print(
         f"PASSOU: {all(resultados)}"

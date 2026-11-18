@@ -328,6 +328,7 @@ class CicloResidenteNixOS:
                     }
                 resultado["fisiologia"] = copy.deepcopy(fisiologia)
 
+            plano_central = None
             if self.plano_central_controle is not None:
                 try:
                     plano_central = self.plano_central_controle.gerar_plano(

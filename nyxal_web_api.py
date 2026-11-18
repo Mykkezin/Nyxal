@@ -1626,6 +1626,7 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             velocidade_relativa = perfil_fala.speed / max(0.90, KOKORO_SPEED)
             velocidade_relativa = min(1.10, max(0.90, velocidade_relativa))
             piper_length_scale = 1.0 / velocidade_relativa
+            audio = None
 
             try:
                 audio = generate_kokoro_audio(texto_falado, speed=perfil_fala.speed)
@@ -2530,6 +2531,7 @@ def main() -> None:
     )
 
     mcp_http_process = None
+    encerrar_mcp_http = None
     lembretes_iniciados = False
     try:
         # MCP HTTP opcional: processo separado, ligado ao ciclo de vida desta API.
@@ -2547,7 +2549,7 @@ def main() -> None:
         print()
         print("[Nyxal-API] encerrando...")
     finally:
-        if mcp_http_process is not None:
+        if mcp_http_process is not None and encerrar_mcp_http is not None:
             encerrar_mcp_http(mcp_http_process)
         if lembretes_iniciados:
             servico_lembretes.parar()

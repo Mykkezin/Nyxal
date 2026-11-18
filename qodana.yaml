@@ -8,3 +8,9 @@ profile:
   name: qodana.recommended
 include:
   - name: CheckDependencyLicenses
+
+# O projeto usa sintaxe e APIs compatíveis com Python 3.12.
+bootstrap: |
+  . ~/.bashrc
+  conda create -y -n qodana-env python=3.12
+  conda activate qodana-env

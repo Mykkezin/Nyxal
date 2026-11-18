@@ -6,6 +6,7 @@ on:
     branches: # Specify your branches here
       - main # The 'main' branch
       - 'releases/*' # The release branches
+      - 'fix-qodana-leva-1' # Branch de correção Qodana
 
 jobs:
   qodana:
@@ -26,3 +27,4 @@ jobs:
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_28194667 }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
+          QODANA_PYTHON_PATH: /data/cache/conda/envs/qodana-env/bin/python
