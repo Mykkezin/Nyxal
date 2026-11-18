@@ -151,6 +151,19 @@ class VoiceProsodyTests(unittest.TestCase):
             "Primeiro item. Segundo item!",
         )
 
+    def test_markdown_links_and_images_are_reduced_to_spoken_labels(self):
+        self.assertEqual(
+            clean_speech_text(
+                "Leia [o manual](https://example.test/manual) e veja "
+                "![o diagrama](https://example.test/diagram.png)."
+            ),
+            "Leia o manual e veja o diagrama.",
+        )
+        self.assertEqual(
+            clean_speech_text("Mantenha [colchetes] sem link."),
+            "Mantenha [colchetes] sem link.",
+        )
+
     def test_intentional_ellipses_are_preserved_as_pause_cues(self):
         self.assertEqual(
             clean_speech_text("Então... deixa eu ver"),
