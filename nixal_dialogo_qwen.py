@@ -632,8 +632,8 @@ class DialogoQwenNixal:
         return resposta, resultados
 
     @staticmethod
-    def _pedido_coordenacao_especialistas(texto: str) -> bool:
-        """Ativa a coordenação só quando o usuário a solicita explicitamente."""
+    def pedido_coordenacao_especialistas(texto: str) -> bool:
+        """Informa se o usuário solicitou explicitamente a coordenação de especialistas."""
         if not isinstance(texto, str) or not texto.strip():
             return False
         # Não tratar uma instrução citada em documento/exemplo como pedido ativo.
@@ -676,6 +676,11 @@ class DialogoQwenNixal:
         )
         return any(marcador in normalizado for marcador in marcadores)
 
+    @staticmethod
+    def _pedido_coordenacao_especialistas(texto: str) -> bool:
+        """Compatibilidade com consumidores antigos do detector interno."""
+        return DialogoQwenNixal.pedido_coordenacao_especialistas(texto)
+
     def _executar_passagem_especialista(
         self,
         instrucao: str,
@@ -712,7 +717,7 @@ class DialogoQwenNixal:
         texto: str,
     ) -> tuple[str | None, dict[str, Any]]:
         """Conselho local opt-in: arquiteto + revisor; a síntese final continua governada."""
-        solicitado = self._pedido_coordenacao_especialistas(texto)
+        solicitado = self.pedido_coordenacao_especialistas(texto)
         estado_base: dict[str, Any] = {
             "solicitada": solicitado,
             "ativa": False,
