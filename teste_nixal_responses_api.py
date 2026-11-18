@@ -27,6 +27,14 @@ class TestResponsesAdapter(unittest.TestCase):
             ["first", "second"],
         )
         self.assertEqual(api._extrair_partes_conteudo(None), [])
+        self.assertEqual(
+            api._extrair_partes_conteudo([
+                {"type": [], "text": "invalid list type"},
+                {"type": {}, "text": "invalid dict type"},
+                {"type": "output_text", "text": "valid after invalid"},
+            ]),
+            ["valid after invalid"],
+        )
 
     def test_provider_requires_key_model_and_official_https_host(self):
         with patch.dict(os.environ, {}, clear=True):
