@@ -34,7 +34,51 @@ def verificar(condicao: bool, mensagem: str) -> None:
     print(f"[PASS] {mensagem}")
 
 
+def verificar_formatacao_hora() -> None:
+    def resposta_hora(hora, minuto, segundo):
+        return {
+            "sucesso": True,
+            "valor": {
+                "execucao": {
+                    "valor": {
+                        "capacidade": "obter_hora",
+                        "resultado": {
+                            "hora": hora,
+                            "minuto": minuto,
+                            "segundo": segundo,
+                        },
+                    },
+                },
+            },
+        }
+
+    resposta_valida = nyxal_web_api.format_chat_response(
+        resposta_hora(23, 30, 15)
+    )
+    verificar(
+        resposta_valida == "Agora são 23:30:15, da noite, senhor Myke.",
+        "horário válido mantém formatação HH:MM:SS",
+    )
+
+    for valores in (
+        (True, 30, 15),
+        (24, 30, 15),
+        (-1, 30, 15),
+        (12, 60, 15),
+        (12, 30, 60),
+        ("12", 30, 15),
+    ):
+        resposta = nyxal_web_api.format_chat_response(
+            resposta_hora(*valores)
+        )
+        verificar(
+            resposta == "Ordem executada com sucesso pela Nyxal.",
+            f"valores de horário inválidos são recusados: {valores!r}",
+        )
+
+
 def main() -> None:
+    verificar_formatacao_hora()
     verificar(
         nyxal_web_api.WHISPER_MODEL is None,
         "Whisper não é inicializado no import da API",

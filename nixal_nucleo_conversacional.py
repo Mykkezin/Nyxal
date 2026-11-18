@@ -309,21 +309,9 @@ class NucleoConversacionalNixal:
         )
 
         consultar_conversas_anteriores = self._deve_recuperar_conversas_anteriores(texto)
-        detector_especialistas = getattr(
-            DialogoQwenNixal,
-            "_pedido_coordenacao_especialistas",
-            None,
+        coordenacao_especialistas_solicitada = (
+            DialogoQwenNixal.pedido_coordenacao_especialistas(texto) is True
         )
-        try:
-            coordenacao_especialistas_solicitada = (
-                detector_especialistas(texto) is True
-                if callable(detector_especialistas)
-                else False
-            )
-        except Exception:
-            # Adaptadores antigos e stubs de compatibilidade não oferecem esse recurso.
-            # Nessa situação, o núcleo mantém o fluxo conversacional já existente.
-            coordenacao_especialistas_solicitada = False
         priorizar_dialogo = self._deve_priorizar_dialogo(
             texto,
             historico,

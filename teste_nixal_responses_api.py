@@ -14,6 +14,28 @@ import nixal_responses_api as api
 
 
 class TestResponsesAdapter(unittest.TestCase):
+    def test_content_extractor_accepts_text_and_structured_segments(self):
+        self.assertEqual(api._extrair_partes_conteudo("  plain text  "), ["plain text"])
+        self.assertEqual(
+            api._extrair_partes_conteudo([
+                {"type": "output_text", "text": " first "},
+                {"type": "text", "text": "second"},
+                {"type": "image", "text": "ignored"},
+                "invalid segment",
+                {"type": "output_text", "text": "  "},
+            ]),
+            ["first", "second"],
+        )
+        self.assertEqual(api._extrair_partes_conteudo(None), [])
+        self.assertEqual(
+            api._extrair_partes_conteudo([
+                {"type": [], "text": "invalid list type"},
+                {"type": {}, "text": "invalid dict type"},
+                {"type": "output_text", "text": "valid after invalid"},
+            ]),
+            ["valid after invalid"],
+        )
+
     def test_provider_requires_key_model_and_official_https_host(self):
         with patch.dict(os.environ, {}, clear=True):
             self.assertFalse(api.provider_configured("openai"))
@@ -84,8 +106,11 @@ class TestResponsesAdapter(unittest.TestCase):
 
     def test_grok_parses_structured_output_without_openai_store_flag(self):
         response_body = (
-            b'{"output":[{"type":"message","role":"assistant","content":'
-            b'[{"type":"output_text","text":"Grok response"}]}]}'
+            b'{"output":['
+            b'{"type":"message","role":[],"content":[{"type":"output_text","text":"must be ignored"}]},'
+            b'{"type":"message","role":"assistant","content":['
+            b'{"type":[],"text":"invalid type"},'
+            b'{"type":"output_text","text":"Grok response"}]}]}'
         )
         fake_response = io.BytesIO(response_body)
         with patch.dict(os.environ, {

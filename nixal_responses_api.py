@@ -68,6 +68,30 @@ class _RejectRedirects(HTTPRedirectHandler):
         return None
 
 
+def _extrair_partes_conteudo(conteudo: object) -> list[str]:
+    """Extract text from either a plain string or structured response segments."""
+    if isinstance(conteudo, str):
+        texto = conteudo.strip()
+        return [texto] if texto else []
+    if not isinstance(conteudo, list):
+        return []
+
+    partes: list[str] = []
+    for segmento in conteudo:
+        if not isinstance(segmento, dict):
+            continue
+        texto = segmento.get("text")
+        tipo = segmento.get("type")
+        if (
+            isinstance(tipo, str)
+            and tipo in {"output_text", "text"}
+            and isinstance(texto, str)
+            and texto.strip()
+        ):
+            partes.append(texto.strip())
+    return partes
+
+
 def ask(
     provider: str,
     message: str,
@@ -84,7 +108,12 @@ def ask(
     for item in (history or [])[-20:]:
         role = item.get("role")
         content = item.get("content")
-        if role in {"user", "assistant"} and isinstance(content, str) and content.strip():
+        if (
+            isinstance(role, str)
+            and role in {"user", "assistant"}
+            and isinstance(content, str)
+            and content.strip()
+        ):
             inputs.append({"role": role, "content": content[:12000]})
     inputs.append({"role": "user", "content": message.strip()[:12000]})
     base = config["base"].rstrip("/")
@@ -128,20 +157,14 @@ def ask(
     output = result.get("output", [])
     if isinstance(output, list):
         for item in output:
-            if not isinstance(item, dict) or item.get("role") not in {None, "assistant"}:
+            if not isinstance(item, dict):
                 continue
-            content = item.get("content", [])
-            if isinstance(content, str) and content.strip():
-                parts.append(content.strip())
-            elif isinstance(content, list):
-                for segment in content:
-                    if (
-                        isinstance(segment, dict)
-                        and segment.get("type") in {"output_text", "text"}
-                        and isinstance(segment.get("text"), str)
-                        and segment["text"].strip()
-                    ):
-                        parts.append(segment["text"].strip())
+            role = item.get("role")
+            if role is not None and role != "assistant":
+                continue
+            parts.extend(
+                _extrair_partes_conteudo(item.get("content", []))
+            )
     answer = "\n".join(parts).strip()
     if not answer:
         state = str(result.get("status") or "desconhecido")

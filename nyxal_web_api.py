@@ -2442,11 +2442,12 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             },
         )
 
-    def log_message(
-        self,
-        format_string: str,
-        *args,
-    ) -> None:
+    # noinspection PyShadowingBuiltins
+    # O nome `format` precisa coincidir com BaseHTTPRequestHandler.log_message.
+    def log_message(self, format, *args):
+        # A assinatura reproduz BaseHTTPRequestHandler.log_message.
+        # Os argumentos não são registrados para evitar vazamento de dados.
+        del format, args
         # Não imprime caminho, query string, IDs de mensagens ou possíveis segredos.
         metodo = getattr(self, "command", None) or "HTTP"
         codigo = getattr(self, "_nyxal_status_code", None)

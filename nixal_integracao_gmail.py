@@ -25,6 +25,21 @@ CLIENT_FILE = Path(os.environ.get("NYXAL_GOOGLE_CLIENT_FILE", str(CONFIG_DIR / "
 TOKEN_FILE = Path(os.environ.get("NYXAL_GOOGLE_TOKEN_FILE", os.environ.get("NYXAL_GMAIL_TOKEN_FILE", str(CONFIG_DIR / "google-workspace-token.json")))).expanduser()
 
 
+def _normalizar_escopos_token(valor: object) -> set[str]:
+    """Normalize OAuth scope data without assuming the JSON representation."""
+    if isinstance(valor, str):
+        return {escopo for escopo in valor.split() if escopo}
+    if isinstance(valor, list):
+        return {
+            escopo
+            for item in valor
+            if isinstance(item, str)
+            for escopo in item.split()
+            if escopo
+        }
+    return set()
+
+
 class IntegracaoGmailNixOS:
     FONTE = "google_workspace_oauth_readonly"
     VERSAO = "1.1.0"
@@ -39,10 +54,7 @@ class IntegracaoGmailNixOS:
             try:
                 raw = json.loads(TOKEN_FILE.read_text(encoding="utf-8"))
                 scopes = raw.get("scopes", []) if isinstance(raw, dict) else []
-                if isinstance(scopes, str):
-                    token_scopes = set(scopes.split())
-                elif isinstance(scopes, list):
-                    token_scopes = {value for value in scopes if isinstance(value, str)}
+                token_scopes = _normalizar_escopos_token(scopes)
             except (OSError, json.JSONDecodeError):
                 token_error = "token_json_invalido"
         missing_scopes = [scope for scope in SCOPES if scope not in token_scopes]
@@ -101,8 +113,15 @@ class IntegracaoGmailNixOS:
         if not TOKEN_FILE.is_file():
             raise RuntimeError("Google Workspace ainda não autorizado. Execute scripts/autorizar_gmail_nyxal.py.")
 
-        credentials = Credentials.from_authorized_user_file(str(TOKEN_FILE))
-        current_scopes = set(credentials.scopes or [])
+        token_info = json.loads(TOKEN_FILE.read_text(encoding="utf-8"))
+        if not isinstance(token_info, dict):
+            raise RuntimeError("Arquivo de token Google inválido.")
+
+        current_scopes = _normalizar_escopos_token(token_info.get("scopes"))
+        credentials = Credentials.from_authorized_user_info(
+            token_info,
+            scopes=sorted(current_scopes),
+        )
         missing = [scope for scope in SCOPES if scope not in current_scopes]
         if missing:
             raise RuntimeError(

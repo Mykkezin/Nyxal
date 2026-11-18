@@ -30,6 +30,7 @@ teste_cristal_expansivel_v2.py
 teste_cristal_persistente.py
 teste_cristal_state_dir_isolation.py
 teste_diagnostico_autorreprentacao_56_4_8.py
+teste_detector_coordenacao_especialistas.py
 teste_dicionario_binario.py
 teste_estado_composicao_56_4_7.py
 teste_estado_composicao_56_4_7_v2.py
@@ -71,7 +72,9 @@ teste_nixal_comparacao_evidencias_operacional.py
 teste_nixal_evidencia_operacional.py
 teste_nixal_fechamento_cadeia_operacional.py
 teste_nixal_memoria_conversacional.py
+teste_nixal_integracao_google.py
 teste_nixal_normalizador_operacional.py
+teste_nixal_responses_api.py
 teste_nixal_padroes_recorrentes_operacional.py
 teste_nixal_qualificacao_evidencia_operacional.py
 teste_nixal_reutilizacao_evidencia_operacional.py
@@ -87,6 +90,7 @@ teste_recuperacao_investigacao_56_4_17.py
 teste_relevancia_historico_investigacao_56_4_20.py
 teste_reutilizacao.py
 teste_sanidade.py
+deploy/voice/test_nyxal_voice_prosody.py
 testes/teste_persistencia_cristal.py
 testes/teste_nyxal_fase0.py
 testes/teste_nyxal_preflight_fase1.py
