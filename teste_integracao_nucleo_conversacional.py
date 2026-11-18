@@ -42,6 +42,7 @@ import sys
 import time
 import types
 from copy import deepcopy
+from typing import Any
 from unittest.mock import patch
 
 # A cadeia é validada sem modelo: o runner do CI não tem ollama instalado.
@@ -267,9 +268,14 @@ class DialogoDeterministico(
     def responder(
         self,
         texto: str,
-        **argumentos,
-    ) -> dict:
-
+        historico: list[dict[str, str]] | None = None,
+        *,
+        sessao: str | None = None,
+        provedor: str | None = None,
+        contexto_sistema: dict[str, Any] | None = None,
+        estado_runtime_nyxal: dict[str, Any] | None = None,
+        perfil_resposta: str = "padrao",
+    ) -> dict[str, Any]:
         self.chamadas.append(texto)
 
         return {
