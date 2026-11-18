@@ -43,7 +43,7 @@ import json
 import math
 import re
 import unicodedata
-from typing import Any, Callable, TypeGuard
+from typing import Any
 
 from nixal_interface import (
     InterfaceConversacionalNixal,
@@ -65,11 +65,6 @@ from nixal_recuperador_contexto import RecuperadorContextoNixal
 from nixal_dialogo_qwen import (
     DialogoQwenNixal,
 )
-
-
-def _is_specialist_detector(value: object) -> TypeGuard[Callable[[str], Any]]:
-    """Narrow the optional specialist detector after checking runtime callability."""
-    return callable(value)
 
 
 class NucleoConversacionalNixal:
@@ -314,18 +309,10 @@ class NucleoConversacionalNixal:
         )
 
         consultar_conversas_anteriores = self._deve_recuperar_conversas_anteriores(texto)
-        detector_especialistas = getattr(
-            DialogoQwenNixal,
-            "_pedido_coordenacao_especialistas",
-            None,
-        )
         try:
-            if _is_specialist_detector(detector_especialistas):
-                coordenacao_especialistas_solicitada = (
-                    detector_especialistas(texto) is True
-                )
-            else:
-                coordenacao_especialistas_solicitada = False
+            coordenacao_especialistas_solicitada = (
+                DialogoQwenNixal._pedido_coordenacao_especialistas(texto) is True
+            )
         except Exception:
             # Adaptadores antigos e stubs de compatibilidade não oferecem esse recurso.
             # Nessa situação, o núcleo mantém o fluxo conversacional já existente.
