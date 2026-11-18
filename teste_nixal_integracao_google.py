@@ -7,10 +7,26 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from nixal_integracao_gmail import IntegracaoGmailNixOS, SCOPES
+from nixal_integracao_gmail import (
+    IntegracaoGmailNixOS,
+    SCOPES,
+    _normalizar_escopos_token,
+)
 
 
 class TestGoogleWorkspaceReadOnly(unittest.TestCase):
+    def test_normaliza_escopos_em_string_lista_e_formato_invalido(self):
+        self.assertEqual(
+            _normalizar_escopos_token(f"{SCOPES[0]} {SCOPES[1]}"),
+            {SCOPES[0], SCOPES[1]},
+        )
+        self.assertEqual(
+            _normalizar_escopos_token([SCOPES[0], 123, None, SCOPES[1]]),
+            {SCOPES[0], SCOPES[1]},
+        )
+        self.assertEqual(_normalizar_escopos_token(None), set())
+        self.assertEqual(_normalizar_escopos_token({"scope": SCOPES[0]}), set())
+
     def test_status_detecta_token_gmail_apenas_com_escopos_ausentes(self):
         with tempfile.TemporaryDirectory() as folder:
             client = Path(folder) / "oauth.json"
