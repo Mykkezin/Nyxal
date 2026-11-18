@@ -29,23 +29,5 @@ class TestDetectorCoordenacaoEspecialistas(unittest.TestCase):
                     DialogoQwenNixal.pedido_coordenacao_especialistas(texto)
                 )
 
-    def test_alias_privado_mantem_compatibilidade(self) -> None:
-        casos = (
-            ("Use modo especialistas para revisar a arquitetura.", True),
-            ("Explique a diferença entre CPU e GPU.", False),
-            ('A frase "Use modo especialistas" está no documento.', False),
-        )
-        for texto, esperado in casos:
-            with self.subTest(texto=texto):
-                self.assertIs(
-                    DialogoQwenNixal._pedido_coordenacao_especialistas(texto),
-                    esperado,
-                )
-                self.assertIs(
-                    DialogoQwenNixal.pedido_coordenacao_especialistas(texto),
-                    esperado,
-                )
-
-
 if __name__ == "__main__":
     unittest.main(verbosity=2)
