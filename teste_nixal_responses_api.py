@@ -106,8 +106,11 @@ class TestResponsesAdapter(unittest.TestCase):
 
     def test_grok_parses_structured_output_without_openai_store_flag(self):
         response_body = (
-            b'{"output":[{"type":"message","role":"assistant","content":'
-            b'[{"type":"output_text","text":"Grok response"}]}]}'
+            b'{"output":['
+            b'{"type":"message","role":[],"content":[{"type":"output_text","text":"must be ignored"}]},'
+            b'{"type":"message","role":"assistant","content":['
+            b'{"type":[],"text":"invalid type"},'
+            b'{"type":"output_text","text":"Grok response"}]}]}'
         )
         fake_response = io.BytesIO(response_body)
         with patch.dict(os.environ, {
