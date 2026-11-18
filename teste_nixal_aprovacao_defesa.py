@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 import os
+from copy import deepcopy
+from typing import Any
 import shutil
 import subprocess
 import sys
@@ -68,12 +70,25 @@ class DiarioAprovacaoDefesaTestes(unittest.TestCase):
             self.caminho, relogio=lambda: self.relogio_valor[0]
         )
 
-    def registrar(self, principal=PRINCIPAL, plano=PLANO, ttl=300):
+    def registrar(
+        self,
+        principal: dict[str, Any] | None = None,
+        plano: dict[str, Any] | None = None,
+        ttl: int = 300,
+    ):
+        principal_efetivo = deepcopy(
+            PRINCIPAL if principal is None else principal
+        )
+        plano_efetivo = deepcopy(
+            PLANO if plano is None else plano
+        )
         resultado = self.diario.registrar(
-            principal=principal, plano=plano, ttl_segundos=ttl
+            principal=principal_efetivo,
+            plano=plano_efetivo,
+            ttl_segundos=ttl,
         )
         self.assertTrue(resultado["sucesso"], resultado)
-        return resultado["aprovacao_id"], _hash_escopo(plano)
+        return resultado["aprovacao_id"], _hash_escopo(plano_efetivo)
 
     # ------------------------------------------------------------------
     # procedência confiável
