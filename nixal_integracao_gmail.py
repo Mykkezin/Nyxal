@@ -113,8 +113,15 @@ class IntegracaoGmailNixOS:
         if not TOKEN_FILE.is_file():
             raise RuntimeError("Google Workspace ainda não autorizado. Execute scripts/autorizar_gmail_nyxal.py.")
 
-        credentials = Credentials.from_authorized_user_file(str(TOKEN_FILE))
-        current_scopes = _normalizar_escopos_token(credentials.scopes)
+        token_info = json.loads(TOKEN_FILE.read_text(encoding="utf-8"))
+        if not isinstance(token_info, dict):
+            raise RuntimeError("Arquivo de token Google inválido.")
+
+        current_scopes = _normalizar_escopos_token(token_info.get("scopes"))
+        credentials = Credentials.from_authorized_user_info(
+            token_info,
+            scopes=sorted(current_scopes),
+        )
         missing = [scope for scope in SCOPES if scope not in current_scopes]
         if missing:
             raise RuntimeError(
