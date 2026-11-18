@@ -790,7 +790,17 @@ def format_chat_response(resultado: dict) -> str:
         minuto = valor.get("minuto")
         segundo = valor.get("segundo")
 
-        if all(isinstance(item, int) for item in (hora, minuto, segundo)):
+        if (
+            isinstance(hora, int)
+            and not isinstance(hora, bool)
+            and 0 <= hora <= 23
+            and isinstance(minuto, int)
+            and not isinstance(minuto, bool)
+            and 0 <= minuto <= 59
+            and isinstance(segundo, int)
+            and not isinstance(segundo, bool)
+            and 0 <= segundo <= 59
+        ):
             periodo = (
                 "da madrugada"
                 if hora < 6

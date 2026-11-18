@@ -1,4 +1,14 @@
 import json
+from typing import TypedDict
+
+
+class ResultadoMedicao(TypedDict):
+    quantidade: int
+    original: int
+    dicionario: int
+    representacao: int
+    total: int
+    economia: float
 
 
 # ============================================================
@@ -551,11 +561,12 @@ def assinatura_semantica(
 # ============================================================
 
 def medir(
-    quantidade,
+    quantidade: int,
     experiencias_minimas,
+
     conceitos_minimos,
     relacoes_minimas,
-):
+) -> ResultadoMedicao:
     itens = experiencias_minimas[:quantidade]
 
     original = tamanho_original(itens)

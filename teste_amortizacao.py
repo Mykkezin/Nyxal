@@ -1,4 +1,14 @@
 import json
+from typing import TypedDict
+
+
+class ResultadoMedicao(TypedDict):
+    quantidade: int
+    original: int
+    dicionario: int
+    representacao: int
+    total: int
+    economia: float
 
 
 # ============================================================
@@ -434,7 +444,7 @@ def porcentagem_economia(original, representacao):
     return ((original - representacao) / original) * 100
 
 
-def medir(quantidade):
+def medir(quantidade: int) -> ResultadoMedicao:
     itens = EXPERIENCIAS[:quantidade]
 
     original = tamanho_original(itens)
