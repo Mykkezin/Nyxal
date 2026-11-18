@@ -18,7 +18,7 @@ from __future__ import annotations
 import copy
 import threading
 import time
-from typing import Any, Callable, TypeGuard
+from typing import Any, Protocol
 
 from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
 from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
@@ -33,9 +33,16 @@ from nixal_plano_central_controle import PlanoCentralControleNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
 
 
-def _is_registrar_callback(value: object) -> TypeGuard[Callable[..., Any]]:
-    """Narrow an optional persistence hook only after a runtime callability check."""
-    return callable(value)
+class _PersistenciaCicloResidente(Protocol):
+    """Contrato estrutural mínimo usado pelo ciclo residente."""
+
+    def registrar(
+        self,
+        *,
+        ciclo: dict[str, Any] | None,
+        estado: str,
+    ) -> Any:
+        ...
 
 
 class CicloResidenteNixOS:
@@ -47,7 +54,7 @@ class CicloResidenteNixOS:
     def __init__(
         self,
         runtime: Any,
-        persistencia: Any | None = None,
+        persistencia: _PersistenciaCicloResidente | None = None,
         auto_evolucao: AutoEvolucaoGovernadaNixOS | None = None,
         auto_experimento: AutoExperimentoIsoladoAE2 | None = None,
         auto_avaliacao: AutoAvaliacaoAE3 | None = None,
@@ -200,16 +207,8 @@ class CicloResidenteNixOS:
         if self.persistencia is None:
             return
 
-        registrar = getattr(
-            self.persistencia,
-            "registrar",
-            None,
-        )
-        if not _is_registrar_callback(registrar):
-            return
-
         try:
-            registrar(
+            self.persistencia.registrar(
                 ciclo=ciclo,
                 estado=estado,
             )
