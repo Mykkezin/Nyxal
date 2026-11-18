@@ -68,10 +68,9 @@ def verificar_formatacao_hora() -> None:
         (12, 30, 60),
         ("12", 30, 15),
     ):
-        with __import__("contextlib").nullcontext():
-            resposta = nyxal_web_api.format_chat_response(
-                resposta_hora(*valores)
-            )
+        resposta = nyxal_web_api.format_chat_response(
+            resposta_hora(*valores)
+        )
         verificar(
             resposta == "Ordem executada com sucesso pela Nyxal.",
             f"valores de horário inválidos são recusados: {valores!r}",
