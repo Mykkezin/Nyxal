@@ -1,4 +1,11 @@
 import json
+from typing import TypedDict
+
+
+class RequisitoSanidade(TypedDict):
+    id: int
+    texto: str
+    atomos: list[str]
 
 
 CRISTAL_C = {
@@ -33,7 +40,7 @@ ATOMOS = {
 }
 
 
-REQUISITOS = [
+REQUISITOS: list[RequisitoSanidade] = [
     {
         "id": 1,
         "texto": "A hipótese é uma ideia provisória.",
