@@ -30,7 +30,13 @@ def _normalizar_escopos_token(valor: object) -> set[str]:
     if isinstance(valor, str):
         return {escopo for escopo in valor.split() if escopo}
     if isinstance(valor, list):
-        return {item for item in valor if isinstance(item, str)}
+        return {
+            escopo
+            for item in valor
+            if isinstance(item, str)
+            for escopo in item.split()
+            if escopo
+        }
     return set()
 
 
