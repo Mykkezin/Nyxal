@@ -156,10 +156,10 @@ class ExecutorAvaliacaoFalso(ExecucaoAvaliacaoHipoteseNixal):
 
     def executar(
         self,
-        entrada: dict[str, Any],
+        resultado_integracao_teste: dict[str, Any],
     ) -> dict[str, Any]:
         self.chamadas += 1
-        self.entrada_recebida = deepcopy(entrada)
+        self.entrada_recebida = deepcopy(resultado_integracao_teste)
         return deepcopy(self._resultado)
 
 
