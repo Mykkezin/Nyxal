@@ -9,9 +9,10 @@ name: Nyxal Root Test Matrix
 # operacional vivo, na mesma máquina deste runner) e os que importam
 # nixal_capacidades — 10 dos 118 excluídos, por evidência estática de import.
 # 3 dos 12 `nivel_9_*` estão incluídos; os outros 9 não passaram nos critérios.
-# A única entrada de subdiretório cumpre os mesmos dois critérios: roda com o
-# python3 do runner e só escreve em diretórios temporários, nunca no checkout
-# vivo desta máquina. Por isso o nome do log abaixo sanitiza barras.
+# As entradas em subdiretórios (incluindo o teste isolado de prosódia de voz)
+# cumprem os mesmos critérios: rodam com o python3 do runner e só escrevem em
+# diretórios temporários, nunca no checkout vivo desta máquina. Por isso o nome
+# do log abaixo sanitiza barras.
 # A contagem desta allowlist é a única fonte de verdade; este comentário é
 # descrição, não gate. A guarda anti-encolhimento abaixo é o gate.
 
@@ -25,6 +26,8 @@ on:
       - "nyxal_*.py"
       - "interface/js/**/*.js"
       - "testes/**/*.py"
+      - "deploy/voice/nyxal_voice_prosody.py"
+      - "deploy/voice/test_nyxal_voice_prosody.py"
       - "gerenciador_cristal.py"
       - "cristalizacao.py"
       - "ciclo_cristalizacao.py"
@@ -42,6 +45,8 @@ on:
       - "nixal_*.py"
       - "nyxal_*.py"
       - "testes/**/*.py"
+      - "deploy/voice/nyxal_voice_prosody.py"
+      - "deploy/voice/test_nyxal_voice_prosody.py"
       - "gerenciador_cristal.py"
       - "cristalizacao.py"
       - "ciclo_cristalizacao.py"
