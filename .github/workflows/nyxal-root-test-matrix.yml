@@ -9,7 +9,7 @@ name: Nyxal Root Test Matrix
 # As entradas em subdiretórios incluem a prosódia de voz e a regressão do cristal;
 # todas escrevem apenas em diretórios temporários durante esta matriz.
 # A lista de caminhos abaixo é a fonte de verdade; este comentário é descritivo.
-# A guarda anti-encolhimento abaixo impede que a matriz fique vazia ou encolha.
+# A guarda exige pelo menos as 95 entradas atuais; reduções exigem revisão explícita.
 
 on:
   pull_request:
@@ -124,7 +124,8 @@ jobs:
         run: |
           total=$(grep -c '[^[:space:]]' .github/matriz-validacao-raiz.txt)
           echo "$total"
-          if [ "$total" -lt 75 ]; then
-            echo "a matriz encolheu além do esperado; revalide o inventário"
+          minimo=95
+          if [ "$total" -lt "$minimo" ]; then
+            echo "a matriz caiu abaixo de $minimo entradas; revalide o inventário e a mudança"
             exit 1
           fi
