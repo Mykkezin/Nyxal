@@ -235,14 +235,25 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
         self.assertTrue(all("sessao-anterior-privada" not in str(item) for item in resultado["mensagens"]))
 
     def test_busca_relevante_redige_segredos_e_nao_expoe_id_de_sessao(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "fake-token-para-teste")
+            JWT_SECRET = os.getenv("JWT_SECRET", "fake-jwt-para-teste")
+
+        github_pat = "ghp_" + ("A" * 36)
+        provider_token = "sk-proj-" + ("B" * 24)
+        jwt_token = ".".join((
+            "eyJhbGciOiJIUzI1NiJ9",
+            "eyJzdWIiOiJ1c2VyIn0",
+            "S" * 36,
+        ))
         memoria = MemoriaConversacionalNixal(caminho=self.caminho)
         memoria.registrar(
             "sessao-com-segredo",
             "user",
             "A arquitetura do agente usa cache local; access_token=MEMORIA-SEGREDO-123 "
             "Authorization: Bearer MEMORIA-BEARER-456 token=MEMORIA-TOKEN-789 "
-            "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 sk-proj-1234567890abcdefghijklmnop "
-            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.SECRET_SIGNATURE_1234567890 "
+            f"token={GITHUB_TOKEN} secret={JWT_SECRET} "
+            f"{github_pat} {provider_token} {jwt_token} "
             "-----BEGIN OPENSSH PRIVATE KEY----- PRIVATE_KEY_MATERIAL_DO_NOT_LEAK "
             "-----END OPENSSH PRIVATE KEY-----",
         )
@@ -254,15 +265,18 @@ class TesteMemoriaConversacionalNixal(unittest.TestCase):
             "MEMORIA-SEGREDO-123",
             "MEMORIA-BEARER-456",
             "MEMORIA-TOKEN-789",
-            "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
-            "sk-proj-1234567890abcdefghijklmnop",
-            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.SECRET_SIGNATURE_1234567890",
+            GITHUB_TOKEN,
+            JWT_SECRET,
+            github_pat,
+            provider_token,
+            jwt_token,
             "PRIVATE_KEY_MATERIAL_DO_NOT_LEAK",
         ):
             self.assertNotIn(segredo, trecho)
         self.assertIn("access_token=[REDACTED]", trecho)
         self.assertIn("Authorization=[REDACTED]", trecho)
         self.assertIn("token=[REDACTED]", trecho)
+        self.assertIn("secret=[REDACTED]", trecho)
         self.assertIn("[REDACTED TOKEN]", trecho)
         self.assertIn("[REDACTED JWT]", trecho)
         self.assertIn("[REDACTED PRIVATE KEY]", trecho)
