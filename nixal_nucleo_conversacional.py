@@ -43,7 +43,7 @@ import json
 import math
 import re
 import unicodedata
-from typing import Any, Callable, cast
+from typing import Any, Callable
 
 from nixal_interface import (
     InterfaceConversacionalNixal,
@@ -316,10 +316,7 @@ class NucleoConversacionalNixal:
         )
         try:
             if callable(detector_especialistas):
-                detector_seguro = cast(
-                    Callable[[str], Any],
-                    detector_especialistas,
-                )
+                detector_seguro: Callable[[str], Any] = detector_especialistas
                 coordenacao_especialistas_solicitada = (
                     detector_seguro(texto) is True
                 )
