@@ -18,7 +18,7 @@ from __future__ import annotations
 import copy
 import threading
 import time
-from typing import Any, Callable
+from typing import Any, Callable, TypeGuard
 
 from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
 from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
@@ -31,6 +31,11 @@ from nixal_fisiologia_operacional import FisiologiaOperacionalNixOS
 from nixal_gateway_atuacao import GatewayAtuacaoNixOS
 from nixal_plano_central_controle import PlanoCentralControleNixOS
 from nixal_presenca_maquina import PresencaMaquinaNixOS
+
+
+def _is_registrar_callback(value: object) -> TypeGuard[Callable[..., Any]]:
+    """Narrow an optional persistence hook only after a runtime callability check."""
+    return callable(value)
 
 
 class CicloResidenteNixOS:
@@ -200,12 +205,11 @@ class CicloResidenteNixOS:
             "registrar",
             None,
         )
-        if not callable(registrar):
+        if not _is_registrar_callback(registrar):
             return
 
-        registrar_seguro: Callable[..., Any] = registrar
         try:
-            registrar_seguro(
+            registrar(
                 ciclo=ciclo,
                 estado=estado,
             )
