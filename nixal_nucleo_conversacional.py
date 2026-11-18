@@ -43,7 +43,7 @@ import json
 import math
 import re
 import unicodedata
-from typing import Any, Callable
+from typing import Any, Callable, TypeGuard
 
 from nixal_interface import (
     InterfaceConversacionalNixal,
@@ -65,6 +65,11 @@ from nixal_recuperador_contexto import RecuperadorContextoNixal
 from nixal_dialogo_qwen import (
     DialogoQwenNixal,
 )
+
+
+def _is_specialist_detector(value: object) -> TypeGuard[Callable[[str], Any]]:
+    """Narrow the optional specialist detector after checking runtime callability."""
+    return callable(value)
 
 
 class NucleoConversacionalNixal:
@@ -315,10 +320,9 @@ class NucleoConversacionalNixal:
             None,
         )
         try:
-            if callable(detector_especialistas):
-                detector_seguro: Callable[[str], Any] = detector_especialistas
+            if _is_specialist_detector(detector_especialistas):
                 coordenacao_especialistas_solicitada = (
-                    detector_seguro(texto) is True
+                    detector_especialistas(texto) is True
                 )
             else:
                 coordenacao_especialistas_solicitada = False
