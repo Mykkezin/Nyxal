@@ -43,7 +43,7 @@ import json
 import math
 import re
 import unicodedata
-from typing import Any
+from typing import Any, Callable, cast
 
 from nixal_interface import (
     InterfaceConversacionalNixal,
@@ -315,11 +315,16 @@ class NucleoConversacionalNixal:
             None,
         )
         try:
-            coordenacao_especialistas_solicitada = (
-                detector_especialistas(texto) is True
-                if callable(detector_especialistas)
-                else False
-            )
+            if callable(detector_especialistas):
+                detector_seguro = cast(
+                    Callable[[str], Any],
+                    detector_especialistas,
+                )
+                coordenacao_especialistas_solicitada = (
+                    detector_seguro(texto) is True
+                )
+            else:
+                coordenacao_especialistas_solicitada = False
         except Exception:
             # Adaptadores antigos e stubs de compatibilidade não oferecem esse recurso.
             # Nessa situação, o núcleo mantém o fluxo conversacional já existente.
