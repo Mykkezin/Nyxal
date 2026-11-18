@@ -81,8 +81,10 @@ def _extrair_partes_conteudo(conteudo: object) -> list[str]:
         if not isinstance(segmento, dict):
             continue
         texto = segmento.get("text")
+        tipo = segmento.get("type")
         if (
-            segmento.get("type") in {"output_text", "text"}
+            isinstance(tipo, str)
+            and tipo in {"output_text", "text"}
             and isinstance(texto, str)
             and texto.strip()
         ):
