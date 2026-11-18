@@ -2442,6 +2442,8 @@ class NyxalAPIHandler(BaseHTTPRequestHandler):
             },
         )
 
+    # noinspection PyShadowingBuiltins
+    # O nome `format` precisa coincidir com BaseHTTPRequestHandler.log_message.
     def log_message(self, format, *args):
         # A assinatura reproduz BaseHTTPRequestHandler.log_message.
         # Os argumentos não são registrados para evitar vazamento de dados.
