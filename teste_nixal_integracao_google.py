@@ -10,29 +10,36 @@ from unittest.mock import MagicMock, patch
 from nixal_integracao_gmail import (
     IntegracaoGmailNixOS,
     SCOPES,
-    _normalizar_escopos_token,
 )
 
 
 class TestGoogleWorkspaceReadOnly(unittest.TestCase):
-    def test_normaliza_escopos_em_string_lista_e_formato_invalido(self):
-        self.assertEqual(
-            _normalizar_escopos_token(f"{SCOPES[0]} {SCOPES[1]}"),
-            {SCOPES[0], SCOPES[1]},
-        )
-        self.assertEqual(
-            _normalizar_escopos_token([SCOPES[0], 123, None, SCOPES[1]]),
-            {SCOPES[0], SCOPES[1]},
-        )
-        self.assertEqual(_normalizar_escopos_token(None), set())
-        self.assertEqual(_normalizar_escopos_token({"scope": SCOPES[0]}), set())
+    def test_status_normaliza_escopos_string_com_espacos(self):
+        with tempfile.TemporaryDirectory() as folder:
+            client = Path(folder) / "oauth.json"
+            token = Path(folder) / "token.json"
+            client.write_text("{}", encoding="utf-8")
+            token.write_text(
+                json.dumps({"scopes": f"{SCOPES[0]} {SCOPES[2]}"}),
+                encoding="utf-8",
+            )
+            with (
+                patch("nixal_integracao_gmail.CLIENT_FILE", client),
+                patch("nixal_integracao_gmail.TOKEN_FILE", token),
+                patch.object(IntegracaoGmailNixOS, "_dependencies_available", return_value=True),
+            ):
+                status = IntegracaoGmailNixOS().status()
+        self.assertEqual(status["escopos_ausentes"], [SCOPES[1], SCOPES[3]])
 
     def test_status_detecta_token_gmail_apenas_com_escopos_ausentes(self):
         with tempfile.TemporaryDirectory() as folder:
             client = Path(folder) / "oauth.json"
             token = Path(folder) / "token.json"
             client.write_text("{}", encoding="utf-8")
-            token.write_text(json.dumps({"scopes": [SCOPES[0]]}), encoding="utf-8")
+            token.write_text(
+                json.dumps({"scopes": [SCOPES[0], "", f"{SCOPES[1]} {SCOPES[2]}", 123, None]}),
+                encoding="utf-8",
+            )
             with (
                 patch("nixal_integracao_gmail.CLIENT_FILE", client),
                 patch("nixal_integracao_gmail.TOKEN_FILE", token),
@@ -40,9 +47,7 @@ class TestGoogleWorkspaceReadOnly(unittest.TestCase):
             ):
                 status = IntegracaoGmailNixOS().status()
         self.assertEqual(status["estado"], "configuracao_pendente")
-        self.assertIn(SCOPES[1], status["escopos_ausentes"])
-        self.assertIn(SCOPES[2], status["escopos_ausentes"])
-        self.assertIn(SCOPES[3], status["escopos_ausentes"])
+        self.assertEqual(status["escopos_ausentes"], [SCOPES[3]])
         self.assertTrue(status["somente_leitura"])
         self.assertFalse(status["pode_enviar_email"])
 
