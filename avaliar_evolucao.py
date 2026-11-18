@@ -1,4 +1,6 @@
 import json
+from typing import TypedDict
+
 import ollama
 
 MODELO = "qwen2:7b"
@@ -30,7 +32,13 @@ CRISTAL_B = {
     "incerteza": "carrega ideia, relações, limites e incerteza"
 }
 
-REQUISITOS = [
+class RequisitoEvolucao(TypedDict):
+    id: int
+    texto: str
+    componentes: list[str]
+
+
+REQUISITOS: list[RequisitoEvolucao] = [
     {
         "id": 1,
         "texto": "A hipótese é uma ideia provisória.",
