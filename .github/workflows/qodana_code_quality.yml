@@ -6,25 +6,31 @@ on:
     branches: # Specify your branches here
       - main # The 'main' branch
       - 'releases/*' # The release branches
-      - 'fix-qodana-leva-1' # Branch de correção Qodana
 
 jobs:
   qodana:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}  # to check out the actual pull request commit, not the merge commit
           fetch-depth: 0  # a full history is required for pull request analysis
+          persist-credentials: false
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2026.2
         with:
           pr-mode: false
+          # qodana.yaml bootstrap creates this interpreter inside the linter container.
+          # Keep the matching name in env below so the action forwards its value into Docker.
+          env-vars-to-linter: QODANA_PYTHON_PATH
+          upload-result: true
+          artifact-name: qodana-report
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_28194667 }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
+          # Container path created by the qodana.yaml bootstrap (Python 3.12), not a runner path.
           QODANA_PYTHON_PATH: /data/cache/conda/envs/qodana-env/bin/python
