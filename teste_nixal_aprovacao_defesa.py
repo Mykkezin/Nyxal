@@ -9,15 +9,15 @@ from __future__ import annotations
 
 import json
 import os
-from copy import deepcopy
-from typing import Any
 import shutil
 import subprocess
 import sys
-import time
 import tempfile
+import time
 import unittest
+from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 from nixal_aprovacao_defesa import DiarioAprovacaoDefesa, _hash_escopo
 from nixal_executor_defesa_governada import ExecutorDefesaGovernada
