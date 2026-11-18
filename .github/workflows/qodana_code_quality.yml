@@ -24,6 +24,7 @@ jobs:
         uses: JetBrains/qodana-action@v2026.2
         with:
           pr-mode: false
+          env-vars-to-linter: QODANA_PYTHON_PATH
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_28194667 }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
