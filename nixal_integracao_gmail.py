@@ -114,7 +114,7 @@ class IntegracaoGmailNixOS:
             raise RuntimeError("Google Workspace ainda não autorizado. Execute scripts/autorizar_gmail_nyxal.py.")
 
         credentials = Credentials.from_authorized_user_file(str(TOKEN_FILE))
-        current_scopes = set(credentials.scopes or [])
+        current_scopes = _normalizar_escopos_token(credentials.scopes)
         missing = [scope for scope in SCOPES if scope not in current_scopes]
         if missing:
             raise RuntimeError(
