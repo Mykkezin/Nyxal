@@ -18,7 +18,7 @@ from __future__ import annotations
 import copy
 import threading
 import time
-from typing import Any
+from typing import Any, Callable, cast
 
 from nixal_auto_evolucao import AutoEvolucaoGovernadaNixOS
 from nixal_auto_experimento_ae2 import AutoExperimentoIsoladoAE2
@@ -203,8 +203,9 @@ class CicloResidenteNixOS:
         if not callable(registrar):
             return
 
+        registrar_seguro = cast(Callable[..., Any], registrar)
         try:
-            registrar(
+            registrar_seguro(
                 ciclo=ciclo,
                 estado=estado,
             )
