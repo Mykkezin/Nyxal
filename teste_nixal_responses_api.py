@@ -14,6 +14,20 @@ import nixal_responses_api as api
 
 
 class TestResponsesAdapter(unittest.TestCase):
+    def test_content_extractor_accepts_text_and_structured_segments(self):
+        self.assertEqual(api._extrair_partes_conteudo("  plain text  "), ["plain text"])
+        self.assertEqual(
+            api._extrair_partes_conteudo([
+                {"type": "output_text", "text": " first "},
+                {"type": "text", "text": "second"},
+                {"type": "image", "text": "ignored"},
+                "invalid segment",
+                {"type": "output_text", "text": "  "},
+            ]),
+            ["first", "second"],
+        )
+        self.assertEqual(api._extrair_partes_conteudo(None), [])
+
     def test_provider_requires_key_model_and_official_https_host(self):
         with patch.dict(os.environ, {}, clear=True):
             self.assertFalse(api.provider_configured("openai"))
