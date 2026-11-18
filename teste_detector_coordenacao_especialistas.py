@@ -29,5 +29,6 @@ class TestDetectorCoordenacaoEspecialistas(unittest.TestCase):
                     DialogoQwenNixal.pedido_coordenacao_especialistas(texto)
                 )
 
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
