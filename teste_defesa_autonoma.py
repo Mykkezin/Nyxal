@@ -294,13 +294,16 @@ class TesteDefesaAutonoma(unittest.TestCase):
         )
 
     def test_historico_de_falhas_por_origem_tem_limite(self):
-        for _ in range(defesa.MAX_FAILURES_PER_ORIGIN * 4):
-            decisao = self.avaliar_falha()
+        decisoes = [
+            self.avaliar_falha()
+            for _ in range(defesa.MAX_FAILURES_PER_ORIGIN * 4)
+        ]
+        self.assertTrue(decisoes)
         self.assertLessEqual(
             len(self.motor._falhas["203.0.113.10"]),
             defesa.MAX_FAILURES_PER_ORIGIN,
         )
-        self.assertIn("bloqueio_temporario_origem", self.tipos(decisao))
+        self.assertIn("bloqueio_temporario_origem", self.tipos(decisoes[-1]))
 
     def test_contador_e_seguro_sob_requisicoes_concorrentes(self):
         from concurrent.futures import ThreadPoolExecutor
