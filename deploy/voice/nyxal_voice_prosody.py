@@ -187,7 +187,7 @@ def clean_speech_text(value: str) -> str:
     text = re.sub(r"(?m)^\s{0,3}\d+[.)]\s+(.+?)\s*$", phrase_boundary, text)
     text = re.sub(r"(?m)^\s{0,3}>\s?", "", text)
     text = re.sub(r"(?m)^\s*(?:---+|___+|\*\*\*+)\s*$", " ", text)
-    text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"!?\[([^]]*)]\([^)]*\)", r"\1", text)
     text = re.sub(r"\x60([^\x60]+)\x60", r"\1", text)
     text = re.sub(r"[*_~]{1,3}", "", text)
     # Decorative emoji are not usually meaningful when read aloud.
