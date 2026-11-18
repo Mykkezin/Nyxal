@@ -152,7 +152,10 @@ def ask(
     output = result.get("output", [])
     if isinstance(output, list):
         for item in output:
-            if not isinstance(item, dict) or item.get("role") not in {None, "assistant"}:
+            if not isinstance(item, dict):
+                continue
+            role = item.get("role")
+            if role is not None and role != "assistant":
                 continue
             parts.extend(
                 _extrair_partes_conteudo(item.get("content", []))
