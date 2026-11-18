@@ -83,6 +83,7 @@ class TestTrilhaHTTPIntegracao(unittest.TestCase):
 
     def wait_for_records(self, request_ids: list[str], timeout: float = 2.0) -> list[dict]:
         wanted = set(request_ids)
+        found: list[dict] = []
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             found = [item for item in self.records() if item["request_id"] in wanted]
