@@ -1,6 +1,6 @@
 name: Nyxal Root Test Matrix
 
-# Matriz de validação atualizada em 2026-11-18: a allowlist contém 95 testes.
+# Matriz de validação atualizada em 2026-11-18: a allowlist contém 96 testes.
 # Ela não pretende executar todos os scripts do repositório; inclui apenas os
 # testes selecionados para execução isolada com o Python do runner e sem escrita
 # no checkout operacional nem em estado persistente da instalação ativa.
@@ -9,7 +9,7 @@ name: Nyxal Root Test Matrix
 # As entradas em subdiretórios incluem a prosódia de voz e a regressão do cristal;
 # todas escrevem apenas em diretórios temporários durante esta matriz.
 # A lista de caminhos abaixo é a fonte de verdade; este comentário é descritivo.
-# A guarda exige pelo menos as 95 entradas atuais; reduções exigem revisão explícita.
+# A guarda exige pelo menos as 96 entradas atuais; reduções exigem revisão explícita.
 
 on:
   pull_request:
@@ -124,7 +124,7 @@ jobs:
         run: |
           total=$(grep -c '[^[:space:]]' .github/matriz-validacao-raiz.txt)
           echo "$total"
-          minimo=95
+          minimo=96
           if [ "$total" -lt "$minimo" ]; then
             echo "a matriz caiu abaixo de $minimo entradas; revalide o inventário e a mudança"
             exit 1
