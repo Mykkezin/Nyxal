@@ -108,7 +108,12 @@ def ask(
     for item in (history or [])[-20:]:
         role = item.get("role")
         content = item.get("content")
-        if role in {"user", "assistant"} and isinstance(content, str) and content.strip():
+        if (
+            isinstance(role, str)
+            and role in {"user", "assistant"}
+            and isinstance(content, str)
+            and content.strip()
+        ):
             inputs.append({"role": role, "content": content[:12000]})
     inputs.append({"role": "user", "content": message.strip()[:12000]})
     base = config["base"].rstrip("/")
